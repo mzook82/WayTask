@@ -8,14 +8,28 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject private var appStateManager: AppStateManager
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView(selection: $appStateManager.selectedTab) {
+            ProductListView()
+                .tabItem {
+                    Label("Products", systemImage: "checklist")
+                }
+                .tag(AppTab.products)
+
+            CameraView()
+                .tabItem {
+                    Label("Scan", systemImage: "camera")
+                }
+                .tag(AppTab.camera)
+
+            MainMapView()
+                .tabItem {
+                    Label("Map", systemImage: "map")
+                }
+                .tag(AppTab.map)
         }
-        .padding()
     }
 }
 

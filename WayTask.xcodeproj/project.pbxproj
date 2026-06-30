@@ -6,13 +6,59 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D11995C52FF3999200C9EAF2 /* CameraService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11995C42FF3999200C9EAF2 /* CameraService.swift */; };
+		D11995C72FF399AE00C9EAF2 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11995C62FF399AE00C9EAF2 /* CameraPreviewView.swift */; };
+		D11995C92FF399B600C9EAF2 /* ProductRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11995C82FF399B600C9EAF2 /* ProductRecognitionService.swift */; };
+		D11995CB2FF399E100C9EAF2 /* CameraViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11995CA2FF399E100C9EAF2 /* CameraViewModel.swift */; };
+		D12B90982FF2FCC800531ECE /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12B90972FF2FCC800531ECE /* CameraView.swift */; };
+		D12B909A2FF2FDCD00531ECE /* WayTaskDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12B90992FF2FDCD00531ECE /* WayTaskDesignSystem.swift */; };
+		D1954DE62FF3C40D00E946DA /* MapViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954DE52FF3C40D00E946DA /* MapViewModel.swift */; };
+		D1954DE82FF3C40E00E946DA /* StoreAnnotation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954DE72FF3C40E00E946DA /* StoreAnnotation.swift */; };
+		D1954DEA2FF3C40E00E946DA /* ProductAnnotation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954DE92FF3C40E00E946DA /* ProductAnnotation.swift */; };
+		D1954DEC2FF3C45900E946DA /* WayTaskMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954DEB2FF3C45900E946DA /* WayTaskMapView.swift */; };
+		D1954DEE2FF3C45A00E946DA /* MapFilterBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954DED2FF3C45A00E946DA /* MapFilterBar.swift */; };
+		D1954DF02FF3C45A00E946DA /* MapControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954DEF2FF3C45A00E946DA /* MapControls.swift */; };
+		D1954DF22FF3C45B00E946DA /* MapBottomSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954DF12FF3C45B00E946DA /* MapBottomSheet.swift */; };
+		D1954DF42FF3CCF800E946DA /* StoreSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954DF32FF3CCF800E946DA /* StoreSearchService.swift */; };
+		D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B8519A2FF18FF50083B34C /* ProductListView.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		D11995C42FF3999200C9EAF2 /* CameraService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraService.swift; sourceTree = "<group>"; };
+		D11995C62FF399AE00C9EAF2 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
+		D11995C82FF399B600C9EAF2 /* ProductRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductRecognitionService.swift; sourceTree = "<group>"; };
+		D11995CA2FF399E100C9EAF2 /* CameraViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewModel.swift; sourceTree = "<group>"; };
+		D12B90972FF2FCC800531ECE /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
+		D12B90992FF2FDCD00531ECE /* WayTaskDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WayTaskDesignSystem.swift; sourceTree = "<group>"; };
+		D1954DE52FF3C40D00E946DA /* MapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewModel.swift; sourceTree = "<group>"; };
+		D1954DE72FF3C40E00E946DA /* StoreAnnotation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreAnnotation.swift; sourceTree = "<group>"; };
+		D1954DE92FF3C40E00E946DA /* ProductAnnotation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductAnnotation.swift; sourceTree = "<group>"; };
+		D1954DEB2FF3C45900E946DA /* WayTaskMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WayTaskMapView.swift; sourceTree = "<group>"; };
+		D1954DED2FF3C45A00E946DA /* MapFilterBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapFilterBar.swift; sourceTree = "<group>"; };
+		D1954DEF2FF3C45A00E946DA /* MapControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapControls.swift; sourceTree = "<group>"; };
+		D1954DF12FF3C45B00E946DA /* MapBottomSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapBottomSheet.swift; sourceTree = "<group>"; };
+		D1954DF32FF3CCF800E946DA /* StoreSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreSearchService.swift; sourceTree = "<group>"; };
 		D1B8517E2FEFF2F40083B34C /* WayTask.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WayTask.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D1B8519A2FF18FF50083B34C /* ProductListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D11995C32FF3983500C9EAF2 /* Exceptions for "WayTask" folder in "WayTask" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D1B8517D2FEFF2F40083B34C /* WayTask */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D1B851802FEFF2F40083B34C /* WayTask */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D11995C32FF3983500C9EAF2 /* Exceptions for "WayTask" folder in "WayTask" target */,
+			);
 			path = WayTask;
 			sourceTree = "<group>";
 		};
@@ -34,6 +80,21 @@
 			children = (
 				D1B851802FEFF2F40083B34C /* WayTask */,
 				D1B8517F2FEFF2F40083B34C /* Products */,
+				D1B8519A2FF18FF50083B34C /* ProductListView.swift */,
+				D12B90972FF2FCC800531ECE /* CameraView.swift */,
+				D12B90992FF2FDCD00531ECE /* WayTaskDesignSystem.swift */,
+				D11995C42FF3999200C9EAF2 /* CameraService.swift */,
+				D11995C62FF399AE00C9EAF2 /* CameraPreviewView.swift */,
+				D11995C82FF399B600C9EAF2 /* ProductRecognitionService.swift */,
+				D11995CA2FF399E100C9EAF2 /* CameraViewModel.swift */,
+				D1954DE52FF3C40D00E946DA /* MapViewModel.swift */,
+				D1954DE72FF3C40E00E946DA /* StoreAnnotation.swift */,
+				D1954DE92FF3C40E00E946DA /* ProductAnnotation.swift */,
+				D1954DEB2FF3C45900E946DA /* WayTaskMapView.swift */,
+				D1954DED2FF3C45A00E946DA /* MapFilterBar.swift */,
+				D1954DEF2FF3C45A00E946DA /* MapControls.swift */,
+				D1954DF12FF3C45B00E946DA /* MapBottomSheet.swift */,
+				D1954DF32FF3CCF800E946DA /* StoreSearchService.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -119,6 +180,21 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D11995C52FF3999200C9EAF2 /* CameraService.swift in Sources */,
+				D12B90982FF2FCC800531ECE /* CameraView.swift in Sources */,
+				D1954DEC2FF3C45900E946DA /* WayTaskMapView.swift in Sources */,
+				D1954DE82FF3C40E00E946DA /* StoreAnnotation.swift in Sources */,
+				D1954DF02FF3C45A00E946DA /* MapControls.swift in Sources */,
+				D1954DEE2FF3C45A00E946DA /* MapFilterBar.swift in Sources */,
+				D12B909A2FF2FDCD00531ECE /* WayTaskDesignSystem.swift in Sources */,
+				D11995C92FF399B600C9EAF2 /* ProductRecognitionService.swift in Sources */,
+				D1954DE62FF3C40D00E946DA /* MapViewModel.swift in Sources */,
+				D1954DEA2FF3C40E00E946DA /* ProductAnnotation.swift in Sources */,
+				D11995C72FF399AE00C9EAF2 /* CameraPreviewView.swift in Sources */,
+				D11995CB2FF399E100C9EAF2 /* CameraViewModel.swift in Sources */,
+				D1954DF22FF3C45B00E946DA /* MapBottomSheet.swift in Sources */,
+				D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */,
+				D1954DF42FF3CCF800E946DA /* StoreSearchService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -251,8 +327,17 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 635X95KVUL;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WayTask/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NFCReaderUsageDescription = "האפליקציה צריכה גישה לתמונות כדי לצרף תמונה לפריט.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "האפליקציה צריכה גישה למצלמה כדי לצלם ולזהות מוצרים.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "האפליקציה צריכה גישה למיקום כדי לזהות כניסה לאזור מוגדר.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "האפליקציה צריכה גישה למיקום כדי לזהות כניסה לאזור מוגדר.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "האפליקציה צריכה גישה לתמונות כדי לבחור תמונה של מוצר.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -282,8 +367,17 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 635X95KVUL;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WayTask/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NFCReaderUsageDescription = "האפליקציה צריכה גישה לתמונות כדי לצרף תמונה לפריט.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "האפליקציה צריכה גישה למצלמה כדי לצלם ולזהות מוצרים.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "האפליקציה צריכה גישה למיקום כדי לזהות כניסה לאזור מוגדר.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "האפליקציה צריכה גישה למיקום כדי לזהות כניסה לאזור מוגדר.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "האפליקציה צריכה גישה לתמונות כדי לבחור תמונה של מוצר.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
