@@ -197,3 +197,122 @@ Future modules may include:
 These modules are intentionally planned for a future milestone and are **not part of the current implementation**.
 
 The goal is to improve scalability, maintainability, and long-term flexibility without affecting the MVP timeline.
+
+---
+
+# 7. Architecture Decisions
+
+The following architectural decisions define how WayTask is built today and how it will evolve.
+
+## Business Logic
+
+Business logic should remain outside SwiftUI Views.
+
+Views are responsible only for presenting information and handling user interaction.
+
+---
+
+## State Management
+
+Each screen owns its own ViewModel.
+
+ViewModels coordinate user actions and communicate with reusable Services.
+
+---
+
+## Services
+
+Reusable functionality belongs inside Services.
+
+Examples include:
+
+- CameraService
+- StoreSearchService
+- LocationManager
+
+Services should remain independent of SwiftUI whenever possible.
+
+---
+
+## Native First
+
+WayTask should always prefer Apple's native frameworks before introducing third-party dependencies.
+
+Current native technologies include:
+
+- SwiftUI
+- MapKit
+- CoreLocation
+- AVFoundation
+- Photos
+
+---
+
+## AI Independence
+
+Artificial Intelligence must remain replaceable.
+
+The application should never depend directly on one provider.
+
+Future providers may include:
+
+- OpenAI
+- Apple Foundation Models
+- Gemini
+- Claude
+
+The rest of the application should not require changes when switching providers.
+
+---
+
+# 8. Scalability Strategy
+
+The MVP focuses on a simple project structure.
+
+As the application grows, features will gradually become independent modules.
+
+Future examples:
+
+- Camera Module
+- Shopping Module
+- Discover Module
+- Notification Module
+- AI Module
+
+This transition will happen only after the MVP has stabilized.
+
+---
+
+# 9. Performance Goals
+
+WayTask should feel lightweight and responsive.
+
+Performance priorities:
+
+- Fast application launch
+- Smooth scrolling
+- Instant map interaction
+- Responsive camera preview
+- Minimal loading delays
+
+Artificial Intelligence should never block the user interface.
+
+Heavy processing should run asynchronously whenever possible.
+
+---
+
+# 10. Privacy Principles
+
+Privacy is a core architectural requirement.
+
+The application should:
+
+- Request only required permissions.
+- Clearly explain why permissions are needed.
+- Minimize cloud processing whenever possible.
+- Keep sensitive user information under user control.
+
+Whenever possible, processing should occur directly on the device.
+
+---
+
