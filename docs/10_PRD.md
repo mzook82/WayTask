@@ -128,12 +128,117 @@ WayTask aims to:
 
 ---
 
-# Next Section
+# 6. Target Users
 
-The next revision of the PRD will include:
+WayTask is designed for people who want shopping to become simpler, smarter, and more efficient.
 
-- Target Users
-- User Personas
-- User Journeys
-- User Stories
-- Success Metrics
+The application is intended for users who regularly purchase products, visit physical stores, and appreciate timely recommendations powered by location and artificial intelligence.
+
+Primary user groups include:
+
+- Busy professionals
+- Families
+- Students
+- Frequent shoppers
+- Travelers
+- Apple ecosystem users
+
+---
+
+# 7. User Personas
+
+## Persona 1 – Busy Professional
+
+### Profile
+
+Age: 25–45
+
+Works full-time
+
+Often shops after work
+
+Frequently forgets products
+
+Values speed and convenience
+
+### Goals
+
+- Save time
+- Avoid unnecessary shopping trips
+- Receive useful reminders
+- Navigate directly to nearby stores
+
+### Pain Points
+
+- Forgetting products
+- Visiting multiple stores
+- Wasting time
+- Missing nearby shopping opportunities
+
+---
+
+## Persona 2 – Parent
+
+### Profile
+
+Weekly grocery shopping
+
+Buys recurring household products
+
+Needs reminders
+
+Values organization
+
+### Goals
+
+- Never forget important products
+- Quickly build shopping lists
+- Receive suggestions based on previous purchases
+
+### Pain Points
+
+- Long shopping lists
+- Forgotten household items
+- Time pressure
+
+---
+
+## Persona 3 – Food Enthusiast
+
+### Profile
+
+Enjoys cooking
+
+Experiments with recipes
+
+Purchases specialty ingredients
+
+### Goals
+
+- Discover nearby ingredients
+- Receive recipe suggestions
+- Find complementary products
+
+### Pain Points
+
+- Missing ingredients
+- Visiting multiple specialty stores
+
+---
+
+## Persona 4 – Smart Shopper
+
+### Profile
+
+Enjoys finding the best products
+
+Interested in discovering new stores
+
+Likes personalized recommendations
+
+### Goals
+
+- Discover nearby opportunities
+- Compare products
+- Save money
+- Explore new businesses
