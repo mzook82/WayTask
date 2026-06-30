@@ -36,6 +36,8 @@ Rather than relying on memory, users should receive intelligent assistance befor
 
 WayTask becomes a trusted shopping companion that quietly works in the background, delivering timely recommendations without interrupting everyday life.
 
+WayTask should never feel like an application. It should feel like a personal shopping companion.
+
 ---
 
 # Long-Term Vision
