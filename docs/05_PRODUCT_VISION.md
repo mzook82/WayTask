@@ -36,7 +36,23 @@ Rather than relying on memory, users should receive intelligent assistance befor
 
 WayTask becomes a trusted shopping companion that quietly works in the background, delivering timely recommendations without interrupting everyday life.
 
-WayTask should never feel like an application. It should feel like a personal shopping companion.
+WayTask should never feel like an application.
+
+It should feel like a trusted personal shopping companion that naturally helps users make better shopping decisions without requiring constant attention or unnecessary interaction.
+
+Every feature should answer one simple question:
+
+> **"Does this genuinely help the user at this moment?"**
+
+If the answer is no, the feature should be redesigned, postponed, or removed.
+
+---
+
+## Experience Principle
+
+WayTask is designed to disappear into everyday life.
+
+The best shopping assistant is one that helps at exactly the right moment, requires almost no effort, and feels like a natural extension of the user rather than another app competing for attention.
 
 ---
 
