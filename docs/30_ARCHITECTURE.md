@@ -316,3 +316,45 @@ Whenever possible, processing should occur directly on the device.
 
 ---
 
+# 11. Open Questions
+
+The following questions should be revisited as WayTask evolves:
+
+- Which AI provider should be used first?
+- Should product recognition start with Apple Vision, OpenAI, Gemini, or a hybrid approach?
+- When should backend storage be introduced?
+- Should shopping history remain local-first or sync through the cloud?
+- How should recommendation caching work?
+- When should the project be refactored into feature modules?
+- Should Discover use local data first or external APIs?
+
+---
+
+# 12. Future Improvements
+
+Future architecture improvements may include:
+
+- Modular feature folders
+- AI Engine abstraction
+- Prompt Library
+- Recommendation Engine
+- Feature Flags
+- Backend API layer
+- Cloud sync
+- Test coverage
+- Analytics layer
+- Error reporting
+
+These improvements should be added gradually and only when they support the MVP or long-term scalability.
+
+---
+
+# 13. Related Documents
+
+- README.md
+- docs/00_INDEX.md
+- docs/05_PRODUCT_VISION.md
+- docs/10_PRD.md
+- docs/20_ROADMAP.md
+- docs/40_AI_ROADMAP.md
+- docs/70_DEVELOPMENT_GUIDE.md
