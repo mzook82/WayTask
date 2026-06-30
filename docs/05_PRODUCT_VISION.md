@@ -186,6 +186,16 @@ Topics to explore in future revisions:
 
 ---
 
+## User Promise
+
+WayTask promises to help users make smarter shopping decisions with the least possible effort.
+
+Every feature must provide clear value, reduce friction, and respect the user's time, attention, and privacy.
+
+If a feature does not meaningfully improve the shopping experience, it should not become part of WayTask.
+
+---
+
 # Next Document
 
 The next document is:
