@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import Photos
 
 @MainActor
 final class CameraViewModel: ObservableObject {
@@ -34,10 +35,12 @@ final class CameraViewModel: ObservableObject {
     }
 
     @Published var selectedMode: Mode = .photo
+    @Published var pendingPhotoData: Data?
     @Published var capturedImageData: Data?
     @Published var recognizedProduct: ProductRecognitionResult?
     @Published var isRecognizing = false
-    @Published var statusMessage = "AI product recognition is not available yet."
+    @Published var isSavingPhoto = false
+    @Published var statusMessage = "AI recognition is not available yet."
     @Published var focusPoint: CGPoint?
 
     let cameraService: CameraService
@@ -61,6 +64,10 @@ final class CameraViewModel: ObservableObject {
         recognizedProduct != nil
     }
 
+    var isShowingPhotoPreview: Bool {
+        pendingPhotoData != nil
+    }
+
     func startCamera() {
         cameraService.requestAccessAndConfigure()
     }
@@ -74,20 +81,27 @@ final class CameraViewModel: ObservableObject {
     }
 
     func focus(at point: CGPoint) {
+        guard pendingPhotoData == nil else {
+            return
+        }
+
         focusPoint = point
         cameraService.focus(at: point)
         statusMessage = "Focus locked."
     }
 
     func zoom(to zoomFactor: CGFloat) {
+        guard pendingPhotoData == nil else {
+            return
+        }
+
         cameraService.setZoomFactor(zoomFactor)
     }
 
     func capturePhoto() {
         clearRecognition()
-        statusMessage = selectedMode == .aiVision
-            ? "Waiting for product analysis."
-            : "Taking photo..."
+        pendingPhotoData = nil
+        statusMessage = "Taking photo..."
 
         cameraService.capturePhoto { [weak self] result in
             guard let self else {
@@ -97,8 +111,8 @@ final class CameraViewModel: ObservableObject {
             Task { @MainActor in
                 switch result {
                 case .success(let photo):
-                    self.capturedImageData = photo.data
-                    await self.recognizeIfNeeded(from: photo.data)
+                    self.pendingPhotoData = photo.data
+                    self.statusMessage = "Review your photo before using it."
                 case .failure:
                     self.statusMessage = "Photo capture failed. Please try again."
                 }
@@ -108,42 +122,91 @@ final class CameraViewModel: ObservableObject {
 
     func handleSelectedPhotoData(_ data: Data?) {
         clearRecognition()
+        pendingPhotoData = nil
 
         guard let data else {
             statusMessage = "We could not load that photo. Please choose another one."
             return
         }
 
-        capturedImageData = data
+        pendingPhotoData = data
+        statusMessage = "Review your photo before using it."
+    }
+
+    func usePendingPhoto() {
+        guard let pendingPhotoData else {
+            return
+        }
+
+        capturedImageData = pendingPhotoData
+        self.pendingPhotoData = nil
+        clearRecognition()
+        statusMessage = "Photo captured. Ready for AI recognition."
+    }
+
+    func retakePhoto() {
+        pendingPhotoData = nil
+        capturedImageData = nil
+        clearRecognition()
+        statusMessage = "AI recognition is not available yet."
+    }
+
+    func savePendingPhotoToLibrary() {
+        guard let pendingPhotoData else {
+            statusMessage = "No photo is ready to save."
+            return
+        }
+
+        isSavingPhoto = true
+        statusMessage = "Saving photo..."
 
         Task {
-            await recognizeIfNeeded(from: data)
+            let authorized = await requestPhotoLibraryAddPermission()
+
+            guard authorized else {
+                isSavingPhoto = false
+                statusMessage = "Photos permission is needed to save this image."
+                return
+            }
+
+            do {
+                try await savePhotoData(pendingPhotoData)
+                isSavingPhoto = false
+                statusMessage = "Photo saved to Photos."
+            } catch {
+                isSavingPhoto = false
+                statusMessage = "Could not save photo. Please try again."
+            }
         }
     }
 
     func resetCapture() {
+        pendingPhotoData = nil
         capturedImageData = nil
         clearRecognition()
-        statusMessage = "AI product recognition is not available yet."
+        statusMessage = "AI recognition is not available yet."
     }
 
-    private func recognizeIfNeeded(from imageData: Data) async {
-        guard selectedMode == .aiVision else {
-            statusMessage = "Photo captured successfully. Ready for AI recognition."
-            return
+    private func requestPhotoLibraryAddPermission() async -> Bool {
+        let currentStatus = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+
+        switch currentStatus {
+        case .authorized, .limited:
+            return true
+        case .notDetermined:
+            let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+            return status == .authorized || status == .limited
+        case .denied, .restricted:
+            return false
+        @unknown default:
+            return false
         }
+    }
 
-        isRecognizing = true
-        statusMessage = "Waiting for product analysis."
-        defer { isRecognizing = false }
-
-        do {
-            recognizedProduct = try await recognitionService.recognizeProduct(from: imageData)
-            statusMessage = recognizedProduct == nil
-                ? "AI product recognition is not available yet."
-                : "Product recognized."
-        } catch {
-            statusMessage = "Product analysis is unavailable right now."
+    private func savePhotoData(_ data: Data) async throws {
+        try await PHPhotoLibrary.shared().performChanges {
+            let request = PHAssetCreationRequest.forAsset()
+            request.addResource(with: .photo, data: data, options: nil)
         }
     }
 

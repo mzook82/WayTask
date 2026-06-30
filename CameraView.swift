@@ -1,6 +1,7 @@
 import PhotosUI
 import SwiftData
 import SwiftUI
+import UIKit
 
 struct CameraView: View {
     @Environment(\.modelContext) private var modelContext
@@ -73,18 +74,22 @@ struct CameraView: View {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .fill(WayTaskDesign.scannerSurface)
 
-            CameraPreviewView(
-                session: viewModel.cameraService.session,
-                onFocus: { devicePoint, viewPoint in
-                    viewModel.focus(at: devicePoint)
-                    showFocusIndicator(at: viewPoint)
-                },
-                onZoom: { zoomFactor in
-                    viewModel.zoom(to: zoomFactor)
-                }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-            .opacity(viewModel.cameraService.authorizationStatus == .authorized ? 1 : 0)
+            if let previewData = viewModel.pendingPhotoData {
+                capturedPhotoPreview(previewData)
+            } else {
+                CameraPreviewView(
+                    session: viewModel.cameraService.session,
+                    onFocus: { devicePoint, viewPoint in
+                        viewModel.focus(at: devicePoint)
+                        showFocusIndicator(at: viewPoint)
+                    },
+                    onZoom: { zoomFactor in
+                        viewModel.zoom(to: zoomFactor)
+                    }
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .opacity(viewModel.cameraService.authorizationStatus == .authorized ? 1 : 0)
+            }
 
             cameraOverlay
             focusIndicator
@@ -95,6 +100,28 @@ struct CameraView: View {
         }
         .padding(.horizontal, 22)
         .frame(maxHeight: .infinity)
+    }
+
+    private func capturedPhotoPreview(_ data: Data) -> some View {
+        Group {
+            if let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                VStack(spacing: 10) {
+                    Image(systemName: "photo")
+                        .font(.largeTitle)
+                        .foregroundStyle(WayTaskDesign.accent)
+
+                    Text("Photo preview unavailable")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
     }
 
     @ViewBuilder
@@ -206,31 +233,14 @@ struct CameraView: View {
                 recognizedProductCard(product)
             }
 
-            HStack(spacing: 12) {
-                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                    WayTaskModeTile(title: "Library", systemName: "photo")
-                }
-                .buttonStyle(.plain)
+            if viewModel.isShowingPhotoPreview {
+                photoReviewControls
+            } else {
+                captureControls
+            }
 
-                Button {
-                    viewModel.capturePhoto()
-                } label: {
-                    ZStack {
-                        Circle()
-                            .stroke(.white.opacity(0.34), lineWidth: 4)
-                            .frame(width: 70, height: 70)
-
-                        Circle()
-                            .fill(WayTaskDesign.accentGradient)
-                            .frame(width: 56, height: 56)
-                            .shadow(color: WayTaskDesign.accent.opacity(0.36), radius: 18, y: 8)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Take photo")
-
-                WayTaskModeTile(title: viewModel.selectedMode.title, systemName: viewModel.selectedMode.iconName)
+            if viewModel.recognizedProduct == nil {
+                aiUnavailableMessage
             }
 
             if viewModel.canAddProduct,
@@ -251,6 +261,87 @@ struct CameraView: View {
                 .fill(WayTaskDesign.surfaceBorder)
                 .frame(height: 1)
         }
+    }
+
+    private var captureControls: some View {
+        HStack(spacing: 12) {
+            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                WayTaskModeTile(title: "Library", systemName: "photo")
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                viewModel.capturePhoto()
+            } label: {
+                ZStack {
+                    Circle()
+                        .stroke(.white.opacity(0.34), lineWidth: 4)
+                        .frame(width: 70, height: 70)
+
+                    Circle()
+                        .fill(WayTaskDesign.accentGradient)
+                        .frame(width: 56, height: 56)
+                        .shadow(color: WayTaskDesign.accent.opacity(0.36), radius: 18, y: 8)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Take photo")
+
+            WayTaskModeTile(title: viewModel.selectedMode.title, systemName: viewModel.selectedMode.iconName)
+        }
+    }
+
+    private var photoReviewControls: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Button {
+                    viewModel.usePendingPhoto()
+                } label: {
+                    Label("Use Photo", systemImage: "checkmark.circle.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 52, cornerRadius: 16, shadow: true))
+
+                Button {
+                    viewModel.retakePhoto()
+                } label: {
+                    Label("Retake", systemImage: "arrow.counterclockwise")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 52, cornerRadius: 16))
+            }
+
+            Button {
+                viewModel.savePendingPhotoToLibrary()
+            } label: {
+                if viewModel.isSavingPhoto {
+                    ProgressView()
+                        .tint(WayTaskDesign.accent)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    Label("Save to Photos", systemImage: "square.and.arrow.down")
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 46, cornerRadius: 15))
+            .disabled(viewModel.isSavingPhoto)
+        }
+    }
+
+    private var aiUnavailableMessage: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "sparkles")
+                .foregroundStyle(WayTaskDesign.accent)
+
+            Text("AI recognition is not available yet.")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(WayTaskDesign.secondaryText)
+
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .wayTaskCard(cornerRadius: 14)
     }
 
     private var statusIconName: String {
