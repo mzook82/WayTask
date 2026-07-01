@@ -24,6 +24,12 @@ struct ContentView: View {
                 }
                 .tag(AppTab.camera)
 
+            DiscoverView()
+                .tabItem {
+                    Label("Discover", systemImage: "sparkle.magnifyingglass")
+                }
+                .tag(AppTab.discover)
+
             MainMapView()
                 .tabItem {
                     Label("Map", systemImage: "map")

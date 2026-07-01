@@ -13,6 +13,7 @@ import UserNotifications
 enum AppTab: Hashable {
     case products
     case camera
+    case discover
     case map
 }
 
