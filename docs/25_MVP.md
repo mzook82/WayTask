@@ -27,10 +27,10 @@ WayTask should help users remember, discover, compare, and make better shopping 
 | Shopping | ✅ 80% |
 | Camera | ✅ 90% |
 | Map | ✅ 90% |
-| Shopping Intelligence | ✅ 30% |
+| Shopping Intelligence | ✅ 50% |
 | AI | ⏳ 5% |
 | Notifications | ⏳ 0% |
-| Discover | ⏳ 0% |
+| Discover | ✅ 30% |
 | Settings | ⏳ 10% |
 | Onboarding | ⏳ 0% |
 
@@ -104,13 +104,16 @@ WayTask should help users remember, discover, compare, and make better shopping 
 
 # Discover
 
-- [ ] Nearby Stores
-- [ ] Nearby Restaurants
-- [ ] Coffee Shops
-- [ ] Trending Places
-- [ ] New Stores
+- [x] Discover Tab *(Sprint 4)*
+- [x] Nearby Today *(Sprint 4)*
+- [x] Recommended Nearby *(Sprint 4)*
+- [x] Based on Your Shopping List *(Sprint 4)*
+- [x] New Around You *(Sprint 4)*
+- [ ] Real Store Data
+- [ ] Personalized Recommendations
 - [ ] Nearby Deals
-- [ ] Personalized Discover
+- [ ] Trending Places
+- [ ] Online Shopping Suggestions
 
 ---
 
@@ -171,6 +174,19 @@ The MVP will be considered complete when a user can:
 - [ ] Navigate to a selected store.
 - [ ] Receive intelligent shopping recommendations.
 - [ ] Complete a shopping trip with WayTask assistance.
+
+---
+
+# MVP Progress Log
+
+## Sprint 4
+
+- Discover foundation
+- DiscoverView
+- DiscoverViewModel
+- DiscoverItem model
+- ShoppingContext integration
+- Map handoff from Discover
 
 ---
 
