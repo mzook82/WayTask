@@ -34,10 +34,23 @@ final class CameraViewModel: ObservableObject {
         }
     }
 
+    enum RecognitionPhase: String {
+        case idle
+        case captured
+        case analyzing
+        case result
+        case confirmation
+        case unavailable
+        case failed
+    }
+
     @Published var selectedMode: Mode = .photo
     @Published var pendingPhotoData: Data?
     @Published var capturedImageData: Data?
-    @Published var recognizedProduct: ProductRecognitionResult?
+    @Published var recognitionResult: RecognitionResult?
+    @Published var selectedCandidate: ProductCandidate?
+    @Published var confirmedCandidate: ProductCandidate?
+    @Published var recognitionPhase: RecognitionPhase = .idle
     @Published var isRecognizing = false
     @Published var isSavingPhoto = false
     @Published var statusMessage = "AI recognition is not available yet."
@@ -46,6 +59,7 @@ final class CameraViewModel: ObservableObject {
     let cameraService: CameraService
 
     private let recognitionService: ProductRecognitionServicing
+    private var pendingPhotoSource: RecognitionInputSource = .cameraCapture
 
     init() {
         self.cameraService = CameraService()
@@ -60,12 +74,37 @@ final class CameraViewModel: ObservableObject {
         self.recognitionService = recognitionService
     }
 
+    var recognizedProduct: ProductCandidate? {
+        confirmedCandidate
+    }
+
     var canAddProduct: Bool {
-        recognizedProduct != nil
+        confirmedCandidate != nil
+    }
+
+    var canConfirmCandidate: Bool {
+        selectedCandidate != nil && confirmedCandidate == nil
     }
 
     var isShowingPhotoPreview: Bool {
         pendingPhotoData != nil
+    }
+
+    var shoppingContext: ShoppingContext? {
+        guard let confirmedCandidate else {
+            return nil
+        }
+
+        return ShoppingContext(
+            activeShoppingListItems: [
+                ShoppingContextItem(
+                    id: confirmedCandidate.id,
+                    name: confirmedCandidate.name,
+                    productHints: confirmedCandidate.productHints
+                )
+            ],
+            availableProductHints: confirmedCandidate.productHints
+        )
     }
 
     func startCamera() {
@@ -101,6 +140,8 @@ final class CameraViewModel: ObservableObject {
     func capturePhoto() {
         clearRecognition()
         pendingPhotoData = nil
+        pendingPhotoSource = .cameraCapture
+        recognitionPhase = .captured
         statusMessage = "Taking photo..."
 
         cameraService.capturePhoto { [weak self] result in
@@ -112,8 +153,10 @@ final class CameraViewModel: ObservableObject {
                 switch result {
                 case .success(let photo):
                     self.pendingPhotoData = photo.data
+                    self.recognitionPhase = .captured
                     self.statusMessage = "Review your photo before using it."
                 case .failure:
+                    self.recognitionPhase = .failed
                     self.statusMessage = "Photo capture failed. Please try again."
                 }
             }
@@ -123,13 +166,16 @@ final class CameraViewModel: ObservableObject {
     func handleSelectedPhotoData(_ data: Data?) {
         clearRecognition()
         pendingPhotoData = nil
+        pendingPhotoSource = .photoLibrary
 
         guard let data else {
+            recognitionPhase = .failed
             statusMessage = "We could not load that photo. Please choose another one."
             return
         }
 
         pendingPhotoData = data
+        recognitionPhase = .captured
         statusMessage = "Review your photo before using it."
     }
 
@@ -141,13 +187,25 @@ final class CameraViewModel: ObservableObject {
         capturedImageData = pendingPhotoData
         self.pendingPhotoData = nil
         clearRecognition()
-        statusMessage = "Photo captured. Ready for AI recognition."
+        analyzeCapturedPhoto(pendingPhotoData, inputSource: pendingPhotoSource)
+    }
+
+    func confirmSelectedCandidate() {
+        guard let selectedCandidate else {
+            return
+        }
+
+        confirmedCandidate = selectedCandidate
+        recognitionPhase = .confirmation
+        statusMessage = "Product confirmed and ready for your shopping context."
     }
 
     func retakePhoto() {
         pendingPhotoData = nil
         capturedImageData = nil
+        pendingPhotoSource = .cameraCapture
         clearRecognition()
+        recognitionPhase = .idle
         statusMessage = "AI recognition is not available yet."
     }
 
@@ -183,8 +241,32 @@ final class CameraViewModel: ObservableObject {
     func resetCapture() {
         pendingPhotoData = nil
         capturedImageData = nil
+        pendingPhotoSource = .cameraCapture
         clearRecognition()
+        recognitionPhase = .idle
         statusMessage = "AI recognition is not available yet."
+    }
+
+    private func analyzeCapturedPhoto(_ imageData: Data, inputSource: RecognitionInputSource) {
+        recognitionPhase = .analyzing
+        isRecognizing = true
+        statusMessage = "Analyzing photo..."
+
+        Task {
+            let result = await recognitionService.analyzeProduct(from: imageData, inputSource: inputSource)
+            recognitionResult = result
+            selectedCandidate = result.bestCandidate
+            confirmedCandidate = nil
+            isRecognizing = false
+
+            if let selectedCandidate {
+                recognitionPhase = .result
+                statusMessage = "Review \(selectedCandidate.name) before adding it."
+            } else {
+                recognitionPhase = result.status == .failed ? .failed : .unavailable
+                statusMessage = result.message
+            }
+        }
     }
 
     private func requestPhotoLibraryAddPermission() async -> Bool {
@@ -211,7 +293,9 @@ final class CameraViewModel: ObservableObject {
     }
 
     private func clearRecognition() {
-        recognizedProduct = nil
+        recognitionResult = nil
+        selectedCandidate = nil
+        confirmedCandidate = nil
         isRecognizing = false
     }
 }

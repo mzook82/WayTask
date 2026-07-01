@@ -48,7 +48,7 @@ WayTask should help users remember, discover, compare, and make better shopping 
 
 ---
 
-# Camera
+# Camera (10/12 Complete)
 
 - [x] Live Camera Preview *(Sprint 1)*
 - [x] Tap to Focus *(Sprint 1)*
@@ -58,9 +58,10 @@ WayTask should help users remember, discover, compare, and make better shopping 
 - [x] Photo Preview *(Sprint 1.2)*
 - [x] Save to Photos *(Sprint 1.2)*
 - [x] Retake Photo *(Sprint 1.2)*
+- [x] Product Recognition Pipeline *(Sprint 5)*
+- [x] Product Confirmation Flow *(Sprint 5)*
 - [ ] Barcode Scanner
-- [ ] Product Recognition
-- [ ] OCR Text Recognition
+- [ ] Real Product Recognition
 
 ---
 
@@ -78,27 +79,28 @@ WayTask should help users remember, discover, compare, and make better shopping 
 
 ---
 
-# Shopping Intelligence
+# Shopping Intelligence (5/8 Complete)
 
 - [x] Shopping Mission Model *(Sprint 3)*
 - [x] Shopping Context Foundation *(Sprint 3)*
 - [x] Decision Engine Stub *(Sprint 3)*
+- [x] ShoppingContext Bridge *(Sprint 5)*
+- [x] Recognition Pipeline *(Sprint 5)*
 - [ ] Context Analysis
 - [ ] Recommendation Engine
 - [ ] Shopping Memory
-- [ ] Shopping Insights
 
 ---
 
-# AI
+# AI (1/7 Complete)
 
+- [x] AI-ready Recognition Interface *(Sprint 5)*
 - [ ] AI Provider Integration
 - [ ] Product Recognition
 - [ ] AI Skills
 - [ ] Product Suggestions
 - [ ] Recipe Suggestions
 - [ ] Gift Suggestions
-- [ ] Alternative Products
 
 ---
 

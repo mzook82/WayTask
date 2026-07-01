@@ -1,15 +1,16 @@
 import Foundation
 
-struct ProductRecognitionResult: Equatable {
-    let name: String
-}
-
 protocol ProductRecognitionServicing {
-    func recognizeProduct(from imageData: Data) async throws -> ProductRecognitionResult?
+    func analyzeProduct(from imageData: Data, inputSource: RecognitionInputSource) async -> RecognitionResult
 }
 
 struct ProductRecognitionService: ProductRecognitionServicing {
-    func recognizeProduct(from imageData: Data) async throws -> ProductRecognitionResult? {
-        nil
+    func analyzeProduct(from imageData: Data, inputSource: RecognitionInputSource) async -> RecognitionResult {
+        RecognitionResult(
+            status: .unavailable,
+            candidates: [],
+            message: "AI recognition is not available yet.",
+            inputSource: inputSource
+        )
     }
 }

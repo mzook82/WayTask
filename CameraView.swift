@@ -239,7 +239,12 @@ struct CameraView: View {
                 captureControls
             }
 
-            if viewModel.recognizedProduct == nil {
+            if viewModel.canConfirmCandidate,
+               let candidate = viewModel.selectedCandidate {
+                confirmationControls(candidate)
+            }
+
+            if viewModel.recognizedProduct == nil && viewModel.selectedCandidate == nil {
                 aiUnavailableMessage
             }
 
@@ -329,6 +334,23 @@ struct CameraView: View {
         }
     }
 
+    private func confirmationControls(_ candidate: ProductCandidate) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Confirm result")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(WayTaskDesign.secondaryText)
+                .textCase(.uppercase)
+
+            Button {
+                viewModel.confirmSelectedCandidate()
+            } label: {
+                Label("Use \(candidate.name)", systemImage: "checkmark.seal.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 52, cornerRadius: 16, shadow: true))
+        }
+    }
+
     private var aiUnavailableMessage: some View {
         HStack(spacing: 10) {
             Image(systemName: "sparkles")
@@ -359,7 +381,7 @@ struct CameraView: View {
         }
     }
 
-    private func recognizedProductCard(_ product: ProductRecognitionResult) -> some View {
+    private func recognizedProductCard(_ product: ProductCandidate) -> some View {
         HStack(spacing: 12) {
             WayTaskProductThumbnail(data: viewModel.capturedImageData, size: 58)
 
@@ -413,7 +435,7 @@ struct CameraView: View {
         }
     }
 
-    private func addRecognizedProduct(_ product: ProductRecognitionResult) {
+    private func addRecognizedProduct(_ product: ProductCandidate) {
         let item = ShoppingItem(
             name: product.name,
             imageData: viewModel.capturedImageData
