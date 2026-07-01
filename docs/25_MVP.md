@@ -2,28 +2,46 @@
 
 **Project:** WayTask
 
-**Version:** 0.1
+**Version:** 0.2
 
 **Status:** In Progress
 
-**Target:** MVP
+**Target:** MVP 1.0
 
-**Last Updated:** June 30, 2026
+**Last Updated:** July 2026
 
 ---
 
 # MVP Goal
 
-Deliver the first production-ready version of WayTask that provides real value through shopping lists, location awareness, camera functionality, and intelligent shopping assistance.
+Build the first production-ready version of WayTask that acts as a personal shopping companion.
+
+WayTask should help users remember, discover, compare, and make better shopping decisions with the least possible effort.
+
+---
+
+# Current MVP Progress
+
+| Area | Progress |
+|------|----------|
+| Shopping | ✅ 80% |
+| Camera | ✅ 90% |
+| Map | ✅ 90% |
+| Shopping Intelligence | ✅ 30% |
+| AI | ⏳ 5% |
+| Notifications | ⏳ 0% |
+| Discover | ⏳ 0% |
+| Settings | ⏳ 10% |
+| Onboarding | ⏳ 0% |
 
 ---
 
 # Shopping
 
-- [x] Product List
-- [x] Add Products
-- [x] Edit Products
-- [x] Delete Products
+- [x] Product List *(Sprint 1)*
+- [x] Add Products *(Sprint 1)*
+- [x] Edit Products *(Sprint 1)*
+- [x] Delete Products *(Sprint 1)*
 - [ ] Product Categories
 - [ ] Favorites
 - [ ] Search Products
@@ -32,14 +50,14 @@ Deliver the first production-ready version of WayTask that provides real value t
 
 # Camera
 
-- [x] Live Camera Preview
-- [x] Tap to Focus
-- [x] Pinch to Zoom
-- [x] Flash Control
-- [x] Photo Library Import
-- [x] Photo Preview
-- [x] Save to Photos
-- [x] Retake Photo
+- [x] Live Camera Preview *(Sprint 1)*
+- [x] Tap to Focus *(Sprint 1)*
+- [x] Pinch to Zoom *(Sprint 1)*
+- [x] Flash Control *(Sprint 1)*
+- [x] Photo Library Import *(Sprint 1.1)*
+- [x] Photo Preview *(Sprint 1.2)*
+- [x] Save to Photos *(Sprint 1.2)*
+- [x] Retake Photo *(Sprint 1.2)*
 - [ ] Barcode Scanner
 - [ ] Product Recognition
 - [ ] OCR Text Recognition
@@ -48,63 +66,70 @@ Deliver the first production-ready version of WayTask that provides real value t
 
 # Map
 
-- [x] User Location
-- [x] Follow User
-- [x] Store Pins
-- [x] Bottom Sheet
-- [x] Apple Maps Navigation
-- [x] Store Search
+- [x] User Location *(Sprint 2)*
+- [x] Follow User *(Sprint 2A)*
+- [x] Store Pins *(Sprint 2A)*
+- [x] Bottom Sheet *(Sprint 2A)*
+- [x] Apple Maps Navigation *(Sprint 2A)*
+- [x] Store Search *(Sprint 2A)*
 - [ ] Discover Layer
 - [ ] Product Pins
 - [ ] Smart Filters
 
 ---
 
-# AI
+# Shopping Intelligence
 
-- [ ] AI Foundation
-- [ ] Product Recognition
+- [x] Shopping Mission Model *(Sprint 3)*
+- [x] Shopping Context Foundation *(Sprint 3)*
+- [x] Decision Engine Stub *(Sprint 3)*
+- [ ] Context Analysis
 - [ ] Recommendation Engine
-- [ ] Context Engine
-- [ ] AI Skills
 - [ ] Shopping Memory
+- [ ] Shopping Insights
 
 ---
 
-# Notifications
+# AI
 
-- [ ] Nearby Store Alerts
-- [ ] Shopping Reminders
-- [ ] Missed Opportunities
-- [ ] Smart Suggestions
+- [ ] AI Provider Integration
+- [ ] Product Recognition
+- [ ] AI Skills
+- [ ] Product Suggestions
+- [ ] Recipe Suggestions
+- [ ] Gift Suggestions
+- [ ] Alternative Products
 
 ---
 
 # Discover
 
 - [ ] Nearby Stores
-- [ ] Restaurants
+- [ ] Nearby Restaurants
 - [ ] Coffee Shops
 - [ ] Trending Places
 - [ ] New Stores
+- [ ] Nearby Deals
+- [ ] Personalized Discover
 
 ---
 
-# User Profile
+# Notifications
 
-- [ ] Interests
-- [ ] Preferences
-- [ ] Favorite Stores
-- [ ] Shopping History
+- [ ] Nearby Product Alerts
+- [ ] Shopping Reminders
+- [ ] Missed Opportunities
+- [ ] Smart Suggestions
 
 ---
 
 # Settings
 
-- [ ] Permissions
-- [ ] Notification Settings
+- [ ] Interests
+- [ ] Favorite Stores
 - [ ] Privacy Settings
-- [ ] AI Settings
+- [ ] Notification Settings
+- [ ] AI Preferences
 
 ---
 
@@ -112,8 +137,25 @@ Deliver the first production-ready version of WayTask that provides real value t
 
 - [ ] Welcome Screen
 - [ ] Interest Selection
+- [ ] Shopping Preferences
+- [ ] Favorite Store Selection
 - [ ] Permissions
 - [ ] Finish Setup
+
+---
+
+# Future Shopping Intelligence
+
+These features are intentionally planned after the MVP.
+
+- [ ] Price Comparison
+- [ ] Online Store Suggestions
+- [ ] Cheapest Nearby Store
+- [ ] Shopping Route Optimization
+- [ ] Indoor Mall Navigation
+- [ ] Shopping Budget Assistant
+- [ ] Shared Family Shopping
+- [ ] Loyalty Card Integration
 
 ---
 
@@ -122,17 +164,26 @@ Deliver the first production-ready version of WayTask that provides real value t
 The MVP will be considered complete when a user can:
 
 - [ ] Create a shopping list.
-- [ ] Receive nearby shopping suggestions.
-- [ ] Open the map.
-- [ ] Navigate to a store.
-- [ ] Capture or import a product image.
-- [ ] Receive AI-powered product suggestions.
-- [ ] Complete a shopping trip successfully.
+- [ ] Add products manually.
+- [ ] Capture or import a product photo.
+- [ ] Receive nearby store suggestions.
+- [ ] View stores on the map.
+- [ ] Navigate to a selected store.
+- [ ] Receive intelligent shopping recommendations.
+- [ ] Complete a shopping trip with WayTask assistance.
 
 ---
 
-# Current Progress
+# Notes
 
-Foundation Progress:
+WayTask is not a shopping list application.
 
-████████░░ 80%
+WayTask is a Personal Shopping Companion.
+
+Every feature must:
+
+- Solve a real user problem.
+- Reduce shopping effort.
+- Respect user privacy.
+- Be simple to use.
+- Support the long-term product vision.
