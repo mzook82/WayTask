@@ -290,3 +290,37 @@ Differentiate trip planning from standard product navigation.
 
 **Status**
 Completed
+
+## Sprint 16 – Shopping Mode
+
+### Goal
+
+Introduce an in-store shopping mode that guides users through their shopping list while they are actively shopping.
+
+### User Value
+
+Users can start a shopping session, track their progress, mark items as collected, and complete the session.
+
+### Completed
+
+- ShoppingSession SwiftData model
+- ShoppingSessionService
+- Start Shopping
+- Active Shopping Mode
+- Progress indicator
+- Collected / Remaining counter
+- Checklist interaction
+- Finish Shopping action
+
+### Out of Scope
+
+- AI assistance
+- Indoor navigation
+- Route optimization
+- Permanent purchase history
+
+### Result
+
+Build completed successfully.
+
+**Status:** ✅ Completed

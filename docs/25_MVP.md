@@ -45,7 +45,8 @@ WayTask should help users remember, discover, compare, and make better shopping 
 - [x] Delete Products *(Sprint 1)*
 - [x] Shopping Memory *(Sprint 13)*
 - [x] Shopping Trip Planner *(Sprint 15)*
-- [x] Trip Coverage *(Sprint 15)*
+- [x] Shopping Mode *(Sprint 16)*
+- [x] Shopping Session *(Sprint 16)*
 - [ ] Product Categories
 - [ ] Favorites
 - [ ] Search Products

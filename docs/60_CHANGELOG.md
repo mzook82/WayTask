@@ -283,3 +283,34 @@ WayTask highlights the best nearby store for the current shopping trip and displ
 Trip planning currently uses local store data and heuristic coverage estimation.
 
 Future versions will support real retailer inventories, multi-stop trips, route optimization, and AI-assisted planning.
+
+# Version 1.6 Beta
+
+## Sprint
+
+Sprint 16 – Shopping Mode
+
+## Added
+
+- ShoppingSession model
+- ShoppingSessionService
+- Shopping Mode
+- Shopping progress tracking
+- Session persistence
+- Start / Finish Shopping
+
+## Improved
+
+- Shopping experience
+- In-store workflow
+- Session architecture
+
+## User Value Added
+
+WayTask now assists users during shopping by tracking collected items, remaining items, and overall shopping progress.
+
+## Notes
+
+Shopping sessions are persisted using SwiftData.
+
+Future versions will include shopping history, indoor navigation, smart reminders, and AI shopping assistance.

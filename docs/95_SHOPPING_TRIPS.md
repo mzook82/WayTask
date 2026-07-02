@@ -20,3 +20,39 @@ WayTask can now:
 - Live inventory
 - Price-aware trip planning
 - AI trip optimization
+
+## Shopping Mode Integration
+
+Shopping Trip Planning now connects directly with Shopping Mode.
+
+Current flow:
+
+Shopping List
+
+↓
+
+Shopping Trip Planner
+
+↓
+
+Best Store Recommendation
+
+↓
+
+Trip Map Mode
+
+↓
+
+Shopping Mode
+
+↓
+
+Finish Shopping
+
+Future extensions:
+
+- Multi-store trips
+- Indoor navigation
+- Purchase confirmation
+- Smart reminders
+- AI shopping assistant
