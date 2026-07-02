@@ -252,3 +252,34 @@ WayTask now remembers shopping history and prepares future shopping habit featur
 ## Notes
 
 No user-facing interface yet.
+
+# Version 1.5
+
+## Added
+
+- ShoppingTripService
+- StoreCoverage
+- Shopping Trip Planner
+- Shopping Trip card
+- Trip Map Mode
+- Trip coverage calculation
+- Coverage-based store ranking
+
+## Improved
+
+- Buying Options experience
+- Map experience
+- Store recommendation flow
+- Shopping trip planning
+
+## User Value Added
+
+Users can now receive recommendations based on their entire shopping list instead of evaluating products one by one.
+
+WayTask highlights the best nearby store for the current shopping trip and displays shopping coverage before navigation.
+
+## Notes
+
+Trip planning currently uses local store data and heuristic coverage estimation.
+
+Future versions will support real retailer inventories, multi-stop trips, route optimization, and AI-assisted planning.

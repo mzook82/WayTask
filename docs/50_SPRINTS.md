@@ -239,3 +239,54 @@ Persist shopping history and prepare future shopping habit analysis.
 - AI
 
 Status: ✅ Completed
+
+### Sprint 15 – Shopping Trip Planner Foundation ✅
+
+**Goal**
+Create the foundation for planning an entire shopping trip instead of recommending stores for individual products.
+
+**Completed**
+- StoreCoverage model
+- ShoppingTripService
+- Coverage calculation
+- Coverage-based ranking
+- Integration with StoreRankingService
+- AI-independent architecture
+
+**User Value**
+WayTask can now evaluate stores based on how many shopping-list items they are likely to satisfy.
+
+**Status**
+Completed
+
+### Sprint 15.1 – Shopping Trip UI ✅
+
+**Goal**
+Expose Shopping Trip planning to users.
+
+**Completed**
+- Shopping Trip card
+- Coverage summary
+- Matched items
+- Missing items
+- Trip recommendation reasons
+- View Trip on Map action
+
+**Status**
+Completed
+
+### Sprint 15.2 – Trip Map Mode ✅
+
+**Goal**
+Differentiate trip planning from standard product navigation.
+
+**Completed**
+- Trip map mode
+- Best trip store selection
+- Trip context banner
+- Trip bottom sheet
+- Coverage indicator on map
+- Dedicated View Trip on Map flow
+
+**Status**
+Completed

@@ -43,6 +43,9 @@ WayTask should help users remember, discover, compare, and make better shopping 
 - [x] Add Products *(Sprint 1)*
 - [x] Edit Products *(Sprint 1)*
 - [x] Delete Products *(Sprint 1)*
+- [x] Shopping Memory *(Sprint 13)*
+- [x] Shopping Trip Planner *(Sprint 15)*
+- [x] Trip Coverage *(Sprint 15)*
 - [ ] Product Categories
 - [ ] Favorites
 - [ ] Search Products
@@ -69,7 +72,7 @@ WayTask should help users remember, discover, compare, and make better shopping 
 
 ---
 
-# Map (8/10 Complete)
+# Map (10/13 Complete)
 
 - [x] Nearby Stores
 - [x] Product Store Suggestions *(Sprint 10)*
@@ -84,6 +87,10 @@ WayTask should help users remember, discover, compare, and make better shopping 
 - [x] Buying Options UI *(Sprint 11.1)*
 - [x] Store Ranking Reasons *(Sprint 12)*
 - [x] View on Map from Buying Options *(Sprint 11.1)*
+- [x] Shopping Trip Planner *(Sprint 15)*
+- [x] Trip Coverage Visualization *(Sprint 15.1)*
+- [x] Trip Map Mode *(Sprint 15.2)*
+
 ---
 
 # Shopping Intelligence (10/12 Complete)
