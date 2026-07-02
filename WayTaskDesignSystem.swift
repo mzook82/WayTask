@@ -163,8 +163,8 @@ struct WayTaskPrimaryPillButtonStyle: ButtonStyle {
             .font(.subheadline.weight(.bold))
             .foregroundStyle(.white)
             .padding(.horizontal, 14)
-            .frame(maxWidth: height == nil ? nil : .infinity)
-            .frame(minHeight: height ?? 44)
+            .frame(maxWidth: height == nil ? nil : .infinity, alignment: .center)
+            .frame(minHeight: height ?? 44, alignment: .center)
             .background {
                 WayTaskDesign.accentGradient
                     .opacity(configuration.isPressed ? 0.72 : 1)

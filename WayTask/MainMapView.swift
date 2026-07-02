@@ -53,6 +53,7 @@ struct MainMapView: View {
                 startMonitoringSavedLocations()
                 mapViewModel.update(locations: locations)
                 focusSelectedLocation()
+                applyStoreSuggestion()
             }
             .onChange(of: mapSignatures) {
                 startMonitoringSavedLocations()
@@ -60,6 +61,9 @@ struct MainMapView: View {
             }
             .onChange(of: appStateManager.focusedLocationID) {
                 focusSelectedLocation()
+            }
+            .onChange(of: appStateManager.storeSuggestionRequest) {
+                applyStoreSuggestion()
             }
         }
     }
@@ -228,6 +232,14 @@ struct MainMapView: View {
 
         mapViewModel.update(locations: locations)
         mapViewModel.focusStore(id: focusedLocationID)
+    }
+
+    private func applyStoreSuggestion() {
+        guard let request = appStateManager.storeSuggestionRequest else {
+            return
+        }
+
+        mapViewModel.applyStoreSuggestion(request)
     }
 
     private func selectStore(_ storeID: UUID) {

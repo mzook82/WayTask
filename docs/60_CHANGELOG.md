@@ -167,3 +167,37 @@ Users can now scan a real product barcode and retrieve accurate product informat
 Open Food Facts is the first production product provider.
 
 Future releases will add additional providers, retail APIs, and price comparison services.
+
+# Version 1.0 Beta
+
+**Date:** July 2026
+
+**Status:** Beta
+
+## Sprint
+
+Sprint 10 – Smart Store Suggestions
+
+## Added
+
+- Shopping Intent Matcher
+- Store category matching
+- Product-to-store recommendations
+- Shopping List integration
+- Map suggestion workflow
+
+## Improved
+
+- Product shopping flow
+- Map intelligence
+- Store recommendation architecture
+
+## User Value Added
+
+Users can now scan a product, add it to their shopping list, and immediately receive suggestions for nearby stores that are likely to sell it.
+
+## Notes
+
+Current recommendations are category-based.
+
+Future versions will add live inventory, price comparison, and AI-assisted recommendations.

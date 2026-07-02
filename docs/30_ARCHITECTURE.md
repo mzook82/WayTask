@@ -358,3 +358,38 @@ These improvements should be added gradually and only when they support the MVP 
 - docs/20_ROADMAP.md
 - docs/40_AI_ROADMAP.md
 - docs/70_DEVELOPMENT_GUIDE.md
+
+# Shopping Intelligence Layer
+
+WayTask now includes a dedicated Shopping Intelligence layer.
+
+Flow:
+
+Camera
+↓
+
+Recognition
+
+↓
+
+Product Provider
+
+↓
+
+Shopping List
+
+↓
+
+Shopping Intent
+
+↓
+
+Store Search
+
+↓
+
+Map
+
+↓
+
+Future AI

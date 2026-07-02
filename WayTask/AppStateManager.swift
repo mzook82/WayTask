@@ -23,6 +23,7 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     @Published var focusedLocationID: UUID?
     @Published var shoppingListRevision = UUID()
     @Published var recentlyAddedShoppingItemID: UUID?
+    @Published var storeSuggestionRequest: ShoppingStoreSuggestionRequest?
 
     override init() {
         super.init()
@@ -37,6 +38,12 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     func shoppingListDidChange(revealing itemID: UUID? = nil) {
         recentlyAddedShoppingItemID = itemID
         shoppingListRevision = UUID()
+    }
+
+    func suggestStores(for request: ShoppingStoreSuggestionRequest) {
+        navigationPath = NavigationPath()
+        storeSuggestionRequest = request
+        selectedTab = .map
     }
 
     func userNotificationCenter(

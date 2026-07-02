@@ -16,6 +16,7 @@ struct ProductListView: View {
     @State private var selectedImageData: Data?
     @State private var suggestionItem: ShoppingItem?
     private let shoppingListService = ShoppingListService()
+    private let shoppingIntentMatcher = ShoppingIntentMatcher()
     @State private var suggestions: [MKMapItem] = []
     @State private var isSearchingSuggestions = false
     @State private var searchText = ""
@@ -106,7 +107,7 @@ struct ProductListView: View {
                 .disabled(newItemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
-        .padding(14)
+        .padding(16)
         .wayTaskCard()
     }
 
@@ -345,27 +346,8 @@ struct ProductListView: View {
     }
 
     private func findSuggestions(for item: ShoppingItem) {
-        suggestionItem = item
-        suggestions = []
-        isSearchingSuggestions = true
-
-        Task {
-            let request = MKLocalSearch.Request()
-            request.naturalLanguageQuery = item.name
-            request.resultTypes = [.pointOfInterest]
-            request.region = MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: 32.0853, longitude: 34.7818),
-                span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2)
-            )
-
-            let response = try? await MKLocalSearch(request: request).start()
-            let mapItems = response?.mapItems ?? []
-
-            await MainActor.run {
-                suggestions = Array(mapItems.prefix(8))
-                isSearchingSuggestions = false
-            }
-        }
+        let request = shoppingIntentMatcher.suggestionRequest(for: item)
+        appStateManager.suggestStores(for: request)
     }
 
     private func assign(_ item: ShoppingItem, to mapItem: MKMapItem) {
@@ -416,16 +398,23 @@ private struct ProductRowCard: View {
     let onOpenMap: (GeoLocation) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                WayTaskProductThumbnail(data: item.imageData)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 14) {
+                WayTaskProductThumbnail(data: item.imageData, size: 72, cornerRadius: 17)
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 5) {
                     Text(item.name)
                         .font(.headline)
                         .foregroundStyle(WayTaskDesign.primaryText)
                         .strikethrough(item.isCompleted)
                         .lineLimit(2)
+
+                    if let brand = item.brand?.trimmingCharacters(in: .whitespacesAndNewlines), !brand.isEmpty {
+                        Text(brand)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(WayTaskDesign.secondaryText)
+                            .lineLimit(1)
+                    }
 
                     if let location {
                         Label(location.title, systemImage: "mappin.and.ellipse")
@@ -455,6 +444,7 @@ private struct ProductRowCard: View {
             HStack(spacing: 10) {
                 Button(action: onSuggest) {
                     Label("Suggest Places", systemImage: "sparkle.magnifyingglass")
+                        .frame(maxWidth: location == nil ? .infinity : nil)
                 }
                 .buttonStyle(WayTaskSecondaryPillButtonStyle())
 
@@ -463,12 +453,13 @@ private struct ProductRowCard: View {
                         onOpenMap(location)
                     } label: {
                         Label("Map", systemImage: "map")
+                            .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(WayTaskSecondaryPillButtonStyle())
                 }
             }
         }
-        .padding(14)
+        .padding(16)
         .wayTaskCard()
     }
 }

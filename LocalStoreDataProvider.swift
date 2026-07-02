@@ -13,8 +13,20 @@ struct LocalStoreDataProvider: StoreDataProvider {
         return localStores(around: coordinate, shoppingItems: request.shoppingItems)
     }
 
-    func localStores(around coordinate: CLLocationCoordinate2D, shoppingItems: [String]) -> [MapStore] {
+    func localStores(
+        around coordinate: CLLocationCoordinate2D,
+        shoppingItems: [String],
+        storeCategories: [ShoppingStoreCategory] = []
+    ) -> [MapStore] {
         let activeItems = shoppingItems.isEmpty ? ["Shopping list"] : shoppingItems
+
+        if !storeCategories.isEmpty {
+            return categoryStores(
+                around: coordinate,
+                shoppingItems: activeItems,
+                storeCategories: storeCategories
+            )
+        }
 
         return [
             makeStore(
@@ -45,6 +57,29 @@ struct LocalStoreDataProvider: StoreDataProvider {
                 websiteURL: nil
             )
         ]
+    }
+
+    private func categoryStores(
+        around coordinate: CLLocationCoordinate2D,
+        shoppingItems: [String],
+        storeCategories: [ShoppingStoreCategory]
+    ) -> [MapStore] {
+        storeCategories.enumerated().map { index, category in
+            let offsetStep = Double(index + 1)
+            return makeStore(
+                id: UUID(uuidString: "20000000-0000-0000-0000-\(String(format: "%012d", index + 1))") ?? UUID(),
+                title: category.sampleStoreName,
+                coordinate: offset(
+                    coordinate,
+                    latitude: 0.0016 * offsetStep,
+                    longitude: index.isMultiple(of: 2) ? 0.0021 : -0.0021
+                ),
+                itemNames: shoppingItems,
+                radius: 180,
+                rating: 4.5 + min(Double(index) * 0.1, 0.3),
+                websiteURL: URL(string: "https://maps.apple.com")
+            )
+        }
     }
 
     private func makeStore(

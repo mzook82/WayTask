@@ -232,49 +232,46 @@ struct CameraView: View {
         viewModel.barcodeResult != nil || viewModel.confirmedBarcodeResult != nil
     }
 
+    private var displayedProduct: ProductCandidate? {
+        viewModel.recognizedProduct ?? viewModel.selectedCandidate
+    }
+
+    private var currentBarcodeResult: BarcodeResult? {
+        viewModel.confirmedBarcodeResult ?? viewModel.barcodeResult
+    }
+
+    private var isShowingProductResult: Bool {
+        displayedProduct != nil
+    }
+
     private var actionPanel: some View {
-        VStack(spacing: isShowingBarcodeResult ? 10 : 16) {
-            if let product = viewModel.recognizedProduct ?? viewModel.selectedCandidate {
+        VStack(spacing: isShowingBarcodeResult || isShowingProductResult ? 10 : 16) {
+            if let product = displayedProduct {
                 recognizedProductCard(product)
-            }
-
-            if let barcode = viewModel.barcodeResult ?? viewModel.confirmedBarcodeResult {
-                barcodeResultCard(barcode)
-            }
-
-            if viewModel.isShowingPhotoPreview {
-                photoReviewControls
+                productResultControls(product)
             } else {
-                captureControls
-            }
-
-            if viewModel.canConfirmCandidate,
-               let candidate = viewModel.selectedCandidate {
-                confirmationControls(candidate)
-            }
-
-            if viewModel.barcodeResult != nil || viewModel.confirmedBarcodeResult != nil {
-                barcodeControls
-            }
-
-            if viewModel.selectedMode != .barcode && viewModel.recognizedProduct == nil && viewModel.selectedCandidate == nil {
-                aiUnavailableMessage
-            }
-
-            if viewModel.canAddProduct,
-               let product = viewModel.recognizedProduct {
-                Button {
-                    addRecognizedProduct(product)
-                } label: {
-                    Label("Add to List", systemImage: "plus.circle.fill")
-                        .frame(maxWidth: .infinity)
+                if let barcode = viewModel.barcodeResult ?? viewModel.confirmedBarcodeResult {
+                    barcodeResultCard(barcode)
                 }
-                .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 56, cornerRadius: 18, shadow: true))
+
+                if viewModel.isShowingPhotoPreview {
+                    photoReviewControls
+                } else {
+                    captureControls
+                }
+
+                if viewModel.barcodeResult != nil || viewModel.confirmedBarcodeResult != nil {
+                    barcodeControls
+                }
+
+                if viewModel.selectedMode != .barcode {
+                    aiUnavailableMessage
+                }
             }
         }
-        .padding(.horizontal, isShowingBarcodeResult ? 16 : 20)
-        .padding(.top, isShowingBarcodeResult ? 12 : 20)
-        .padding(.bottom, isShowingBarcodeResult ? 14 : 20)
+        .padding(.horizontal, isShowingBarcodeResult || isShowingProductResult ? 16 : 20)
+        .padding(.top, isShowingBarcodeResult || isShowingProductResult ? 12 : 20)
+        .padding(.bottom, isShowingBarcodeResult || isShowingProductResult ? 16 : 20)
         .background(.black.opacity(0.42))
         .overlay(alignment: .top) {
             Rectangle()
@@ -285,7 +282,9 @@ struct CameraView: View {
 
     @ViewBuilder
     private var captureControls: some View {
-        if isShowingBarcodeResult {
+        if isShowingProductResult {
+            EmptyView()
+        } else if isShowingBarcodeResult {
             compactBarcodeCameraState
         } else {
             HStack(spacing: 12) {
@@ -374,21 +373,40 @@ struct CameraView: View {
         }
     }
 
-    private func confirmationControls(_ candidate: ProductCandidate) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Confirm result")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(WayTaskDesign.secondaryText)
-                .textCase(.uppercase)
+    private func productResultControls(_ product: ProductCandidate) -> some View {
+        HStack(spacing: 12) {
+            if viewModel.canAddProduct {
+                Button {
+                    addRecognizedProduct(product)
+                } label: {
+                    centeredCTAContent(title: "Add to Shopping List", systemName: "plus.circle.fill")
+                }
+                .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 50, cornerRadius: 16, shadow: true))
+            } else if viewModel.canConfirmCandidate {
+                Button {
+                    viewModel.confirmSelectedCandidate()
+                } label: {
+                    centeredCTAContent(title: "Use Product", systemName: "checkmark.seal.fill")
+                }
+                .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 50, cornerRadius: 16, shadow: true))
+            }
 
             Button {
-                viewModel.confirmSelectedCandidate()
+                viewModel.scanAgain()
             } label: {
-                Label("Use \(candidate.name)", systemImage: "checkmark.seal.fill")
+                Label("Scan Again", systemImage: "barcode.viewfinder")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 52, cornerRadius: 16, shadow: true))
+            .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 50, cornerRadius: 16))
         }
+    }
+
+    private func centeredCTAContent(title: String, systemName: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemName)
+            Text(title)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private var barcodeControls: some View {
@@ -489,29 +507,45 @@ struct CameraView: View {
     }
 
     private func recognizedProductCard(_ product: ProductCandidate) -> some View {
-        HStack(spacing: 12) {
-            WayTaskProductThumbnail(data: product.imageData ?? viewModel.capturedImageData, size: 58)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                WayTaskProductThumbnail(data: product.imageData ?? viewModel.capturedImageData, size: 76, cornerRadius: 18)
 
-            VStack(alignment: .leading, spacing: 5) {
-                Text(product.name)
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(WayTaskDesign.primaryText)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 5) {
+                    Label("Product Found", systemImage: "checkmark.seal.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(WayTaskDesign.accent)
+                        .lineLimit(1)
 
-                if let brand = product.brand {
-                    Text(brand)
+                    Text(product.name)
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(WayTaskDesign.primaryText)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+
+                    productDetailLine(product)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            if let barcodeLine = barcodeDetailLine(for: product) {
+                HStack(spacing: 8) {
+                    Image(systemName: "barcode")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(WayTaskDesign.accent)
+
+                    Text(barcodeLine)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(WayTaskDesign.secondaryText)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                 }
-
-                Label(product.category ?? "Product found", systemImage: "checkmark.seal.fill")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(WayTaskDesign.accent)
-                    .lineLimit(1)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(WayTaskDesign.surfaceElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
-
-            Spacer()
         }
         .padding(14)
         .background(WayTaskDesign.accent.opacity(0.12))
@@ -520,6 +554,34 @@ struct CameraView: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(WayTaskDesign.accent.opacity(0.24), lineWidth: 1)
         }
+    }
+
+    @ViewBuilder
+    private func productDetailLine(_ product: ProductCandidate) -> some View {
+        let details = [product.brand, product.category]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        if details.isEmpty {
+            Text("Review and add this product.")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(WayTaskDesign.secondaryText)
+                .lineLimit(1)
+        } else {
+            Text(details.joined(separator: " / "))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(WayTaskDesign.secondaryText)
+                .lineLimit(2)
+        }
+    }
+
+    private func barcodeDetailLine(for product: ProductCandidate) -> String? {
+        guard let barcode = product.barcode ?? currentBarcodeResult?.value else {
+            return nil
+        }
+
+        let type = currentBarcodeResult?.type.displayName ?? "Barcode"
+        return "\(type) / \(barcode)"
     }
 
     private func showFocusIndicator(at point: CGPoint) {

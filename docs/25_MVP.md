@@ -24,13 +24,13 @@ WayTask should help users remember, discover, compare, and make better shopping 
 
 | Area | Progress |
 |------|----------|
-| Shopping | ✅ 80% |
+| Shopping | ✅ 90% |
 | Camera | ✅ 98% |
-| Map | ✅ 90% |
-| Shopping Intelligence | ✅ 80% |
+| Map | ✅ 95% |
+| Shopping Intelligence | ✅ 90% |
 | Data Providers | ✅ 100% |
 | AI | ⏳ 10% |
-| Discover | ✅ 40% |
+| Discover | ✅ 60% |
 | Notifications | ⏳ 0% |
 | Settings | ⏳ 10% |
 | Onboarding | ⏳ 0% |
@@ -69,21 +69,23 @@ WayTask should help users remember, discover, compare, and make better shopping 
 
 ---
 
-# Map
+# Map (8/10 Complete)
 
-- [x] User Location *(Sprint 2)*
-- [x] Follow User *(Sprint 2A)*
-- [x] Store Pins *(Sprint 2A)*
-- [x] Bottom Sheet *(Sprint 2A)*
-- [x] Apple Maps Navigation *(Sprint 2A)*
-- [x] Store Search *(Sprint 2A)*
-- [ ] Discover Layer
-- [ ] Product Pins
-- [ ] Smart Filters
+- [x] Nearby Stores
+- [x] Product Store Suggestions *(Sprint 10)*
+- [x] Store Categories
+- [x] Navigation
+- [x] Map Markers
+- [x] Store Cards
+- [x] Shopping Intent Integration *(Sprint 10)*
+- [ ] Indoor Navigation
+- [ ] Live Store Availability
+- [ ] Price Comparison
+- [ ] Store Ranking
 
 ---
 
-# Shopping Intelligence (8/10 Complete)
+# Shopping Intelligence (10/12 Complete)
 
 - [x] Shopping Mission Model *(Sprint 3)*
 - [x] Shopping Context Foundation *(Sprint 3)*
@@ -93,8 +95,10 @@ WayTask should help users remember, discover, compare, and make better shopping 
 - [x] Data Provider Architecture *(Sprint 6)*
 - [x] Provider Abstraction Layer *(Sprint 6)*
 - [x] Real Product Provider *(Sprint 8)*
-- [ ] Context Analysis
-- [ ] Recommendation Engine
+- [x] Smart Store Suggestions *(Sprint 10)*
+- [x] Shopping Intent Matching *(Sprint 10)*
+- [ ] Personalized Recommendations
+- [ ] Shopping Memory
 
 ---
 
@@ -234,6 +238,14 @@ The MVP will be considered complete when a user can:
 - Brand support
 - Category support
 - Provider-based product lookup
+
+## Sprint 10
+
+- Shopping Intent Matcher
+- Store category matching
+- Suggest Places integration
+- Shopping List to Map flow
+- Nearby store suggestions
 
 ---
 

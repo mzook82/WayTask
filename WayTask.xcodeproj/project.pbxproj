@@ -38,6 +38,7 @@
 		D1954E122FF6559B00E946DA /* OpenFoodFactsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E112FF6559B00E946DA /* OpenFoodFactsProvider.swift */; };
 		D1954E142FF6590000E946DA /* ProductSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E132FF6590000E946DA /* ProductSource.swift */; };
 		D1954E162FF6590100E946DA /* ShoppingListService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E152FF6590100E946DA /* ShoppingListService.swift */; };
+		D1954E182FF678CF00E946DA /* ShoppingIntentMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E172FF678CF00E946DA /* ShoppingIntentMatcher.swift */; };
 		D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B8519A2FF18FF50083B34C /* ProductListView.swift */; };
 /* End PBXBuildFile section */
 
@@ -73,6 +74,7 @@
 		D1954E112FF6559B00E946DA /* OpenFoodFactsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenFoodFactsProvider.swift; sourceTree = "<group>"; };
 		D1954E132FF6590000E946DA /* ProductSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductSource.swift; sourceTree = "<group>"; };
 		D1954E152FF6590100E946DA /* ShoppingListService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListService.swift; sourceTree = "<group>"; };
+		D1954E172FF678CF00E946DA /* ShoppingIntentMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingIntentMatcher.swift; sourceTree = "<group>"; };
 		D1B8517E2FEFF2F40083B34C /* WayTask.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WayTask.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1B8519A2FF18FF50083B34C /* ProductListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -146,6 +148,7 @@
 				D1954E112FF6559B00E946DA /* OpenFoodFactsProvider.swift */,
 				D1954E132FF6590000E946DA /* ProductSource.swift */,
 				D1954E152FF6590100E946DA /* ShoppingListService.swift */,
+				D1954E172FF678CF00E946DA /* ShoppingIntentMatcher.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -260,6 +263,7 @@
 				D11995CB2FF399E100C9EAF2 /* CameraViewModel.swift in Sources */,
 				D1954DF22FF3C45B00E946DA /* MapBottomSheet.swift in Sources */,
 				D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */,
+				D1954E182FF678CF00E946DA /* ShoppingIntentMatcher.swift in Sources */,
 				D1954DF62FF59EE800E946DA /* ShoppingMission.swift in Sources */,
 				D1954E122FF6559B00E946DA /* OpenFoodFactsProvider.swift in Sources */,
 				D1954DF42FF3CCF800E946DA /* StoreSearchService.swift in Sources */,

@@ -395,7 +395,7 @@ final class CameraViewModel: ObservableObject {
                 selectedCandidate = candidate
                 confirmedCandidate = nil
                 recognitionPhase = .result
-                statusMessage = "Product found. Review before adding it."
+                statusMessage = "Review and add this product."
             } catch {
                 isRecognizing = false
                 recognitionResult = RecognitionResult(

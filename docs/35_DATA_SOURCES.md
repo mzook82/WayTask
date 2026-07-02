@@ -62,3 +62,24 @@ The provider foundation is designed to support later features without coupling U
 ## Current Policy
 
 Until real providers are implemented, WayTask must not show local fallback data as verified availability, pricing, or AI-generated recommendations.
+
+## Open Food Facts
+
+Status: Integrated
+
+Purpose:
+
+Provides real product information using barcode lookup.
+
+Current Data:
+
+- Product Name
+- Brand
+- Category
+- Product Image
+
+Future Expansion:
+
+- Open Beauty Facts
+- Open Pet Food Facts
+- Retail APIs

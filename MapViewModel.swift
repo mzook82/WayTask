@@ -64,6 +64,7 @@ final class MapViewModel: ObservableObject {
     private var savedStores: [MapStore] = []
     private var savedProducts: [MapProduct] = []
     private var activeShoppingItemNames: [String] = []
+    private var activeSuggestionRequest: ShoppingStoreSuggestionRequest?
     private var hasCenteredOnUser = false
 
     init() {
@@ -139,6 +140,20 @@ final class MapViewModel: ObservableObject {
         cameraTarget = region(centeredOn: userCoordinate, latitudeDelta: 0.01, longitudeDelta: 0.01)
     }
 
+    func applyStoreSuggestion(_ request: ShoppingStoreSuggestionRequest) {
+        activeSuggestionRequest = request
+        searchText = ""
+        selectedCategory = .shoppingList
+        shoppingListOnly = true
+        rebuildDisplayStores()
+
+        if let firstSuggestedStore = stores.first(where: { store in
+            !store.isSavedLocation && store.itemNames.contains(request.itemName)
+        }) ?? stores.first(where: { !$0.isSavedLocation }) {
+            selectStore(id: firstSuggestedStore.id)
+        }
+    }
+
     func setUserCoordinate(_ coordinate: CLLocationCoordinate2D) {
         let shouldRefreshFallback = userCoordinate == nil || distance(from: userCoordinate, to: coordinate) > 50
         userCoordinate = coordinate
@@ -179,9 +194,11 @@ final class MapViewModel: ObservableObject {
         var nextProducts = savedProducts
 
         if let userCoordinate {
+            let suggestionItems = activeSuggestionRequest.map { [$0.itemName] } ?? activeShoppingItemNames
             let fallbackStores = storeSearchService.fallbackStores(
                 around: userCoordinate,
-                shoppingItems: activeShoppingItemNames
+                shoppingItems: suggestionItems,
+                storeCategories: activeSuggestionRequest?.storeCategories ?? []
             )
             nextStores.append(contentsOf: fallbackStores)
             nextProducts.append(contentsOf: fallbackStores.flatMap(makeProducts))
