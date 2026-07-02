@@ -35,22 +35,46 @@ final class ShoppingItem {
     var name: String
     var isCompleted: Bool
     var imageData: Data?
+    var brand: String?
+    var category: String?
+    var barcode: String?
+    var imageURLString: String?
+    var dateAdded: Date
+    var sourceRawValue: String
 
     init(
         id: UUID = UUID(),
         name: String,
         isCompleted: Bool = false,
-        imageData: Data? = nil
+        imageData: Data? = nil,
+        brand: String? = nil,
+        category: String? = nil,
+        barcode: String? = nil,
+        imageURL: URL? = nil,
+        dateAdded: Date = Date(),
+        source: ProductSource = .manual
     ) {
         self.id = id
         self.name = name
         self.isCompleted = isCompleted
         self.imageData = imageData
+        self.brand = brand
+        self.category = category
+        self.barcode = barcode
+        self.imageURLString = imageURL?.absoluteString
+        self.dateAdded = dateAdded
+        self.sourceRawValue = source.rawValue
     }
-}//
-//  Models.swift
-//  WayTask
-//
-//  Created by Mordechai Zukerman on 27/06/2026.
-//
 
+    var imageURL: URL? {
+        guard let imageURLString else {
+            return nil
+        }
+
+        return URL(string: imageURLString)
+    }
+
+    var source: ProductSource {
+        ProductSource(rawValue: sourceRawValue) ?? .manual
+    }
+}

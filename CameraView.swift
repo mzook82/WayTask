@@ -8,6 +8,7 @@ struct CameraView: View {
     @EnvironmentObject private var appStateManager: AppStateManager
 
     @StateObject private var viewModel = CameraViewModel()
+    private let shoppingListService = ShoppingListService()
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var focusIndicatorPoint: CGPoint?
     @State private var focusIndicatorScale = 1.35
@@ -550,15 +551,21 @@ struct CameraView: View {
     }
 
     private func addRecognizedProduct(_ product: ProductCandidate) {
-        let item = ShoppingItem(
-            name: product.name,
-            imageData: product.imageData ?? viewModel.capturedImageData
-        )
-
-        modelContext.insert(item)
-        try? modelContext.save()
-        viewModel.resetCapture()
-        appStateManager.selectedTab = .products
+        do {
+            let item = try shoppingListService.addRecognizedProduct(
+                product,
+                fallbackImageData: viewModel.capturedImageData,
+                in: modelContext
+            )
+            appStateManager.shoppingListDidChange(revealing: item.id)
+            viewModel.productWasAddedToShoppingList(product)
+            appStateManager.selectedTab = .products
+        } catch {
+            #if DEBUG
+            print("Add recognized product failed: \(error.localizedDescription)")
+            #endif
+            viewModel.productAddFailed(error)
+        }
     }
 }
 

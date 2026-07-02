@@ -18,6 +18,7 @@ struct ProductCandidate: Identifiable, Codable, Equatable, Sendable {
     let productHints: [String]
     let imageURL: URL?
     let imageData: Data?
+    let barcode: String?
 
     init(
         id: UUID = UUID(),
@@ -28,7 +29,8 @@ struct ProductCandidate: Identifiable, Codable, Equatable, Sendable {
         source: ProductCandidateSource = .unknown,
         productHints: [String] = [],
         imageURL: URL? = nil,
-        imageData: Data? = nil
+        imageData: Data? = nil,
+        barcode: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -39,5 +41,6 @@ struct ProductCandidate: Identifiable, Codable, Equatable, Sendable {
         self.productHints = productHints
         self.imageURL = imageURL
         self.imageData = imageData
+        self.barcode = barcode
     }
 }

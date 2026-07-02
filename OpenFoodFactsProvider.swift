@@ -54,7 +54,8 @@ struct OpenFoodFactsProvider: ProductDataProvider {
                     source: .barcode,
                     productHints: product.productHints,
                     imageURL: product.imageURL,
-                    imageData: imageData
+                    imageData: imageData,
+                    barcode: barcode
                 )
             ]
         } catch let error as DataProviderError {

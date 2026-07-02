@@ -15,6 +15,7 @@ struct ProductListView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var selectedImageData: Data?
     @State private var suggestionItem: ShoppingItem?
+    private let shoppingListService = ShoppingListService()
     @State private var suggestions: [MKMapItem] = []
     @State private var isSearchingSuggestions = false
     @State private var searchText = ""
@@ -39,6 +40,11 @@ struct ProductListView: View {
             }
             .onChange(of: selectedPhotoItem) {
                 loadSelectedPhoto()
+            }
+            .onChange(of: appStateManager.shoppingListRevision) {
+                if appStateManager.recentlyAddedShoppingItemID == nil {
+                    showAllProducts()
+                }
             }
         }
         .preferredColorScheme(.dark)
@@ -167,6 +173,7 @@ struct ProductListView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color.clear)
+        .id(appStateManager.shoppingListRevision)
     }
 
     private var emptyState: some View {
@@ -250,6 +257,10 @@ struct ProductListView: View {
 
     private var filteredItems: [ShoppingItem] {
         items.filter { item in
+            if item.id == appStateManager.recentlyAddedShoppingItemID {
+                return true
+            }
+
             let matchesSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
                 item.name.localizedCaseInsensitiveContains(searchText)
 
@@ -277,20 +288,22 @@ struct ProductListView: View {
             return
         }
 
-        let item = ShoppingItem(
-            name: name,
-            imageData: selectedImageData
-        )
-
-        modelContext.insert(item)
-
-        if let selectedLocationID,
-           let location = locations.first(where: { $0.id == selectedLocationID }) {
-            location.shoppingItems.append(item)
+        let location = selectedLocationID.flatMap { locationID in
+            locations.first { $0.id == locationID }
         }
 
-        try? modelContext.save()
-        resetForm()
+        do {
+            try shoppingListService.addManualItem(
+                name: name,
+                imageData: selectedImageData,
+                location: location,
+                in: modelContext
+            )
+            appStateManager.shoppingListDidChange()
+            resetForm()
+        } catch {
+            assertionFailure("Failed to add manual shopping item: \(error.localizedDescription)")
+        }
     }
 
     private func loadSelectedPhoto() {
@@ -304,6 +317,11 @@ struct ProductListView: View {
         selectedLocationID = nil
         selectedPhotoItem = nil
         selectedImageData = nil
+    }
+
+    private func showAllProducts() {
+        searchText = ""
+        selectedFilter = .all
     }
 
     private func deleteFilteredItems(at offsets: IndexSet) {

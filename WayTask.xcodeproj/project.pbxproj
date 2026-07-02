@@ -36,6 +36,8 @@
 		D1954E0E2FF5B08700E946DA /* LocalStoreDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E0D2FF5B08700E946DA /* LocalStoreDataProvider.swift */; };
 		D1954E102FF64C3300E946DA /* BarcodeResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E0F2FF64C3300E946DA /* BarcodeResult.swift */; };
 		D1954E122FF6559B00E946DA /* OpenFoodFactsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E112FF6559B00E946DA /* OpenFoodFactsProvider.swift */; };
+		D1954E142FF6590000E946DA /* ProductSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E132FF6590000E946DA /* ProductSource.swift */; };
+		D1954E162FF6590100E946DA /* ShoppingListService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E152FF6590100E946DA /* ShoppingListService.swift */; };
 		D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B8519A2FF18FF50083B34C /* ProductListView.swift */; };
 /* End PBXBuildFile section */
 
@@ -69,6 +71,8 @@
 		D1954E0D2FF5B08700E946DA /* LocalStoreDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStoreDataProvider.swift; sourceTree = "<group>"; };
 		D1954E0F2FF64C3300E946DA /* BarcodeResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeResult.swift; sourceTree = "<group>"; };
 		D1954E112FF6559B00E946DA /* OpenFoodFactsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenFoodFactsProvider.swift; sourceTree = "<group>"; };
+		D1954E132FF6590000E946DA /* ProductSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductSource.swift; sourceTree = "<group>"; };
+		D1954E152FF6590100E946DA /* ShoppingListService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListService.swift; sourceTree = "<group>"; };
 		D1B8517E2FEFF2F40083B34C /* WayTask.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WayTask.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1B8519A2FF18FF50083B34C /* ProductListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -140,6 +144,8 @@
 				D1954E0D2FF5B08700E946DA /* LocalStoreDataProvider.swift */,
 				D1954E0F2FF64C3300E946DA /* BarcodeResult.swift */,
 				D1954E112FF6559B00E946DA /* OpenFoodFactsProvider.swift */,
+				D1954E132FF6590000E946DA /* ProductSource.swift */,
+				D1954E152FF6590100E946DA /* ShoppingListService.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -231,8 +237,10 @@
 				D1954E102FF64C3300E946DA /* BarcodeResult.swift in Sources */,
 				D1954E062FF5B07400E946DA /* DataSourceType.swift in Sources */,
 				D1954DEC2FF3C45900E946DA /* WayTaskMapView.swift in Sources */,
+				D1954E142FF6590000E946DA /* ProductSource.swift in Sources */,
 				D1954E042FF5ACBC00E946DA /* RecognitionResult.swift in Sources */,
 				D1954DF82FF59EE800E946DA /* ShoppingContext.swift in Sources */,
+				D1954E162FF6590100E946DA /* ShoppingListService.swift in Sources */,
 				D1954E0C2FF5B07600E946DA /* ProductDataProvider.swift in Sources */,
 				D1954E002FF5A2BF00E946DA /* DiscoverView.swift in Sources */,
 				D1954DE82FF3C40E00E946DA /* StoreAnnotation.swift in Sources */,

@@ -21,6 +21,8 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     @Published var selectedTab: AppTab = .products
     @Published var navigationPath = NavigationPath()
     @Published var focusedLocationID: UUID?
+    @Published var shoppingListRevision = UUID()
+    @Published var recentlyAddedShoppingItemID: UUID?
 
     override init() {
         super.init()
@@ -30,6 +32,11 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     func focusMap(on locationID: UUID) {
         selectedTab = .map
         focusedLocationID = locationID
+    }
+
+    func shoppingListDidChange(revealing itemID: UUID? = nil) {
+        recentlyAddedShoppingItemID = itemID
+        shoppingListRevision = UUID()
     }
 
     func userNotificationCenter(

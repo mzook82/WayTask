@@ -62,6 +62,7 @@ final class CameraViewModel: ObservableObject {
     @Published var barcodeResult: BarcodeResult?
     @Published var confirmedBarcodeResult: BarcodeResult?
     @Published var recognitionPhase: RecognitionPhase = .idle
+    @Published private(set) var latestShoppingContext: ShoppingContext?
     @Published var isRecognizing = false
     @Published var isSavingPhoto = false
     @Published var statusMessage = "AI recognition is not available yet."
@@ -236,6 +237,42 @@ final class CameraViewModel: ObservableObject {
 
         confirmedBarcodeResult = barcodeResult
         lookupProduct(for: barcodeResult)
+    }
+
+    func productAddFailed(_ error: Error? = nil) {
+        recognitionPhase = .failed
+        #if DEBUG
+        if let error {
+            statusMessage = "Add failed: \(error.localizedDescription)"
+            return
+        }
+        #endif
+        statusMessage = "Could not add this product. Please try again."
+    }
+
+    func productWasAddedToShoppingList(_ candidate: ProductCandidate) {
+        latestShoppingContext = ShoppingContext(
+            activeShoppingListItems: [
+                ShoppingContextItem(
+                    id: candidate.id,
+                    name: candidate.name,
+                    productHints: candidate.productHints
+                )
+            ],
+            recentSearches: [candidate.barcode].compactMap { $0 },
+            availableProductHints: candidate.productHints + [candidate.barcode].compactMap { $0 }
+        )
+
+        pendingPhotoData = nil
+        capturedImageData = nil
+        pendingPhotoSource = .cameraCapture
+        clearRecognition()
+        recognitionPhase = .idle
+        statusMessage = "Added to your Shopping List"
+
+        if selectedMode == .barcode {
+            startBarcodeScanning()
+        }
     }
 
     func scanAgain() {
