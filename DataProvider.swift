@@ -14,6 +14,8 @@ enum DataProviderError: LocalizedError, Equatable {
     case unavailable
     case unsupportedSource(DataSourceType)
     case invalidRequest
+    case networkUnavailable
+    case timeout
 
     var errorDescription: String? {
         switch self {
@@ -23,6 +25,10 @@ enum DataProviderError: LocalizedError, Equatable {
             return "\(sourceType.displayName) is not supported yet."
         case .invalidRequest:
             return "The data request is invalid."
+        case .networkUnavailable:
+            return "No internet connection."
+        case .timeout:
+            return "The request timed out."
         }
     }
 }

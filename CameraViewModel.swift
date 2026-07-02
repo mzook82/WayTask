@@ -70,19 +70,23 @@ final class CameraViewModel: ObservableObject {
     let cameraService: CameraService
 
     private let recognitionService: ProductRecognitionServicing
+    private let productDataProvider: any ProductDataProvider
     private var pendingPhotoSource: RecognitionInputSource = .cameraCapture
 
     init() {
         self.cameraService = CameraService()
         self.recognitionService = ProductRecognitionService()
+        self.productDataProvider = OpenFoodFactsProvider()
     }
 
     init(
         cameraService: CameraService,
-        recognitionService: ProductRecognitionServicing
+        recognitionService: ProductRecognitionServicing,
+        productDataProvider: any ProductDataProvider
     ) {
         self.cameraService = cameraService
         self.recognitionService = recognitionService
+        self.productDataProvider = productDataProvider
     }
 
     var recognizedProduct: ProductCandidate? {
@@ -231,8 +235,7 @@ final class CameraViewModel: ObservableObject {
         }
 
         confirmedBarcodeResult = barcodeResult
-        recognitionPhase = .confirmation
-        statusMessage = "Barcode confirmed and ready for future product lookup."
+        lookupProduct(for: barcodeResult)
     }
 
     func scanAgain() {
@@ -318,6 +321,73 @@ final class CameraViewModel: ObservableObject {
             Task { @MainActor in
                 self?.handleBarcodeDetection(result)
             }
+        }
+    }
+
+    private func lookupProduct(for barcode: BarcodeResult) {
+        recognitionPhase = .analyzing
+        isRecognizing = true
+        statusMessage = "Searching product..."
+
+        Task {
+            do {
+                let candidates = try await productDataProvider.products(
+                    for: ProductDataRequest(barcode: barcode.value)
+                )
+                isRecognizing = false
+
+                guard let candidate = candidates.first else {
+                    recognitionResult = RecognitionResult(
+                        status: .noMatch,
+                        candidates: [],
+                        message: "Product not found.",
+                        inputSource: .barcode
+                    )
+                    selectedCandidate = nil
+                    recognitionPhase = .unavailable
+                    statusMessage = "Product not found."
+                    return
+                }
+
+                recognitionResult = RecognitionResult(
+                    status: .recognized,
+                    candidates: candidates,
+                    message: "Product found.",
+                    inputSource: .barcode
+                )
+                selectedCandidate = candidate
+                confirmedCandidate = nil
+                recognitionPhase = .result
+                statusMessage = "Product found. Review before adding it."
+            } catch {
+                isRecognizing = false
+                recognitionResult = RecognitionResult(
+                    status: .failed,
+                    candidates: [],
+                    message: productLookupMessage(for: error),
+                    inputSource: .barcode
+                )
+                selectedCandidate = nil
+                recognitionPhase = .failed
+                statusMessage = productLookupMessage(for: error)
+            }
+        }
+    }
+
+    private func productLookupMessage(for error: Error) -> String {
+        guard let providerError = error as? DataProviderError else {
+            return "Product lookup is unavailable right now."
+        }
+
+        switch providerError {
+        case .invalidRequest:
+            return "Invalid barcode."
+        case .networkUnavailable:
+            return "No internet connection."
+        case .timeout:
+            return "Product lookup timed out."
+        case .unavailable, .unsupportedSource:
+            return "Product lookup is unavailable right now."
         }
     }
 

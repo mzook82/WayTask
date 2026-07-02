@@ -227,9 +227,13 @@ struct CameraView: View {
         }
     }
 
+    private var isShowingBarcodeResult: Bool {
+        viewModel.barcodeResult != nil || viewModel.confirmedBarcodeResult != nil
+    }
+
     private var actionPanel: some View {
-        VStack(spacing: 16) {
-            if let product = viewModel.recognizedProduct {
+        VStack(spacing: isShowingBarcodeResult ? 10 : 16) {
+            if let product = viewModel.recognizedProduct ?? viewModel.selectedCandidate {
                 recognizedProductCard(product)
             }
 
@@ -267,7 +271,9 @@ struct CameraView: View {
                 .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 56, cornerRadius: 18, shadow: true))
             }
         }
-        .padding(20)
+        .padding(.horizontal, isShowingBarcodeResult ? 16 : 20)
+        .padding(.top, isShowingBarcodeResult ? 12 : 20)
+        .padding(.bottom, isShowingBarcodeResult ? 14 : 20)
         .background(.black.opacity(0.42))
         .overlay(alignment: .top) {
             Rectangle()
@@ -276,33 +282,58 @@ struct CameraView: View {
         }
     }
 
+    @ViewBuilder
     private var captureControls: some View {
-        HStack(spacing: 12) {
-            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                WayTaskModeTile(title: "Library", systemName: "photo")
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                viewModel.capturePhoto()
-            } label: {
-                ZStack {
-                    Circle()
-                        .stroke(.white.opacity(0.34), lineWidth: 4)
-                        .frame(width: 70, height: 70)
-
-                    Circle()
-                        .fill(WayTaskDesign.accentGradient)
-                        .frame(width: 56, height: 56)
-                        .shadow(color: WayTaskDesign.accent.opacity(0.36), radius: 18, y: 8)
+        if isShowingBarcodeResult {
+            compactBarcodeCameraState
+        } else {
+            HStack(spacing: 12) {
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    WayTaskModeTile(title: "Library", systemName: "photo")
                 }
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Take photo")
+                .buttonStyle(.plain)
 
-            WayTaskModeTile(title: viewModel.selectedMode.title, systemName: viewModel.selectedMode.iconName)
+                Button {
+                    viewModel.capturePhoto()
+                } label: {
+                    ZStack {
+                        Circle()
+                            .stroke(.white.opacity(0.34), lineWidth: 4)
+                            .frame(width: 70, height: 70)
+
+                        Circle()
+                            .fill(WayTaskDesign.accentGradient)
+                            .frame(width: 56, height: 56)
+                            .shadow(color: WayTaskDesign.accent.opacity(0.36), radius: 18, y: 8)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Take photo")
+
+                WayTaskModeTile(title: viewModel.selectedMode.title, systemName: viewModel.selectedMode.iconName)
+            }
         }
+    }
+
+    private var compactBarcodeCameraState: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "barcode.viewfinder")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(WayTaskDesign.accent)
+                .frame(width: 34, height: 34)
+                .background(WayTaskDesign.surfaceElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+            Text(viewModel.confirmedBarcodeResult == nil ? "Review barcode" : "Barcode confirmed")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(WayTaskDesign.secondaryText)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .wayTaskCard(cornerRadius: 14)
     }
 
     private var photoReviewControls: some View {
@@ -368,7 +399,7 @@ struct CameraView: View {
                     Label("Confirm", systemImage: "checkmark.circle.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 52, cornerRadius: 16, shadow: true))
+                .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 44, cornerRadius: 14, shadow: true))
             }
 
             Button {
@@ -377,7 +408,7 @@ struct CameraView: View {
                 Label("Scan Again", systemImage: "barcode.viewfinder")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 52, cornerRadius: 16))
+            .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 44, cornerRadius: 14))
         }
     }
 
@@ -412,47 +443,53 @@ struct CameraView: View {
     }
 
     private func barcodeResultCard(_ barcode: BarcodeResult) -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 15, style: .continuous)
-                    .fill(WayTaskDesign.surfaceElevated)
+        HStack(spacing: 10) {
+            Image(systemName: "barcode.viewfinder")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(WayTaskDesign.accent)
+                .frame(width: 42, height: 42)
+                .background(WayTaskDesign.surfaceElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                Image(systemName: "barcode.viewfinder")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(WayTaskDesign.accent)
-            }
-            .frame(width: 58, height: 58)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Label("Barcode detected", systemImage: "checkmark.seal.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(WayTaskDesign.accent)
+                        .lineLimit(1)
 
-            VStack(alignment: .leading, spacing: 5) {
-                Label("Barcode detected", systemImage: "checkmark.seal.fill")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(WayTaskDesign.accent)
+                    Text(barcode.type.displayName)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(WayTaskDesign.surfaceElevated)
+                        .clipShape(Capsule())
+                }
 
                 Text(barcode.value)
-                    .font(.headline.weight(.bold))
+                    .font(.subheadline.weight(.bold))
                     .foregroundStyle(WayTaskDesign.primaryText)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.72)
                     .textSelection(.enabled)
-
-                Text(barcode.type.displayName)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(WayTaskDesign.secondaryText)
             }
 
-            Spacer()
+            Spacer(minLength: 0)
         }
-        .padding(14)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .background(WayTaskDesign.accent.opacity(0.12))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(WayTaskDesign.accent.opacity(0.24), lineWidth: 1)
         }
     }
 
     private func recognizedProductCard(_ product: ProductCandidate) -> some View {
         HStack(spacing: 12) {
-            WayTaskProductThumbnail(data: viewModel.capturedImageData, size: 58)
+            WayTaskProductThumbnail(data: product.imageData ?? viewModel.capturedImageData, size: 58)
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(product.name)
@@ -460,9 +497,17 @@ struct CameraView: View {
                     .foregroundStyle(WayTaskDesign.primaryText)
                     .lineLimit(1)
 
-                Label("Product recognized", systemImage: "checkmark.seal.fill")
+                if let brand = product.brand {
+                    Text(brand)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                        .lineLimit(1)
+                }
+
+                Label(product.category ?? "Product found", systemImage: "checkmark.seal.fill")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(WayTaskDesign.accent)
+                    .lineLimit(1)
             }
 
             Spacer()
@@ -507,7 +552,7 @@ struct CameraView: View {
     private func addRecognizedProduct(_ product: ProductCandidate) {
         let item = ShoppingItem(
             name: product.name,
-            imageData: viewModel.capturedImageData
+            imageData: product.imageData ?? viewModel.capturedImageData
         )
 
         modelContext.insert(item)

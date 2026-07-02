@@ -35,6 +35,7 @@
 		D1954E0C2FF5B07600E946DA /* ProductDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E0B2FF5B07600E946DA /* ProductDataProvider.swift */; };
 		D1954E0E2FF5B08700E946DA /* LocalStoreDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E0D2FF5B08700E946DA /* LocalStoreDataProvider.swift */; };
 		D1954E102FF64C3300E946DA /* BarcodeResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E0F2FF64C3300E946DA /* BarcodeResult.swift */; };
+		D1954E122FF6559B00E946DA /* OpenFoodFactsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E112FF6559B00E946DA /* OpenFoodFactsProvider.swift */; };
 		D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B8519A2FF18FF50083B34C /* ProductListView.swift */; };
 /* End PBXBuildFile section */
 
@@ -67,6 +68,7 @@
 		D1954E0B2FF5B07600E946DA /* ProductDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDataProvider.swift; sourceTree = "<group>"; };
 		D1954E0D2FF5B08700E946DA /* LocalStoreDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStoreDataProvider.swift; sourceTree = "<group>"; };
 		D1954E0F2FF64C3300E946DA /* BarcodeResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeResult.swift; sourceTree = "<group>"; };
+		D1954E112FF6559B00E946DA /* OpenFoodFactsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenFoodFactsProvider.swift; sourceTree = "<group>"; };
 		D1B8517E2FEFF2F40083B34C /* WayTask.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WayTask.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1B8519A2FF18FF50083B34C /* ProductListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -137,6 +139,7 @@
 				D1954E0B2FF5B07600E946DA /* ProductDataProvider.swift */,
 				D1954E0D2FF5B08700E946DA /* LocalStoreDataProvider.swift */,
 				D1954E0F2FF64C3300E946DA /* BarcodeResult.swift */,
+				D1954E112FF6559B00E946DA /* OpenFoodFactsProvider.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -250,6 +253,7 @@
 				D1954DF22FF3C45B00E946DA /* MapBottomSheet.swift in Sources */,
 				D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */,
 				D1954DF62FF59EE800E946DA /* ShoppingMission.swift in Sources */,
+				D1954E122FF6559B00E946DA /* OpenFoodFactsProvider.swift in Sources */,
 				D1954DF42FF3CCF800E946DA /* StoreSearchService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

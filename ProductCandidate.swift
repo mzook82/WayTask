@@ -16,6 +16,8 @@ struct ProductCandidate: Identifiable, Codable, Equatable, Sendable {
     let confidence: Double?
     let source: ProductCandidateSource
     let productHints: [String]
+    let imageURL: URL?
+    let imageData: Data?
 
     init(
         id: UUID = UUID(),
@@ -24,7 +26,9 @@ struct ProductCandidate: Identifiable, Codable, Equatable, Sendable {
         category: String? = nil,
         confidence: Double? = nil,
         source: ProductCandidateSource = .unknown,
-        productHints: [String] = []
+        productHints: [String] = [],
+        imageURL: URL? = nil,
+        imageData: Data? = nil
     ) {
         self.id = id
         self.name = name
@@ -33,5 +37,7 @@ struct ProductCandidate: Identifiable, Codable, Equatable, Sendable {
         self.confidence = confidence
         self.source = source
         self.productHints = productHints
+        self.imageURL = imageURL
+        self.imageData = imageData
     }
 }
