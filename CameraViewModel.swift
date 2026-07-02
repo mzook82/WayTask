@@ -241,12 +241,6 @@ final class CameraViewModel: ObservableObject {
 
     func productAddFailed(_ error: Error? = nil) {
         recognitionPhase = .failed
-        #if DEBUG
-        if let error {
-            statusMessage = "Add failed: \(error.localizedDescription)"
-            return
-        }
-        #endif
         statusMessage = "Could not add this product. Please try again."
     }
 

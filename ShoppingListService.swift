@@ -88,7 +88,7 @@ struct ShoppingListService: ShoppingListServicing {
 
         try modelContext.save()
         try verifyInsertedItem(item, in: modelContext)
-        try shoppingMemoryService.recordProductAdded(item, in: modelContext)
+        recordShoppingMemoryIfPossible(for: item, in: modelContext)
         return item
     }
 
@@ -107,6 +107,14 @@ struct ShoppingListService: ShoppingListServicing {
                 barcode: item.barcode,
                 fetchedCount: matches.count
             )
+        }
+    }
+
+    private func recordShoppingMemoryIfPossible(for item: ShoppingItem, in modelContext: ModelContext) {
+        do {
+            try shoppingMemoryService.recordProductAdded(item, in: modelContext)
+        } catch {
+            assertionFailure("Shopping memory recording failed: \(error.localizedDescription)")
         }
     }
 

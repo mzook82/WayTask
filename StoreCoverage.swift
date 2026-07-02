@@ -1,0 +1,25 @@
+import CoreLocation
+import Foundation
+
+struct StoreCoverage: Identifiable {
+    var id: UUID { store.id }
+
+    let store: MapStore
+    let matchedItems: [ShoppingItem]
+    let missingItems: [ShoppingItem]
+    let coverageScore: Double
+    let distance: CLLocationDistance?
+    let ranking: StoreScore
+
+    var matchedItemCount: Int {
+        matchedItems.count
+    }
+
+    var missingItemCount: Int {
+        missingItems.count
+    }
+
+    var coversAllItems: Bool {
+        !matchedItems.isEmpty && missingItems.isEmpty
+    }
+}

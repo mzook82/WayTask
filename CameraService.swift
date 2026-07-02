@@ -42,6 +42,7 @@ final class CameraService: NSObject, ObservableObject {
     private let metadataOutput = AVCaptureMetadataOutput()
     private var videoDeviceInput: AVCaptureDeviceInput?
     private var photoCaptureCompletion: ((Result<CapturedPhoto, Error>) -> Void)?
+    private var activePhotoCaptureProcessors: [CameraPhotoCaptureProcessor] = []
     private var barcodeHandler: ((BarcodeResult) -> Void)?
     private var lastBarcodeValue: String?
     private var lastBarcodeDate: Date?
@@ -142,7 +143,15 @@ final class CameraService: NSObject, ObservableObject {
                 settings.flashMode = .on
             }
 
-            self.photoOutput.capturePhoto(with: settings, delegate: self)
+            let processor = CameraPhotoCaptureProcessor { [weak self] result, processor in
+                DispatchQueue.main.async {
+                    self?.photoCaptureCompletion?(result)
+                    self?.photoCaptureCompletion = nil
+                    self?.activePhotoCaptureProcessors.removeAll { $0 === processor }
+                }
+            }
+            self.activePhotoCaptureProcessors.append(processor)
+            self.photoOutput.capturePhoto(with: settings, delegate: processor)
         }
     }
 
@@ -323,32 +332,29 @@ final class CameraService: NSObject, ObservableObject {
     }
 }
 
-extension CameraService: AVCapturePhotoCaptureDelegate {
+nonisolated private final class CameraPhotoCaptureProcessor: NSObject, AVCapturePhotoCaptureDelegate {
+    private let completion: (Result<CapturedPhoto, Error>, CameraPhotoCaptureProcessor) -> Void
+
+    init(completion: @escaping (Result<CapturedPhoto, Error>, CameraPhotoCaptureProcessor) -> Void) {
+        self.completion = completion
+    }
+
     func photoOutput(
         _ output: AVCapturePhotoOutput,
         didFinishProcessingPhoto photo: AVCapturePhoto,
         error: Error?
     ) {
         if let error {
-            DispatchQueue.main.async { [weak self] in
-                self?.photoCaptureCompletion?(.failure(error))
-                self?.photoCaptureCompletion = nil
-            }
+            completion(.failure(error), self)
             return
         }
 
         guard let data = photo.fileDataRepresentation() else {
-            DispatchQueue.main.async { [weak self] in
-                self?.photoCaptureCompletion?(.failure(CameraServiceError.captureFailed))
-                self?.photoCaptureCompletion = nil
-            }
+            completion(.failure(CameraServiceError.captureFailed), self)
             return
         }
 
-        DispatchQueue.main.async { [weak self] in
-            self?.photoCaptureCompletion?(.success(CapturedPhoto(data: data)))
-            self?.photoCaptureCompletion = nil
-        }
+        completion(.success(CapturedPhoto(data: data)), self)
     }
 }
 

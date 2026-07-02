@@ -45,6 +45,8 @@
 		D1954E202FF6924100E946DA /* StoreRankingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E1F2FF6924100E946DA /* StoreRankingService.swift */; };
 		D1954E222FF6969E00E946DA /* ProductHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E212FF6969E00E946DA /* ProductHistory.swift */; };
 		D1954E242FF696B200E946DA /* ShoppingMemoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E232FF696B200E946DA /* ShoppingMemoryService.swift */; };
+		D1954E262FF6ADC500E946DA /* StoreCoverage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E252FF6ADC500E946DA /* StoreCoverage.swift */; };
+		D1954E282FF6ADDE00E946DA /* ShoppingTripService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E272FF6ADDE00E946DA /* ShoppingTripService.swift */; };
 		D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B8519A2FF18FF50083B34C /* ProductListView.swift */; };
 /* End PBXBuildFile section */
 
@@ -87,6 +89,8 @@
 		D1954E1F2FF6924100E946DA /* StoreRankingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreRankingService.swift; sourceTree = "<group>"; };
 		D1954E212FF6969E00E946DA /* ProductHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductHistory.swift; sourceTree = "<group>"; };
 		D1954E232FF696B200E946DA /* ShoppingMemoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingMemoryService.swift; sourceTree = "<group>"; };
+		D1954E252FF6ADC500E946DA /* StoreCoverage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreCoverage.swift; sourceTree = "<group>"; };
+		D1954E272FF6ADDE00E946DA /* ShoppingTripService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingTripService.swift; sourceTree = "<group>"; };
 		D1B8517E2FEFF2F40083B34C /* WayTask.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WayTask.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1B8519A2FF18FF50083B34C /* ProductListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -167,6 +171,8 @@
 				D1954E1F2FF6924100E946DA /* StoreRankingService.swift */,
 				D1954E212FF6969E00E946DA /* ProductHistory.swift */,
 				D1954E232FF696B200E946DA /* ShoppingMemoryService.swift */,
+				D1954E252FF6ADC500E946DA /* StoreCoverage.swift */,
+				D1954E272FF6ADDE00E946DA /* ShoppingTripService.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -266,6 +272,7 @@
 				D1954DF82FF59EE800E946DA /* ShoppingContext.swift in Sources */,
 				D1954E202FF6924100E946DA /* StoreRankingService.swift in Sources */,
 				D1954E1E2FF67E9800E946DA /* BuyingOptionsSheet.swift in Sources */,
+				D1954E262FF6ADC500E946DA /* StoreCoverage.swift in Sources */,
 				D1954E162FF6590100E946DA /* ShoppingListService.swift in Sources */,
 				D1954E0C2FF5B07600E946DA /* ProductDataProvider.swift in Sources */,
 				D1954E002FF5A2BF00E946DA /* DiscoverView.swift in Sources */,
@@ -273,6 +280,7 @@
 				D1954DF02FF3C45A00E946DA /* MapControls.swift in Sources */,
 				D1954DFC2FF5A2A200E946DA /* DiscoverItem.swift in Sources */,
 				D1954DEE2FF3C45A00E946DA /* MapFilterBar.swift in Sources */,
+				D1954E282FF6ADDE00E946DA /* ShoppingTripService.swift in Sources */,
 				D1954E082FF5B07500E946DA /* DataProvider.swift in Sources */,
 				D1954E0E2FF5B08700E946DA /* LocalStoreDataProvider.swift in Sources */,
 				D12B909A2FF2FDCD00531ECE /* WayTaskDesignSystem.swift in Sources */,
@@ -432,7 +440,7 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "האפליקציה צריכה גישה למצלמה כדי לצלם ולזהות מוצרים.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "האפליקציה צריכה גישה למיקום כדי לזהות כניסה לאזור מוגדר.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "האפליקציה צריכה גישה למיקום כדי לזהות כניסה לאזור מוגדר.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "WayTask can save captured product photos to your Photos library when you choose to save them.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "האפליקציה צריכה גישה לתמונות כדי לבחור תמונה של מוצר.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -472,7 +480,7 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "האפליקציה צריכה גישה למצלמה כדי לצלם ולזהות מוצרים.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "האפליקציה צריכה גישה למיקום כדי לזהות כניסה לאזור מוגדר.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "האפליקציה צריכה גישה למיקום כדי לזהות כניסה לאזור מוגדר.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "WayTask can save captured product photos to your Photos library when you choose to save them.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "האפליקציה צריכה גישה לתמונות כדי לבחור תמונה של מוצר.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

@@ -22,6 +22,7 @@ struct ProductListView: View {
     private let shoppingIntentMatcher = ShoppingIntentMatcher()
     private let buyingOptionsService = BuyingOptionsService()
     private let shoppingMemoryService = ShoppingMemoryService()
+    private let shoppingTripService = ShoppingTripService()
     @State private var suggestions: [MKMapItem] = []
     @State private var isSearchingSuggestions = false
     @State private var searchText = ""
@@ -47,8 +48,13 @@ struct ProductListView: View {
             .sheet(isPresented: $isShowingBuyingOptions) {
                 BuyingOptionsSheet(
                     options: appStateManager.buyingOptions,
+                    tripCoverages: appStateManager.shoppingTripCoverages,
+                    activeTripItemCount: activeShoppingItems.count,
                     onViewOnMap: { _ in
                         openBuyingOptionsOnMap()
+                    },
+                    onViewTripOnMap: {
+                        openTripOnMap()
                     },
                     onClose: {
                         isShowingBuyingOptions = false
@@ -273,6 +279,10 @@ struct ProductListView: View {
         return "\(items.count) items • \(openCount) open • \(assignedCount) placed"
     }
 
+    private var activeShoppingItems: [ShoppingItem] {
+        items.filter { !$0.isCompleted }
+    }
+
     private var filteredItems: [ShoppingItem] {
         items.filter { item in
             if item.id == appStateManager.recentlyAddedShoppingItemID {
@@ -379,7 +389,7 @@ struct ProductListView: View {
         }
 
         let daysSinceLastAdded = Calendar.current.dateComponents([.day], from: history.lastAddedDate, to: Date()).day ?? 0
-        if indicators.count < 2 && daysSinceLastAdded <= 7 {
+        if history.addCount > 1 && indicators.count < 2 && daysSinceLastAdded <= 7 {
             indicators.append("Last added recently")
         }
 
@@ -389,9 +399,16 @@ struct ProductListView: View {
     private func findSuggestions(for item: ShoppingItem) {
         let request = shoppingIntentMatcher.suggestionRequest(for: item)
         let buyingOptions = buyingOptionsService.localOptions(for: request)
+        let tripCoverages = shoppingTripService.coverage(
+            for: activeShoppingItems,
+            stores: tripPlanningStores(for: request),
+            request: request,
+            userCoordinate: nil
+        )
         buyingOptionsRequest = request
         appStateManager.storeSuggestionRequest = request
         appStateManager.buyingOptions = buyingOptions
+        appStateManager.shoppingTripCoverages = tripCoverages
         isShowingBuyingOptions = true
     }
 
@@ -404,8 +421,51 @@ struct ProductListView: View {
         isShowingBuyingOptions = false
         appStateManager.suggestStores(
             for: buyingOptionsRequest,
-            buyingOptions: appStateManager.buyingOptions
+            buyingOptions: appStateManager.buyingOptions,
+            shoppingTripCoverages: appStateManager.shoppingTripCoverages
         )
+    }
+
+    private func openTripOnMap() {
+        guard let buyingOptionsRequest else {
+            isShowingBuyingOptions = false
+            return
+        }
+
+        isShowingBuyingOptions = false
+        appStateManager.showTripOnMap(
+            for: buyingOptionsRequest,
+            buyingOptions: appStateManager.buyingOptions,
+            shoppingTripCoverages: appStateManager.shoppingTripCoverages
+        )
+    }
+
+    private func tripPlanningStores(for request: ShoppingStoreSuggestionRequest) -> [MapStore] {
+        savedStoresForTripPlanning() + buyingOptionsService.suggestedStores(for: request)
+    }
+
+    private func savedStoresForTripPlanning() -> [MapStore] {
+        locations.map { location in
+            let openItems = location.shoppingItems
+                .filter { !$0.isCompleted }
+                .map(\.name)
+            let completedItems = location.shoppingItems
+                .filter(\.isCompleted)
+                .map(\.name)
+
+            return MapStore(
+                id: location.id,
+                locationID: location.id,
+                title: location.title,
+                coordinate: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude),
+                radius: location.radius,
+                itemNames: openItems,
+                completedItemNames: completedItems,
+                isOpen: true,
+                rating: 4.4 + (Double(min(location.shoppingItems.count, 4)) * 0.1),
+                websiteURL: nil
+            )
+        }
     }
 
     private func assign(_ item: ShoppingItem, to mapItem: MKMapItem) {

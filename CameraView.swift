@@ -623,9 +623,6 @@ struct CameraView: View {
             viewModel.productWasAddedToShoppingList(product)
             appStateManager.selectedTab = .products
         } catch {
-            #if DEBUG
-            print("Add recognized product failed: \(error.localizedDescription)")
-            #endif
             viewModel.productAddFailed(error)
         }
     }

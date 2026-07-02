@@ -23,7 +23,8 @@ struct StoreRankingService {
     func score(
         store: MapStore,
         request: ShoppingStoreSuggestionRequest,
-        userCoordinate: CLLocationCoordinate2D? = nil
+        userCoordinate: CLLocationCoordinate2D? = nil,
+        coverageScore: Double? = nil
     ) -> StoreScore {
         var score = 0.0
         var reasons: [String] = []
@@ -63,6 +64,17 @@ struct StoreRankingService {
         } else {
             score += 8
             reasons.append("Nearby suggestion")
+        }
+
+        if let coverageScore {
+            let normalizedCoverage = min(max(coverageScore, 0), 1)
+            score += normalizedCoverage * 30
+
+            if normalizedCoverage >= 1 {
+                reasons.append("Covers your full list")
+            } else if normalizedCoverage >= 0.5 {
+                reasons.append("Covers multiple list items")
+            }
         }
 
         if !store.isSavedLocation {

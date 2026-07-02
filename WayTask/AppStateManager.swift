@@ -25,6 +25,8 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     @Published var recentlyAddedShoppingItemID: UUID?
     @Published var storeSuggestionRequest: ShoppingStoreSuggestionRequest?
     @Published var buyingOptions: [BuyingOption] = []
+    @Published var shoppingTripCoverages: [StoreCoverage] = []
+    @Published var isTripMapMode = false
 
     override init() {
         super.init()
@@ -32,6 +34,7 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     }
 
     func focusMap(on locationID: UUID) {
+        isTripMapMode = false
         selectedTab = .map
         focusedLocationID = locationID
     }
@@ -41,10 +44,29 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         shoppingListRevision = UUID()
     }
 
-    func suggestStores(for request: ShoppingStoreSuggestionRequest, buyingOptions: [BuyingOption] = []) {
+    func suggestStores(
+        for request: ShoppingStoreSuggestionRequest,
+        buyingOptions: [BuyingOption] = [],
+        shoppingTripCoverages: [StoreCoverage] = []
+    ) {
         navigationPath = NavigationPath()
         storeSuggestionRequest = request
         self.buyingOptions = buyingOptions
+        self.shoppingTripCoverages = shoppingTripCoverages
+        isTripMapMode = false
+        selectedTab = .map
+    }
+
+    func showTripOnMap(
+        for request: ShoppingStoreSuggestionRequest,
+        buyingOptions: [BuyingOption] = [],
+        shoppingTripCoverages: [StoreCoverage] = []
+    ) {
+        navigationPath = NavigationPath()
+        storeSuggestionRequest = request
+        self.buyingOptions = buyingOptions
+        self.shoppingTripCoverages = shoppingTripCoverages
+        isTripMapMode = true
         selectedTab = .map
     }
 

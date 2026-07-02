@@ -140,18 +140,28 @@ final class MapViewModel: ObservableObject {
         cameraTarget = region(centeredOn: userCoordinate, latitudeDelta: 0.01, longitudeDelta: 0.01)
     }
 
+    func selectTripStore(from coverage: StoreCoverage) {
+        let matchedItemNames = Set(coverage.matchedItems.map { $0.name.lowercased() })
+        let targetStore = stores.first { store in
+            store.id == coverage.store.id
+        } ?? stores.first { store in
+            store.title.localizedCaseInsensitiveCompare(coverage.store.title) == .orderedSame
+        } ?? stores.first { store in
+            store.itemNames.contains { matchedItemNames.contains($0.lowercased()) }
+        }
+
+        if let targetStore {
+            selectStore(id: targetStore.id)
+        }
+    }
+
     func applyStoreSuggestion(_ request: ShoppingStoreSuggestionRequest) {
         activeSuggestionRequest = request
         searchText = ""
         selectedCategory = .shoppingList
         shoppingListOnly = true
         rebuildDisplayStores()
-
-        if let firstSuggestedStore = stores.first(where: { store in
-            !store.isSavedLocation && store.itemNames.contains(request.itemName)
-        }) ?? stores.first(where: { !$0.isSavedLocation }) {
-            selectStore(id: firstSuggestedStore.id)
-        }
+        selectSuggestedStoreIfAvailable()
     }
 
     func setUserCoordinate(_ coordinate: CLLocationCoordinate2D) {
@@ -160,11 +170,15 @@ final class MapViewModel: ObservableObject {
 
         if shouldRefreshFallback {
             rebuildDisplayStores()
+            selectSuggestedStoreIfAvailable()
         }
 
         if !hasCenteredOnUser {
             hasCenteredOnUser = true
-            followUser()
+
+            if activeSuggestionRequest == nil {
+                followUser()
+            }
         }
     }
 
@@ -187,6 +201,23 @@ final class MapViewModel: ObservableObject {
         let mapItem = MKMapItem(location: location, address: nil)
         mapItem.name = store.title
         mapItem.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeWalking])
+    }
+
+    private func selectSuggestedStoreIfAvailable() {
+        guard let request = activeSuggestionRequest else {
+            return
+        }
+
+        if let selectedStoreID,
+           stores.contains(where: { $0.id == selectedStoreID && !$0.isSavedLocation }) {
+            return
+        }
+
+        if let firstSuggestedStore = stores.first(where: { store in
+            !store.isSavedLocation && store.itemNames.contains(request.itemName)
+        }) ?? stores.first(where: { !$0.isSavedLocation }) {
+            selectStore(id: firstSuggestedStore.id)
+        }
     }
 
     private func rebuildDisplayStores() {
