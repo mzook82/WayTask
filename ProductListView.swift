@@ -10,6 +10,7 @@ struct ProductListView: View {
     @Query private var items: [ShoppingItem]
     @Query private var locations: [GeoLocation]
     @Query private var productHistories: [ProductHistory]
+    @Query private var shoppingSessions: [ShoppingSession]
 
     @State private var newItemName = ""
     @State private var selectedLocationID: UUID?
@@ -23,6 +24,7 @@ struct ProductListView: View {
     private let buyingOptionsService = BuyingOptionsService()
     private let shoppingMemoryService = ShoppingMemoryService()
     private let shoppingTripService = ShoppingTripService()
+    private let shoppingSessionService = ShoppingSessionService()
     @State private var suggestions: [MKMapItem] = []
     @State private var isSearchingSuggestions = false
     @State private var searchText = ""
@@ -35,9 +37,13 @@ struct ProductListView: View {
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    header
-                    filterBar
-                    productList
+                    if let activeSession {
+                        shoppingSessionContent(for: activeSession)
+                    } else {
+                        header
+                        filterBar
+                        productList
+                    }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -82,6 +88,10 @@ struct ProductListView: View {
             )
             WayTaskSearchField(placeholder: "Search products...", text: $searchText)
             addProductCard
+
+            if !activeShoppingItems.isEmpty {
+                startShoppingCard
+            }
         }
         .padding(.horizontal, 20)
         .padding(.top, 18)
@@ -131,6 +141,138 @@ struct ProductListView: View {
         }
         .padding(16)
         .wayTaskCard()
+    }
+
+    private var startShoppingCard: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "cart.fill")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(WayTaskDesign.accent)
+                .frame(width: 44, height: 44)
+                .background(WayTaskDesign.accent.opacity(0.14))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Ready to shop")
+                    .font(.headline)
+                    .foregroundStyle(WayTaskDesign.primaryText)
+
+                Text("\(activeShoppingItems.count) active items in your list")
+                    .font(.caption)
+                    .foregroundStyle(WayTaskDesign.secondaryText)
+            }
+
+            Spacer(minLength: 8)
+
+            Button {
+                startShopping()
+            } label: {
+                Label("Start Shopping", systemImage: "play.fill")
+                    .labelStyle(.titleAndIcon)
+            }
+            .buttonStyle(WayTaskPrimaryPillButtonStyle())
+        }
+        .padding(16)
+        .wayTaskCard()
+    }
+
+    @ViewBuilder
+    private func shoppingSessionContent(for session: ShoppingSession) -> some View {
+        let sessionItems = shoppingSessionItems(for: session)
+        let collectedCount = sessionItems.filter { session.isCollected($0) }.count
+        let totalCount = sessionItems.count
+        let remainingCount = max(totalCount - collectedCount, 0)
+        let progress = totalCount == 0 ? 0 : Double(collectedCount) / Double(totalCount)
+
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 14) {
+                WayTaskScreenHeader(
+                    title: "Shopping Mode",
+                    subtitle: "\(remainingCount) remaining • \(collectedCount)/\(totalCount) collected",
+                    trailingIcons: ["cart.fill"]
+                )
+
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .center, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Active shopping session")
+                                .font(.headline)
+                                .foregroundStyle(WayTaskDesign.primaryText)
+
+                            Text(totalCount == 0 ? "No active items in this session" : "Collect items as you shop")
+                                .font(.caption)
+                                .foregroundStyle(WayTaskDesign.secondaryText)
+                        }
+
+                        Spacer(minLength: 8)
+
+                        Button("Finish") {
+                            finishShopping(session)
+                        }
+                        .buttonStyle(WayTaskSecondaryPillButtonStyle())
+                    }
+
+                    ProgressView(value: progress)
+                        .tint(WayTaskDesign.accent)
+                        .accessibilityLabel("Shopping progress")
+                        .accessibilityValue("\(collectedCount) of \(totalCount) items collected")
+
+                    HStack(spacing: 10) {
+                        ShoppingSessionMetric(title: "Collected", value: "\(collectedCount)/\(totalCount)", iconName: "checkmark.circle.fill")
+                        ShoppingSessionMetric(title: "Remaining", value: "\(remainingCount)", iconName: "list.bullet")
+                    }
+                }
+                .padding(16)
+                .wayTaskCard()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 18)
+            .padding(.bottom, 12)
+
+            shoppingSessionList(for: session, items: sessionItems)
+        }
+    }
+
+    private func shoppingSessionList(for session: ShoppingSession, items sessionItems: [ShoppingItem]) -> some View {
+        List {
+            if sessionItems.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "checkmark.circle")
+                        .font(.system(size: 44, weight: .semibold))
+                        .foregroundStyle(WayTaskDesign.accent)
+
+                    Text("Nothing left to collect")
+                        .font(.headline)
+                        .foregroundStyle(WayTaskDesign.primaryText)
+
+                    Text("Finish this session when you are done shopping.")
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(24)
+                .wayTaskCard()
+                .listRowInsets(EdgeInsets(top: 42, leading: 20, bottom: 42, trailing: 20))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            } else {
+                ForEach(sessionItems) { item in
+                    ShoppingSessionItemRow(
+                        item: item,
+                        isCollected: session.isCollected(item)
+                    ) {
+                        toggleCollected(item, in: session)
+                    }
+                    .listRowInsets(EdgeInsets(top: 5, leading: 20, bottom: 5, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.clear)
     }
 
     @ViewBuilder
@@ -283,6 +425,13 @@ struct ProductListView: View {
         items.filter { !$0.isCompleted }
     }
 
+    private var activeSession: ShoppingSession? {
+        shoppingSessions
+            .filter(\.isActive)
+            .sorted { $0.startedAt > $1.startedAt }
+            .first
+    }
+
     private var filteredItems: [ShoppingItem] {
         items.filter { item in
             if item.id == appStateManager.recentlyAddedShoppingItemID {
@@ -306,6 +455,39 @@ struct ProductListView: View {
             case .done:
                 return item.isCompleted
             }
+        }
+    }
+
+    private func shoppingSessionItems(for session: ShoppingSession) -> [ShoppingItem] {
+        let sessionItemIDs = Set(session.itemIDs)
+        return items.filter { sessionItemIDs.contains($0.id) }
+    }
+
+    private func startShopping() {
+        do {
+            try shoppingSessionService.startShopping(with: activeShoppingItems, in: modelContext)
+        } catch {
+            assertionFailure("Failed to start shopping session: \(error.localizedDescription)")
+        }
+    }
+
+    private func toggleCollected(_ item: ShoppingItem, in session: ShoppingSession) {
+        do {
+            if session.isCollected(item) {
+                try shoppingSessionService.markItemRemaining(item, in: session, modelContext: modelContext)
+            } else {
+                try shoppingSessionService.markItemCollected(item, in: session, modelContext: modelContext)
+            }
+        } catch {
+            assertionFailure("Failed to update shopping session item: \(error.localizedDescription)")
+        }
+    }
+
+    private func finishShopping(_ session: ShoppingSession) {
+        do {
+            try shoppingSessionService.finishShopping(session, in: modelContext)
+        } catch {
+            assertionFailure("Failed to finish shopping session: \(error.localizedDescription)")
         }
     }
 
@@ -622,6 +804,85 @@ private struct MemoryIndicatorRow: View {
         }
 
         return "clock.fill"
+    }
+}
+
+private struct ShoppingSessionMetric: View {
+    let title: String
+    let value: String
+    let iconName: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: iconName)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(WayTaskDesign.accent)
+                .frame(width: 28, height: 28)
+                .background(WayTaskDesign.accent.opacity(0.12))
+                .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(value)
+                    .font(.headline)
+                    .foregroundStyle(WayTaskDesign.primaryText)
+
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.secondaryText)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(WayTaskDesign.surface.opacity(0.75))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+private struct ShoppingSessionItemRow: View {
+    let item: ShoppingItem
+    let isCollected: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(alignment: .center, spacing: 14) {
+                Image(systemName: isCollected ? "checkmark.circle.fill" : "circle")
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(isCollected ? WayTaskDesign.accent : WayTaskDesign.tertiaryText)
+                    .animation(.spring(response: 0.28, dampingFraction: 0.82), value: isCollected)
+
+                WayTaskProductThumbnail(data: item.imageData, size: 52, cornerRadius: 14)
+                    .opacity(isCollected ? 0.6 : 1)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.name)
+                        .font(.headline)
+                        .foregroundStyle(WayTaskDesign.primaryText)
+                        .strikethrough(isCollected)
+                        .lineLimit(2)
+
+                    if let brand = item.brand?.trimmingCharacters(in: .whitespacesAndNewlines), !brand.isEmpty {
+                        Text(brand)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(WayTaskDesign.secondaryText)
+                            .lineLimit(1)
+                    }
+
+                    Text(isCollected ? "Collected" : "Remaining")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(isCollected ? WayTaskDesign.accent : WayTaskDesign.secondaryText)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(16)
+        .wayTaskCard()
+        .opacity(isCollected ? 0.72 : 1)
+        .accessibilityLabel("\(item.name), \(isCollected ? "collected" : "remaining")")
     }
 }
 
