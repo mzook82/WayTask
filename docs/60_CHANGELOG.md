@@ -132,3 +132,38 @@ Barcode recognition is independent from AI and external databases.
 No products are added automatically.
 
 Future releases will connect barcode recognition to real product databases.
+
+# Version 0.8
+
+**Date:** July 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 8 – First Real Product Provider
+
+## Added
+
+- Open Food Facts provider
+- Real barcode lookup
+- Product image support
+- Brand information
+- Category information
+- Real ProductCandidate generation
+
+## Improved
+
+- Camera recognition workflow
+- Product provider architecture
+- Recognition pipeline
+
+## User Value Added
+
+Users can now scan a real product barcode and retrieve accurate product information, including the product name, brand, category, and image before deciding whether to continue.
+
+## Notes
+
+Open Food Facts is the first production product provider.
+
+Future releases will add additional providers, retail APIs, and price comparison services.
