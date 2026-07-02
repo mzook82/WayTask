@@ -81,8 +81,9 @@ WayTask should help users remember, discover, compare, and make better shopping 
 - [ ] Indoor Navigation
 - [ ] Live Store Availability
 - [ ] Price Comparison
-- [ ] Store Ranking
-
+- [x] Buying Options UI *(Sprint 11.1)*
+- [x] Store Ranking Reasons *(Sprint 12)*
+- [x] View on Map from Buying Options *(Sprint 11.1)*
 ---
 
 # Shopping Intelligence (10/12 Complete)
@@ -99,6 +100,9 @@ WayTask should help users remember, discover, compare, and make better shopping 
 - [x] Shopping Intent Matching *(Sprint 10)*
 - [ ] Personalized Recommendations
 - [ ] Shopping Memory
+- [x] Store Ranking Foundation *(Sprint 12)*
+- [x] Best Match Badge *(Sprint 12)*
+- [x] Recommendation Reasons *(Sprint 12)*
 
 ---
 

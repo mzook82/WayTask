@@ -201,3 +201,37 @@ Users can now scan a product, add it to their shopping list, and immediately rec
 Current recommendations are category-based.
 
 Future versions will add live inventory, price comparison, and AI-assisted recommendations.
+
+# Version 1.2 Beta
+
+**Date:** July 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 12 – Store Ranking Foundation
+
+## Added
+
+- StoreRankingService
+- StoreScore model
+- Best Match badge
+- Recommendation reasons
+- Confidence labels
+
+## Improved
+
+- Buying Options UI
+- Store recommendation clarity
+- Ranking architecture
+
+## User Value Added
+
+Users can now see why WayTask recommends a buying option, including category match, nearby availability, and confidence reasons.
+
+## Notes
+
+Ranking is rule-based and independent from AI.
+
+Future versions may include price, availability, opening hours, user preferences, and AI-assisted ranking.

@@ -184,3 +184,36 @@ After adding a product, users can instantly discover nearby stores where the pro
 Build completed successfully.
 
 Status: ✅ Completed
+
+# Sprint 11 – Store Ranking Foundation
+
+## Goal
+
+Rank buying options and explain why a store is recommended.
+
+## User Value
+
+Users can understand why WayTask recommends one buying option over another.
+
+## Completed
+
+- StoreRankingService
+- StoreScore model
+- Best Match badge
+- Recommendation reasons
+- Confidence labels
+- Buying Options ranking integration
+- Badge UI polish
+
+## Out of Scope
+
+- AI ranking
+- Real prices
+- Live inventory
+- Paid APIs
+
+## Result
+
+Build completed successfully.
+
+Status: ✅ Completed
