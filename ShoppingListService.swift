@@ -32,6 +32,8 @@ protocol ShoppingListServicing {
 }
 
 struct ShoppingListService: ShoppingListServicing {
+    private let shoppingMemoryService = ShoppingMemoryService()
+
     @discardableResult
     func addManualItem(
         name: String,
@@ -86,6 +88,7 @@ struct ShoppingListService: ShoppingListServicing {
 
         try modelContext.save()
         try verifyInsertedItem(item, in: modelContext)
+        try shoppingMemoryService.recordProductAdded(item, in: modelContext)
         return item
     }
 

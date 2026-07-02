@@ -185,7 +185,7 @@ Build completed successfully.
 
 Status: ✅ Completed
 
-# Sprint 11 – Store Ranking Foundation
+# Sprint 12 – Store Ranking Foundation
 
 ## Goal
 
@@ -215,5 +215,27 @@ Users can understand why WayTask recommends one buying option over another.
 ## Result
 
 Build completed successfully.
+
+Status: ✅ Completed
+
+# Sprint 13 – Shopping Memory Foundation
+
+## Goal
+
+Persist shopping history and prepare future shopping habit analysis.
+
+## Completed
+
+- ProductHistory
+- ShoppingMemoryService
+- Shopping history persistence
+- Product add tracking
+- Frequently added queries
+
+## Out of Scope
+
+- User interface
+- Notifications
+- AI
 
 Status: ✅ Completed

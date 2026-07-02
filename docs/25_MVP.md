@@ -207,6 +207,16 @@ The MVP will be considered complete when a user can:
 
 ---
 
+# Shopping Memory
+
+- [x] Product History *(Sprint 13)*
+- [x] Shopping Memory Service *(Sprint 13)*
+- [ ] Frequently Bought UI
+- [ ] Repeat Purchase Suggestions
+- [ ] Shopping Insights
+
+---
+
 # MVP Progress Log
 
 ## Sprint 4

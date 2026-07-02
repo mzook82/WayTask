@@ -235,3 +235,20 @@ Users can now see why WayTask recommends a buying option, including category mat
 Ranking is rule-based and independent from AI.
 
 Future versions may include price, availability, opening hours, user preferences, and AI-assisted ranking.
+
+# Version 1.3 Beta
+
+## Added
+
+- ProductHistory
+- ShoppingMemoryService
+- Persistent shopping history
+- Product tracking
+
+## User Value Added
+
+WayTask now remembers shopping history and prepares future shopping habit features.
+
+## Notes
+
+No user-facing interface yet.
