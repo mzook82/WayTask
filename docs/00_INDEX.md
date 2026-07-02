@@ -17,6 +17,50 @@ This documentation serves as the central knowledge base for the project, coverin
 
 ---
 
+# Screenshots
+
+## Core User Flow
+
+### 1. Camera Recognition
+
+Scan a product barcode and retrieve real product information.
+
+![Camera Recognition](docs/screenshots/camera-recognition.png)
+
+---
+
+### 2. Product List
+
+Recognized products are added to the shopping list with product image, brand, and shopping memory indicators.
+
+![Product List](docs/screenshots/product-list.png)
+
+---
+
+### 3. Buying Options
+
+WayTask suggests buying options and explains the best match.
+
+![Buying Options](docs/screenshots/buying-options.png)
+
+---
+
+### 4. Map Suggestions
+
+Suggested stores appear on the map with navigation support.
+
+![Map Suggestions](docs/screenshots/map-suggestions.png)
+
+---
+
+### 5. Discover
+
+Discover nearby shopping opportunities and future recommendations.
+
+![Discover](docs/screenshots/discover.png)
+
+---
+
 ## 🏗 Technical
 
 | Document | Description |

@@ -9,6 +9,7 @@ struct ProductListView: View {
 
     @Query private var items: [ShoppingItem]
     @Query private var locations: [GeoLocation]
+    @Query private var productHistories: [ProductHistory]
 
     @State private var newItemName = ""
     @State private var selectedLocationID: UUID?
@@ -20,6 +21,7 @@ struct ProductListView: View {
     private let shoppingListService = ShoppingListService()
     private let shoppingIntentMatcher = ShoppingIntentMatcher()
     private let buyingOptionsService = BuyingOptionsService()
+    private let shoppingMemoryService = ShoppingMemoryService()
     @State private var suggestions: [MKMapItem] = []
     @State private var isSearchingSuggestions = false
     @State private var searchText = ""
@@ -166,6 +168,7 @@ struct ProductListView: View {
                     ProductRowCard(
                         item: item,
                         location: assignedLocation(for: item),
+                        memoryIndicators: memoryIndicators(for: item),
                         onToggle: {
                             withAnimation(.spring()) {
                                 item.isCompleted.toggle()
@@ -359,6 +362,30 @@ struct ProductListView: View {
         }
     }
 
+    private func memoryIndicators(for item: ShoppingItem) -> [String] {
+        guard let history = try? shoppingMemoryService.productHistory(for: item, in: modelContext),
+              productHistories.contains(where: { $0.id == history.id }) else {
+            return []
+        }
+
+        var indicators: [String] = []
+
+        if history.addCount >= 3 {
+            indicators.append("Frequently Bought")
+        }
+
+        if history.addCount > 1 {
+            indicators.append("Added \(history.addCount) times")
+        }
+
+        let daysSinceLastAdded = Calendar.current.dateComponents([.day], from: history.lastAddedDate, to: Date()).day ?? 0
+        if indicators.count < 2 && daysSinceLastAdded <= 7 {
+            indicators.append("Last added recently")
+        }
+
+        return Array(indicators.prefix(2))
+    }
+
     private func findSuggestions(for item: ShoppingItem) {
         let request = shoppingIntentMatcher.suggestionRequest(for: item)
         let buyingOptions = buyingOptionsService.localOptions(for: request)
@@ -424,6 +451,7 @@ private enum ProductFilter: String, CaseIterable, Identifiable {
 private struct ProductRowCard: View {
     @Bindable var item: ShoppingItem
     let location: GeoLocation?
+    let memoryIndicators: [String]
     let onToggle: () -> Void
     let onSuggest: () -> Void
     let onOpenMap: (GeoLocation) -> Void
@@ -456,6 +484,10 @@ private struct ProductRowCard: View {
                         Label("No place selected", systemImage: "mappin.slash")
                             .font(.caption)
                             .foregroundStyle(WayTaskDesign.secondaryText)
+                    }
+
+                    if !memoryIndicators.isEmpty {
+                        MemoryIndicatorRow(indicators: memoryIndicators)
                     }
                 }
 
@@ -492,6 +524,44 @@ private struct ProductRowCard: View {
         }
         .padding(16)
         .wayTaskCard()
+    }
+}
+
+private struct MemoryIndicatorRow: View {
+    let indicators: [String]
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(indicators.prefix(2), id: \.self) { indicator in
+                HStack(spacing: 4) {
+                    Image(systemName: iconName(for: indicator))
+                        .font(.caption2.weight(.bold))
+
+                    Text(indicator)
+                        .lineLimit(1)
+                }
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(WayTaskDesign.accent)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 4)
+                .background(WayTaskDesign.accent.opacity(0.12))
+                .clipShape(Capsule())
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Shopping memory: \(indicators.prefix(2).joined(separator: ", "))")
+    }
+
+    private func iconName(for indicator: String) -> String {
+        if indicator == "Frequently Bought" {
+            return "arrow.triangle.2.circlepath"
+        }
+
+        if indicator.hasPrefix("Added") {
+            return "plus.circle.fill"
+        }
+
+        return "clock.fill"
     }
 }
 
