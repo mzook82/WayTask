@@ -37,9 +37,15 @@ final class CameraService: NSObject, ObservableObject {
     let session = AVCaptureSession()
 
     private let sessionQueue = DispatchQueue(label: "WayTask.CameraService.SessionQueue")
+    private let metadataQueue = DispatchQueue(label: "WayTask.CameraService.MetadataQueue")
     private let photoOutput = AVCapturePhotoOutput()
+    private let metadataOutput = AVCaptureMetadataOutput()
     private var videoDeviceInput: AVCaptureDeviceInput?
     private var photoCaptureCompletion: ((Result<CapturedPhoto, Error>) -> Void)?
+    private var barcodeHandler: ((BarcodeResult) -> Void)?
+    private var lastBarcodeValue: String?
+    private var lastBarcodeDate: Date?
+    private var isBarcodeScanningEnabled = false
 
     var supportsFlash: Bool {
         videoDeviceInput?.device.hasTorch == true
@@ -88,6 +94,34 @@ final class CameraService: NSObject, ObservableObject {
 
             DispatchQueue.main.async {
                 self.isRunning = false
+            }
+        }
+    }
+
+    func startBarcodeScanning(onDetected: @escaping (BarcodeResult) -> Void) {
+        sessionQueue.async { [weak self] in
+            guard let self, self.isConfigured else {
+                return
+            }
+
+            self.barcodeHandler = onDetected
+            self.isBarcodeScanningEnabled = true
+            self.configureBarcodeTypesIfAvailable()
+        }
+    }
+
+    func stopBarcodeScanning() {
+        sessionQueue.async { [weak self] in
+            guard let self else {
+                return
+            }
+
+            self.isBarcodeScanningEnabled = false
+            self.barcodeHandler = nil
+            self.lastBarcodeValue = nil
+            self.lastBarcodeDate = nil
+            if self.isConfigured {
+                self.metadataOutput.metadataObjectTypes = []
             }
         }
     }
@@ -232,11 +266,60 @@ final class CameraService: NSObject, ObservableObject {
         }
         session.addOutput(photoOutput)
 
+        guard session.canAddOutput(metadataOutput) else {
+            throw CameraServiceError.configurationFailed
+        }
+        session.addOutput(metadataOutput)
+        metadataOutput.setMetadataObjectsDelegate(self, queue: metadataQueue)
+        configureBarcodeTypesIfAvailable()
+
         if videoDevice.isFocusModeSupported(.continuousAutoFocus) {
             try videoDevice.lockForConfiguration()
             videoDevice.focusMode = .continuousAutoFocus
             videoDevice.unlockForConfiguration()
         }
+    }
+
+    private func configureBarcodeTypesIfAvailable() {
+        guard isConfigured || session.outputs.contains(metadataOutput) else {
+            return
+        }
+
+        let supportedTypes: [AVMetadataObject.ObjectType] = [.ean13, .ean8, .upce, .qr]
+        let availableTypes = metadataOutput.availableMetadataObjectTypes
+        let enabledTypes = supportedTypes.filter { availableTypes.contains($0) }
+        metadataOutput.metadataObjectTypes = isBarcodeScanningEnabled ? enabledTypes : []
+    }
+
+    private func barcodeType(from metadataType: AVMetadataObject.ObjectType, value: String) -> BarcodeType {
+        switch metadataType {
+        case .ean13:
+            return value.hasPrefix("0") && value.count == 13 ? .upcA : .ean13
+        case .ean8:
+            return .ean8
+        case .upce:
+            return .upcE
+        case .qr:
+            return .qr
+        default:
+            return .unknown
+        }
+    }
+
+    private func shouldEmitBarcode(value: String, now: Date) -> Bool {
+        guard lastBarcodeValue == value,
+              let lastBarcodeDate else {
+            lastBarcodeValue = value
+            lastBarcodeDate = now
+            return true
+        }
+
+        if now.timeIntervalSince(lastBarcodeDate) > 1.5 {
+            self.lastBarcodeDate = now
+            return true
+        }
+
+        return false
     }
 }
 
@@ -265,6 +348,37 @@ extension CameraService: AVCapturePhotoCaptureDelegate {
         DispatchQueue.main.async { [weak self] in
             self?.photoCaptureCompletion?(.success(CapturedPhoto(data: data)))
             self?.photoCaptureCompletion = nil
+        }
+    }
+}
+
+extension CameraService: AVCaptureMetadataOutputObjectsDelegate {
+    func metadataOutput(
+        _ output: AVCaptureMetadataOutput,
+        didOutput metadataObjects: [AVMetadataObject],
+        from connection: AVCaptureConnection
+    ) {
+        guard isBarcodeScanningEnabled,
+              let codeObject = metadataObjects.compactMap({ $0 as? AVMetadataMachineReadableCodeObject }).first,
+              let value = codeObject.stringValue,
+              !value.isEmpty else {
+            return
+        }
+
+        let now = Date()
+        guard shouldEmitBarcode(value: value, now: now) else {
+            return
+        }
+
+        let result = BarcodeResult(
+            value: value,
+            type: barcodeType(from: codeObject.type, value: value),
+            scannedAt: now,
+            confidence: nil
+        )
+
+        DispatchQueue.main.async { [weak self] in
+            self?.barcodeHandler?(result)
         }
     }
 }

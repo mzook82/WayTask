@@ -233,6 +233,10 @@ struct CameraView: View {
                 recognizedProductCard(product)
             }
 
+            if let barcode = viewModel.barcodeResult ?? viewModel.confirmedBarcodeResult {
+                barcodeResultCard(barcode)
+            }
+
             if viewModel.isShowingPhotoPreview {
                 photoReviewControls
             } else {
@@ -244,7 +248,11 @@ struct CameraView: View {
                 confirmationControls(candidate)
             }
 
-            if viewModel.recognizedProduct == nil && viewModel.selectedCandidate == nil {
+            if viewModel.barcodeResult != nil || viewModel.confirmedBarcodeResult != nil {
+                barcodeControls
+            }
+
+            if viewModel.selectedMode != .barcode && viewModel.recognizedProduct == nil && viewModel.selectedCandidate == nil {
                 aiUnavailableMessage
             }
 
@@ -351,6 +359,28 @@ struct CameraView: View {
         }
     }
 
+    private var barcodeControls: some View {
+        HStack(spacing: 12) {
+            if viewModel.canConfirmBarcode {
+                Button {
+                    viewModel.confirmBarcode()
+                } label: {
+                    Label("Confirm", systemImage: "checkmark.circle.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 52, cornerRadius: 16, shadow: true))
+            }
+
+            Button {
+                viewModel.scanAgain()
+            } label: {
+                Label("Scan Again", systemImage: "barcode.viewfinder")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 52, cornerRadius: 16))
+        }
+    }
+
     private var aiUnavailableMessage: some View {
         HStack(spacing: 10) {
             Image(systemName: "sparkles")
@@ -378,6 +408,45 @@ struct CameraView: View {
             return "barcode.viewfinder"
         case .aiVision:
             return "sparkles"
+        }
+    }
+
+    private func barcodeResultCard(_ barcode: BarcodeResult) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .fill(WayTaskDesign.surfaceElevated)
+
+                Image(systemName: "barcode.viewfinder")
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.accent)
+            }
+            .frame(width: 58, height: 58)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Label("Barcode detected", systemImage: "checkmark.seal.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.accent)
+
+                Text(barcode.value)
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(WayTaskDesign.primaryText)
+                    .lineLimit(1)
+                    .textSelection(.enabled)
+
+                Text(barcode.type.displayName)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.secondaryText)
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .background(WayTaskDesign.accent.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(WayTaskDesign.accent.opacity(0.24), lineWidth: 1)
         }
     }
 

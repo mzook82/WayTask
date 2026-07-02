@@ -38,18 +38,29 @@ final class CameraViewModel: ObservableObject {
         case idle
         case captured
         case analyzing
+        case barcodeDetected
         case result
         case confirmation
         case unavailable
         case failed
     }
 
-    @Published var selectedMode: Mode = .photo
+    @Published var selectedMode: Mode = .photo {
+        didSet {
+            guard oldValue != selectedMode else {
+                return
+            }
+
+            configureMode()
+        }
+    }
     @Published var pendingPhotoData: Data?
     @Published var capturedImageData: Data?
     @Published var recognitionResult: RecognitionResult?
     @Published var selectedCandidate: ProductCandidate?
     @Published var confirmedCandidate: ProductCandidate?
+    @Published var barcodeResult: BarcodeResult?
+    @Published var confirmedBarcodeResult: BarcodeResult?
     @Published var recognitionPhase: RecognitionPhase = .idle
     @Published var isRecognizing = false
     @Published var isSavingPhoto = false
@@ -86,32 +97,46 @@ final class CameraViewModel: ObservableObject {
         selectedCandidate != nil && confirmedCandidate == nil
     }
 
+    var canConfirmBarcode: Bool {
+        barcodeResult != nil && confirmedBarcodeResult == nil
+    }
+
     var isShowingPhotoPreview: Bool {
         pendingPhotoData != nil
     }
 
     var shoppingContext: ShoppingContext? {
-        guard let confirmedCandidate else {
-            return nil
+        if let confirmedCandidate {
+            return ShoppingContext(
+                activeShoppingListItems: [
+                    ShoppingContextItem(
+                        id: confirmedCandidate.id,
+                        name: confirmedCandidate.name,
+                        productHints: confirmedCandidate.productHints
+                    )
+                ],
+                availableProductHints: confirmedCandidate.productHints
+            )
         }
 
-        return ShoppingContext(
-            activeShoppingListItems: [
-                ShoppingContextItem(
-                    id: confirmedCandidate.id,
-                    name: confirmedCandidate.name,
-                    productHints: confirmedCandidate.productHints
-                )
-            ],
-            availableProductHints: confirmedCandidate.productHints
-        )
+        if let confirmedBarcodeResult {
+            return ShoppingContext(
+                selectedInterests: [confirmedBarcodeResult.type.displayName],
+                recentSearches: [confirmedBarcodeResult.value],
+                availableProductHints: [confirmedBarcodeResult.value, confirmedBarcodeResult.type.rawValue]
+            )
+        }
+
+        return nil
     }
 
     func startCamera() {
         cameraService.requestAccessAndConfigure()
+        configureMode()
     }
 
     func stopCamera() {
+        cameraService.stopBarcodeScanning()
         cameraService.stop()
     }
 
@@ -200,6 +225,29 @@ final class CameraViewModel: ObservableObject {
         statusMessage = "Product confirmed and ready for your shopping context."
     }
 
+    func confirmBarcode() {
+        guard let barcodeResult else {
+            return
+        }
+
+        confirmedBarcodeResult = barcodeResult
+        recognitionPhase = .confirmation
+        statusMessage = "Barcode confirmed and ready for future product lookup."
+    }
+
+    func scanAgain() {
+        barcodeResult = nil
+        confirmedBarcodeResult = nil
+        recognitionResult = nil
+        selectedCandidate = nil
+        confirmedCandidate = nil
+        recognitionPhase = .idle
+        statusMessage = "Point the camera at a barcode."
+        if selectedMode == .barcode {
+            startBarcodeScanning()
+        }
+    }
+
     func retakePhoto() {
         pendingPhotoData = nil
         capturedImageData = nil
@@ -244,7 +292,51 @@ final class CameraViewModel: ObservableObject {
         pendingPhotoSource = .cameraCapture
         clearRecognition()
         recognitionPhase = .idle
-        statusMessage = "AI recognition is not available yet."
+        statusMessage = selectedMode == .barcode
+            ? "Point the camera at a barcode."
+            : "AI recognition is not available yet."
+    }
+
+    private func configureMode() {
+        clearRecognition()
+        pendingPhotoData = nil
+        capturedImageData = nil
+
+        if selectedMode == .barcode {
+            statusMessage = "Point the camera at a barcode."
+            startBarcodeScanning()
+        } else {
+            cameraService.stopBarcodeScanning()
+            statusMessage = selectedMode == .aiVision
+                ? "AI recognition is not available yet."
+                : "Ready to capture a photo."
+        }
+    }
+
+    private func startBarcodeScanning() {
+        cameraService.startBarcodeScanning { [weak self] result in
+            Task { @MainActor in
+                self?.handleBarcodeDetection(result)
+            }
+        }
+    }
+
+    private func handleBarcodeDetection(_ result: BarcodeResult) {
+        guard selectedMode == .barcode,
+              confirmedBarcodeResult == nil else {
+            return
+        }
+
+        barcodeResult = result
+        recognitionPhase = .barcodeDetected
+        statusMessage = "Barcode detected"
+        recognitionResult = RecognitionResult(
+            status: .recognized,
+            candidates: [],
+            message: "Barcode detected",
+            inputSource: .barcode
+        )
+        cameraService.stopBarcodeScanning()
     }
 
     private func analyzeCapturedPhoto(_ imageData: Data, inputSource: RecognitionInputSource) {
@@ -296,6 +388,8 @@ final class CameraViewModel: ObservableObject {
         recognitionResult = nil
         selectedCandidate = nil
         confirmedCandidate = nil
+        barcodeResult = nil
+        confirmedBarcodeResult = nil
         isRecognizing = false
     }
 }

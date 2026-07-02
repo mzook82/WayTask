@@ -60,3 +60,64 @@ Prepare the camera flow for reliable product recognition while keeping the user 
 Build completed successfully.
 
 Status: ✅ Completed
+
+# Sprint 6 – Data Providers Foundation
+
+## Goal
+
+Create a flexible provider architecture that allows WayTask to integrate multiple data sources without changing business logic.
+
+## User Value
+
+Prepare WayTask for real-world product, store, and shopping information while keeping the application independent from any specific provider.
+
+## Completed
+
+- DataProvider protocol
+- StoreDataProvider protocol
+- ProductDataProvider protocol
+- LocalStoreDataProvider
+- DataSourceType model
+- Data source documentation
+
+## Out of Scope
+
+- Real APIs
+- AI
+- Product lookup
+
+## Result
+
+Build completed successfully.
+
+Status: ✅ Completed
+
+# Sprint 7 – Barcode Recognition Foundation
+
+## Goal
+
+Introduce real barcode recognition while preserving the existing camera workflow.
+
+## User Value
+
+Users can scan product barcodes and prepare products for future recognition and shopping intelligence.
+
+## Completed
+
+- Barcode recognition
+- BarcodeResult model
+- Barcode confirmation
+- Recognition pipeline integration
+- ShoppingContext barcode support
+
+## Out of Scope
+
+- Product lookup
+- AI
+- Barcode database
+
+## Result
+
+Build completed successfully.
+
+Status: ✅ Completed

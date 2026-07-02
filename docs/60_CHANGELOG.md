@@ -65,3 +65,70 @@ WayTask is now capable of processing captured products through a structured reco
 Recognition currently returns unavailable until a real provider is connected.
 
 The application never generates fake product recognition results.
+
+# Version 0.6
+
+**Date:** July 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 6 – Data Providers Foundation
+
+## Added
+
+- DataProvider protocol
+- StoreDataProvider protocol
+- ProductDataProvider protocol
+- LocalStoreDataProvider
+- DataSourceType model
+
+## Improved
+
+- Provider architecture
+- Data source abstraction
+
+## User Value Added
+
+WayTask is now prepared to integrate multiple real-world data providers without changing the core application architecture.
+
+## Notes
+
+Current providers remain local only.
+
+Future integrations include Apple Maps, Open Food Facts, retail APIs, and AI providers.
+
+# Version 0.7
+
+**Date:** July 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 7 – Barcode Recognition Foundation
+
+## Added
+
+- Native barcode recognition
+- BarcodeResult model
+- Barcode confirmation flow
+- Recognition pipeline integration
+
+## Improved
+
+- Camera workflow
+- Product recognition architecture
+
+## User Value Added
+
+Users can now scan real product barcodes, creating the foundation for future product lookup and shopping recommendations.
+
+## Notes
+
+Barcode recognition is independent from AI and external databases.
+
+No products are added automatically.
+
+Future releases will connect barcode recognition to real product databases.

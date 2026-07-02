@@ -34,6 +34,7 @@
 		D1954E0A2FF5B07600E946DA /* StoreDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E092FF5B07600E946DA /* StoreDataProvider.swift */; };
 		D1954E0C2FF5B07600E946DA /* ProductDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E0B2FF5B07600E946DA /* ProductDataProvider.swift */; };
 		D1954E0E2FF5B08700E946DA /* LocalStoreDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E0D2FF5B08700E946DA /* LocalStoreDataProvider.swift */; };
+		D1954E102FF64C3300E946DA /* BarcodeResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E0F2FF64C3300E946DA /* BarcodeResult.swift */; };
 		D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B8519A2FF18FF50083B34C /* ProductListView.swift */; };
 /* End PBXBuildFile section */
 
@@ -65,6 +66,7 @@
 		D1954E092FF5B07600E946DA /* StoreDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreDataProvider.swift; sourceTree = "<group>"; };
 		D1954E0B2FF5B07600E946DA /* ProductDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDataProvider.swift; sourceTree = "<group>"; };
 		D1954E0D2FF5B08700E946DA /* LocalStoreDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStoreDataProvider.swift; sourceTree = "<group>"; };
+		D1954E0F2FF64C3300E946DA /* BarcodeResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeResult.swift; sourceTree = "<group>"; };
 		D1B8517E2FEFF2F40083B34C /* WayTask.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WayTask.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1B8519A2FF18FF50083B34C /* ProductListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -134,6 +136,7 @@
 				D1954E092FF5B07600E946DA /* StoreDataProvider.swift */,
 				D1954E0B2FF5B07600E946DA /* ProductDataProvider.swift */,
 				D1954E0D2FF5B08700E946DA /* LocalStoreDataProvider.swift */,
+				D1954E0F2FF64C3300E946DA /* BarcodeResult.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -222,6 +225,7 @@
 				D11995C52FF3999200C9EAF2 /* CameraService.swift in Sources */,
 				D12B90982FF2FCC800531ECE /* CameraView.swift in Sources */,
 				D1954DFA2FF59EE900E946DA /* DecisionEngine.swift in Sources */,
+				D1954E102FF64C3300E946DA /* BarcodeResult.swift in Sources */,
 				D1954E062FF5B07400E946DA /* DataSourceType.swift in Sources */,
 				D1954DEC2FF3C45900E946DA /* WayTaskMapView.swift in Sources */,
 				D1954E042FF5ACBC00E946DA /* RecognitionResult.swift in Sources */,
