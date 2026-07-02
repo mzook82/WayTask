@@ -651,7 +651,7 @@ struct ProductListView: View {
     }
 
     private func assign(_ item: ShoppingItem, to mapItem: MKMapItem) {
-        let coordinate = mapItem.placemark.coordinate
+        let coordinate = mapItem.location.coordinate
         let title = mapItem.name ?? item.name
         let location = GeoLocation(
             title: title,
@@ -903,7 +903,7 @@ private struct SuggestionPlaceRow: View {
                     .font(.headline)
                     .foregroundStyle(WayTaskDesign.primaryText)
 
-                if let address = mapItem.placemark.title {
+                if let address = mapItem.addressRepresentations?.fullAddress(includingRegion: true, singleLine: true) {
                     Text(address)
                         .font(.caption)
                         .foregroundStyle(WayTaskDesign.secondaryText)

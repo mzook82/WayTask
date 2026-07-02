@@ -4,6 +4,10 @@
 <dict>
 	<key>NSCameraUsageDescription</key>
 	<string>WayTask uses the camera to scan barcodes and capture product photos.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>WayTask uses your location to remind you about shopping items near saved places.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>WayTask uses your location to show nearby stores and shopping suggestions.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>WayTask can save captured product photos to your Photos library when you choose to save them.</string>
 	<key>NSUserNotificationUsageDescription</key>
