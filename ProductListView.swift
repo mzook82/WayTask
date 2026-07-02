@@ -15,8 +15,11 @@ struct ProductListView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var selectedImageData: Data?
     @State private var suggestionItem: ShoppingItem?
+    @State private var buyingOptionsRequest: ShoppingStoreSuggestionRequest?
+    @State private var isShowingBuyingOptions = false
     private let shoppingListService = ShoppingListService()
     private let shoppingIntentMatcher = ShoppingIntentMatcher()
+    private let buyingOptionsService = BuyingOptionsService()
     @State private var suggestions: [MKMapItem] = []
     @State private var isSearchingSuggestions = false
     @State private var searchText = ""
@@ -38,6 +41,17 @@ struct ProductListView: View {
             .toolbar(.hidden, for: .navigationBar)
             .sheet(item: $suggestionItem) { item in
                 suggestionSheet(for: item)
+            }
+            .sheet(isPresented: $isShowingBuyingOptions) {
+                BuyingOptionsSheet(
+                    options: appStateManager.buyingOptions,
+                    onViewOnMap: { _ in
+                        openBuyingOptionsOnMap()
+                    },
+                    onClose: {
+                        isShowingBuyingOptions = false
+                    }
+                )
             }
             .onChange(of: selectedPhotoItem) {
                 loadSelectedPhoto()
@@ -347,7 +361,24 @@ struct ProductListView: View {
 
     private func findSuggestions(for item: ShoppingItem) {
         let request = shoppingIntentMatcher.suggestionRequest(for: item)
-        appStateManager.suggestStores(for: request)
+        let buyingOptions = buyingOptionsService.localOptions(for: request)
+        buyingOptionsRequest = request
+        appStateManager.storeSuggestionRequest = request
+        appStateManager.buyingOptions = buyingOptions
+        isShowingBuyingOptions = true
+    }
+
+    private func openBuyingOptionsOnMap() {
+        guard let buyingOptionsRequest else {
+            isShowingBuyingOptions = false
+            return
+        }
+
+        isShowingBuyingOptions = false
+        appStateManager.suggestStores(
+            for: buyingOptionsRequest,
+            buyingOptions: appStateManager.buyingOptions
+        )
     }
 
     private func assign(_ item: ShoppingItem, to mapItem: MKMapItem) {

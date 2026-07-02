@@ -11,6 +11,7 @@ struct MainMapView: View {
 
     @StateObject private var locationManager = LocationManager()
     @StateObject private var mapViewModel = MapViewModel()
+    private let buyingOptionsService = BuyingOptionsService()
 
     @State private var mapCenter = CLLocationCoordinate2D(latitude: 32.0853, longitude: 34.7818)
     @State private var showingAddLocationSheet = false
@@ -240,6 +241,10 @@ struct MainMapView: View {
         }
 
         mapViewModel.applyStoreSuggestion(request)
+        appStateManager.buyingOptions = buyingOptionsService.localOptions(
+            for: request,
+            stores: mapViewModel.filteredStores
+        )
     }
 
     private func selectStore(_ storeID: UUID) {

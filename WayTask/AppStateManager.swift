@@ -24,6 +24,7 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     @Published var shoppingListRevision = UUID()
     @Published var recentlyAddedShoppingItemID: UUID?
     @Published var storeSuggestionRequest: ShoppingStoreSuggestionRequest?
+    @Published var buyingOptions: [BuyingOption] = []
 
     override init() {
         super.init()
@@ -40,9 +41,10 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         shoppingListRevision = UUID()
     }
 
-    func suggestStores(for request: ShoppingStoreSuggestionRequest) {
+    func suggestStores(for request: ShoppingStoreSuggestionRequest, buyingOptions: [BuyingOption] = []) {
         navigationPath = NavigationPath()
         storeSuggestionRequest = request
+        self.buyingOptions = buyingOptions
         selectedTab = .map
     }
 
