@@ -88,6 +88,7 @@ struct ProductListView: View {
             )
             WayTaskSearchField(placeholder: "Search products...", text: $searchText)
             addProductCard
+            scanProductCard
 
             if !activeShoppingItems.isEmpty {
                 startShoppingCard
@@ -141,6 +142,41 @@ struct ProductListView: View {
         }
         .padding(16)
         .wayTaskCard()
+    }
+
+    private var scanProductCard: some View {
+        Button {
+            appStateManager.selectedTab = .camera
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "barcode.viewfinder")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.accent)
+                    .frame(width: 44, height: 44)
+                    .background(WayTaskDesign.accent.opacity(0.14))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Scan Product")
+                        .font(.headline)
+                        .foregroundStyle(WayTaskDesign.primaryText)
+
+                    Text("Use the camera to add products faster")
+                        .font(.caption)
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(WayTaskDesign.secondaryText)
+            }
+            .padding(16)
+            .wayTaskCard()
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Scan Product")
     }
 
     private var startShoppingCard: some View {
@@ -563,16 +599,16 @@ struct ProductListView: View {
         var indicators: [String] = []
 
         if history.addCount >= 3 {
-            indicators.append("Frequently Bought")
+            indicators.append("Frequent")
         }
 
         if history.addCount > 1 {
-            indicators.append("Added \(history.addCount) times")
+            indicators.append("Added \(history.addCount)x")
         }
 
         let daysSinceLastAdded = Calendar.current.dateComponents([.day], from: history.lastAddedDate, to: Date()).day ?? 0
         if history.addCount > 1 && indicators.count < 2 && daysSinceLastAdded <= 7 {
-            indicators.append("Last added recently")
+            indicators.append("Recent")
         }
 
         return Array(indicators.prefix(2))
@@ -580,10 +616,11 @@ struct ProductListView: View {
 
     private func findSuggestions(for item: ShoppingItem) {
         let request = shoppingIntentMatcher.suggestionRequest(for: item)
-        let buyingOptions = buyingOptionsService.localOptions(for: request)
+        let candidateStores = suggestionStores(for: request)
+        let buyingOptions = buyingOptionsService.localOptions(for: request, stores: candidateStores)
         let tripCoverages = shoppingTripService.coverage(
             for: activeShoppingItems,
-            stores: tripPlanningStores(for: request),
+            stores: candidateStores,
             request: request,
             userCoordinate: nil
         )
@@ -622,8 +659,17 @@ struct ProductListView: View {
         )
     }
 
-    private func tripPlanningStores(for request: ShoppingStoreSuggestionRequest) -> [MapStore] {
-        savedStoresForTripPlanning() + buyingOptionsService.suggestedStores(for: request)
+    private func suggestionStores(for request: ShoppingStoreSuggestionRequest) -> [MapStore] {
+        let savedStores = savedStoresForTripPlanning()
+        let relevantSavedStores = savedStores.filter { store in
+            storeMatches(store, request: request)
+        }
+
+        if !relevantSavedStores.isEmpty {
+            return relevantSavedStores
+        }
+
+        return savedStores + buyingOptionsService.suggestedStores(for: request)
     }
 
     private func savedStoresForTripPlanning() -> [MapStore] {
@@ -645,9 +691,29 @@ struct ProductListView: View {
                 completedItemNames: completedItems,
                 isOpen: true,
                 rating: 4.4 + (Double(min(location.shoppingItems.count, 4)) * 0.1),
+                storeCategories: location.storeCategory.map { [$0] } ?? [],
                 websiteURL: nil
             )
         }
+    }
+
+    private func storeMatches(_ store: MapStore, request: ShoppingStoreSuggestionRequest) -> Bool {
+        let matchesItem = store.itemNames.contains { itemName in
+            itemName.localizedCaseInsensitiveContains(request.itemName) ||
+            request.itemName.localizedCaseInsensitiveContains(itemName)
+        }
+        let matchesCategory = store.storeCategories.contains { storeCategory in
+            request.storeCategories.contains { requestCategory in
+                storeCategory.matches(requestCategory)
+            }
+        }
+        let matchesTitle = request.storeCategories.contains { category in
+            store.title.localizedCaseInsensitiveContains(category.sampleStoreName) ||
+            store.title.localizedCaseInsensitiveContains(category.storeFormTitle)
+        }
+        let genericRequestCanUseSavedCategory = request.storeCategories.contains(.generalStore) && store.isSavedLocation && !store.storeCategories.isEmpty
+
+        return matchesItem || matchesCategory || matchesTitle || genericRequestCanUseSavedCategory
     }
 
     private func assign(_ item: ShoppingItem, to mapItem: MKMapItem) {
@@ -795,7 +861,7 @@ private struct MemoryIndicatorRow: View {
     }
 
     private func iconName(for indicator: String) -> String {
-        if indicator == "Frequently Bought" {
+        if indicator == "Frequent" {
             return "arrow.triangle.2.circlepath"
         }
 

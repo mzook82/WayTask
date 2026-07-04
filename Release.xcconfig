@@ -1,0 +1,3 @@
+// Release build settings for WayTask.
+// Secrets.xcconfig is local-only and must not be committed.
+#include? "Secrets.xcconfig"

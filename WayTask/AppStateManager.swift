@@ -70,20 +70,27 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         selectedTab = .map
     }
 
+    func openShoppingNotificationOnMap(storeID: UUID?, locationID: UUID?) {
+        navigationPath = NavigationPath()
+        storeSuggestionRequest = nil
+        buyingOptions = []
+        shoppingTripCoverages = []
+        isTripMapMode = true
+        focusedLocationID = locationID ?? storeID
+        selectedTab = .map
+    }
+
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
         let userInfo = response.notification.request.content.userInfo
 
-        guard let idString = userInfo["geoLocationID"] as? String,
-              let id = UUID(uuidString: idString) else {
-            return
-        }
-
         await MainActor.run {
-            navigationPath = NavigationPath()
-            focusMap(on: id)
+            let storeID = (userInfo["storeID"] as? String).flatMap(UUID.init(uuidString:))
+            let locationID = (userInfo["geoLocationID"] as? String).flatMap(UUID.init(uuidString:))
+
+            openShoppingNotificationOnMap(storeID: storeID, locationID: locationID)
         }
     }
 

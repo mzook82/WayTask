@@ -49,6 +49,11 @@
 		D1954E282FF6ADDE00E946DA /* ShoppingTripService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E272FF6ADDE00E946DA /* ShoppingTripService.swift */; };
 		D1954E2A2FF6BBBF00E946DA /* ShoppingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E292FF6BBBF00E946DA /* ShoppingSession.swift */; };
 		D1954E2C2FF6BBD200E946DA /* ShoppingSessionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E2B2FF6BBD200E946DA /* ShoppingSessionService.swift */; };
+		D1954E2E2FF7D01300E946DA /* GeofenceNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E2D2FF7D01300E946DA /* GeofenceNotificationService.swift */; };
+		D1954E302FF82CDF00E946DA /* AIProductRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E2F2FF82CDF00E946DA /* AIProductRecognitionService.swift */; };
+		D1954E322FF83E7800E946DA /* GeminiProductRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E312FF83E7800E946DA /* GeminiProductRecognitionService.swift */; };
+		D1954E3C2FF85B7D00E946DA /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = D1954E3B2FF85B7D00E946DA /* Secrets.plist */; };
+		D1954E3E2FF85C6B00E946DA /* SecretsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E3D2FF85C6B00E946DA /* SecretsManager.swift */; };
 		D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B8519A2FF18FF50083B34C /* ProductListView.swift */; };
 /* End PBXBuildFile section */
 
@@ -95,6 +100,13 @@
 		D1954E272FF6ADDE00E946DA /* ShoppingTripService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingTripService.swift; sourceTree = "<group>"; };
 		D1954E292FF6BBBF00E946DA /* ShoppingSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingSession.swift; sourceTree = "<group>"; };
 		D1954E2B2FF6BBD200E946DA /* ShoppingSessionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingSessionService.swift; sourceTree = "<group>"; };
+		D1954E2D2FF7D01300E946DA /* GeofenceNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeofenceNotificationService.swift; sourceTree = "<group>"; };
+		D1954E2F2FF82CDF00E946DA /* AIProductRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProductRecognitionService.swift; sourceTree = "<group>"; };
+		D1954E312FF83E7800E946DA /* GeminiProductRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiProductRecognitionService.swift; sourceTree = "<group>"; };
+		D1954E372FF8488C00E946DA /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		D1954E392FF8489800E946DA /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		D1954E3B2FF85B7D00E946DA /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.plist; sourceTree = "<group>"; };
+		D1954E3D2FF85C6B00E946DA /* SecretsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretsManager.swift; sourceTree = "<group>"; };
 		D1B8517E2FEFF2F40083B34C /* WayTask.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WayTask.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1B8519A2FF18FF50083B34C /* ProductListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -152,6 +164,7 @@
 				D1954DF12FF3C45B00E946DA /* MapBottomSheet.swift */,
 				D1954DF32FF3CCF800E946DA /* StoreSearchService.swift */,
 				D1954DF52FF59EE800E946DA /* ShoppingMission.swift */,
+				D1954E3B2FF85B7D00E946DA /* Secrets.plist */,
 				D1954DF72FF59EE800E946DA /* ShoppingContext.swift */,
 				D1954DF92FF59EE900E946DA /* DecisionEngine.swift */,
 				D1954DFB2FF5A2A200E946DA /* DiscoverItem.swift */,
@@ -179,6 +192,12 @@
 				D1954E272FF6ADDE00E946DA /* ShoppingTripService.swift */,
 				D1954E292FF6BBBF00E946DA /* ShoppingSession.swift */,
 				D1954E2B2FF6BBD200E946DA /* ShoppingSessionService.swift */,
+				D1954E2D2FF7D01300E946DA /* GeofenceNotificationService.swift */,
+				D1954E2F2FF82CDF00E946DA /* AIProductRecognitionService.swift */,
+				D1954E312FF83E7800E946DA /* GeminiProductRecognitionService.swift */,
+				D1954E372FF8488C00E946DA /* Debug.xcconfig */,
+				D1954E392FF8489800E946DA /* Release.xcconfig */,
+				D1954E3D2FF85C6B00E946DA /* SecretsManager.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -254,6 +273,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D1954E3C2FF85B7D00E946DA /* Secrets.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -276,6 +296,7 @@
 				D1954E2A2FF6BBBF00E946DA /* ShoppingSession.swift in Sources */,
 				D1954E142FF6590000E946DA /* ProductSource.swift in Sources */,
 				D1954E042FF5ACBC00E946DA /* RecognitionResult.swift in Sources */,
+				D1954E2E2FF7D01300E946DA /* GeofenceNotificationService.swift in Sources */,
 				D1954DF82FF59EE800E946DA /* ShoppingContext.swift in Sources */,
 				D1954E202FF6924100E946DA /* StoreRankingService.swift in Sources */,
 				D1954E1E2FF67E9800E946DA /* BuyingOptionsSheet.swift in Sources */,
@@ -299,9 +320,12 @@
 				D11995C72FF399AE00C9EAF2 /* CameraPreviewView.swift in Sources */,
 				D1954E022FF5ACBC00E946DA /* ProductCandidate.swift in Sources */,
 				D1954DFE2FF5A2A300E946DA /* DiscoverViewModel.swift in Sources */,
+				D1954E302FF82CDF00E946DA /* AIProductRecognitionService.swift in Sources */,
 				D11995CB2FF399E100C9EAF2 /* CameraViewModel.swift in Sources */,
+				D1954E3E2FF85C6B00E946DA /* SecretsManager.swift in Sources */,
 				D1954DF22FF3C45B00E946DA /* MapBottomSheet.swift in Sources */,
 				D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */,
+				D1954E322FF83E7800E946DA /* GeminiProductRecognitionService.swift in Sources */,
 				D1954E182FF678CF00E946DA /* ShoppingIntentMatcher.swift in Sources */,
 				D1954DF62FF59EE800E946DA /* ShoppingMission.swift in Sources */,
 				D1954E122FF6559B00E946DA /* OpenFoodFactsProvider.swift in Sources */,
@@ -315,6 +339,7 @@
 /* Begin XCBuildConfiguration section */
 		D1B851872FEFF2F50083B34C /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D1954E372FF8488C00E946DA /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -378,6 +403,7 @@
 		};
 		D1B851882FEFF2F50083B34C /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D1954E392FF8489800E946DA /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -434,6 +460,7 @@
 		};
 		D1B8518A2FEFF2F50083B34C /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D1954E372FF8488C00E946DA /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -459,7 +486,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = h.WayTask;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -474,6 +501,7 @@
 		};
 		D1B8518B2FEFF2F50083B34C /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D1954E392FF8489800E946DA /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -499,7 +527,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = h.WayTask;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

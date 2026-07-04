@@ -77,8 +77,9 @@ struct StoreRankingService {
             }
         }
 
-        if !store.isSavedLocation {
-            score += 5
+        if store.isSavedLocation {
+            score += 12
+            reasons.append("Saved by you")
         }
 
         let normalizedScore = min(score, 100)
@@ -115,7 +116,12 @@ struct StoreRankingService {
 
     private func matchesSuggestedCategory(store: MapStore, request: ShoppingStoreSuggestionRequest) -> Bool {
         let storeTitle = store.title.lowercased()
+        if request.storeCategories.contains(.generalStore), store.isSavedLocation, !store.storeCategories.isEmpty {
+            return true
+        }
+
         return request.storeCategories.contains { category in
+            store.storeCategories.contains { $0.matches(category) } ||
             storeTitle.contains(categoryKeyword(for: category)) ||
             storeTitle.contains(category.sampleStoreName.lowercased())
         }
@@ -123,6 +129,8 @@ struct StoreRankingService {
 
     private func categoryKeyword(for category: ShoppingStoreCategory) -> String {
         switch category {
+        case .grocery:
+            return "grocery"
         case .supermarket:
             return "market"
         case .coffeeShop:

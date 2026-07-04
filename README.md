@@ -67,8 +67,12 @@ The result is a smarter, faster, and more personalized shopping experience.
 - Live camera preview
 - Photo capture
 - Import from Photos
-- Barcode scanning (planned)
-- Product recognition (planned)
+- Barcode scanning
+- Open Food Facts barcode lookup
+- Gemini Vision product recognition
+- AI Vision mode
+- Manual fallback when recognition is unavailable
+- User review before saving recognized products
 
 ---
 
@@ -80,6 +84,14 @@ Receive notifications when:
 - A nearby place matches your interests.
 - A new store opens nearby.
 - A recommended product becomes relevant.
+
+Current notification foundation includes:
+
+- Saved-store priority
+- Geofence monitoring
+- Smart Nearby Detection
+- Product names from confirmed shopping-list items
+- Notification tap flow into Map / Trip Map Mode
 
 ---
 
@@ -98,7 +110,17 @@ Examples:
 
 ---
 
-## 🤖 AI Assistant (Planned)
+## 🤖 AI Assistant
+
+Current AI foundation:
+
+- Gemini Vision integration
+- Secrets.plist API key loading through SecretsManager
+- Open Food Facts -> Gemini fallback for unknown barcodes
+- AI Vision mode for product photos
+- Structured JSON product recognition
+- Search keywords support for future matching
+- Manual fallback when confidence is low or AI is unavailable
 
 Future AI capabilities include:
 
@@ -146,6 +168,8 @@ WayTask is built using native Apple technologies.
 - AVFoundation
 - Vision Framework
 - PhotosUI
+- UserNotifications
+- Gemini Vision API
 - Git
 - GitHub
 
@@ -186,9 +210,22 @@ Current Progress
 - Shared Design System
 - Camera Foundation
 - Camera UX improvements
+- Barcode scanning
+- Open Food Facts product lookup
+- Gemini Vision integration
+- AI Vision mode
+- Secrets.plist API key architecture
+- AI review flow
+- AI search keywords support
 - Interactive Map Foundation
 - Store Bottom Sheet
 - Store Search Service
+- Buying Options
+- Store Ranking
+- Shopping Trip Planner
+- Shopping Mode
+- Smart Nearby Detection
+- Geofence Notification Foundation
 - GitHub Repository
 - Project Documentation
 
@@ -196,17 +233,20 @@ Current Progress
 
 ## 🚧 In Progress
 
-- Map UX Polish
-- AI Integration Architecture
+- Sprint 19.2 AI persistence and learning foundation
+- Persisting AI search keywords
+- AI result editing polish
+- Gemini parsing and SecretsManager tests
 
 ---
 
 ## ⏳ Planned
 
-- Product Recognition
-- Barcode Scanner
-- Discover
-- Smart Notifications
+- AI Learning Loop
+- AI-powered recommendations
+- Price comparison
+- Online shopping providers
+- Indoor navigation
 - AI Shopping Assistant
 - Recipe Assistant
 - Gift Assistant
@@ -224,6 +264,11 @@ Current Progress
 - Nearby Store Discovery
 - Product Recognition
 - Smart Notifications
+- Barcode scanning
+- Open Food Facts lookup
+- Gemini Vision fallback
+- Shopping Mode
+- Shopping Trip Planner
 
 ---
 
@@ -233,6 +278,9 @@ Current Progress
 - AI Recipe Assistant
 - AI Gift Assistant
 - AI Fashion Assistant
+- AI Learning from accepted, edited, and rejected suggestions
+- Persisted AI search keywords
+- Personalized Buying Options
 
 ---
 
@@ -257,7 +305,34 @@ Additional documentation is available in the `docs` directory.
 | ROADMAP | Product roadmap |
 | ARCHITECTURE | Technical architecture |
 | AI_ROADMAP | AI vision and future plans |
+| AI_PRODUCT_RECOGNITION | Gemini Vision and product recognition flow |
 | DEVELOPMENT_GUIDE | Development workflow |
+
+---
+
+# Recent Progress
+
+## Sprint 19.1
+
+Completed:
+
+- Gemini Vision is the active AI product recognition provider.
+- `Secrets.plist` is the primary API key source through `SecretsManager`.
+- AI Vision mode calls Gemini for product-photo recognition.
+- Barcode mode uses Open Food Facts first, then Gemini fallback when lookup fails.
+- Recognized AI products require user review before saving.
+- Manual product entry remains available when Gemini is unavailable, fails, or returns low confidence.
+- Gemini returns product name, brand, category, confidence, description, and search keywords.
+- Search keywords are available on `ProductCandidate` for future matching.
+- Notifications now use confirmed shopping-list product names rather than keyword-only labels.
+
+Known remaining work for Sprint 19.2:
+
+- Persist AI search keywords to SwiftData safely.
+- Add migration support for keyword storage.
+- Add tests for `SecretsManager` and Gemini response parsing.
+- Improve edit-before-save behavior for AI suggestions.
+- Start AI learning from accepted, edited, and rejected suggestions.
 | SPRINTS | Sprint history |
 | CHANGELOG | Version history |
 | UI_IDEAS | UI inspiration and future concepts |

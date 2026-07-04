@@ -6,10 +6,9 @@ struct MainMapView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var appStateManager: AppStateManager
+    @EnvironmentObject private var locationManager: LocationManager
 
     @Query private var locations: [GeoLocation]
-
-    @StateObject private var locationManager = LocationManager()
     @StateObject private var mapViewModel = MapViewModel()
     private let buyingOptionsService = BuyingOptionsService()
     private let shoppingTripService = ShoppingTripService()
@@ -17,7 +16,11 @@ struct MainMapView: View {
     @State private var mapCenter = CLLocationCoordinate2D(latitude: 32.0853, longitude: 34.7818)
     @State private var showingAddLocationSheet = false
     @State private var newLocationTitle = ""
+    @State private var selectedStoreCategory: ShoppingStoreCategory = .generalStore
+    @State private var newLocationNotes = ""
+    @State private var useCurrentLocationForStore = true
     @State private var selectedRadius = 200.0
+    @State private var storeSaveErrorMessage: String?
 
     var body: some View {
         NavigationStack(path: $appStateManager.navigationPath) {
@@ -35,6 +38,11 @@ struct MainMapView: View {
             .toolbarBackground(.hidden, for: .navigationBar)
             .sheet(isPresented: $showingAddLocationSheet) {
                 addLocationSheet
+            }
+            .alert("Store was not saved", isPresented: storeSaveAlertBinding) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(storeSaveErrorMessage ?? "Please try again.")
             }
             .navigationDestination(for: GeoLocation.self) { location in
                 LocationDetailView(location: location)
@@ -163,8 +171,25 @@ struct MainMapView: View {
     private var addLocationSheet: some View {
         NavigationStack {
             Form {
+                Section("Store") {
+                    TextField("Store name", text: $newLocationTitle)
+
+                    Picker("Category", selection: $selectedStoreCategory) {
+                        ForEach(ShoppingStoreCategory.allCases) { category in
+                            Text(category.storeFormTitle).tag(category)
+                        }
+                    }
+
+                    TextField("Notes", text: $newLocationNotes, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+
                 Section("Location") {
-                    TextField("Location title", text: $newLocationTitle)
+                    Toggle("Use my current location", isOn: $useCurrentLocationForStore)
+
+                    Text(useCurrentLocationForStore ? currentStoreLocationText : "Uses the current map center")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section("Radius") {
@@ -181,7 +206,7 @@ struct MainMapView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("Add Location")
+            .navigationTitle("Add Store")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -198,6 +223,25 @@ struct MainMapView: View {
                 }
             }
         }
+    }
+
+    private var storeSaveAlertBinding: Binding<Bool> {
+        Binding(
+            get: { storeSaveErrorMessage != nil },
+            set: { isPresented in
+                if !isPresented {
+                    storeSaveErrorMessage = nil
+                }
+            }
+        )
+    }
+
+    private var currentStoreLocationText: String {
+        if locationManager.currentCoordinate != nil {
+            return "Saves the store at your current location."
+        }
+
+        return "Waiting for your current location. The map center will be used if unavailable."
     }
 
     private var selectedStoreDistanceText: String {
@@ -227,7 +271,7 @@ struct MainMapView: View {
                 .map { "\($0.id.uuidString)-\($0.name)-\($0.isCompleted)" }
                 .joined(separator: ",")
 
-            return "\(location.id.uuidString)-\(location.title)-\(location.latitude)-\(location.longitude)-\(location.radius)-\(itemSignature)"
+            return "\(location.id.uuidString)-\(location.title)-\(location.latitude)-\(location.longitude)-\(location.radius)-\(location.storeCategoryRawValue ?? "")-\(location.notes ?? "")-\(itemSignature)"
         }
     }
 
@@ -238,25 +282,56 @@ struct MainMapView: View {
             return
         }
 
+        let storeCoordinate = useCurrentLocationForStore ? (locationManager.currentCoordinate ?? mapCenter) : mapCenter
+        let notes = newLocationNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         let location = GeoLocation(
             title: title,
-            latitude: mapCenter.latitude,
-            longitude: mapCenter.longitude,
-            radius: selectedRadius
+            latitude: storeCoordinate.latitude,
+            longitude: storeCoordinate.longitude,
+            radius: selectedRadius,
+            storeCategory: selectedStoreCategory,
+            notes: notes.isEmpty ? nil : notes
         )
 
-        modelContext.insert(location)
-        try? modelContext.save()
-        locationManager.startMonitoring(location: location)
-        mapViewModel.update(locations: locations + [location])
-        mapViewModel.selectStore(id: location.id)
+        do {
+            modelContext.insert(location)
+            try modelContext.save()
+            try verifySavedStore(id: location.id)
 
-        resetForm()
-        showingAddLocationSheet = false
+            let updatedLocations = locations + [location]
+            locationManager.startMonitoring(locations: updatedLocations)
+            mapViewModel.update(locations: updatedLocations)
+            mapViewModel.selectStore(id: location.id)
+
+            resetForm()
+            showingAddLocationSheet = false
+        } catch {
+            modelContext.delete(location)
+            storeSaveErrorMessage = "WayTask could not save this store. Please try again."
+            #if DEBUG
+            print("[WayTask Store Save] Failed to save store: \(error.localizedDescription)")
+            #endif
+        }
+    }
+
+    private func verifySavedStore(id: UUID) throws {
+        let descriptor = FetchDescriptor<GeoLocation>(
+            predicate: #Predicate { location in
+                location.id == id
+            }
+        )
+        let savedStores = try modelContext.fetch(descriptor)
+
+        guard savedStores.contains(where: { $0.id == id }) else {
+            throw StoreSaveError.verificationFailed
+        }
     }
 
     private func resetForm() {
         newLocationTitle = ""
+        selectedStoreCategory = .generalStore
+        newLocationNotes = ""
+        useCurrentLocationForStore = true
         selectedRadius = 200.0
     }
 
@@ -388,6 +463,10 @@ struct MainMapView: View {
         }
 
         appStateManager.navigationPath.append(locationID)
+    }
+
+    private enum StoreSaveError: Error {
+        case verificationFailed
     }
 
     private func closeMap() {

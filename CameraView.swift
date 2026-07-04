@@ -13,6 +13,9 @@ struct CameraView: View {
     @State private var focusIndicatorPoint: CGPoint?
     @State private var focusIndicatorScale = 1.35
     @State private var focusIndicatorOpacity = 0.0
+    @State private var manualProductName = ""
+    @State private var manualProductBrand = ""
+    @State private var manualProductCategory = ""
 
     var body: some View {
         NavigationStack {
@@ -384,15 +387,30 @@ struct CameraView: View {
                 .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 50, cornerRadius: 16, shadow: true))
             } else if viewModel.canConfirmCandidate {
                 Button {
-                    viewModel.confirmSelectedCandidate()
+                    if product.source == .ai {
+                        addRecognizedProduct(product)
+                    } else {
+                        viewModel.confirmSelectedCandidate()
+                    }
                 } label: {
-                    centeredCTAContent(title: "Use Product", systemName: "checkmark.seal.fill")
+                    centeredCTAContent(
+                        title: product.source == .ai ? "Add to Shopping List" : "Use Product",
+                        systemName: product.source == .ai ? "plus.circle.fill" : "checkmark.seal.fill"
+                    )
                 }
                 .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 50, cornerRadius: 16, shadow: true))
+
+                Button {
+                    editSuggestedProduct(product)
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 50, cornerRadius: 16))
             }
 
             Button {
-                viewModel.scanAgain()
+                scanAgain()
             } label: {
                 Label("Scan Again", systemImage: "barcode.viewfinder")
                     .frame(maxWidth: .infinity)
@@ -410,25 +428,90 @@ struct CameraView: View {
     }
 
     private var barcodeControls: some View {
-        HStack(spacing: 12) {
-            if viewModel.canConfirmBarcode {
+        VStack(spacing: 10) {
+            if viewModel.canCreateProductFromBarcode {
+                manualBarcodeProductForm
+            }
+
+            HStack(spacing: 12) {
+                if viewModel.canConfirmBarcode {
+                    Button {
+                        viewModel.confirmBarcode()
+                    } label: {
+                        Label("Confirm", systemImage: "checkmark.circle.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 44, cornerRadius: 14, shadow: true))
+                }
+
                 Button {
-                    viewModel.confirmBarcode()
+                    scanAgain()
                 } label: {
-                    Label("Confirm", systemImage: "checkmark.circle.fill")
+                    Label("Scan Again", systemImage: "barcode.viewfinder")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 44, cornerRadius: 14, shadow: true))
+                .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 44, cornerRadius: 14))
+            }
+        }
+    }
+
+    private var manualBarcodeProductForm: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Add product details")
+                    .font(.headline)
+                    .foregroundStyle(WayTaskDesign.primaryText)
+
+                Text("Open Food Facts did not return product details. Enter only what you know.")
+                    .font(.caption)
+                    .foregroundStyle(WayTaskDesign.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(spacing: 8) {
+                TextField("Product name", text: $manualProductName)
+                    .textInputAutocapitalization(.words)
+                    .wayTaskManualInputStyle()
+
+                TextField("Brand optional", text: $manualProductBrand)
+                    .textInputAutocapitalization(.words)
+                    .wayTaskManualInputStyle()
+
+                TextField("Category optional", text: $manualProductCategory)
+                    .textInputAutocapitalization(.words)
+                    .wayTaskManualInputStyle()
+            }
+
+            if let barcode = currentBarcodeResult {
+                HStack(spacing: 8) {
+                    Image(systemName: "barcode")
+                        .foregroundStyle(WayTaskDesign.accent)
+
+                    Text("\(barcode.type.displayName): \(barcode.value)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(WayTaskDesign.surfaceElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .accessibilityLabel("Barcode \(barcode.value)")
             }
 
             Button {
-                viewModel.scanAgain()
+                addManualBarcodeProductToShoppingList()
             } label: {
-                Label("Scan Again", systemImage: "barcode.viewfinder")
-                    .frame(maxWidth: .infinity)
+                centeredCTAContent(title: "Add Product", systemName: "plus.circle.fill")
             }
-            .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 44, cornerRadius: 14))
+            .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 46, cornerRadius: 15, shadow: true))
+            .disabled(manualProductName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
+        .padding(14)
+        .wayTaskCard(cornerRadius: 16)
     }
 
     private var aiUnavailableMessage: some View {
@@ -436,7 +519,7 @@ struct CameraView: View {
             Image(systemName: "sparkles")
                 .foregroundStyle(WayTaskDesign.accent)
 
-            Text("AI recognition is not available yet.")
+            Text(viewModel.selectedMode == .aiVision ? "Gemini can suggest product details from your photo." : "Photo recognition uses Gemini when available.")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(WayTaskDesign.secondaryText)
 
@@ -512,7 +595,7 @@ struct CameraView: View {
                 WayTaskProductThumbnail(data: product.imageData ?? viewModel.capturedImageData, size: 76, cornerRadius: 18)
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Label("Product Found", systemImage: "checkmark.seal.fill")
+                    Label(product.source == .ai ? "We think this is..." : "Product Found", systemImage: product.source == .ai ? "sparkles" : "checkmark.seal.fill")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(WayTaskDesign.accent)
                         .lineLimit(1)
@@ -562,7 +645,14 @@ struct CameraView: View {
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
-        if details.isEmpty {
+        if product.source == .ai {
+            let confidenceText = product.confidence.map { "AI-suggested / \(Int(($0 * 100).rounded()))% confidence" } ?? "AI-suggested"
+            let detailText = details.isEmpty ? confidenceText : "\(details.joined(separator: " / ")) / \(confidenceText)"
+            Text(detailText)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(WayTaskDesign.secondaryText)
+                .lineLimit(2)
+        } else if details.isEmpty {
             Text("Review and add this product.")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(WayTaskDesign.secondaryText)
@@ -612,6 +702,47 @@ struct CameraView: View {
         }
     }
 
+    private func scanAgain() {
+        resetManualBarcodeForm()
+        viewModel.scanAgain()
+    }
+
+    private func editSuggestedProduct(_ product: ProductCandidate) {
+        manualProductName = product.name
+        manualProductBrand = product.brand ?? ""
+        manualProductCategory = product.category ?? ""
+        viewModel.useCandidateForManualEditing()
+    }
+
+    private func addManualBarcodeProductToShoppingList() {
+        let name = manualProductName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !name.isEmpty,
+              let barcode = currentBarcodeResult else {
+            return
+        }
+
+        let brand = manualProductBrand.trimmingCharacters(in: .whitespacesAndNewlines)
+        let category = manualProductCategory.trimmingCharacters(in: .whitespacesAndNewlines)
+        let product = ProductCandidate(
+            name: name,
+            brand: brand.isEmpty ? nil : brand,
+            category: category.isEmpty ? nil : category,
+            source: .barcode,
+            productHints: [name, brand, category, barcode.value, barcode.type.displayName].filter { !$0.isEmpty },
+            barcode: barcode.value
+        )
+
+        addRecognizedProduct(product)
+        resetManualBarcodeForm()
+    }
+
+    private func resetManualBarcodeForm() {
+        manualProductName = ""
+        manualProductBrand = ""
+        manualProductCategory = ""
+    }
+
     private func addRecognizedProduct(_ product: ProductCandidate) {
         do {
             let item = try shoppingListService.addRecognizedProduct(
@@ -625,6 +756,28 @@ struct CameraView: View {
         } catch {
             viewModel.productAddFailed(error)
         }
+    }
+}
+
+private struct WayTaskManualInputStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(WayTaskDesign.primaryText)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(WayTaskDesign.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(WayTaskDesign.surfaceBorder, lineWidth: 1)
+            }
+    }
+}
+
+private extension View {
+    func wayTaskManualInputStyle() -> some View {
+        modifier(WayTaskManualInputStyle())
     }
 }
 

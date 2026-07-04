@@ -8,7 +8,8 @@ struct ShoppingStoreSuggestionRequest: Equatable {
     let searchTerms: [String]
 }
 
-enum ShoppingStoreCategory: String, CaseIterable, Identifiable, Equatable {
+enum ShoppingStoreCategory: String, CaseIterable, Identifiable, Equatable, Hashable {
+    case grocery
     case supermarket
     case coffeeShop
     case petStore
@@ -20,6 +21,8 @@ enum ShoppingStoreCategory: String, CaseIterable, Identifiable, Equatable {
 
     var displayName: String {
         switch self {
+        case .grocery:
+            return "Grocery"
         case .supermarket:
             return "Supermarkets"
         case .coffeeShop:
@@ -35,8 +38,35 @@ enum ShoppingStoreCategory: String, CaseIterable, Identifiable, Equatable {
         }
     }
 
+    var storeFormTitle: String {
+        switch self {
+        case .grocery:
+            return "Grocery"
+        case .supermarket:
+            return "Supermarket"
+        case .coffeeShop:
+            return "Coffee"
+        case .petStore:
+            return "Pet Store"
+        case .electronicsStore:
+            return "Electronics"
+        case .pharmacy:
+            return "Pharmacy"
+        case .generalStore:
+            return "General Store"
+        }
+    }
+
+    func matches(_ other: ShoppingStoreCategory) -> Bool {
+        self == other ||
+        (self == .grocery && other == .supermarket) ||
+        (self == .supermarket && other == .grocery)
+    }
+
     var sampleStoreName: String {
         switch self {
+        case .grocery:
+            return "Grocery Store"
         case .supermarket:
             return "Nearby Supermarket"
         case .coffeeShop:
@@ -98,8 +128,11 @@ struct ShoppingIntentMatcher {
     }
 
     static let defaultCategoryMappings: [ShoppingStoreCategory: [String]] = [
+        .grocery: [
+            "grocery", "groceries", "food", "snack", "drink", "milk", "bread", "cheese", "fruit", "vegetable", "cereal", "chocolate", "water"
+        ],
         .supermarket: [
-            "grocery", "groceries", "food", "snack", "drink", "milk", "bread", "cheese", "fruit", "vegetable", "cereal", "chocolate", "water", "supermarket"
+            "supermarket", "market"
         ],
         .coffeeShop: [
             "coffee", "espresso", "latte", "cappuccino", "tea", "cafe"

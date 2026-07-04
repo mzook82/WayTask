@@ -8,6 +8,8 @@ final class GeoLocation {
     var latitude: Double
     var longitude: Double
     var radius: Double
+    var storeCategoryRawValue: String?
+    var notes: String?
 
     @Relationship(deleteRule: .cascade)
     var shoppingItems: [ShoppingItem]
@@ -18,6 +20,8 @@ final class GeoLocation {
         latitude: Double,
         longitude: Double,
         radius: Double = 200.0,
+        storeCategory: ShoppingStoreCategory? = nil,
+        notes: String? = nil,
         shoppingItems: [ShoppingItem] = []
     ) {
         self.id = id
@@ -25,7 +29,22 @@ final class GeoLocation {
         self.latitude = latitude
         self.longitude = longitude
         self.radius = radius
+        self.storeCategoryRawValue = storeCategory?.rawValue
+        self.notes = notes
         self.shoppingItems = shoppingItems
+    }
+
+    var storeCategory: ShoppingStoreCategory? {
+        get {
+            guard let storeCategoryRawValue else {
+                return nil
+            }
+
+            return ShoppingStoreCategory(rawValue: storeCategoryRawValue)
+        }
+        set {
+            storeCategoryRawValue = newValue?.rawValue
+        }
     }
 }
 

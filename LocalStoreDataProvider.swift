@@ -36,6 +36,7 @@ struct LocalStoreDataProvider: StoreDataProvider {
                 itemNames: Array(activeItems.prefix(3)),
                 radius: 180,
                 rating: 4.7,
+                storeCategories: [.grocery],
                 websiteURL: URL(string: "https://maps.apple.com")
             ),
             makeStore(
@@ -45,6 +46,7 @@ struct LocalStoreDataProvider: StoreDataProvider {
                 itemNames: Array(activeItems.suffix(min(activeItems.count, 2))),
                 radius: 160,
                 rating: 4.5,
+                storeCategories: [.pharmacy],
                 websiteURL: nil
             ),
             makeStore(
@@ -54,6 +56,7 @@ struct LocalStoreDataProvider: StoreDataProvider {
                 itemNames: Array(activeItems.prefix(2)),
                 radius: 140,
                 rating: 4.6,
+                storeCategories: [.grocery],
                 websiteURL: nil
             )
         ]
@@ -77,6 +80,7 @@ struct LocalStoreDataProvider: StoreDataProvider {
                 itemNames: shoppingItems,
                 radius: 180,
                 rating: 4.5 + min(Double(index) * 0.1, 0.3),
+                storeCategories: [category],
                 websiteURL: URL(string: "https://maps.apple.com")
             )
         }
@@ -89,6 +93,7 @@ struct LocalStoreDataProvider: StoreDataProvider {
         itemNames: [String],
         radius: Double,
         rating: Double,
+        storeCategories: [ShoppingStoreCategory],
         websiteURL: URL?
     ) -> MapStore {
         MapStore(
@@ -101,6 +106,7 @@ struct LocalStoreDataProvider: StoreDataProvider {
             completedItemNames: [],
             isOpen: true,
             rating: rating,
+            storeCategories: storeCategories,
             websiteURL: websiteURL
         )
     }

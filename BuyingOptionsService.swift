@@ -50,10 +50,17 @@ struct BuyingOptionsService: BuyingOptionsServicing {
 
     func localOptions(for request: ShoppingStoreSuggestionRequest, stores: [MapStore], userCoordinate: CLLocationCoordinate2D?) -> [BuyingOption] {
         let matchingStores = stores.filter { store in
-            store.itemNames.contains { itemName in
+            let matchesItem = store.itemNames.contains { itemName in
                 itemName.localizedCaseInsensitiveContains(request.itemName) ||
                 request.itemName.localizedCaseInsensitiveContains(itemName)
             }
+            let matchesCategory = store.storeCategories.contains { storeCategory in
+                request.storeCategories.contains { requestCategory in
+                    storeCategory.matches(requestCategory)
+                }
+            }
+            let genericRequestCanUseSavedCategory = request.storeCategories.contains(.generalStore) && store.isSavedLocation && !store.storeCategories.isEmpty
+            return matchesItem || matchesCategory || genericRequestCanUseSavedCategory
         }
 
         let sourceStores = matchingStores.isEmpty ? stores : matchingStores
@@ -95,6 +102,7 @@ struct BuyingOptionsService: BuyingOptionsServicing {
                 completedItemNames: [],
                 isOpen: true,
                 rating: 4.5 + min(Double(index) * 0.1, 0.3),
+                storeCategories: [category],
                 websiteURL: URL(string: "https://maps.apple.com")
             )
         }

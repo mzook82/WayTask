@@ -29,7 +29,7 @@ WayTask should help users remember, discover, compare, and make better shopping 
 | Map | ✅ 95% |
 | Shopping Intelligence | ✅ 90% |
 | Data Providers | ✅ 100% |
-| AI | ⏳ 10% |
+| AI | ✅ 45% |
 | Discover | ✅ 60% |
 | Notifications | ⏳ 0% |
 | Settings | ⏳ 10% |
@@ -127,15 +127,18 @@ WayTask should help users remember, discover, compare, and make better shopping 
 
 ---
 
-# AI (1/7 Complete)
+# AI (4/9 Complete)
 
 - [x] AI-ready Recognition Interface *(Sprint 5)*
-- [ ] AI Provider Integration
-- [ ] Product Recognition
+- [x] Gemini Vision Provider Integration *(Sprint 19)*
+- [x] Secrets.plist API Key Loading *(Sprint 19.1)*
+- [x] AI Product Recognition Review Flow *(Sprint 19)*
 - [ ] AI Skills
 - [ ] Product Suggestions
 - [ ] Recipe Suggestions
 - [ ] Gift Suggestions
+- [ ] Persist AI Search Keywords
+- [ ] AI Learning Loop
 
 ---
 
@@ -197,6 +200,10 @@ These features are intentionally planned after the MVP.
 - [ ] Shared Family Shopping
 - [ ] Loyalty Card Integration
 - [ ] Barcode Database Integration
+- [ ] AI Fridge Scan
+- [ ] AI Pantry Scan
+- [ ] AI Wardrobe Scan
+- [ ] AI Scan Sessions
 
 ---
 
@@ -268,6 +275,17 @@ The MVP will be considered complete when a user can:
 - Suggest Places integration
 - Shopping List to Map flow
 - Nearby store suggestions
+
+## Sprint 19.1
+
+- Gemini Vision is integrated as the real AI product recognition provider.
+- Gemini is called after Open Food Facts cannot identify a scanned barcode.
+- AI Vision mode can analyze a captured product photo directly.
+- Secrets.plist is now the primary API key source through SecretsManager.
+- Info.plist and environment key loading remain only as legacy/debug fallbacks.
+- Manual product entry remains the final fallback when Gemini is unavailable, fails, or returns low confidence.
+- AI results require user review before being added to the Shopping List.
+- Gemini returns product name, brand, category, confidence, description, and search keywords for future matching.
 
 ---
 

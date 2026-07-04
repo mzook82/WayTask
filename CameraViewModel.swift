@@ -65,29 +65,34 @@ final class CameraViewModel: ObservableObject {
     @Published private(set) var latestShoppingContext: ShoppingContext?
     @Published var isRecognizing = false
     @Published var isSavingPhoto = false
-    @Published var statusMessage = "AI recognition is not available yet."
+    @Published var statusMessage = "Ready to capture a photo."
     @Published var focusPoint: CGPoint?
 
     let cameraService: CameraService
 
     private let recognitionService: ProductRecognitionServicing
     private let productDataProvider: any ProductDataProvider
+    private let aiRecognitionService: AIProductRecognitionServicing
     private var pendingPhotoSource: RecognitionInputSource = .cameraCapture
+    private var recognitionTask: Task<Void, Never>?
 
     init() {
         self.cameraService = CameraService()
         self.recognitionService = ProductRecognitionService()
         self.productDataProvider = OpenFoodFactsProvider()
+        self.aiRecognitionService = GeminiProductRecognitionService()
     }
 
     init(
         cameraService: CameraService,
         recognitionService: ProductRecognitionServicing,
-        productDataProvider: any ProductDataProvider
+        productDataProvider: any ProductDataProvider,
+        aiRecognitionService: AIProductRecognitionServicing
     ) {
         self.cameraService = cameraService
         self.recognitionService = recognitionService
         self.productDataProvider = productDataProvider
+        self.aiRecognitionService = aiRecognitionService
     }
 
     var recognizedProduct: ProductCandidate? {
@@ -105,6 +110,18 @@ final class CameraViewModel: ObservableObject {
     var canConfirmBarcode: Bool {
         barcodeResult != nil && confirmedBarcodeResult == nil
     }
+
+    var canCreateProductFromBarcode: Bool {
+        guard confirmedBarcodeResult != nil,
+              selectedCandidate == nil,
+              confirmedCandidate == nil,
+              !isRecognizing else {
+            return false
+        }
+
+        return recognitionResult?.status == .noMatch || recognitionResult?.status == .failed || recognitionResult?.status == .unavailable
+    }
+
 
     var isShowingPhotoPreview: Bool {
         pendingPhotoData != nil
@@ -141,6 +158,8 @@ final class CameraViewModel: ObservableObject {
     }
 
     func stopCamera() {
+        recognitionTask?.cancel()
+        recognitionTask = nil
         cameraService.stopBarcodeScanning()
         cameraService.stop()
     }
@@ -168,6 +187,8 @@ final class CameraViewModel: ObservableObject {
     }
 
     func capturePhoto() {
+        recognitionTask?.cancel()
+        recognitionTask = nil
         clearRecognition()
         pendingPhotoData = nil
         pendingPhotoSource = .cameraCapture
@@ -217,7 +238,12 @@ final class CameraViewModel: ObservableObject {
         capturedImageData = pendingPhotoData
         self.pendingPhotoData = nil
         clearRecognition()
-        analyzeCapturedPhoto(pendingPhotoData, inputSource: pendingPhotoSource)
+
+        if selectedMode == .aiVision {
+            analyzeAIProductPhoto(pendingPhotoData)
+        } else {
+            analyzeCapturedPhoto(pendingPhotoData, inputSource: pendingPhotoSource)
+        }
     }
 
     func confirmSelectedCandidate() {
@@ -231,12 +257,12 @@ final class CameraViewModel: ObservableObject {
     }
 
     func confirmBarcode() {
-        guard let barcodeResult else {
+        guard let barcodeResult, !isRecognizing else {
             return
         }
 
         confirmedBarcodeResult = barcodeResult
-        lookupProduct(for: barcodeResult)
+        captureReferencePhotoThenLookupProduct(for: barcodeResult)
     }
 
     func productAddFailed(_ error: Error? = nil) {
@@ -270,6 +296,8 @@ final class CameraViewModel: ObservableObject {
     }
 
     func scanAgain() {
+        recognitionTask?.cancel()
+        recognitionTask = nil
         barcodeResult = nil
         confirmedBarcodeResult = nil
         recognitionResult = nil
@@ -288,7 +316,7 @@ final class CameraViewModel: ObservableObject {
         pendingPhotoSource = .cameraCapture
         clearRecognition()
         recognitionPhase = .idle
-        statusMessage = "AI recognition is not available yet."
+        statusMessage = selectedMode == .aiVision ? "Capture a product photo for Gemini." : "Ready to capture a photo."
     }
 
     func savePendingPhotoToLibrary() {
@@ -328,7 +356,9 @@ final class CameraViewModel: ObservableObject {
         recognitionPhase = .idle
         statusMessage = selectedMode == .barcode
             ? "Point the camera at a barcode."
-            : "AI recognition is not available yet."
+            : selectedMode == .aiVision
+                ? "Capture a product photo for Gemini."
+                : "Ready to capture a photo."
     }
 
     private func configureMode() {
@@ -342,7 +372,7 @@ final class CameraViewModel: ObservableObject {
         } else {
             cameraService.stopBarcodeScanning()
             statusMessage = selectedMode == .aiVision
-                ? "AI recognition is not available yet."
+                ? "Capture a product photo for Gemini."
                 : "Ready to capture a photo."
         }
     }
@@ -355,28 +385,51 @@ final class CameraViewModel: ObservableObject {
         }
     }
 
+    private func captureReferencePhotoThenLookupProduct(for barcode: BarcodeResult) {
+        recognitionPhase = .analyzing
+        isRecognizing = true
+        statusMessage = "Preparing product image..."
+
+        cameraService.capturePhoto { [weak self] result in
+            guard let self else {
+                return
+            }
+
+            Task { @MainActor in
+                switch result {
+                case .success(let photo):
+                    self.capturedImageData = photo.data
+                case .failure:
+                    self.capturedImageData = nil
+                }
+
+                self.lookupProduct(for: barcode)
+            }
+        }
+    }
+
     private func lookupProduct(for barcode: BarcodeResult) {
         recognitionPhase = .analyzing
         isRecognizing = true
         statusMessage = "Searching product..."
 
-        Task {
+        recognitionTask?.cancel()
+        recognitionTask = Task { [weak self] in
+            guard let self else {
+                return
+            }
+
             do {
                 let candidates = try await productDataProvider.products(
                     for: ProductDataRequest(barcode: barcode.value)
                 )
+                guard !Task.isCancelled else {
+                    return
+                }
                 isRecognizing = false
 
                 guard let candidate = candidates.first else {
-                    recognitionResult = RecognitionResult(
-                        status: .noMatch,
-                        candidates: [],
-                        message: "Product not found.",
-                        inputSource: .barcode
-                    )
-                    selectedCandidate = nil
-                    recognitionPhase = .unavailable
-                    statusMessage = "Product not found."
+                    await analyzeAIProductFallback(for: barcode)
                     return
                 }
 
@@ -390,19 +443,74 @@ final class CameraViewModel: ObservableObject {
                 confirmedCandidate = nil
                 recognitionPhase = .result
                 statusMessage = "Review and add this product."
+            } catch is CancellationError {
+                return
             } catch {
-                isRecognizing = false
-                recognitionResult = RecognitionResult(
-                    status: .failed,
-                    candidates: [],
-                    message: productLookupMessage(for: error),
-                    inputSource: .barcode
-                )
-                selectedCandidate = nil
-                recognitionPhase = .failed
-                statusMessage = productLookupMessage(for: error)
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                statusMessage = "Product lookup failed. Checking the image with Gemini..."
+                await analyzeAIProductFallback(for: barcode)
             }
         }
+    }
+
+    private func analyzeAIProductPhoto(_ imageData: Data) {
+        recognitionPhase = .analyzing
+        isRecognizing = true
+        statusMessage = "Analyzing with Gemini..."
+
+        recognitionTask?.cancel()
+        recognitionTask = Task { [weak self] in
+            guard let self else {
+                return
+            }
+
+            let result = await aiRecognitionService.suggestProduct(from: imageData, barcode: nil)
+            await applyAIRecognitionResult(result)
+        }
+    }
+
+    private func analyzeAIProductFallback(for barcode: BarcodeResult) async {
+        statusMessage = "Product not found. Checking the image with Gemini..."
+
+        let result = await aiRecognitionService.suggestProduct(
+            from: capturedImageData,
+            barcode: barcode
+        )
+
+        await applyAIRecognitionResult(result)
+    }
+
+    private func applyAIRecognitionResult(_ result: RecognitionResult) async {
+        guard !Task.isCancelled else {
+            return
+        }
+
+        recognitionResult = result
+        isRecognizing = false
+
+        guard let candidate = result.bestCandidate,
+              (candidate.confidence ?? 0) >= 0.55 else {
+            selectedCandidate = nil
+            confirmedCandidate = nil
+            recognitionPhase = .unavailable
+            statusMessage = result.message
+            return
+        }
+
+        selectedCandidate = candidate
+        confirmedCandidate = nil
+        recognitionPhase = .result
+        statusMessage = "We think this is \(candidate.name). Review before adding."
+    }
+
+    func useCandidateForManualEditing() {
+        selectedCandidate = nil
+        confirmedCandidate = nil
+        recognitionPhase = .unavailable
+        statusMessage = "Edit the suggested details before adding."
     }
 
     private func productLookupMessage(for error: Error) -> String {
@@ -412,13 +520,15 @@ final class CameraViewModel: ObservableObject {
 
         switch providerError {
         case .invalidRequest:
-            return "Invalid barcode."
+            return "This barcode could not be used for lookup."
         case .networkUnavailable:
-            return "No internet connection."
+            return "No internet connection. Try again when you're online."
         case .timeout:
-            return "Product lookup timed out."
-        case .unavailable, .unsupportedSource:
-            return "Product lookup is unavailable right now."
+            return "Product lookup timed out. Please try again."
+        case .unavailable:
+            return "The product database is unavailable right now."
+        case .unsupportedSource:
+            return "This product database is not supported yet."
         }
     }
 

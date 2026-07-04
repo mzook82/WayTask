@@ -11,11 +11,19 @@ import SwiftData
 @main
 struct WayTaskApp: App {
     @StateObject private var appStateManager = AppStateManager()
+    @StateObject private var locationManager = LocationManager()
+
+    init() {
+        #if DEBUG
+        print(SecretsManager.isGeminiConfigured ? "Gemini configured ✔" : "Gemini unavailable")
+        #endif
+    }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(appStateManager)
+                .environmentObject(locationManager)
         }
         .modelContainer(for: [
             GeoLocation.self,

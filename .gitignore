@@ -16,3 +16,5 @@ xcuserdata/
 # Logs
 *.log
 EOF
+Secrets.xcconfig
+Secrets.plist

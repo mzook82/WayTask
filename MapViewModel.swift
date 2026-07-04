@@ -13,6 +13,7 @@ struct MapStore: Identifiable {
     let completedItemNames: [String]
     let isOpen: Bool
     let rating: Double
+    let storeCategories: [ShoppingStoreCategory]
     let websiteURL: URL?
 
     var openItemCount: Int {
@@ -209,15 +210,53 @@ final class MapViewModel: ObservableObject {
         }
 
         if let selectedStoreID,
-           stores.contains(where: { $0.id == selectedStoreID && !$0.isSavedLocation }) {
+           stores.contains(where: { $0.id == selectedStoreID && storeMatchesSuggestion($0, request: request) }) {
+            return
+        }
+
+        if let savedStore = stores.first(where: { store in
+            store.isSavedLocation && storeMatchesSuggestion(store, request: request)
+        }) {
+            selectStore(id: savedStore.id)
             return
         }
 
         if let firstSuggestedStore = stores.first(where: { store in
-            !store.isSavedLocation && store.itemNames.contains(request.itemName)
+            !store.isSavedLocation && storeMatchesSuggestion(store, request: request)
         }) ?? stores.first(where: { !$0.isSavedLocation }) {
             selectStore(id: firstSuggestedStore.id)
         }
+    }
+
+    private func storeMatchesSuggestion(_ store: MapStore, request: ShoppingStoreSuggestionRequest) -> Bool {
+        let matchesItem = store.itemNames.contains { itemName in
+            itemName.localizedCaseInsensitiveContains(request.itemName) ||
+            request.itemName.localizedCaseInsensitiveContains(itemName)
+        }
+        let matchesCategory = store.storeCategories.contains { storeCategory in
+            request.storeCategories.contains { requestCategory in
+                storeCategory.matches(requestCategory)
+            }
+        }
+        let matchesTitle = request.storeCategories.contains { category in
+            store.title.localizedCaseInsensitiveContains(category.sampleStoreName) ||
+            store.title.localizedCaseInsensitiveContains(category.storeFormTitle)
+        }
+        let genericRequestCanUseSavedCategory = request.storeCategories.contains(.generalStore) && store.isSavedLocation && !store.storeCategories.isEmpty
+
+        return matchesItem || matchesCategory || matchesTitle || genericRequestCanUseSavedCategory
+    }
+
+    private func isNearbySavedStore(_ store: MapStore) -> Bool {
+        guard store.isSavedLocation else {
+            return false
+        }
+
+        guard let userCoordinate else {
+            return true
+        }
+
+        return distance(from: userCoordinate, to: store.coordinate) <= 1500
     }
 
     private func rebuildDisplayStores() {
@@ -258,6 +297,7 @@ final class MapViewModel: ObservableObject {
             completedItemNames: completedItems,
             isOpen: true,
             rating: rating(for: location),
+            storeCategories: location.storeCategory.map { [$0] } ?? [],
             websiteURL: nil
         )
     }
@@ -315,7 +355,14 @@ final class MapViewModel: ObservableObject {
 
     private func matchesFilters(_ store: MapStore) -> Bool {
         if shoppingListOnly && store.openItemCount == 0 {
-            return false
+            if isNearbySavedStore(store) {
+                return true
+            }
+
+            guard let activeSuggestionRequest,
+                  storeMatchesSuggestion(store, request: activeSuggestionRequest) else {
+                return false
+            }
         }
 
         switch selectedCategory {
@@ -324,7 +371,19 @@ final class MapViewModel: ObservableObject {
         case .open:
             return store.isOpen
         case .shoppingList:
-            return store.openItemCount > 0
+            if store.openItemCount > 0 {
+                return true
+            }
+
+            if isNearbySavedStore(store) {
+                return true
+            }
+
+            guard let activeSuggestionRequest else {
+                return false
+            }
+
+            return storeMatchesSuggestion(store, request: activeSuggestionRequest)
         }
     }
 

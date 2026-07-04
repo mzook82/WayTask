@@ -12,9 +12,14 @@ protocol ShoppingTripServicing {
 
 struct ShoppingTripService: ShoppingTripServicing {
     private let rankingService: StoreRankingService
+    private let intentMatcher: ShoppingIntentMatcher
 
-    init(rankingService: StoreRankingService = StoreRankingService()) {
+    init(
+        rankingService: StoreRankingService = StoreRankingService(),
+        intentMatcher: ShoppingIntentMatcher = ShoppingIntentMatcher()
+    ) {
         self.rankingService = rankingService
+        self.intentMatcher = intentMatcher
     }
 
     func coverage(
@@ -88,7 +93,21 @@ struct ShoppingTripService: ShoppingTripServicing {
             return false
         }
 
-        let storeTokens = tokens(from: store.itemNames + [store.title])
+        let itemCategories = Set(intentMatcher.matchStoreCategories(for: item))
+        let storeCategories = Set(store.storeCategories)
+        if storeCategories.contains(where: { storeCategory in
+            itemCategories.contains { itemCategory in
+                storeCategory.matches(itemCategory)
+            }
+        }) {
+            return true
+        }
+
+        if itemCategories.contains(.generalStore), store.isSavedLocation, !storeCategories.isEmpty {
+            return true
+        }
+
+        let storeTokens = tokens(from: store.itemNames + [store.title] + store.storeCategories.map(\.displayName))
         return itemTokens.contains { token in
             storeTokens.contains(token)
         }
