@@ -9,6 +9,7 @@ struct CameraView: View {
 
     @StateObject private var viewModel = CameraViewModel()
     private let shoppingListService = ShoppingListService()
+    private let productKnowledgeService = ProductKnowledgeService()
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var focusIndicatorPoint: CGPoint?
     @State private var focusIndicatorScale = 1.35
@@ -475,7 +476,7 @@ struct CameraView: View {
             HStack(spacing: 12) {
                 if viewModel.canConfirmBarcode {
                     Button {
-                        viewModel.confirmBarcode()
+                        confirmBarcode()
                     } label: {
                         Label("Confirm", systemImage: "checkmark.circle.fill")
                             .frame(maxWidth: .infinity)
@@ -783,6 +784,26 @@ struct CameraView: View {
     private func scanAgain() {
         resetManualBarcodeForm()
         viewModel.scanAgain()
+    }
+
+    private func confirmBarcode() {
+        guard let barcode = currentBarcodeResult else {
+            viewModel.confirmBarcode()
+            return
+        }
+
+        do {
+            if let candidate = try productKnowledgeService.productCandidate(
+                forBarcode: barcode.value,
+                in: modelContext
+            ) {
+                viewModel.useKnownProduct(candidate, for: barcode)
+            } else {
+                viewModel.confirmBarcode()
+            }
+        } catch {
+            viewModel.confirmBarcode()
+        }
     }
 
     private func editSuggestedProduct(_ product: ProductCandidate) {

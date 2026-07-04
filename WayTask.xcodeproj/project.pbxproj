@@ -56,6 +56,8 @@
 		D1954E3E2FF85C6B00E946DA /* SecretsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E3D2FF85C6B00E946DA /* SecretsManager.swift */; };
 		D1954E402FF8FB2E00E946DA /* DebugSeedStoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E3F2FF8FB2E00E946DA /* DebugSeedStoreService.swift */; };
 		D1954E422FF9010700E946DA /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E412FF9010700E946DA /* SettingsView.swift */; };
+		D1954E442FF91D5B00E946DA /* ProductKnowledge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E432FF91D5B00E946DA /* ProductKnowledge.swift */; };
+		D1954E462FF91D5B00E946DA /* ProductKnowledgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E452FF91D5B00E946DA /* ProductKnowledgeService.swift */; };
 		D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B8519A2FF18FF50083B34C /* ProductListView.swift */; };
 /* End PBXBuildFile section */
 
@@ -111,6 +113,8 @@
 		D1954E3D2FF85C6B00E946DA /* SecretsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretsManager.swift; sourceTree = "<group>"; };
 		D1954E3F2FF8FB2E00E946DA /* DebugSeedStoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSeedStoreService.swift; sourceTree = "<group>"; };
 		D1954E412FF9010700E946DA /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		D1954E432FF91D5B00E946DA /* ProductKnowledge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductKnowledge.swift; sourceTree = "<group>"; };
+		D1954E452FF91D5B00E946DA /* ProductKnowledgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductKnowledgeService.swift; sourceTree = "<group>"; };
 		D1B8517E2FEFF2F40083B34C /* WayTask.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WayTask.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1B8519A2FF18FF50083B34C /* ProductListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -199,6 +203,8 @@
 				D1954E2D2FF7D01300E946DA /* GeofenceNotificationService.swift */,
 				D1954E2F2FF82CDF00E946DA /* AIProductRecognitionService.swift */,
 				D1954E312FF83E7800E946DA /* GeminiProductRecognitionService.swift */,
+				D1954E432FF91D5B00E946DA /* ProductKnowledge.swift */,
+				D1954E452FF91D5B00E946DA /* ProductKnowledgeService.swift */,
 				D1954E372FF8488C00E946DA /* Debug.xcconfig */,
 				D1954E392FF8489800E946DA /* Release.xcconfig */,
 				D1954E3D2FF85C6B00E946DA /* SecretsManager.swift */,
@@ -333,7 +339,9 @@
 				D1954DF22FF3C45B00E946DA /* MapBottomSheet.swift in Sources */,
 				D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */,
 				D1954E422FF9010700E946DA /* SettingsView.swift in Sources */,
+				D1954E442FF91D5B00E946DA /* ProductKnowledge.swift in Sources */,
 				D1954E322FF83E7800E946DA /* GeminiProductRecognitionService.swift in Sources */,
+				D1954E462FF91D5B00E946DA /* ProductKnowledgeService.swift in Sources */,
 				D1954E182FF678CF00E946DA /* ShoppingIntentMatcher.swift in Sources */,
 				D1954DF62FF59EE800E946DA /* ShoppingMission.swift in Sources */,
 				D1954E122FF6559B00E946DA /* OpenFoodFactsProvider.swift in Sources */,

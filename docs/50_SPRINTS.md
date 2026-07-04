@@ -388,3 +388,36 @@ Users returning to WayTask can immediately see that a relevant nearby store may 
 Build completed successfully.
 
 **Status:** ✅ Completed
+
+## Sprint 22 – Product Knowledge Engine
+
+### Goal
+
+Create a local Product Knowledge Engine that remembers confirmed product identity separately from shopping history.
+
+### User Value
+
+WayTask can recognize products it has already learned from the user, making repeated barcode scans faster and reducing unnecessary external lookup or AI work.
+
+### Completed
+
+- Added a separate `ProductKnowledge` SwiftData model for reusable product identity.
+- Added `ProductKnowledgeService` for barcode lookup, learning, and updates.
+- Barcode confirmation now checks local ProductKnowledge before Open Food Facts or Gemini.
+- Confirmed products are learned after they are successfully added to the shopping list.
+- Final confirmed values update ProductKnowledge and are treated as authoritative.
+- Preserved `ProductHistory` and the existing shopping memory flow.
+
+### Out of Scope
+
+- Cloud sync
+- Product Knowledge UI
+- Bulk import/export
+- Changes to ProductHistory
+- Changes to external provider behavior
+
+### Result
+
+Build completed successfully.
+
+**Status:** ✅ Completed

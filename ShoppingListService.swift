@@ -33,6 +33,7 @@ protocol ShoppingListServicing {
 
 struct ShoppingListService: ShoppingListServicing {
     private let shoppingMemoryService = ShoppingMemoryService()
+    private let productKnowledgeService = ProductKnowledgeService()
 
     @discardableResult
     func addManualItem(
@@ -47,7 +48,7 @@ struct ShoppingListService: ShoppingListServicing {
             source: .manual
         )
 
-        return try insert(item, location: location, in: modelContext)
+        return try insert(item, location: location, candidate: nil, fallbackImageData: nil, in: modelContext)
     }
 
     @discardableResult
@@ -57,7 +58,7 @@ struct ShoppingListService: ShoppingListServicing {
         in modelContext: ModelContext
     ) throws -> ShoppingItem {
         let item = makeShoppingItem(from: candidate, fallbackImageData: fallbackImageData)
-        return try insert(item, location: nil, in: modelContext)
+        return try insert(item, location: nil, candidate: candidate, fallbackImageData: fallbackImageData, in: modelContext)
     }
 
     func makeShoppingItem(from candidate: ProductCandidate, fallbackImageData: Data?) -> ShoppingItem {
@@ -84,6 +85,8 @@ struct ShoppingListService: ShoppingListServicing {
     private func insert(
         _ item: ShoppingItem,
         location: GeoLocation?,
+        candidate: ProductCandidate?,
+        fallbackImageData: Data?,
         in modelContext: ModelContext
     ) throws -> ShoppingItem {
         modelContext.insert(item)
@@ -95,6 +98,7 @@ struct ShoppingListService: ShoppingListServicing {
         try modelContext.save()
         try verifyInsertedItem(item, in: modelContext)
         recordShoppingMemoryIfPossible(for: item, in: modelContext)
+        recordProductKnowledgeIfPossible(for: item, candidate: candidate, fallbackImageData: fallbackImageData, in: modelContext)
         return item
     }
 
@@ -121,6 +125,27 @@ struct ShoppingListService: ShoppingListServicing {
             try shoppingMemoryService.recordProductAdded(item, in: modelContext)
         } catch {
             assertionFailure("Shopping memory recording failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func recordProductKnowledgeIfPossible(
+        for item: ShoppingItem,
+        candidate: ProductCandidate?,
+        fallbackImageData: Data?,
+        in modelContext: ModelContext
+    ) {
+        do {
+            if let candidate {
+                try productKnowledgeService.learn(
+                    from: candidate,
+                    fallbackImageData: fallbackImageData,
+                    in: modelContext
+                )
+            } else {
+                try productKnowledgeService.learn(from: item, in: modelContext)
+            }
+        } catch {
+            assertionFailure("Product knowledge recording failed: \(error.localizedDescription)")
         }
     }
 

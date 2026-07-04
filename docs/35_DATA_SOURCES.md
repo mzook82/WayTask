@@ -31,6 +31,14 @@ MapKit results are merged with user-saved stores. User-saved stores remain first
 
 User-created shopping items, saved places, images, and geofence-backed locations come from the app's local SwiftData models and app state.
 
+### Local Product Knowledge
+
+`ProductKnowledge` stores reusable product identity learned from confirmed products.
+
+Barcode scanning checks local ProductKnowledge before external product providers. If a barcode has already been learned, WayTask can return the local product candidate without calling Open Food Facts or Gemini.
+
+ProductKnowledge is separate from ProductHistory. ProductKnowledge stores identity; ProductHistory stores shopping usage memory.
+
 ### Product Recognition Data
 
 `ProductRecognitionService` is a pipeline stub. It returns an unavailable recognition result with no product candidates until a real product recognition provider is implemented.

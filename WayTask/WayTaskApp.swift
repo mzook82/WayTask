@@ -29,6 +29,7 @@ struct WayTaskApp: App {
             GeoLocation.self,
             ShoppingItem.self,
             ProductHistory.self,
+            ProductKnowledge.self,
             ShoppingSession.self
         ])
     }

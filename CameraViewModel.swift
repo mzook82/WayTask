@@ -277,6 +277,24 @@ final class CameraViewModel: ObservableObject {
         lookupProduct(for: barcodeResult)
     }
 
+    func useKnownProduct(_ candidate: ProductCandidate, for barcode: BarcodeResult) {
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        confirmedBarcodeResult = barcode
+        recognitionResult = RecognitionResult(
+            status: .recognized,
+            candidates: [candidate],
+            message: "Product found in WayTask.",
+            inputSource: .barcode
+        )
+        selectedCandidate = candidate
+        confirmedCandidate = nil
+        isRecognizing = false
+        isWaitingForBarcodePackagePhoto = false
+        recognitionPhase = .result
+        statusMessage = "Product found in WayTask. Review and add it."
+    }
+
     func productAddFailed(_ error: Error? = nil) {
         recognitionPhase = .failed
         statusMessage = "Could not add this product. Please try again."

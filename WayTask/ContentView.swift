@@ -48,9 +48,11 @@ struct ContentView: View {
         .onAppear {
             seedDebugStoreIfNeeded()
             refreshShoppingGeofences()
+            refreshNearbyOpportunities()
         }
         .onChange(of: geofenceRefreshSignature) {
             refreshShoppingGeofences()
+            refreshNearbyOpportunities()
         }
         .onChange(of: scenePhase) {
             guard scenePhase == .active else {
@@ -59,6 +61,7 @@ struct ContentView: View {
 
             seedDebugStoreIfNeeded()
             refreshShoppingGeofences()
+            refreshNearbyOpportunities()
             locationManager.checkSmartNearbyDetection(reason: "app active")
         }
     }
@@ -106,6 +109,16 @@ struct ContentView: View {
 
     private func refreshShoppingGeofences() {
         locationManager.refreshShoppingGeofences(items: items, savedLocations: locations)
+    }
+
+    private func refreshNearbyOpportunities() {
+        Task {
+            await appStateManager.refreshNearbyOpportunities(
+                items: items,
+                savedLocations: locations,
+                currentCoordinate: locationManager.currentCoordinate
+            )
+        }
     }
 
     private func seedDebugStoreIfNeeded() {

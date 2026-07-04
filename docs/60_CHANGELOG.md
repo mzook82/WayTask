@@ -383,3 +383,40 @@ WayTask now gives users a second chance to act on relevant nearby shopping oppor
 ## Notes
 
 This sprint adds an in-app reminder surface only. Push notification spam prevention remains handled by the existing notification cooldown.
+
+# Version 1.9 Beta
+
+## Sprint
+
+Sprint 22 – Product Knowledge Engine
+
+## Added
+
+- `ProductKnowledge` local SwiftData model
+- `ProductKnowledgeService`
+- Local barcode-first Product Knowledge lookup
+- Product learning after successful shopping-list add
+- Product Knowledge updates from final confirmed product values
+
+## Improved
+
+- Repeated barcode scans can return a learned product before calling Open Food Facts or Gemini.
+- Confirmed product identity is now stored separately from shopping history.
+- Product Knowledge records keep barcode, display name, brand, category, type, flavor, package size, thumbnail data, search keywords, confidence, source, learned date, last-used date, and usage count.
+
+## Preserved
+
+- ProductHistory
+- ShoppingMemoryService
+- Open Food Facts lookup
+- Gemini fallback
+- Barcode scanning and review flow
+- Manual add and recognized-product add behavior
+
+## User Value Added
+
+WayTask now starts building long-term local product intelligence from products the user has confirmed, while keeping all existing scan and add flows intact.
+
+## Notes
+
+Product Knowledge is local only. The model is intentionally separate from ProductHistory and is structured so a future sprint can add cloud synchronization without changing the current scan flow.
