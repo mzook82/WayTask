@@ -162,6 +162,8 @@ struct WayTaskPrimaryPillButtonStyle: ButtonStyle {
         configuration.label
             .font(.subheadline.weight(.bold))
             .foregroundStyle(.white)
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
             .padding(.horizontal, 14)
             .frame(maxWidth: height == nil ? nil : .infinity, alignment: .center)
             .frame(minHeight: height ?? 44, alignment: .center)

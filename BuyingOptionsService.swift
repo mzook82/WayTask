@@ -72,7 +72,11 @@ struct BuyingOptionsService: BuyingOptionsServicing {
         )
 
         let storeOptions = rankedStores.map { rankedStore in
-            BuyingOption(
+            let recommendationReasons = recommendationReasons(
+                for: rankedStore.store,
+                ranking: rankedStore.ranking
+            )
+            return BuyingOption(
                 title: "Buy \(request.itemName)",
                 subtitle: rankedStore.store.matchingItemsLabel,
                 optionType: rankedStore.store.isSavedLocation ? .nearbyStore : .suggestedStore,
@@ -81,9 +85,9 @@ struct BuyingOptionsService: BuyingOptionsServicing {
                 priceText: nil,
                 websiteURL: rankedStore.store.websiteURL,
                 confidenceLabel: rankedStore.ranking.confidenceLabel,
-                source: rankedStore.store.isSavedLocation ? .userGenerated : .local,
+                source: rankedStore.store.sourceType,
                 ranking: rankedStore.ranking,
-                recommendationReasons: rankedStore.ranking.reasons
+                recommendationReasons: recommendationReasons
             )
         }
 
@@ -103,7 +107,8 @@ struct BuyingOptionsService: BuyingOptionsServicing {
                 isOpen: true,
                 rating: 4.5 + min(Double(index) * 0.1, 0.3),
                 storeCategories: [category],
-                websiteURL: URL(string: "https://maps.apple.com")
+                websiteURL: URL(string: "https://maps.apple.com"),
+                sourceType: .local
             )
         }
     }
@@ -149,5 +154,25 @@ struct BuyingOptionsService: BuyingOptionsServicing {
         }
 
         return "\(max(Int(distance), 1)) m away"
+    }
+
+    private func recommendationReasons(for store: MapStore, ranking: StoreScore) -> [String] {
+        var reasons = ranking.reasons
+
+        if store.itemNames.count > 1 {
+            reasons.insert("Covers \(store.itemNames.count) list items", at: 0)
+        }
+
+        return reasons.deduplicatedCaseInsensitive()
+    }
+}
+
+private extension Array where Element == String {
+    func deduplicatedCaseInsensitive() -> [String] {
+        reduce(into: [String]()) { result, value in
+            if !result.contains(where: { $0.localizedCaseInsensitiveCompare(value) == .orderedSame }) {
+                result.append(value)
+            }
+        }
     }
 }

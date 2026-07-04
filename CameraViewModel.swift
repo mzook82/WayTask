@@ -231,7 +231,7 @@ final class CameraViewModel: ObservableObject {
     }
 
     func usePendingPhoto() {
-        guard let pendingPhotoData else {
+        guard let pendingPhotoData, !isRecognizing else {
             return
         }
 
@@ -450,7 +450,7 @@ final class CameraViewModel: ObservableObject {
                     return
                 }
 
-                statusMessage = "Product lookup failed. Checking the image with Gemini..."
+                statusMessage = "Analyzing product with AI..."
                 await analyzeAIProductFallback(for: barcode)
             }
         }
@@ -459,7 +459,7 @@ final class CameraViewModel: ObservableObject {
     private func analyzeAIProductPhoto(_ imageData: Data) {
         recognitionPhase = .analyzing
         isRecognizing = true
-        statusMessage = "Analyzing with Gemini..."
+        statusMessage = "Analyzing product with AI..."
 
         recognitionTask?.cancel()
         recognitionTask = Task { [weak self] in
@@ -473,7 +473,7 @@ final class CameraViewModel: ObservableObject {
     }
 
     private func analyzeAIProductFallback(for barcode: BarcodeResult) async {
-        statusMessage = "Product not found. Checking the image with Gemini..."
+        statusMessage = "Analyzing product with AI..."
 
         let result = await aiRecognitionService.suggestProduct(
             from: capturedImageData,

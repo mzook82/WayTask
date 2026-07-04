@@ -76,6 +76,12 @@ struct ShoppingTripService: ShoppingTripServicing {
             userCoordinate: userCoordinate,
             coverageScore: coverageScore
         )
+        let coverageReason = "Covers \(matchedItems.count)/\(shoppingItems.count) items"
+        let coverageRanking = StoreScore(
+            score: ranking.score,
+            confidence: ranking.confidence,
+            reasons: ([coverageReason] + ranking.reasons).deduplicatedCaseInsensitive()
+        )
 
         return StoreCoverage(
             store: store,
@@ -83,12 +89,22 @@ struct ShoppingTripService: ShoppingTripServicing {
             missingItems: missingItems,
             coverageScore: coverageScore,
             distance: storeDistance,
-            ranking: ranking
+            ranking: coverageRanking
         )
     }
 
     private func storeLikelyMatches(_ item: ShoppingItem, in store: MapStore) -> Bool {
-        let itemTokens = tokens(from: [item.name, item.brand, item.category])
+        let productTerms = [
+            item.name,
+            item.brand,
+            item.category,
+            item.productType,
+            item.flavor,
+            item.packageSize,
+            item.packageType
+        ]
+        .compactMap { $0 }
+        let itemTokens = tokens(from: productTerms + item.searchKeywords)
         guard !itemTokens.isEmpty else {
             return false
         }
@@ -146,5 +162,15 @@ struct ShoppingTripService: ShoppingTripServicing {
         let startLocation = CLLocation(latitude: start.latitude, longitude: start.longitude)
         let endLocation = CLLocation(latitude: end.latitude, longitude: end.longitude)
         return startLocation.distance(from: endLocation)
+    }
+}
+
+private extension Array where Element == String {
+    func deduplicatedCaseInsensitive() -> [String] {
+        reduce(into: [String]()) { result, value in
+            if !result.contains(where: { $0.localizedCaseInsensitiveCompare(value) == .orderedSame }) {
+                result.append(value)
+            }
+        }
     }
 }

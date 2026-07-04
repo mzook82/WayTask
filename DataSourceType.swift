@@ -8,6 +8,7 @@ enum DataSourceType: String, CaseIterable, Codable, Identifiable, Sendable {
     case publicDatabase
     case aiProvider
     case userGenerated
+    case debugSeed
 
     var id: String {
         rawValue
@@ -29,6 +30,8 @@ enum DataSourceType: String, CaseIterable, Codable, Identifiable, Sendable {
             return "AI Provider"
         case .userGenerated:
             return "User Generated"
+        case .debugSeed:
+            return "Debug Seed"
         }
     }
 }

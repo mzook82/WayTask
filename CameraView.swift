@@ -423,6 +423,8 @@ struct CameraView: View {
         HStack(spacing: 8) {
             Image(systemName: systemName)
             Text(title)
+                .lineLimit(1)
+                .minimumScaleFactor(0.74)
         }
         .frame(maxWidth: .infinity, alignment: .center)
     }
@@ -646,8 +648,17 @@ struct CameraView: View {
             .filter { !$0.isEmpty }
 
         if product.source == .ai {
-            let confidenceText = product.confidence.map { "AI-suggested / \(Int(($0 * 100).rounded()))% confidence" } ?? "AI-suggested"
-            let detailText = details.isEmpty ? confidenceText : "\(details.joined(separator: " / ")) / \(confidenceText)"
+            let aiDetails = [
+                product.brand,
+                product.category,
+                product.flavor,
+                product.packageSize
+            ]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .prefix(4)
+            let confidenceText = product.confidence.map { "\(Int(($0 * 100).rounded()))% confidence" } ?? "AI-suggested"
+            let detailText = aiDetails.isEmpty ? confidenceText : "\(aiDetails.joined(separator: " / ")) / \(confidenceText)"
             Text(detailText)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(WayTaskDesign.secondaryText)

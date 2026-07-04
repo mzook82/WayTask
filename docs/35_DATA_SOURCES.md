@@ -1,14 +1,31 @@
 # Data Sources
 
-WayTask currently uses local, in-app data providers only. No external store, product, price, online shopping, or AI provider is connected yet.
+WayTask currently uses local SwiftData, Open Food Facts, Gemini Vision, and Apple MapKit Local Search data sources. Price comparison, live inventory, online shopping APIs, and AI store ranking are not connected yet.
 
 ## Current Sources
 
 ### Local Store Data
 
-`LocalStoreDataProvider` returns nearby fallback stores around the user's current map region. This keeps the Map and Discover foundations usable while real store data sources are added later.
+`LocalStoreDataProvider` returns nearby fallback stores around the user's current map region. This keeps the Map and Discover foundations usable when Apple MapKit Local Search returns no results or is unavailable.
 
 Current local store data is sample fallback data and should not be treated as verified retail inventory, pricing, opening hours, or availability.
+
+### Apple MapKit Local Search
+
+`MapKitStoreSearchService` uses Apple MapKit Local Search to discover real nearby stores for shopping suggestions and map display.
+
+Supported search categories include:
+
+- Grocery
+- Supermarket
+- Convenience Store
+- Pharmacy
+- Pet Store
+- Electronics
+- Home Improvement
+- General stores
+
+MapKit results are merged with user-saved stores. User-saved stores remain first and keep their user metadata. If MapKit and a saved store appear to represent the same physical place, WayTask prefers the saved store and avoids duplicate markers.
 
 ### User-Generated Data
 
@@ -62,6 +79,12 @@ The provider foundation is designed to support later features without coupling U
 ## Current Policy
 
 Until real providers are implemented, WayTask must not show local fallback data as verified availability, pricing, or AI-generated recommendations.
+
+## Sprint 19.3 Store Data Limitation
+
+Current map, buying option, shopping trip, and geofence behavior uses a combination of user-saved stores from SwiftData, Apple MapKit Local Search stores, and local fallback/demo stores. Saved user stores should be prioritized and shown before MapKit and fallback stores when relevant.
+
+Fallback/demo stores should only appear when MapKit does not return usable nearby results. A future sprint should improve real-store metadata with richer Apple Maps details, hours, and provider-backed inventory where available.
 
 ## Open Food Facts
 

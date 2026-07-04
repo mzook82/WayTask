@@ -10,6 +10,7 @@ struct ShoppingGeofenceCandidate: Identifiable, Equatable {
     let radius: CLLocationDistance
     let itemNames: [String]
     let sourceType: String
+    let distanceMeters: CLLocationDistance?
 
     static func == (lhs: ShoppingGeofenceCandidate, rhs: ShoppingGeofenceCandidate) -> Bool {
         lhs.id == rhs.id &&
@@ -19,7 +20,8 @@ struct ShoppingGeofenceCandidate: Identifiable, Equatable {
         lhs.coordinate.longitude == rhs.coordinate.longitude &&
         lhs.radius == rhs.radius &&
         lhs.itemNames == rhs.itemNames &&
-        lhs.sourceType == rhs.sourceType
+        lhs.sourceType == rhs.sourceType &&
+        lhs.distanceMeters == rhs.distanceMeters
     }
 }
 
@@ -33,6 +35,7 @@ struct ShoppingGeofencePayload {
     let title: String
     let itemNames: [String]
     let sourceType: String
+    let distanceMeters: CLLocationDistance?
 
     init(candidate: ShoppingGeofenceCandidate) {
         self.storeID = candidate.id
@@ -40,6 +43,7 @@ struct ShoppingGeofencePayload {
         self.title = candidate.title
         self.itemNames = candidate.itemNames
         self.sourceType = candidate.sourceType
+        self.distanceMeters = candidate.distanceMeters
     }
 
     init?(identifier: String) {
@@ -63,6 +67,12 @@ struct ShoppingGeofencePayload {
         } else {
             self.itemNames = []
         }
+
+        if components.count > 6 {
+            self.distanceMeters = Double(components[6])
+        } else {
+            self.distanceMeters = nil
+        }
     }
 
     var identifier: String {
@@ -72,7 +82,8 @@ struct ShoppingGeofencePayload {
             locationID?.uuidString ?? "none",
             Self.sanitize(title),
             Self.sanitize(sourceType),
-            itemNames.map(Self.sanitize).joined(separator: Self.itemSeparator)
+            itemNames.map(Self.sanitize).joined(separator: Self.itemSeparator),
+            distanceMeters.map { String(Int($0.rounded())) } ?? ""
         ]
         .joined(separator: Self.separator)
     }
@@ -84,7 +95,8 @@ struct ShoppingGeofencePayload {
             "matchedItemCount": "\(itemNames.count)",
             "matchedItemNames": itemNames.joined(separator: ", "),
             "storeSourceType": sourceType,
-            "opensTripMode": "true"
+            "opensTripMode": "true",
+            "distanceMeters": distanceMeters.map { String(Int($0.rounded())) } ?? ""
         ]
 
         if let locationID {
@@ -193,18 +205,27 @@ struct GeofenceNotificationService {
 
     private func notificationBody(for payload: ShoppingGeofencePayload) -> String {
         let itemCount = payload.itemNames.count
+        let distanceSuffix = payload.distanceMeters.map { " \(distanceText(for: $0))" } ?? ""
 
         if itemCount == 1 {
-            return "\(payload.itemNames[0]) may be available here."
+            return "\(payload.itemNames[0]) may be available here.\(distanceSuffix)"
         }
 
         if itemCount > 1 {
             let visibleNames = payload.itemNames.prefix(2).joined(separator: ", ")
-            let suffix = itemCount > 2 ? ", and more." : "."
-            return "\(itemCount) items from your shopping list may be available here: \(visibleNames)\(suffix)"
+            let listSuffix = itemCount > 2 ? ", and more." : "."
+            return "\(itemCount) items may be available here: \(visibleNames)\(listSuffix)\(distanceSuffix)"
         }
 
-        return "Your shopping list may have a match here."
+        return "Your shopping list may have a match here.\(distanceSuffix)"
+    }
+
+    private func distanceText(for distance: CLLocationDistance) -> String {
+        if distance >= 1000 {
+            return String(format: "About %.1f km away.", distance / 1000)
+        }
+
+        return "About \(max(Int(distance.rounded()), 1)) m away."
     }
 
     private func shouldNotify(_ payload: ShoppingGeofencePayload, now: Date) -> Bool {

@@ -12,6 +12,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var appStateManager: AppStateManager
     @EnvironmentObject private var locationManager: LocationManager
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
 
     @Query private var items: [ShoppingItem]
@@ -45,6 +46,7 @@ struct ContentView: View {
                 .tag(AppTab.map)
         }
         .onAppear {
+            seedDebugStoreIfNeeded()
             refreshShoppingGeofences()
         }
         .onChange(of: geofenceRefreshSignature) {
@@ -55,6 +57,7 @@ struct ContentView: View {
                 return
             }
 
+            seedDebugStoreIfNeeded()
             refreshShoppingGeofences()
             locationManager.checkSmartNearbyDetection(reason: "app active")
         }
@@ -77,7 +80,7 @@ struct ContentView: View {
                     .sorted()
                     .joined(separator: ",")
 
-                return "\(location.id.uuidString)-\(location.title)-\(location.latitude)-\(location.longitude)-\(location.radius)-\(location.storeCategoryRawValue ?? "")-\(location.notes ?? "")-\(locationItemSignature)"
+                return "\(location.id.uuidString)-\(location.title)-\(location.latitude)-\(location.longitude)-\(location.radius)-\(location.storeCategoryRawValue ?? "")-\(location.addressText ?? "")-\(location.notes ?? "")-\(locationItemSignature)"
             }
             .sorted()
             .joined(separator: "|")
@@ -103,6 +106,15 @@ struct ContentView: View {
 
     private func refreshShoppingGeofences() {
         locationManager.refreshShoppingGeofences(items: items, savedLocations: locations)
+    }
+
+    private func seedDebugStoreIfNeeded() {
+        #if DEBUG
+        DebugSeedStoreService().ensureSeedStore(
+            near: locationManager.currentCoordinate,
+            in: modelContext
+        )
+        #endif
     }
 }
 

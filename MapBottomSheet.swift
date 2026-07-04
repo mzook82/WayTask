@@ -61,9 +61,17 @@ struct MapBottomSheet: View {
                             .lineLimit(1)
                     }
 
-                    Label(String(format: "%.1f rating", store.rating), systemImage: "star.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 8) {
+                        if let rating = store.rating {
+                            Label(String(format: "%.1f rating", rating), systemImage: "star.fill")
+                        }
+
+                        if store.isSavedLocation {
+                            Label("Saved by you", systemImage: "bookmark.fill")
+                        }
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
                 }
 
                 Spacer(minLength: 8)
@@ -137,14 +145,36 @@ struct MapBottomSheet: View {
         .padding(.bottom, 4)
     }
 
-    private func statusPill(isOpen: Bool) -> some View {
-        Text(isOpen ? "Open" : "Closed")
+    private func statusPill(isOpen: Bool?) -> some View {
+        Text(statusText(isOpen))
             .font(.caption2.weight(.bold))
-            .foregroundStyle(isOpen ? .green : .red)
+            .foregroundStyle(statusColor(isOpen))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background((isOpen ? Color.green : Color.red).opacity(0.14))
+            .background(statusColor(isOpen).opacity(0.14))
             .clipShape(Capsule())
+    }
+
+    private func statusText(_ isOpen: Bool?) -> String {
+        switch isOpen {
+        case true:
+            return "Open"
+        case false:
+            return "Closed"
+        case nil:
+            return "Hours unavailable"
+        }
+    }
+
+    private func statusColor(_ isOpen: Bool?) -> Color {
+        switch isOpen {
+        case true:
+            return .green
+        case false:
+            return .red
+        case nil:
+            return .secondary
+        }
     }
 }
 

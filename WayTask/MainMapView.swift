@@ -271,7 +271,7 @@ struct MainMapView: View {
                 .map { "\($0.id.uuidString)-\($0.name)-\($0.isCompleted)" }
                 .joined(separator: ",")
 
-            return "\(location.id.uuidString)-\(location.title)-\(location.latitude)-\(location.longitude)-\(location.radius)-\(location.storeCategoryRawValue ?? "")-\(location.notes ?? "")-\(itemSignature)"
+            return "\(location.id.uuidString)-\(location.title)-\(location.latitude)-\(location.longitude)-\(location.radius)-\(location.storeCategoryRawValue ?? "")-\(location.addressText ?? "")-\(location.notes ?? "")-\(itemSignature)"
         }
     }
 
@@ -290,7 +290,8 @@ struct MainMapView: View {
             longitude: storeCoordinate.longitude,
             radius: selectedRadius,
             storeCategory: selectedStoreCategory,
-            notes: notes.isEmpty ? nil : notes
+            notes: notes.isEmpty ? nil : notes,
+            sourceType: .userGenerated
         )
 
         do {
@@ -298,9 +299,9 @@ struct MainMapView: View {
             try modelContext.save()
             try verifySavedStore(id: location.id)
 
-            let updatedLocations = locations + [location]
-            locationManager.startMonitoring(locations: updatedLocations)
-            mapViewModel.update(locations: updatedLocations)
+            let savedLocations = try fetchSavedStores()
+            locationManager.startMonitoring(locations: savedLocations)
+            mapViewModel.update(locations: savedLocations)
             mapViewModel.selectStore(id: location.id)
 
             resetForm()
@@ -312,6 +313,10 @@ struct MainMapView: View {
             print("[WayTask Store Save] Failed to save store: \(error.localizedDescription)")
             #endif
         }
+    }
+
+    private func fetchSavedStores() throws -> [GeoLocation] {
+        try modelContext.fetch(FetchDescriptor<GeoLocation>())
     }
 
     private func verifySavedStore(id: UUID) throws {
@@ -353,7 +358,10 @@ struct MainMapView: View {
             return
         }
 
-        mapViewModel.applyStoreSuggestion(request)
+        mapViewModel.applyStoreSuggestion(
+            request,
+            shoppingItems: currentTripItems().map(\.name)
+        )
         appStateManager.buyingOptions = buyingOptionsService.localOptions(
             for: request,
             stores: mapViewModel.filteredStores,

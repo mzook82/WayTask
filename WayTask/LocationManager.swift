@@ -77,7 +77,8 @@ final class LocationManager: NSObject, ObservableObject {
             coordinate: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude),
             radius: notificationRadius(for: location.radius),
             itemNames: Array(openItemNames),
-            sourceType: "saved"
+            sourceType: location.sourceType.rawValue,
+            distanceMeters: distanceFromCurrentUser(to: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude))
         )
 
         startMonitoring(candidate: candidate)
@@ -167,7 +168,8 @@ final class LocationManager: NSObject, ObservableObject {
                 coordinate: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude),
                 radius: notificationRadius(for: location.radius),
                 itemNames: notificationItemNames(from: matchingItems),
-                sourceType: "saved"
+                sourceType: location.sourceType.rawValue,
+                distanceMeters: distanceFromCurrentUser(to: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude))
             )
         }
     }
@@ -190,7 +192,8 @@ final class LocationManager: NSObject, ObservableObject {
                 coordinate: store.coordinate,
                 radius: notificationRadius(for: store.radius),
                 itemNames: itemNames,
-                sourceType: store.isSavedLocation ? "saved" : "fallback"
+                sourceType: store.isSavedLocation ? "saved" : "fallback",
+                distanceMeters: distanceFromCurrentUser(to: store.coordinate)
             )
         }
     }
@@ -273,6 +276,16 @@ final class LocationManager: NSObject, ObservableObject {
 
     private func notificationRadius(for radius: CLLocationDistance) -> CLLocationDistance {
         min(max(radius, 150), 250)
+    }
+
+    private func distanceFromCurrentUser(to coordinate: CLLocationCoordinate2D) -> CLLocationDistance? {
+        guard let currentCoordinate else {
+            return nil
+        }
+
+        let userLocation = CLLocation(latitude: currentCoordinate.latitude, longitude: currentCoordinate.longitude)
+        let storeLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        return userLocation.distance(from: storeLocation)
     }
 
     private func geofenceSignature(for candidates: [ShoppingGeofenceCandidate]) -> String {

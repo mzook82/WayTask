@@ -11,10 +11,11 @@ struct MapStore: Identifiable {
     let radius: Double
     let itemNames: [String]
     let completedItemNames: [String]
-    let isOpen: Bool
-    let rating: Double
+    let isOpen: Bool?
+    let rating: Double?
     let storeCategories: [ShoppingStoreCategory]
     let websiteURL: URL?
+    let sourceType: DataSourceType
 
     var openItemCount: Int {
         itemNames.count
@@ -67,9 +68,10 @@ final class MapViewModel: ObservableObject {
     private var activeShoppingItemNames: [String] = []
     private var activeSuggestionRequest: ShoppingStoreSuggestionRequest?
     private var hasCenteredOnUser = false
+    private var storeSearchTask: Task<Void, Never>?
 
     init() {
-        self.storeSearchService = LocalStoreSearchService()
+        self.storeSearchService = MapKitStoreSearchService()
     }
 
     init(storeSearchService: StoreSearchService) {
@@ -157,7 +159,12 @@ final class MapViewModel: ObservableObject {
     }
 
     func applyStoreSuggestion(_ request: ShoppingStoreSuggestionRequest) {
+        applyStoreSuggestion(request, shoppingItems: [request.itemName])
+    }
+
+    func applyStoreSuggestion(_ request: ShoppingStoreSuggestionRequest, shoppingItems: [String]) {
         activeSuggestionRequest = request
+        activeShoppingItemNames = shoppingItems.isEmpty ? [request.itemName] : shoppingItems
         searchText = ""
         selectedCategory = .shoppingList
         shoppingListOnly = true
@@ -260,22 +267,64 @@ final class MapViewModel: ObservableObject {
     }
 
     private func rebuildDisplayStores() {
-        var nextStores = savedStores
-        var nextProducts = savedProducts
+        let nextStores = savedStores
+        let nextProducts = savedProducts
 
-        if let userCoordinate {
-            let suggestionItems = activeSuggestionRequest.map { [$0.itemName] } ?? activeShoppingItemNames
-            let fallbackStores = storeSearchService.fallbackStores(
-                around: userCoordinate,
-                shoppingItems: suggestionItems,
-                storeCategories: activeSuggestionRequest?.storeCategories ?? []
-            )
-            nextStores.append(contentsOf: fallbackStores)
-            nextProducts.append(contentsOf: fallbackStores.flatMap(makeProducts))
+        stores = savedStorePrioritized(nextStores)
+        products = nextProducts
+
+        guard let userCoordinate else {
+            storeSearchTask?.cancel()
+            storeSearchTask = nil
+            return
         }
 
-        stores = nextStores
-        products = nextProducts
+        let suggestionItems = activeSuggestionRequest.map { [$0.itemName] } ?? activeShoppingItemNames
+        let storeCategories = activeSuggestionRequest?.storeCategories ?? []
+        storeSearchTask?.cancel()
+        storeSearchTask = Task { [weak self] in
+            guard let self else {
+                return
+            }
+
+            let discoveredStores = await storeSearchService.stores(
+                around: userCoordinate,
+                shoppingItems: suggestionItems,
+                storeCategories: storeCategories
+            )
+
+            guard !Task.isCancelled else {
+                return
+            }
+
+            applyDiscoveredStores(discoveredStores)
+        }
+    }
+
+    private func applyDiscoveredStores(_ discoveredStores: [MapStore]) {
+        let relevantSavedStoreExists = activeSuggestionRequest.map { request in
+            savedStores.contains { storeMatchesSuggestion($0, request: request) }
+        } ?? false
+        let filteredDiscoveredStores = relevantSavedStoreExists
+            ? discoveredStores.filter { $0.sourceType != .local }
+            : discoveredStores
+        let mergedStores = savedStorePrioritized(savedStores + filteredDiscoveredStores)
+        stores = mergedStores
+        products = savedProducts + filteredDiscoveredStores.flatMap(makeProducts)
+        selectSuggestedStoreIfAvailable()
+    }
+
+    private func savedStorePrioritized(_ stores: [MapStore]) -> [MapStore] {
+        stores.reduce(into: [MapStore]()) { result, store in
+            let duplicatesExistingStore = result.contains { existingStore in
+                existingStore.title.localizedCaseInsensitiveCompare(store.title) == .orderedSame
+                    || distance(from: existingStore.coordinate, to: store.coordinate) < 25
+            }
+
+            if !duplicatesExistingStore {
+                result.append(store)
+            }
+        }
     }
 
     private func makeStore(from location: GeoLocation) -> MapStore {
@@ -298,7 +347,8 @@ final class MapViewModel: ObservableObject {
             isOpen: true,
             rating: rating(for: location),
             storeCategories: location.storeCategory.map { [$0] } ?? [],
-            websiteURL: nil
+            websiteURL: nil,
+            sourceType: location.sourceType
         )
     }
 
@@ -369,7 +419,7 @@ final class MapViewModel: ObservableObject {
         case .all:
             return true
         case .open:
-            return store.isOpen
+            return store.isOpen ?? true
         case .shoppingList:
             if store.openItemCount > 0 {
                 return true

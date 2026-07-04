@@ -6,6 +6,7 @@ import SwiftUI
 struct ProductListView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var appStateManager: AppStateManager
+    @EnvironmentObject private var locationManager: LocationManager
 
     @Query private var items: [ShoppingItem]
     @Query private var locations: [GeoLocation]
@@ -19,12 +20,14 @@ struct ProductListView: View {
     @State private var suggestionItem: ShoppingItem?
     @State private var buyingOptionsRequest: ShoppingStoreSuggestionRequest?
     @State private var isShowingBuyingOptions = false
+    @State private var isShowingSettings = false
     private let shoppingListService = ShoppingListService()
     private let shoppingIntentMatcher = ShoppingIntentMatcher()
     private let buyingOptionsService = BuyingOptionsService()
     private let shoppingMemoryService = ShoppingMemoryService()
     private let shoppingTripService = ShoppingTripService()
     private let shoppingSessionService = ShoppingSessionService()
+    private let storeSearchService = MapKitStoreSearchService()
     @State private var suggestions: [MKMapItem] = []
     @State private var isSearchingSuggestions = false
     @State private var searchText = ""
@@ -67,6 +70,10 @@ struct ProductListView: View {
                     }
                 )
             }
+            .sheet(isPresented: $isShowingSettings) {
+                SettingsView()
+                    .environmentObject(locationManager)
+            }
             .onChange(of: selectedPhotoItem) {
                 loadSelectedPhoto()
             }
@@ -81,11 +88,28 @@ struct ProductListView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 14) {
-            WayTaskScreenHeader(
-                title: "My Lists",
-                subtitle: summaryText,
-                trailingIcons: ["bell", "gearshape"]
-            )
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("My Lists")
+                        .font(.largeTitle.weight(.bold))
+                        .foregroundStyle(WayTaskDesign.primaryText)
+
+                    Text(summaryText)
+                        .font(.subheadline)
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                }
+
+                Spacer()
+
+                HStack(spacing: 10) {
+                    WayTaskIconButton(systemName: "bell")
+
+                    WayTaskIconButton(systemName: "gearshape") {
+                        isShowingSettings = true
+                    }
+                    .accessibilityLabel("Settings")
+                }
+            }
             WayTaskSearchField(placeholder: "Search products...", text: $searchText)
             addProductCard
             scanProductCard
@@ -203,8 +227,13 @@ struct ProductListView: View {
             Button {
                 startShopping()
             } label: {
-                Label("Start Shopping", systemImage: "play.fill")
-                    .labelStyle(.titleAndIcon)
+                HStack(spacing: 6) {
+                    Image(systemName: "play.fill")
+                    Text("Start Shopping")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                }
+                .frame(minWidth: 126, alignment: .center)
             }
             .buttonStyle(WayTaskPrimaryPillButtonStyle())
         }
@@ -615,7 +644,7 @@ struct ProductListView: View {
     }
 
     private func findSuggestions(for item: ShoppingItem) {
-        let request = shoppingIntentMatcher.suggestionRequest(for: item)
+        let request = fullListSuggestionRequest(for: item)
         let candidateStores = suggestionStores(for: request)
         let buyingOptions = buyingOptionsService.localOptions(for: request, stores: candidateStores)
         let tripCoverages = shoppingTripService.coverage(
@@ -629,6 +658,61 @@ struct ProductListView: View {
         appStateManager.buyingOptions = buyingOptions
         appStateManager.shoppingTripCoverages = tripCoverages
         isShowingBuyingOptions = true
+
+        refreshSuggestionsWithMapKit(for: request)
+    }
+
+    private func refreshSuggestionsWithMapKit(for request: ShoppingStoreSuggestionRequest) {
+        guard let coordinate = locationManager.currentCoordinate else {
+            return
+        }
+
+        let shoppingItemNames = activeShoppingItems.map(\.name)
+        Task {
+            let discoveredStores = await storeSearchService.stores(
+                around: coordinate,
+                shoppingItems: shoppingItemNames,
+                storeCategories: request.storeCategories
+            )
+            let mergedStores = mergedSuggestionStores(
+                savedStores: savedStoresForTripPlanning(),
+                discoveredStores: discoveredStores,
+                request: request
+            )
+            let buyingOptions = buyingOptionsService.localOptions(
+                for: request,
+                stores: mergedStores,
+                userCoordinate: coordinate
+            )
+            let tripCoverages = shoppingTripService.coverage(
+                for: activeShoppingItems,
+                stores: mergedStores,
+                request: request,
+                userCoordinate: coordinate
+            )
+
+            appStateManager.buyingOptions = buyingOptions
+            appStateManager.shoppingTripCoverages = tripCoverages
+        }
+    }
+
+    private func fullListSuggestionRequest(for selectedItem: ShoppingItem) -> ShoppingStoreSuggestionRequest {
+        let selectedRequest = shoppingIntentMatcher.suggestionRequest(for: selectedItem)
+        let listRequests = activeShoppingItems.map { shoppingIntentMatcher.suggestionRequest(for: $0) }
+        let categories = listRequests
+            .flatMap(\.storeCategories)
+            .deduplicated()
+        let searchTerms = listRequests
+            .flatMap(\.searchTerms)
+            .deduplicatedCaseInsensitive()
+
+        return ShoppingStoreSuggestionRequest(
+            itemID: selectedRequest.itemID,
+            itemName: selectedRequest.itemName,
+            itemCategory: selectedRequest.itemCategory,
+            storeCategories: categories.isEmpty ? selectedRequest.storeCategories : categories,
+            searchTerms: searchTerms.isEmpty ? selectedRequest.searchTerms : searchTerms
+        )
     }
 
     private func openBuyingOptionsOnMap() {
@@ -672,6 +756,21 @@ struct ProductListView: View {
         return savedStores + buyingOptionsService.suggestedStores(for: request)
     }
 
+    private func mergedSuggestionStores(
+        savedStores: [MapStore],
+        discoveredStores: [MapStore],
+        request: ShoppingStoreSuggestionRequest
+    ) -> [MapStore] {
+        let relevantSavedStores = savedStores.filter { storeMatches($0, request: request) }
+        let baseSavedStores = relevantSavedStores.isEmpty ? savedStores : relevantSavedStores
+        let shouldDropFallback = !relevantSavedStores.isEmpty || discoveredStores.contains { $0.sourceType == .appleMaps }
+        let filteredDiscoveredStores = shouldDropFallback
+            ? discoveredStores.filter { $0.sourceType != .local }
+            : discoveredStores
+
+        return (baseSavedStores + filteredDiscoveredStores).deduplicatedStores()
+    }
+
     private func savedStoresForTripPlanning() -> [MapStore] {
         locations.map { location in
             let openItems = location.shoppingItems
@@ -692,7 +791,8 @@ struct ProductListView: View {
                 isOpen: true,
                 rating: 4.4 + (Double(min(location.shoppingItems.count, 4)) * 0.1),
                 storeCategories: location.storeCategory.map { [$0] } ?? [],
-                websiteURL: nil
+                websiteURL: nil,
+                sourceType: location.sourceType
             )
         }
     }
@@ -783,6 +883,14 @@ private struct ProductRowCard: View {
                             .lineLimit(1)
                     }
 
+                    if let productDetails {
+                        Text(productDetails)
+                            .font(.caption)
+                            .foregroundStyle(WayTaskDesign.secondaryText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+                    }
+
                     if let location {
                         Label(location.title, systemImage: "mappin.and.ellipse")
                             .font(.caption)
@@ -832,6 +940,40 @@ private struct ProductRowCard: View {
         }
         .padding(16)
         .wayTaskCard()
+    }
+
+    private var productDetails: String? {
+        let aiDetails = [
+            item.productType,
+            item.flavor,
+            item.packageSize
+        ]
+        .compactDetails()
+
+        if !aiDetails.isEmpty {
+            return aiDetails.prefix(3).joined(separator: " • ")
+        }
+
+        let fallbackDetails = [item.category]
+            .compactDetails()
+
+        guard !fallbackDetails.isEmpty else {
+            return nil
+        }
+
+        return fallbackDetails.joined(separator: " • ")
+    }
+}
+
+private extension Array where Element == String? {
+    func compactDetails() -> [String] {
+        compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .reduce(into: [String]()) { result, value in
+                if !result.contains(where: { $0.localizedCaseInsensitiveCompare(value) == .orderedSame }) {
+                    result.append(value)
+                }
+            }
     }
 }
 
@@ -985,5 +1127,45 @@ private struct SuggestionPlaceRow: View {
         }
         .padding(14)
         .wayTaskCard()
+    }
+}
+
+private extension Array where Element == ShoppingStoreCategory {
+    func deduplicated() -> [ShoppingStoreCategory] {
+        reduce(into: [ShoppingStoreCategory]()) { result, category in
+            if !result.contains(category) {
+                result.append(category)
+            }
+        }
+    }
+}
+
+private extension Array where Element == String {
+    func deduplicatedCaseInsensitive() -> [String] {
+        reduce(into: [String]()) { result, value in
+            if !result.contains(where: { $0.localizedCaseInsensitiveCompare(value) == .orderedSame }) {
+                result.append(value)
+            }
+        }
+    }
+}
+
+private extension Array where Element == MapStore {
+    func deduplicatedStores() -> [MapStore] {
+        reduce(into: [MapStore]()) { result, store in
+            let isDuplicate = result.contains { existingStore in
+                existingStore.title.localizedCaseInsensitiveCompare(store.title) == .orderedSame ||
+                distance(from: existingStore.coordinate, to: store.coordinate) < 35
+            }
+
+            if !isDuplicate {
+                result.append(store)
+            }
+        }
+    }
+
+    private func distance(from start: CLLocationCoordinate2D, to end: CLLocationCoordinate2D) -> CLLocationDistance {
+        CLLocation(latitude: start.latitude, longitude: start.longitude)
+            .distance(from: CLLocation(latitude: end.latitude, longitude: end.longitude))
     }
 }

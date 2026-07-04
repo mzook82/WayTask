@@ -61,9 +61,6 @@ struct ShoppingListService: ShoppingListServicing {
     }
 
     func makeShoppingItem(from candidate: ProductCandidate, fallbackImageData: Data?) -> ShoppingItem {
-        // ProductCandidate.searchKeywords are intentionally kept in-memory for now.
-        // Persist them on ShoppingItem in a future SwiftData migration so store matching,
-        // buying options, shopping trip coverage, notifications, and product search can use them.
         ShoppingItem(
             name: candidate.name,
             isCompleted: false,
@@ -73,7 +70,13 @@ struct ShoppingListService: ShoppingListServicing {
             barcode: candidate.barcode,
             imageURL: candidate.imageURL,
             dateAdded: Date(),
-            source: source(for: candidate.source)
+            source: source(for: candidate.source),
+            productType: candidate.productType,
+            flavor: candidate.flavor,
+            packageSize: candidate.packageSize,
+            packageType: candidate.packageType,
+            visibleText: candidate.visibleText,
+            searchKeywords: candidate.searchKeywords
         )
     }
 

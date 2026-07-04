@@ -86,11 +86,20 @@ struct GeminiProductRecognitionService: AIProductRecognitionServicing {
                 brand: suggestion.brand?.trimmedNonEmpty,
                 category: suggestion.category?.trimmedNonEmpty,
                 confidence: confidence,
+                productType: suggestion.productType?.trimmedNonEmpty,
+                flavor: suggestion.flavor?.trimmedNonEmpty,
+                packageSize: suggestion.packageSize?.trimmedNonEmpty,
+                packageType: suggestion.packageType?.trimmedNonEmpty,
+                visibleText: suggestion.visibleText?.trimmedNonEmpty,
                 source: .ai,
                 productHints: ([
                     productName,
                     suggestion.brand?.trimmedNonEmpty,
                     suggestion.category?.trimmedNonEmpty,
+                    suggestion.productType?.trimmedNonEmpty,
+                    suggestion.flavor?.trimmedNonEmpty,
+                    suggestion.packageSize?.trimmedNonEmpty,
+                    suggestion.packageType?.trimmedNonEmpty,
                     barcode?.value,
                     suggestion.description?.trimmedNonEmpty
                 ].compactMap { $0 } + searchKeywords).deduplicatedCaseInsensitive(),
@@ -154,11 +163,16 @@ struct GeminiProductRecognitionService: AIProductRecognitionServicing {
         let barcodeContext = barcode.map { "The scanned barcode is \($0.value) (\($0.type.displayName))." } ?? "No barcode is available for this image."
 
         return """
-        Identify the commercial product visible in this packaging image. \(barcodeContext) Use visible packaging only. Avoid guessing. If the product, brand, or category is not clearly visible, leave that field empty and use low confidence. Return 3 to 8 useful searchKeywords that describe the product, category, and shopping intent for future store matching. Do not include random guesses, private data, or user-specific data. Return ONLY structured JSON with this exact shape:
+        Act as a retail product recognition system. Identify the full commercial product visible on the front packaging image. \(barcodeContext) Prefer the complete printed product name, not a generic term. For example, if the package shows "PRO 20 Banana & Oats", productName must be "PRO 20 Banana & Oats", not "Banana" or "Drink". Use visible packaging and readable text only. Avoid guessing. If a field is not visible, leave it empty and lower confidence. Summarize visible text/OCR from the package in visibleText. Return 3 to 8 useful searchKeywords that describe the product, category, product type, flavor, and shopping intent for future store matching. Do not include random guesses, private data, or user-specific data. Return ONLY valid JSON with this exact shape:
         {
           "productName": "",
           "brand": "",
           "category": "",
+          "productType": "",
+          "flavor": "",
+          "packageSize": "",
+          "packageType": "",
+          "visibleText": "",
           "confidence": 0.0,
           "description": "",
           "searchKeywords": []
@@ -310,6 +324,11 @@ private struct GeminiProductSuggestion: Decodable {
     let productName: String?
     let brand: String?
     let category: String?
+    let productType: String?
+    let flavor: String?
+    let packageSize: String?
+    let packageType: String?
+    let visibleText: String?
     let confidence: Double?
     let description: String?
     let searchKeywords: [String]?

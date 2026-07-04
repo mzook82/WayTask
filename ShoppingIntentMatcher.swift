@@ -11,9 +11,11 @@ struct ShoppingStoreSuggestionRequest: Equatable {
 enum ShoppingStoreCategory: String, CaseIterable, Identifiable, Equatable, Hashable {
     case grocery
     case supermarket
+    case convenienceStore
     case coffeeShop
     case petStore
     case electronicsStore
+    case homeImprovement
     case pharmacy
     case generalStore
 
@@ -25,12 +27,16 @@ enum ShoppingStoreCategory: String, CaseIterable, Identifiable, Equatable, Hasha
             return "Grocery"
         case .supermarket:
             return "Supermarkets"
+        case .convenienceStore:
+            return "Convenience Stores"
         case .coffeeShop:
             return "Coffee Shops"
         case .petStore:
             return "Pet Stores"
         case .electronicsStore:
             return "Electronics Stores"
+        case .homeImprovement:
+            return "Home Improvement"
         case .pharmacy:
             return "Pharmacies"
         case .generalStore:
@@ -44,12 +50,16 @@ enum ShoppingStoreCategory: String, CaseIterable, Identifiable, Equatable, Hasha
             return "Grocery"
         case .supermarket:
             return "Supermarket"
+        case .convenienceStore:
+            return "Convenience Store"
         case .coffeeShop:
             return "Coffee"
         case .petStore:
             return "Pet Store"
         case .electronicsStore:
             return "Electronics"
+        case .homeImprovement:
+            return "Home Improvement"
         case .pharmacy:
             return "Pharmacy"
         case .generalStore:
@@ -60,7 +70,9 @@ enum ShoppingStoreCategory: String, CaseIterable, Identifiable, Equatable, Hasha
     func matches(_ other: ShoppingStoreCategory) -> Bool {
         self == other ||
         (self == .grocery && other == .supermarket) ||
-        (self == .supermarket && other == .grocery)
+        (self == .supermarket && other == .grocery) ||
+        (self == .grocery && other == .convenienceStore) ||
+        (self == .convenienceStore && other == .grocery)
     }
 
     var sampleStoreName: String {
@@ -69,12 +81,16 @@ enum ShoppingStoreCategory: String, CaseIterable, Identifiable, Equatable, Hasha
             return "Grocery Store"
         case .supermarket:
             return "Nearby Supermarket"
+        case .convenienceStore:
+            return "Convenience Store"
         case .coffeeShop:
             return "Local Coffee Shop"
         case .petStore:
             return "Pet Supply Store"
         case .electronicsStore:
             return "Electronics Store"
+        case .homeImprovement:
+            return "Home Improvement Store"
         case .pharmacy:
             return "Nearby Pharmacy"
         case .generalStore:
@@ -104,8 +120,17 @@ struct ShoppingIntentMatcher {
     }
 
     func matchStoreCategories(for item: ShoppingItem) -> [ShoppingStoreCategory] {
-        let haystack = [item.name, item.brand, item.category]
-            .compactMap { $0 }
+        let productTerms = [
+            item.name,
+            item.brand,
+            item.category,
+            item.productType,
+            item.flavor,
+            item.packageSize
+        ]
+        .compactMap { $0 }
+
+        let haystack = (productTerms + item.searchKeywords)
             .joined(separator: " ")
             .lowercased()
 
@@ -123,6 +148,12 @@ struct ShoppingIntentMatcher {
             terms.append(category)
         }
 
+        terms.append(contentsOf: [
+            item.productType,
+            item.flavor,
+            item.packageSize
+        ].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
+        terms.append(contentsOf: item.searchKeywords)
         terms.append(contentsOf: categories.map(\.displayName))
         return Array(Set(terms)).sorted()
     }
@@ -134,6 +165,9 @@ struct ShoppingIntentMatcher {
         .supermarket: [
             "supermarket", "market"
         ],
+        .convenienceStore: [
+            "convenience", "corner store", "mini market"
+        ],
         .coffeeShop: [
             "coffee", "espresso", "latte", "cappuccino", "tea", "cafe"
         ],
@@ -142,6 +176,9 @@ struct ShoppingIntentMatcher {
         ],
         .electronicsStore: [
             "electronics", "phone", "charger", "cable", "battery", "headphones", "computer", "laptop", "camera"
+        ],
+        .homeImprovement: [
+            "home improvement", "hardware", "tools", "paint", "garden", "repair", "household"
         ],
         .pharmacy: [
             "health", "medicine", "pharmacy", "vitamin", "care", "soap", "shampoo", "toothpaste", "baby", "medical"

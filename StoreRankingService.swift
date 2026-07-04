@@ -39,14 +39,20 @@ struct StoreRankingService {
             reasons.append("Likely available")
         }
 
+        if store.itemNames.count > 1 {
+            score += min(Double(store.itemNames.count) * 4, 18)
+        }
+
         if matchesSuggestedCategory(store: store, request: request) {
             score += 25
             reasons.append("Matches product category")
         }
 
-        if store.isOpen {
+        if store.isOpen == true {
             score += 15
             reasons.append("Open now")
+        } else if store.isOpen == nil {
+            score += 6
         }
 
         if let userCoordinate {
@@ -78,7 +84,7 @@ struct StoreRankingService {
         }
 
         if store.isSavedLocation {
-            score += 12
+            score += 22
             reasons.append("Saved by you")
         }
 
@@ -133,12 +139,16 @@ struct StoreRankingService {
             return "grocery"
         case .supermarket:
             return "market"
+        case .convenienceStore:
+            return "convenience"
         case .coffeeShop:
             return "coffee"
         case .petStore:
             return "pet"
         case .electronicsStore:
             return "electronics"
+        case .homeImprovement:
+            return "hardware"
         case .pharmacy:
             return "pharmacy"
         case .generalStore:
