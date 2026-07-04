@@ -324,3 +324,67 @@ Users can start a shopping session, track their progress, mark items as collecte
 Build completed successfully.
 
 **Status:** ✅ Completed
+
+## Sprint 21B – Products-first Experience
+
+### Goal
+
+Make the Products screen shopping-list first without adding new functionality or changing WayTask's visual identity.
+
+### User Value
+
+Users opening WayTask can see their products immediately, while Add Product, Scan Product, and Start Shopping remain reachable during everyday list management.
+
+### Completed
+
+- Moved the product list directly below search and filters.
+- Replaced large pre-list action cards with a compact bottom action bar.
+- Moved the manual Add Product form into a dedicated sheet.
+- Preserved existing product cards, product actions, scanning, shopping mode, shopping trip, map navigation, and notification-driven flows.
+
+### Out of Scope
+
+- New shopping features
+- Product card redesign
+- Visual identity changes
+- Architecture changes
+
+### Result
+
+Build completed successfully.
+
+**Status:** ✅ Completed
+
+## Sprint 21C – Missed Nearby Alerts
+
+### Goal
+
+Surface nearby shopping opportunities inside the app when the user may have missed, ignored, or not received a nearby push notification.
+
+### User Value
+
+Users returning to WayTask can immediately see that a relevant nearby store may match their active shopping list, without waiting for another iOS geofence entry event.
+
+### Completed
+
+- Added in-app nearby opportunity state.
+- Refresh nearby opportunities on app launch, foreground return, shopping-list changes, saved-store changes, and location bucket changes.
+- Check active shopping items against nearby saved stores and MapKit/fallback stores.
+- Added a compact "Nearby now" Products card.
+- Added short in-app dismissal cooldown for the nearby card.
+- Added a red dot to the Products bell when an undisclosed nearby opportunity exists.
+- Added a bell sheet listing current nearby opportunities.
+- Preserved existing push notification scheduling and cooldown behavior.
+
+### Out of Scope
+
+- Push notification redesign
+- New notification categories
+- Background polling
+- Live inventory or price validation
+
+### Result
+
+Build completed successfully.
+
+**Status:** ✅ Completed

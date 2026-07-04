@@ -314,3 +314,72 @@ WayTask now assists users during shopping by tracking collected items, remaining
 Shopping sessions are persisted using SwiftData.
 
 Future versions will include shopping history, indoor navigation, smart reminders, and AI shopping assistance.
+
+# Version 1.7 Beta
+
+## Sprint
+
+Sprint 21B – Products-first Experience
+
+## Improved
+
+- Products screen hierarchy
+- Daily shopping-list workflow
+- Manual Add Product presentation
+- Primary action access while scrolling
+
+## Changed
+
+- The shopping list now starts immediately below search and filters.
+- Add Product, Scan Product, and Start Shopping are available from a compact bottom action bar instead of large cards above the list.
+- The manual Add Product form now opens in a dedicated sheet while preserving the existing fields and add behavior.
+
+## Preserved
+
+- My Lists header and statistics
+- Search and filters
+- Product cards and product actions
+- Shopping Mode and Shopping Trip flows
+- Barcode scanning, Gemini AI, notifications, map navigation, and custom stores
+
+## User Value Added
+
+WayTask now treats the shopping list as the primary Products screen content, reducing visual clutter and unnecessary scrolling for short, medium, and long lists.
+
+## Notes
+
+This sprint is UX polish only. No new features were added.
+
+# Version 1.8 Beta
+
+## Sprint
+
+Sprint 21C – Missed Nearby Alerts
+
+## Added
+
+- In-app nearby shopping opportunity state
+- "Nearby now" Products card
+- Bell red-dot indicator for undisclosed nearby opportunities
+- Nearby opportunities sheet from the Products bell
+- Short in-app dismissal cooldown for nearby cards
+
+## Improved
+
+- App foreground behavior now checks current location, active shopping items, saved stores, and MapKit/fallback nearby stores.
+- Nearby opportunities can appear inside WayTask without waiting for iOS geofence re-entry.
+
+## Preserved
+
+- Existing push notification behavior
+- Existing notification cooldown
+- Existing geofence monitoring
+- Shopping Mode, Shopping Trip, Map, barcode scanning, Gemini AI, custom stores, product cards, and product actions
+
+## User Value Added
+
+WayTask now gives users a second chance to act on relevant nearby shopping opportunities after opening or returning to the app.
+
+## Notes
+
+This sprint adds an in-app reminder surface only. Push notification spam prevention remains handled by the existing notification cooldown.

@@ -19,6 +19,8 @@ struct ProductListView: View {
     @State private var selectedImageData: Data?
     @State private var suggestionItem: ShoppingItem?
     @State private var buyingOptionsRequest: ShoppingStoreSuggestionRequest?
+    @State private var isShowingAddProduct = false
+    @State private var isShowingNearbyOpportunities = false
     @State private var isShowingBuyingOptions = false
     @State private var isShowingSettings = false
     private let shoppingListService = ShoppingListService()
@@ -49,8 +51,19 @@ struct ProductListView: View {
                     }
                 }
             }
+            .safeAreaInset(edge: .bottom) {
+                if activeSession == nil {
+                    bottomActionBar
+                }
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $isShowingAddProduct) {
+                addProductSheet
+            }
+            .sheet(isPresented: $isShowingNearbyOpportunities) {
+                nearbyOpportunitiesSheet
+            }
             .sheet(item: $suggestionItem) { item in
                 suggestionSheet(for: item)
             }
@@ -77,6 +90,11 @@ struct ProductListView: View {
             .onChange(of: selectedPhotoItem) {
                 loadSelectedPhoto()
             }
+            .onChange(of: isShowingAddProduct) {
+                if !isShowingAddProduct {
+                    resetForm()
+                }
+            }
             .onChange(of: appStateManager.shoppingListRevision) {
                 if appStateManager.recentlyAddedShoppingItemID == nil {
                     showAllProducts()
@@ -102,7 +120,22 @@ struct ProductListView: View {
                 Spacer()
 
                 HStack(spacing: 10) {
-                    WayTaskIconButton(systemName: "bell")
+                    WayTaskIconButton(systemName: "bell") {
+                        isShowingNearbyOpportunities = true
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if appStateManager.hasNearbyOpportunityBadge {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 9, height: 9)
+                                .overlay {
+                                    Circle()
+                                        .stroke(Color(red: 0.09, green: 0.09, blue: 0.10), lineWidth: 2)
+                                }
+                                .offset(x: -7, y: 7)
+                        }
+                    }
+                    .accessibilityLabel(appStateManager.hasNearbyOpportunityBadge ? "Nearby opportunities available" : "Nearby opportunities")
 
                     WayTaskIconButton(systemName: "gearshape") {
                         isShowingSettings = true
@@ -111,19 +144,89 @@ struct ProductListView: View {
                 }
             }
             WayTaskSearchField(placeholder: "Search products...", text: $searchText)
-            addProductCard
-            scanProductCard
-
-            if !activeShoppingItems.isEmpty {
-                startShoppingCard
-            }
         }
         .padding(.horizontal, 20)
         .padding(.top, 18)
-        .padding(.bottom, 12)
+        .padding(.bottom, 10)
     }
 
-    private var addProductCard: some View {
+    private var addProductSheet: some View {
+        NavigationStack {
+            ZStack {
+                WayTaskDesign.background
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    addProductForm
+                        .padding(.horizontal, 20)
+                        .padding(.top, 18)
+                        .padding(.bottom, 28)
+                }
+                .scrollDismissesKeyboard(.interactively)
+            }
+            .navigationTitle("Add Product")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        isShowingAddProduct = false
+                    }
+                    .tint(WayTaskDesign.accent)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var nearbyOpportunitiesSheet: some View {
+        NavigationStack {
+            ZStack {
+                WayTaskDesign.background
+                    .ignoresSafeArea()
+
+                List {
+                    if appStateManager.nearbyOpportunities.isEmpty {
+                        ContentUnavailableView(
+                            "No nearby opportunities",
+                            systemImage: "bell",
+                            description: Text("WayTask will surface nearby shopping matches here when they are relevant.")
+                        )
+                        .foregroundStyle(WayTaskDesign.primaryText)
+                        .listRowBackground(Color.clear)
+                    } else {
+                        ForEach(appStateManager.nearbyOpportunities) { opportunity in
+                            NearbyOpportunityRow(opportunity: opportunity) {
+                                isShowingNearbyOpportunities = false
+                                appStateManager.openNearbyOpportunityOnMap(opportunity)
+                            }
+                            .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                        }
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+            }
+            .navigationTitle("Nearby Now")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        isShowingNearbyOpportunities = false
+                    }
+                    .tint(WayTaskDesign.accent)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var addProductForm: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 selectedPhotoPreview
@@ -156,6 +259,7 @@ struct ProductListView: View {
 
                 Button {
                     addItem()
+                    isShowingAddProduct = false
                 } label: {
                     Label("Add Product", systemImage: "plus.circle.fill")
                         .frame(maxWidth: .infinity)
@@ -168,77 +272,44 @@ struct ProductListView: View {
         .wayTaskCard()
     }
 
-    private var scanProductCard: some View {
-        Button {
-            appStateManager.selectedTab = .camera
-        } label: {
-            HStack(spacing: 14) {
-                Image(systemName: "barcode.viewfinder")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(WayTaskDesign.accent)
-                    .frame(width: 44, height: 44)
-                    .background(WayTaskDesign.accent.opacity(0.14))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Scan Product")
-                        .font(.headline)
-                        .foregroundStyle(WayTaskDesign.primaryText)
-
-                    Text("Use the camera to add products faster")
-                        .font(.caption)
-                        .foregroundStyle(WayTaskDesign.secondaryText)
-                }
-
-                Spacer(minLength: 8)
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(WayTaskDesign.secondaryText)
+    private var bottomActionBar: some View {
+        HStack(spacing: 10) {
+            Button {
+                isShowingAddProduct = true
+            } label: {
+                Label("Add", systemImage: "plus.circle.fill")
+                    .frame(maxWidth: .infinity)
             }
-            .padding(16)
-            .wayTaskCard()
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Scan Product")
-    }
+            .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 44, cornerRadius: 14, shadow: true))
 
-    private var startShoppingCard: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "cart.fill")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(WayTaskDesign.accent)
-                .frame(width: 44, height: 44)
-                .background(WayTaskDesign.accent.opacity(0.14))
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Ready to shop")
-                    .font(.headline)
-                    .foregroundStyle(WayTaskDesign.primaryText)
-
-                Text("\(activeShoppingItems.count) active items in your list")
-                    .font(.caption)
-                    .foregroundStyle(WayTaskDesign.secondaryText)
+            Button {
+                appStateManager.selectedTab = .camera
+            } label: {
+                Label("Scan", systemImage: "barcode.viewfinder")
+                    .frame(maxWidth: .infinity)
             }
-
-            Spacer(minLength: 8)
+            .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 44, cornerRadius: 14))
+            .accessibilityLabel("Scan Product")
 
             Button {
                 startShopping()
             } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "play.fill")
-                    Text("Start Shopping")
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                }
-                .frame(minWidth: 126, alignment: .center)
+                Label("Start", systemImage: "play.fill")
+                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(WayTaskPrimaryPillButtonStyle())
+            .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 44, cornerRadius: 14))
+            .disabled(activeShoppingItems.isEmpty)
+            .opacity(activeShoppingItems.isEmpty ? 0.42 : 1)
+            .accessibilityLabel("Start Shopping")
         }
-        .padding(16)
-        .wayTaskCard()
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(WayTaskDesign.surfaceBorder)
+                .frame(height: 1)
+        }
     }
 
     @ViewBuilder
@@ -371,6 +442,13 @@ struct ProductListView: View {
 
     private var productList: some View {
         List {
+            if let opportunity = appStateManager.visibleNearbyOpportunity {
+                nearbyOpportunityBanner(opportunity)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 8, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+
             if filteredItems.isEmpty {
                 emptyState
                     .listRowInsets(EdgeInsets(top: 42, leading: 20, bottom: 42, trailing: 20))
@@ -405,6 +483,66 @@ struct ProductListView: View {
         .scrollContentBackground(.hidden)
         .background(Color.clear)
         .id(appStateManager.shoppingListRevision)
+    }
+
+    private func nearbyOpportunityBanner(_ opportunity: NearbyShoppingOpportunity) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "bell.badge.fill")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.accent)
+                    .frame(width: 38, height: 38)
+                    .background(WayTaskDesign.accent.opacity(0.14))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Nearby now")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(WayTaskDesign.accent)
+                        .textCase(.uppercase)
+
+                    Text(opportunity.title)
+                        .font(.headline)
+                        .foregroundStyle(WayTaskDesign.primaryText)
+                        .lineLimit(1)
+
+                    Text("\(opportunity.itemSummary) \(opportunity.distanceText).")
+                        .font(.caption)
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    appStateManager.openNearbyOpportunityOnMap(opportunity)
+                } label: {
+                    Label("View Map", systemImage: "map")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(WayTaskSecondaryPillButtonStyle())
+
+                Button {
+                    appStateManager.dismissNearbyOpportunity(opportunity)
+                } label: {
+                    Label("Dismiss", systemImage: "xmark")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(WayTaskSecondaryPillButtonStyle())
+            }
+        }
+        .padding(14)
+        .background(WayTaskDesign.accent.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(WayTaskDesign.accent.opacity(0.24), lineWidth: 1)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Nearby now. \(opportunity.title). \(opportunity.itemSummary) \(opportunity.distanceText).")
     }
 
     private var emptyState: some View {
@@ -1012,6 +1150,55 @@ private struct MemoryIndicatorRow: View {
         }
 
         return "clock.fill"
+    }
+}
+
+private struct NearbyOpportunityRow: View {
+    let opportunity: NearbyShoppingOpportunity
+    let onOpenMap: () -> Void
+
+    var body: some View {
+        Button(action: onOpenMap) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.accent)
+                    .frame(width: 40, height: 40)
+                    .background(WayTaskDesign.accent.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 8) {
+                        Text(opportunity.title)
+                            .font(.headline)
+                            .foregroundStyle(WayTaskDesign.primaryText)
+                            .lineLimit(1)
+
+                        Spacer(minLength: 0)
+
+                        Text(opportunity.distanceText)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(WayTaskDesign.accent)
+                            .lineLimit(1)
+                    }
+
+                    Text(opportunity.itemSummary)
+                        .font(.caption)
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(opportunity.sourceType.capitalized)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(WayTaskDesign.tertiaryText)
+                        .lineLimit(1)
+                }
+            }
+            .padding(14)
+            .wayTaskCard(cornerRadius: 16)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(opportunity.title), \(opportunity.distanceText). \(opportunity.itemSummary)")
     }
 }
 

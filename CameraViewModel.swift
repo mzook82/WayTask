@@ -61,6 +61,7 @@ final class CameraViewModel: ObservableObject {
     @Published var confirmedCandidate: ProductCandidate?
     @Published var barcodeResult: BarcodeResult?
     @Published var confirmedBarcodeResult: BarcodeResult?
+    @Published var isWaitingForBarcodePackagePhoto = false
     @Published var recognitionPhase: RecognitionPhase = .idle
     @Published private(set) var latestShoppingContext: ShoppingContext?
     @Published var isRecognizing = false
@@ -115,6 +116,7 @@ final class CameraViewModel: ObservableObject {
         guard confirmedBarcodeResult != nil,
               selectedCandidate == nil,
               confirmedCandidate == nil,
+              !isWaitingForBarcodePackagePhoto,
               !isRecognizing else {
             return false
         }
@@ -189,11 +191,13 @@ final class CameraViewModel: ObservableObject {
     func capturePhoto() {
         recognitionTask?.cancel()
         recognitionTask = nil
-        clearRecognition()
+        if !isWaitingForBarcodePackagePhoto {
+            clearRecognition()
+        }
         pendingPhotoData = nil
         pendingPhotoSource = .cameraCapture
         recognitionPhase = .captured
-        statusMessage = "Taking photo..."
+        statusMessage = isWaitingForBarcodePackagePhoto ? "Capturing product package..." : "Taking photo..."
 
         cameraService.capturePhoto { [weak self] result in
             guard let self else {
@@ -215,7 +219,9 @@ final class CameraViewModel: ObservableObject {
     }
 
     func handleSelectedPhotoData(_ data: Data?) {
-        clearRecognition()
+        if !isWaitingForBarcodePackagePhoto {
+            clearRecognition()
+        }
         pendingPhotoData = nil
         pendingPhotoSource = .photoLibrary
 
@@ -227,7 +233,7 @@ final class CameraViewModel: ObservableObject {
 
         pendingPhotoData = data
         recognitionPhase = .captured
-        statusMessage = "Review your photo before using it."
+        statusMessage = isWaitingForBarcodePackagePhoto ? "Use this package photo for AI analysis." : "Review your photo before using it."
     }
 
     func usePendingPhoto() {
@@ -237,12 +243,18 @@ final class CameraViewModel: ObservableObject {
 
         capturedImageData = pendingPhotoData
         self.pendingPhotoData = nil
-        clearRecognition()
 
-        if selectedMode == .aiVision {
-            analyzeAIProductPhoto(pendingPhotoData)
+        if selectedMode == .barcode, let barcode = confirmedBarcodeResult, isWaitingForBarcodePackagePhoto {
+            isWaitingForBarcodePackagePhoto = false
+            analyzeAIProductFallback(for: barcode, imageData: pendingPhotoData)
         } else {
-            analyzeCapturedPhoto(pendingPhotoData, inputSource: pendingPhotoSource)
+            clearRecognition()
+
+            if selectedMode == .aiVision {
+                analyzeAIProductPhoto(pendingPhotoData)
+            } else {
+                analyzeCapturedPhoto(pendingPhotoData, inputSource: pendingPhotoSource)
+            }
         }
     }
 
@@ -262,7 +274,7 @@ final class CameraViewModel: ObservableObject {
         }
 
         confirmedBarcodeResult = barcodeResult
-        captureReferencePhotoThenLookupProduct(for: barcodeResult)
+        lookupProduct(for: barcodeResult)
     }
 
     func productAddFailed(_ error: Error? = nil) {
@@ -298,8 +310,12 @@ final class CameraViewModel: ObservableObject {
     func scanAgain() {
         recognitionTask?.cancel()
         recognitionTask = nil
+        pendingPhotoData = nil
+        capturedImageData = nil
+        pendingPhotoSource = .cameraCapture
         barcodeResult = nil
         confirmedBarcodeResult = nil
+        isWaitingForBarcodePackagePhoto = false
         recognitionResult = nil
         selectedCandidate = nil
         confirmedCandidate = nil
@@ -314,9 +330,11 @@ final class CameraViewModel: ObservableObject {
         pendingPhotoData = nil
         capturedImageData = nil
         pendingPhotoSource = .cameraCapture
-        clearRecognition()
-        recognitionPhase = .idle
-        statusMessage = selectedMode == .aiVision ? "Capture a product photo for Gemini." : "Ready to capture a photo."
+        if !isWaitingForBarcodePackagePhoto {
+            clearRecognition()
+        }
+        recognitionPhase = isWaitingForBarcodePackagePhoto ? .unavailable : .idle
+        statusMessage = isWaitingForBarcodePackagePhoto ? "Product not found. Show the front of the package." : selectedMode == .aiVision ? "Capture a product photo for Gemini." : "Ready to capture a photo."
     }
 
     func savePendingPhotoToLibrary() {
@@ -353,6 +371,7 @@ final class CameraViewModel: ObservableObject {
         capturedImageData = nil
         pendingPhotoSource = .cameraCapture
         clearRecognition()
+        isWaitingForBarcodePackagePhoto = false
         recognitionPhase = .idle
         statusMessage = selectedMode == .barcode
             ? "Point the camera at a barcode."
@@ -385,33 +404,11 @@ final class CameraViewModel: ObservableObject {
         }
     }
 
-    private func captureReferencePhotoThenLookupProduct(for barcode: BarcodeResult) {
-        recognitionPhase = .analyzing
-        isRecognizing = true
-        statusMessage = "Preparing product image..."
-
-        cameraService.capturePhoto { [weak self] result in
-            guard let self else {
-                return
-            }
-
-            Task { @MainActor in
-                switch result {
-                case .success(let photo):
-                    self.capturedImageData = photo.data
-                case .failure:
-                    self.capturedImageData = nil
-                }
-
-                self.lookupProduct(for: barcode)
-            }
-        }
-    }
-
     private func lookupProduct(for barcode: BarcodeResult) {
         recognitionPhase = .analyzing
         isRecognizing = true
-        statusMessage = "Searching product..."
+        isWaitingForBarcodePackagePhoto = false
+        statusMessage = "Searching product database..."
 
         recognitionTask?.cancel()
         recognitionTask = Task { [weak self] in
@@ -429,7 +426,10 @@ final class CameraViewModel: ObservableObject {
                 isRecognizing = false
 
                 guard let candidate = candidates.first else {
-                    await analyzeAIProductFallback(for: barcode)
+                    requestPackagePhotoForAIFallback(
+                        barcode: barcode,
+                        message: "Product not found. Show the front of the package."
+                    )
                     return
                 }
 
@@ -450,10 +450,30 @@ final class CameraViewModel: ObservableObject {
                     return
                 }
 
-                statusMessage = "Analyzing product with AI..."
-                await analyzeAIProductFallback(for: barcode)
+                requestPackagePhotoForAIFallback(
+                    barcode: barcode,
+                    message: "Product lookup failed. Show the front of the package."
+                )
             }
         }
+    }
+
+    private func requestPackagePhotoForAIFallback(barcode: BarcodeResult, message: String) {
+        recognitionResult = RecognitionResult(
+            status: .noMatch,
+            candidates: [],
+            message: message,
+            inputSource: .barcode
+        )
+        confirmedBarcodeResult = barcode
+        selectedCandidate = nil
+        confirmedCandidate = nil
+        capturedImageData = nil
+        pendingPhotoData = nil
+        isRecognizing = false
+        isWaitingForBarcodePackagePhoto = true
+        recognitionPhase = .unavailable
+        statusMessage = message
     }
 
     private func analyzeAIProductPhoto(_ imageData: Data) {
@@ -472,15 +492,24 @@ final class CameraViewModel: ObservableObject {
         }
     }
 
-    private func analyzeAIProductFallback(for barcode: BarcodeResult) async {
+    private func analyzeAIProductFallback(for barcode: BarcodeResult, imageData: Data) {
+        recognitionPhase = .analyzing
+        isRecognizing = true
         statusMessage = "Analyzing product with AI..."
 
-        let result = await aiRecognitionService.suggestProduct(
-            from: capturedImageData,
-            barcode: barcode
-        )
+        recognitionTask?.cancel()
+        recognitionTask = Task { [weak self] in
+            guard let self else {
+                return
+            }
 
-        await applyAIRecognitionResult(result)
+            let result = await aiRecognitionService.suggestProduct(
+                from: imageData,
+                barcode: barcode
+            )
+
+            await applyAIRecognitionResult(result)
+        }
     }
 
     private func applyAIRecognitionResult(_ result: RecognitionResult) async {
@@ -601,6 +630,7 @@ final class CameraViewModel: ObservableObject {
         confirmedCandidate = nil
         barcodeResult = nil
         confirmedBarcodeResult = nil
+        isWaitingForBarcodePackagePhoto = false
         isRecognizing = false
     }
 }

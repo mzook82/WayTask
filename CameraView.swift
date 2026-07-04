@@ -144,7 +144,11 @@ struct CameraView: View {
             if viewModel.cameraService.authorizationStatus != .authorized {
                 unavailableState
             } else {
-                scanFrame
+                if viewModel.isWaitingForBarcodePackagePhoto {
+                    packagePhotoFrame
+                } else {
+                    scanFrame
+                }
 
                 VStack {
                     modePicker
@@ -189,6 +193,37 @@ struct CameraView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var packagePhotoFrame: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "camera.viewfinder")
+                .font(.system(size: 42, weight: .semibold))
+                .foregroundStyle(WayTaskDesign.accent)
+
+            VStack(spacing: 5) {
+                Text("Show the front of the package")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(WayTaskDesign.primaryText)
+
+                Text("Frame the product name and visible label text.")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.secondaryText)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(18)
+        .frame(width: 258)
+        .frame(minHeight: 206)
+        .background(.black.opacity(0.28))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(WayTaskDesign.accent.opacity(0.34), style: StrokeStyle(lineWidth: 2, dash: [9, 7]))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Show the front of the package. Frame the product name and visible label text.")
     }
 
     private var scanFrame: some View {
@@ -287,7 +322,7 @@ struct CameraView: View {
     private var captureControls: some View {
         if isShowingProductResult {
             EmptyView()
-        } else if isShowingBarcodeResult {
+        } else if isShowingBarcodeResult && !viewModel.isWaitingForBarcodePackagePhoto {
             compactBarcodeCameraState
         } else {
             HStack(spacing: 12) {
@@ -431,7 +466,9 @@ struct CameraView: View {
 
     private var barcodeControls: some View {
         VStack(spacing: 10) {
-            if viewModel.canCreateProductFromBarcode {
+            if viewModel.isWaitingForBarcodePackagePhoto {
+                barcodePackagePhotoPrompt
+            } else if viewModel.canCreateProductFromBarcode {
                 manualBarcodeProductForm
             }
 
@@ -455,6 +492,32 @@ struct CameraView: View {
                 .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 44, cornerRadius: 14))
             }
         }
+    }
+
+    private var barcodePackagePhotoPrompt: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "sparkles")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(WayTaskDesign.accent)
+                .frame(width: 34, height: 34)
+                .background(WayTaskDesign.surfaceElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Show the front of the package")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(WayTaskDesign.primaryText)
+
+                Text("Open Food Facts did not find this barcode. Take a clear front photo so Gemini can suggest product details.")
+                    .font(.caption)
+                    .foregroundStyle(WayTaskDesign.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .wayTaskCard(cornerRadius: 16)
     }
 
     private var manualBarcodeProductForm: some View {
@@ -536,6 +599,10 @@ struct CameraView: View {
             return "checkmark.seal.fill"
         }
 
+        if viewModel.isWaitingForBarcodePackagePhoto {
+            return "camera.viewfinder"
+        }
+
         switch viewModel.selectedMode {
         case .photo:
             return "camera"
@@ -597,7 +664,7 @@ struct CameraView: View {
                 WayTaskProductThumbnail(data: product.imageData ?? viewModel.capturedImageData, size: 76, cornerRadius: 18)
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Label(product.source == .ai ? "We think this is..." : "Product Found", systemImage: product.source == .ai ? "sparkles" : "checkmark.seal.fill")
+                    Label(product.source == .ai ? "Suggested product" : "Product Found", systemImage: product.source == .ai ? "sparkles" : "checkmark.seal.fill")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(WayTaskDesign.accent)
                         .lineLimit(1)
