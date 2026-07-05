@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 import Photos
+import UIKit
 
 @MainActor
 final class CameraViewModel: ObservableObject {
@@ -45,7 +46,7 @@ final class CameraViewModel: ObservableObject {
         case failed
     }
 
-    @Published var selectedMode: Mode = .photo {
+    @Published var selectedMode: Mode = .barcode {
         didSet {
             guard oldValue != selectedMode else {
                 return
@@ -66,7 +67,7 @@ final class CameraViewModel: ObservableObject {
     @Published private(set) var latestShoppingContext: ShoppingContext?
     @Published var isRecognizing = false
     @Published var isSavingPhoto = false
-    @Published var statusMessage = "Ready to capture a photo."
+    @Published var statusMessage = "Point the camera at a barcode."
     @Published var focusPoint: CGPoint?
 
     let cameraService: CameraService
@@ -301,6 +302,7 @@ final class CameraViewModel: ObservableObject {
     }
 
     func productWasAddedToShoppingList(_ candidate: ProductCandidate) {
+        playProductAddedHaptic()
         latestShoppingContext = ShoppingContext(
             activeShoppingListItems: [
                 ShoppingContextItem(
@@ -535,6 +537,7 @@ final class CameraViewModel: ObservableObject {
             return
         }
 
+        playRecognitionCompletedHaptic()
         recognitionResult = result
         isRecognizing = false
 
@@ -585,6 +588,7 @@ final class CameraViewModel: ObservableObject {
             return
         }
 
+        playBarcodeDetectedHaptic()
         barcodeResult = result
         recognitionPhase = .barcodeDetected
         statusMessage = "Barcode detected"
@@ -604,6 +608,7 @@ final class CameraViewModel: ObservableObject {
 
         Task {
             let result = await recognitionService.analyzeProduct(from: imageData, inputSource: inputSource)
+            playRecognitionCompletedHaptic()
             recognitionResult = result
             selectedCandidate = result.bestCandidate
             confirmedCandidate = nil
@@ -650,5 +655,17 @@ final class CameraViewModel: ObservableObject {
         confirmedBarcodeResult = nil
         isWaitingForBarcodePackagePhoto = false
         isRecognizing = false
+    }
+
+    private func playBarcodeDetectedHaptic() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    private func playRecognitionCompletedHaptic() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    private func playProductAddedHaptic() {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 }

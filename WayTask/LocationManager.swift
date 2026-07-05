@@ -49,6 +49,7 @@ final class LocationManager: NSObject, ObservableObject {
 
     func startMonitoring(locations: [GeoLocation]) {
         let relevantLocations = locations
+            .filter(shouldIncludeLocationInGeofenceResults)
             .filter { location in
                 location.shoppingItems.contains { !$0.isCompleted }
             }
@@ -86,16 +87,17 @@ final class LocationManager: NSObject, ObservableObject {
 
     func refreshShoppingGeofences(items: [ShoppingItem], savedLocations: [GeoLocation]) {
         let activeItems = items.filter { !$0.isCompleted }
+        let visibleSavedLocations = savedLocations.filter(shouldIncludeLocationInGeofenceResults)
         cachedActiveShoppingItems = activeItems
-        cachedSavedLocations = savedLocations
+        cachedSavedLocations = visibleSavedLocations
 
-        let candidates = relevantCandidates(for: activeItems, savedLocations: savedLocations)
+        let candidates = relevantCandidates(for: activeItems, savedLocations: visibleSavedLocations)
         let signature = geofenceSignature(for: candidates)
 
         evaluateSmartNearbyDetection(reason: "geofence refresh")
 
         #if DEBUG
-        logGeofenceRefresh(activeItems: activeItems, savedLocations: savedLocations, candidates: candidates)
+        logGeofenceRefresh(activeItems: activeItems, savedLocations: visibleSavedLocations, candidates: candidates)
         #endif
 
         guard signature != lastShoppingGeofenceSignature else {
@@ -161,6 +163,16 @@ final class LocationManager: NSObject, ObservableObject {
                 return nil
             }
 
+            let distance = distanceFromCurrentUser(to: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude))
+            guard ShoppingStoreCategoryFilter.isEligible(
+                storeTitle: location.title,
+                storeCategories: location.storeCategory.map { [$0] } ?? [],
+                requestedCategories: matchedStoreCategories(for: matchingItems),
+                distanceMeters: distance
+            ) else {
+                return nil
+            }
+
             return ShoppingGeofenceCandidate(
                 id: location.id,
                 locationID: location.id,
@@ -169,9 +181,21 @@ final class LocationManager: NSObject, ObservableObject {
                 radius: notificationRadius(for: location.radius),
                 itemNames: notificationItemNames(from: matchingItems),
                 sourceType: location.sourceType.rawValue,
-                distanceMeters: distanceFromCurrentUser(to: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude))
+                distanceMeters: distance
             )
         }
+    }
+
+    private func shouldIncludeLocationInGeofenceResults(_ location: GeoLocation) -> Bool {
+        guard location.sourceType == .debugSeed else {
+            return true
+        }
+
+        #if DEBUG
+        return DebugSeedStoreService.isEnabled
+        #else
+        return false
+        #endif
     }
 
     private func nearbyFallbackCandidates(for items: [ShoppingItem], around coordinate: CLLocationCoordinate2D) -> [ShoppingGeofenceCandidate] {

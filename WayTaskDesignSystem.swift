@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct WayTaskDesign {
@@ -127,29 +128,79 @@ struct WayTaskFilterChip: View {
 
 struct WayTaskProductThumbnail: View {
     let data: Data?
+    var url: URL? = nil
     var size: CGFloat = 64
     var cornerRadius: CGFloat = 15
     var systemName: String = "shippingbox"
+    var onRemoteImageLoaded: ((Data) -> Void)? = nil
+    @State private var remoteImageData: Data?
+    @State private var remoteImageURL: URL?
+    @State private var remoteLoadFailedURL: URL?
 
     var body: some View {
         Group {
-            if let data,
-               let uiImage = UIImage(data: data) {
+            if let uiImage = displayImage {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFill()
             } else {
-                ZStack {
-                    WayTaskDesign.surfaceElevated
-                    Image(systemName: systemName)
-                        .font(.title2)
-                        .foregroundStyle(WayTaskDesign.accent)
-                }
+                placeholder
             }
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .accessibilityHidden(data == nil)
+        .accessibilityHidden(displayImage == nil && url == nil)
+        .task(id: url) {
+            await loadRemoteImageIfNeeded()
+        }
+    }
+
+    private var displayImage: UIImage? {
+        if let data, let image = UIImage(data: data) {
+            return image
+        }
+
+        if let remoteImageData,
+           remoteImageURL == url,
+           let image = UIImage(data: remoteImageData) {
+            return image
+        }
+
+        return nil
+    }
+
+    private var placeholder: some View {
+        ZStack {
+            WayTaskDesign.surfaceElevated
+            Image(systemName: systemName)
+                .font(.title2)
+                .foregroundStyle(WayTaskDesign.accent)
+        }
+    }
+
+    private func loadRemoteImageIfNeeded() async {
+        guard data == nil,
+              let url,
+              remoteImageURL != url,
+              remoteLoadFailedURL != url else {
+            return
+        }
+
+        do {
+            let (loadedData, response) = try await URLSession.shared.data(from: url)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode),
+                  UIImage(data: loadedData) != nil else {
+                remoteLoadFailedURL = url
+                return
+            }
+
+            remoteImageData = loadedData
+            remoteImageURL = url
+            onRemoteImageLoaded?(loadedData)
+        } catch {
+            remoteLoadFailedURL = url
+        }
     }
 }
 

@@ -7,6 +7,8 @@ struct CameraView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var appStateManager: AppStateManager
 
+    var onDone: (() -> Void)?
+
     @StateObject private var viewModel = CameraViewModel()
     private let shoppingListService = ShoppingListService()
     private let productKnowledgeService = ProductKnowledgeService()
@@ -17,6 +19,7 @@ struct CameraView: View {
     @State private var manualProductName = ""
     @State private var manualProductBrand = ""
     @State private var manualProductCategory = ""
+    @State private var loadedProductImageData: [UUID: Data] = [:]
 
     var body: some View {
         NavigationStack {
@@ -35,7 +38,7 @@ struct CameraView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
-                        appStateManager.selectedTab = .products
+                        closeScanner()
                     }
                     .tint(WayTaskDesign.accent)
                 }
@@ -662,7 +665,15 @@ struct CameraView: View {
     private func recognizedProductCard(_ product: ProductCandidate) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                WayTaskProductThumbnail(data: product.imageData ?? viewModel.capturedImageData, size: 76, cornerRadius: 18)
+                WayTaskProductThumbnail(
+                    data: previewImageData(for: product),
+                    url: product.imageURL,
+                    size: 76,
+                    cornerRadius: 18,
+                    onRemoteImageLoaded: { imageData in
+                        loadedProductImageData[product.id] = imageData
+                    }
+                )
 
                 VStack(alignment: .leading, spacing: 5) {
                     Label(product.source == .ai ? "Suggested product" : "Product Found", systemImage: product.source == .ai ? "sparkles" : "checkmark.seal.fill")
@@ -742,6 +753,18 @@ struct CameraView: View {
                 .foregroundStyle(WayTaskDesign.secondaryText)
                 .lineLimit(2)
         }
+    }
+
+    private func previewImageData(for product: ProductCandidate) -> Data? {
+        if let imageData = product.imageData {
+            return imageData
+        }
+
+        if product.imageURL != nil {
+            return nil
+        }
+
+        return viewModel.capturedImageData
     }
 
     private func barcodeDetailLine(for product: ProductCandidate) -> String? {
@@ -844,16 +867,51 @@ struct CameraView: View {
 
     private func addRecognizedProduct(_ product: ProductCandidate) {
         do {
+            let productToAdd = productWithLoadedImageIfAvailable(product)
             let item = try shoppingListService.addRecognizedProduct(
-                product,
+                productToAdd,
                 fallbackImageData: viewModel.capturedImageData,
                 in: modelContext
             )
             appStateManager.shoppingListDidChange(revealing: item.id)
-            viewModel.productWasAddedToShoppingList(product)
-            appStateManager.selectedTab = .products
+            viewModel.productWasAddedToShoppingList(productToAdd)
+            closeScanner()
         } catch {
             viewModel.productAddFailed(error)
+        }
+    }
+
+    private func productWithLoadedImageIfAvailable(_ product: ProductCandidate) -> ProductCandidate {
+        guard product.imageData == nil,
+              let loadedImageData = loadedProductImageData[product.id] else {
+            return product
+        }
+
+        return ProductCandidate(
+            id: product.id,
+            name: product.name,
+            brand: product.brand,
+            category: product.category,
+            confidence: product.confidence,
+            productType: product.productType,
+            flavor: product.flavor,
+            packageSize: product.packageSize,
+            packageType: product.packageType,
+            visibleText: product.visibleText,
+            source: product.source,
+            productHints: product.productHints,
+            searchKeywords: product.searchKeywords,
+            imageURL: product.imageURL,
+            imageData: loadedImageData,
+            barcode: product.barcode
+        )
+    }
+
+    private func closeScanner() {
+        if let onDone {
+            onDone()
+        } else {
+            appStateManager.selectedTab = .products
         }
     }
 }

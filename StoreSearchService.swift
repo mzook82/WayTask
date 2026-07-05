@@ -70,7 +70,15 @@ final class MapKitStoreSearchService: StoreSearchService {
 
         if let cached = cache[cacheKey],
            Date().timeIntervalSince(cached.timestamp) < cacheDuration {
-            return retagStores(cached.stores, shoppingItems: shoppingItems)
+            let cachedStores = retagStores(cached.stores, shoppingItems: shoppingItems)
+            auditFallbackUsed(
+                false,
+                reason: "MapKit cache hit",
+                coordinate: coordinate,
+                requestedCategories: storeCategories,
+                storeCount: cachedStores.count
+            )
+            return cachedStores
         }
 
         let mapKitStores = await searchMapKitStores(
@@ -78,15 +86,67 @@ final class MapKitStoreSearchService: StoreSearchService {
             shoppingItems: [],
             storeCategories: storeCategories
         )
+        let fallbackUsed = mapKitStores.isEmpty
 
-        let stores = mapKitStores.isEmpty
+        let stores = fallbackUsed
             ? fallbackStores(around: coordinate, shoppingItems: shoppingItems, storeCategories: storeCategories)
             : retagStores(mapKitStores, shoppingItems: shoppingItems)
+
+        auditFallbackUsed(
+            fallbackUsed,
+            reason: fallbackUsed ? "MapKit returned zero usable stores" : "MapKit returned usable stores",
+            coordinate: coordinate,
+            requestedCategories: storeCategories,
+            storeCount: stores.count
+        )
 
         if !mapKitStores.isEmpty {
             cache[cacheKey] = CacheEntry(stores: mapKitStores, timestamp: Date())
         }
         return stores
+    }
+
+    func refreshedStores(
+        around coordinate: CLLocationCoordinate2D,
+        shoppingItems: [String],
+        storeCategories: [ShoppingStoreCategory] = []
+    ) async -> [MapStore] {
+        let cacheKey = cacheKey(
+            coordinate: coordinate,
+            storeCategories: storeCategories
+        )
+        let mapKitStores = await searchMapKitStores(
+            around: coordinate,
+            shoppingItems: [],
+            storeCategories: storeCategories
+        )
+
+        if !mapKitStores.isEmpty {
+            cache[cacheKey] = CacheEntry(stores: mapKitStores, timestamp: Date())
+            auditFallbackUsed(
+                false,
+                reason: "MapKit refresh returned usable stores",
+                coordinate: coordinate,
+                requestedCategories: storeCategories,
+                storeCount: mapKitStores.count
+            )
+            return retagStores(mapKitStores, shoppingItems: shoppingItems)
+        }
+
+        cache.removeValue(forKey: cacheKey)
+        let fallbackStores = fallbackStores(
+            around: coordinate,
+            shoppingItems: shoppingItems,
+            storeCategories: storeCategories
+        )
+        auditFallbackUsed(
+            true,
+            reason: "MapKit refresh returned zero usable stores",
+            coordinate: coordinate,
+            requestedCategories: storeCategories,
+            storeCount: fallbackStores.count
+        )
+        return fallbackStores
     }
 
     func fallbackStores(
@@ -116,6 +176,7 @@ final class MapKitStoreSearchService: StoreSearchService {
                         query: query,
                         coordinate: coordinate,
                         shoppingItems: shoppingItems,
+                        requestedCategories: categories,
                         inferredCategory: self.category(for: query)
                     )
                 }
@@ -128,13 +189,34 @@ final class MapKitStoreSearchService: StoreSearchService {
             return combinedStores
         }
 
-        return deduplicated(searchResults, around: coordinate)
+        let nearbySearchResults = searchResults.filter { store in
+            ShoppingStoreCategoryFilter.isWithinPracticalDistance(
+                from: coordinate,
+                to: store.coordinate,
+                requestedCategories: categories
+            )
+        }
+        auditDistanceFiltering(
+            acceptedStores: nearbySearchResults,
+            rejectedStores: searchResults.filter { store in
+                !ShoppingStoreCategoryFilter.isWithinPracticalDistance(
+                    from: coordinate,
+                    to: store.coordinate,
+                    requestedCategories: categories
+                )
+            },
+            coordinate: coordinate,
+            requestedCategories: categories
+        )
+
+        return deduplicated(nearbySearchResults, around: coordinate)
     }
 
     private func searchMapKit(
         query: String,
         coordinate: CLLocationCoordinate2D,
         shoppingItems: [String],
+        requestedCategories: [ShoppingStoreCategory],
         inferredCategory: ShoppingStoreCategory
     ) async -> [MapStore] {
         let region = MKCoordinateRegion(
@@ -147,13 +229,39 @@ final class MapKitStoreSearchService: StoreSearchService {
 
         do {
             let response = try await MKLocalSearch(request: request).start()
-            return response.mapItems.compactMap { item in
-                makeMapStore(
+            var acceptedStores: [MapStore] = []
+            var rejectedStores: [(name: String, category: String, distance: CLLocationDistance, reason: String)] = []
+
+            for item in response.mapItems {
+                let evaluation = makeMapStore(
                     from: item,
                     shoppingItems: shoppingItems,
-                    inferredCategory: inferredCategory
+                    requestedCategories: requestedCategories,
+                    inferredCategory: inferredCategory,
+                    queryCoordinate: coordinate
                 )
+
+                if let store = evaluation.store {
+                    acceptedStores.append(store)
+                } else {
+                    rejectedStores.append((
+                        name: item.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unnamed MapKit result",
+                        category: item.pointOfInterestCategory?.rawValue ?? "unknown",
+                        distance: distance(from: coordinate, to: item.location.coordinate),
+                        reason: evaluation.rejectionReason ?? "unknown rejection"
+                    ))
+                }
             }
+            auditMapKitSearch(
+                query: query,
+                inferredCategory: inferredCategory,
+                requestedCategories: requestedCategories,
+                rawCount: response.mapItems.count,
+                acceptedStores: acceptedStores,
+                rejectedStores: rejectedStores,
+                coordinate: coordinate
+            )
+            return acceptedStores
         } catch {
             #if DEBUG
             print("[WayTask Store Search] MapKit search failed for \(query): \(error.localizedDescription)")
@@ -165,14 +273,42 @@ final class MapKitStoreSearchService: StoreSearchService {
     private func makeMapStore(
         from item: MKMapItem,
         shoppingItems: [String],
-        inferredCategory: ShoppingStoreCategory
-    ) -> MapStore? {
+        requestedCategories: [ShoppingStoreCategory],
+        inferredCategory: ShoppingStoreCategory,
+        queryCoordinate: CLLocationCoordinate2D
+    ) -> (store: MapStore?, rejectionReason: String?) {
         guard let title = item.name?.trimmingCharacters(in: .whitespacesAndNewlines),
               !title.isEmpty else {
-            return nil
+            return (nil, "missing title")
         }
 
-        return MapStore(
+        let storeCategories = [category(from: item.pointOfInterestCategory) ?? inferredCategory]
+        let storeDistance = distance(from: queryCoordinate, to: item.location.coordinate)
+        let rejectionReason: String?
+        if isGroceryMapKitSearch(inferredCategory: inferredCategory, requestedCategories: requestedCategories) {
+            rejectionReason = ShoppingStoreCategoryFilter.mapKitGroceryRejectionReason(
+                storeTitle: title,
+                storeCategories: storeCategories,
+                pointOfInterestCategory: item.pointOfInterestCategory?.rawValue,
+                requestedCategories: requestedCategories,
+                distanceMeters: storeDistance
+            )
+        } else if ShoppingStoreCategoryFilter.shouldExclude(
+            storeTitle: title,
+            storeCategories: storeCategories,
+            pointOfInterestCategory: item.pointOfInterestCategory?.rawValue,
+            for: requestedCategories
+        ) {
+            rejectionReason = "filtered by category"
+        } else {
+            rejectionReason = nil
+        }
+
+        if let rejectionReason {
+            return (nil, rejectionReason)
+        }
+
+        return (MapStore(
             id: UUID(),
             locationID: nil,
             title: title,
@@ -182,10 +318,10 @@ final class MapKitStoreSearchService: StoreSearchService {
             completedItemNames: [],
             isOpen: nil,
             rating: nil,
-            storeCategories: [category(from: item.pointOfInterestCategory) ?? inferredCategory],
+            storeCategories: storeCategories,
             websiteURL: item.url,
             sourceType: .appleMaps
-        )
+        ), nil)
     }
 
     private func retagStores(_ stores: [MapStore], shoppingItems: [String]) -> [MapStore] {
@@ -290,9 +426,23 @@ final class MapKitStoreSearchService: StoreSearchService {
         return .generalStore
     }
 
+    private func isGroceryMapKitSearch(
+        inferredCategory: ShoppingStoreCategory,
+        requestedCategories: [ShoppingStoreCategory]
+    ) -> Bool {
+        inferredCategory == .grocery ||
+            inferredCategory == .supermarket ||
+            inferredCategory == .convenienceStore
+    }
+
     private func category(from pointOfInterestCategory: MKPointOfInterestCategory?) -> ShoppingStoreCategory? {
         guard let pointOfInterestCategory else {
             return nil
+        }
+
+        let rawValue = pointOfInterestCategory.rawValue.lowercased()
+        if rawValue.contains("bakery") {
+            return .grocery
         }
 
         switch pointOfInterestCategory {
@@ -322,6 +472,67 @@ final class MapKitStoreSearchService: StoreSearchService {
     private func distance(from start: CLLocationCoordinate2D, to end: CLLocationCoordinate2D) -> CLLocationDistance {
         CLLocation(latitude: start.latitude, longitude: start.longitude)
             .distance(from: CLLocation(latitude: end.latitude, longitude: end.longitude))
+    }
+
+    private func auditFallbackUsed(
+        _ fallbackUsed: Bool,
+        reason: String,
+        coordinate: CLLocationCoordinate2D,
+        requestedCategories: [ShoppingStoreCategory],
+        storeCount: Int
+    ) {
+        #if DEBUG
+        let categoryText = requestedCategories.map(\.rawValue).joined(separator: ",")
+        print("[WayTask Store Audit] fallbackUsed=\(fallbackUsed) reason=\(reason) count=\(storeCount) categories=\(categoryText) coordinate=\(coordinate.latitude),\(coordinate.longitude)")
+        #endif
+    }
+
+    private func auditMapKitSearch(
+        query: String,
+        inferredCategory: ShoppingStoreCategory,
+        requestedCategories: [ShoppingStoreCategory],
+        rawCount: Int,
+        acceptedStores: [MapStore],
+        rejectedStores: [(name: String, category: String, distance: CLLocationDistance, reason: String)],
+        coordinate: CLLocationCoordinate2D
+    ) {
+        #if DEBUG
+        let categoryText = requestedCategories.map(\.rawValue).joined(separator: ",")
+        print("[WayTask Store Audit] MapKit query=\"\(query)\" category=\(inferredCategory.rawValue) requested=\(categoryText) raw=\(rawCount) accepted=\(acceptedStores.count) rejected=\(rejectedStores.count)")
+        for store in acceptedStores {
+            let distanceMeters = Int(distance(from: coordinate, to: store.coordinate))
+            let storeCategoryText = store.storeCategories.map(\.rawValue).joined(separator: ",")
+            print("[WayTask Store Audit] accepted name=\"\(store.title)\" source=\(store.sourceType.rawValue) distance=\(distanceMeters)m category=\(storeCategoryText)")
+        }
+        for rejectedStore in rejectedStores {
+            print("[WayTask Store Audit] rejected name=\"\(rejectedStore.name)\" source=\(DataSourceType.appleMaps.rawValue) distance=\(Int(rejectedStore.distance))m category=\(rejectedStore.category) reason=\"\(rejectedStore.reason)\"")
+        }
+        #endif
+    }
+
+    private func auditDistanceFiltering(
+        acceptedStores: [MapStore],
+        rejectedStores: [MapStore],
+        coordinate: CLLocationCoordinate2D,
+        requestedCategories: [ShoppingStoreCategory]
+    ) {
+        #if DEBUG
+        guard !rejectedStores.isEmpty else {
+            return
+        }
+
+        print("[WayTask Store Audit] practical-distance accepted=\(acceptedStores.count) rejected=\(rejectedStores.count)")
+        for store in rejectedStores {
+            let distanceMeters = Int(distance(from: coordinate, to: store.coordinate))
+            let reason = ShoppingStoreCategoryFilter.rejectionReason(
+                storeTitle: store.title,
+                storeCategories: store.storeCategories,
+                requestedCategories: requestedCategories,
+                distanceMeters: CLLocationDistance(distanceMeters)
+            ) ?? "outside practical distance"
+            print("[WayTask Store Audit] rejected name=\"\(store.title)\" source=\(store.sourceType.rawValue) distance=\(distanceMeters)m category=\(store.storeCategories.map(\.rawValue).joined(separator: ",")) reason=\"\(reason)\"")
+        }
+        #endif
     }
 }
 

@@ -174,9 +174,10 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
 
         let activeItemNames = notificationItemNames(from: activeItems)
         let categories = matchedStoreCategories(for: activeItems)
+        let visibleSavedLocations = savedLocations.filter(shouldIncludeLocationInNearbyResults)
         let savedOpportunities = nearbySavedOpportunities(
             for: activeItems,
-            savedLocations: savedLocations,
+            savedLocations: visibleSavedLocations,
             currentCoordinate: currentCoordinate
         )
         let mapStores = await nearbyStoreSearchService.stores(
@@ -192,6 +193,7 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         let mapOpportunities = nearbyMapOpportunities(
             from: mapStores,
             itemNames: activeItemNames,
+            requestedCategories: categories,
             currentCoordinate: currentCoordinate
         )
 
@@ -252,6 +254,16 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
             let storeLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
             let distance = userLocation.distance(from: storeLocation)
 
+            let itemCategories = matchedStoreCategories(for: matchingItems)
+            guard ShoppingStoreCategoryFilter.isEligible(
+                storeTitle: location.title,
+                storeCategories: location.storeCategory.map { [$0] } ?? [],
+                requestedCategories: itemCategories,
+                distanceMeters: distance
+            ) else {
+                return nil
+            }
+
             guard distance <= nearbyRadius else {
                 return nil
             }
@@ -271,9 +283,22 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         }
     }
 
+    private func shouldIncludeLocationInNearbyResults(_ location: GeoLocation) -> Bool {
+        guard location.sourceType == .debugSeed else {
+            return true
+        }
+
+        #if DEBUG
+        return DebugSeedStoreService.isEnabled
+        #else
+        return false
+        #endif
+    }
+
     private func nearbyMapOpportunities(
         from stores: [MapStore],
         itemNames: [String],
+        requestedCategories: [ShoppingStoreCategory],
         currentCoordinate: CLLocationCoordinate2D
     ) -> [NearbyShoppingOpportunity] {
         let userLocation = CLLocation(latitude: currentCoordinate.latitude, longitude: currentCoordinate.longitude)
@@ -281,6 +306,15 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         return stores.compactMap { store in
             let storeLocation = CLLocation(latitude: store.coordinate.latitude, longitude: store.coordinate.longitude)
             let distance = userLocation.distance(from: storeLocation)
+
+            guard ShoppingStoreCategoryFilter.isEligible(
+                storeTitle: store.title,
+                storeCategories: store.storeCategories,
+                requestedCategories: requestedCategories,
+                distanceMeters: distance
+            ) else {
+                return nil
+            }
 
             guard distance <= nearbyRadius else {
                 return nil

@@ -63,6 +63,23 @@ The current ProductKnowledge layer is local only. It stores identity and recogni
 
 ---
 
+## Product Knowledge
+
+Lookup order:
+
+1. Product Knowledge
+
+2. Open Food Facts
+
+3. Gemini Vision
+
+4. Manual
+
+Once a product has been confirmed,
+future scans bypass external providers.
+
+---
+
 # Future Capabilities
 
 - Store Ranking

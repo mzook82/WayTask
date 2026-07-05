@@ -27,12 +27,6 @@ struct ContentView: View {
                 }
                 .tag(AppTab.products)
 
-            CameraView()
-                .tabItem {
-                    Label("Scan", systemImage: "camera")
-                }
-                .tag(AppTab.camera)
-
             DiscoverView()
                 .tabItem {
                     Label("Discover", systemImage: "sparkle.magnifyingglass")
@@ -123,6 +117,10 @@ struct ContentView: View {
 
     private func seedDebugStoreIfNeeded() {
         #if DEBUG
+        guard DebugSeedStoreService.isEnabled else {
+            return
+        }
+
         DebugSeedStoreService().ensureSeedStore(
             near: locationManager.currentCoordinate,
             in: modelContext

@@ -421,3 +421,95 @@ WayTask can recognize products it has already learned from the user, making repe
 Build completed successfully.
 
 **Status:** ✅ Completed
+
+## Sprint 23 – Beta Polish (Day 1)
+
+### Goal
+
+Prepare WayTask for a real-world testing session with focused polish and real-usage fixes.
+
+### User Value
+
+Users can start barcode scanning faster, refresh nearby store recommendations, avoid irrelevant grocery store suggestions, and recover from imperfect product images without changing Product Knowledge or Gemini architecture.
+
+### Completed
+
+- Scan now opens in Barcode mode by default.
+- Removed the duplicate Camera tab shortcut; Products remains the clear scan entry point.
+- Added refresh for Buying Options suggested places, including MapKit refresh, reranking, and deduplicated merged stores.
+- Improved product image priority so official product image URLs are preserved before AI fallback photos.
+- Added a lightweight product image replacement path from product rows.
+- Strengthened grocery recommendation filtering against jewelry, florists, law offices, insurance, and banks.
+- Gated Debug Seed Store behavior behind DEBUG builds and an explicit Debug Store setting.
+- Added subtle haptics for barcode detection, AI recognition completion, and successful product add.
+
+### Preserved
+
+- Product Knowledge architecture
+- Gemini integration
+- Existing shopping history and memory flows
+- Existing saved-store and MapKit merge behavior
+
+### Result
+
+Build completed successfully.
+
+**Review:** No P1/P2 issues found after the review pass.
+
+**Status:** ✅ Completed
+
+## Sprint 23.1 – Store Ranking + Product Image Stability
+
+### Goal
+
+Fix real-world beta testing issues found in Map suggestions and product image loading.
+
+### User Value
+
+WayTask now keeps grocery recommendations local and relevant, prevents debug/custom stores from dominating unrelated suggestions, and keeps product images stable after scan and remote image loading.
+
+### Completed
+
+- Added grocery recommendation eligibility with a practical 5 km distance cap.
+- Buying Options now calculates initial and refreshed distance from the current user location.
+- Ranking now gives stronger priority to nearby stores and only boosts saved/custom stores when they are nearby.
+- Grocery filtering now rejects irrelevant business names and generic unrelated retail while allowing relevant grocery, supermarket, convenience, market, bakery, coffee, and pharmacy matches when appropriate.
+- MapKit search results are filtered by practical distance before deduping and display.
+- Map, Buying Options, nearby opportunities, and geofence candidates now share the same store eligibility rules.
+- Stabilized product thumbnails so loaded remote images are not replaced by nil placeholders.
+- Persisted successfully loaded remote product images into `ShoppingItem` and refreshed Product Knowledge from the saved item.
+- Preserved AI/Gemini and Product Knowledge architecture.
+
+### Result
+
+Build completed successfully.
+
+**Review:** Fixed one P2 mixed-category filtering risk before the final build.
+
+**Status:** ✅ Completed
+
+## Sprint 23.2 – Store Source Audit
+
+### Goal
+
+Confirm when WayTask uses MapKit versus saved/debug/fallback store sources, then apply the smallest safe fix for beta store suggestions.
+
+### User Value
+
+Buying Options should wait for real Apple Maps results when current location is available, avoid showing demo stores prematurely, and provide DEBUG audit logs that explain store acceptance, rejection, distance, category, source, and fallback behavior.
+
+### Completed
+
+- Added DEBUG-only store audit logging for MapKit query/category, raw result count, accepted/rejected count, store name, source type, distance, category, rejection reason, and fallback usage.
+- Softened grocery MapKit acceptance for grocery, supermarket, and convenience searches so nearby Apple Maps results are accepted without requiring English grocery words in the business name.
+- Kept explicit grocery rejection for irrelevant categories and names such as jewelry, florists, legal, insurance, banks, offices, real estate, and beauty/salon terms.
+- Prevented Buying Options from showing local/demo fallback stores before MapKit refresh finishes when current location exists.
+- Preserved saved/custom stores, Product Knowledge, Gemini, and existing UI design.
+
+### Result
+
+Build completed successfully.
+
+**Review:** Fixed one P2 false-rejection risk in explicit term matching before the final build.
+
+**Status:** ✅ Completed

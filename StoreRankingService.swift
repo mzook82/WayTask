@@ -43,7 +43,8 @@ struct StoreRankingService {
             score += min(Double(store.itemNames.count) * 4, 18)
         }
 
-        if matchesSuggestedCategory(store: store, request: request) {
+        let categoryMatched = matchesSuggestedCategory(store: store, request: request)
+        if categoryMatched {
             score += 25
             reasons.append("Matches product category")
         }
@@ -59,13 +60,16 @@ struct StoreRankingService {
             let distance = distance(from: userCoordinate, to: store.coordinate)
 
             if distance < 500 {
-                score += 25
+                score += 32
                 reasons.append("Closest store")
             } else if distance < 1500 {
-                score += 15
+                score += 24
+                reasons.append("Nearby")
+            } else if distance < 3000 {
+                score += 10
                 reasons.append("Nearby")
             } else {
-                score += 6
+                score -= 18
             }
         } else {
             score += 8
@@ -83,13 +87,21 @@ struct StoreRankingService {
             }
         }
 
-        if store.isSavedLocation {
+        let savedLocationIsNearby: Bool
+        if let userCoordinate {
+            savedLocationIsNearby = distance(from: userCoordinate, to: store.coordinate) <= 1500
+        } else {
+            savedLocationIsNearby = true
+        }
+
+        if store.isSavedLocation && savedLocationIsNearby {
             score += 22
             reasons.append("Saved by you")
         }
 
         let normalizedScore = min(score, 100)
-        let confidence = min(max(normalizedScore / 100, 0.2), 0.95)
+        let maxConfidence = categoryMatched ? 0.95 : 0.54
+        let confidence = min(max(normalizedScore / 100, 0.2), maxConfidence)
         let fallbackReasons = reasons.isEmpty ? ["Suggested for this item"] : reasons
 
         return StoreScore(
@@ -105,6 +117,20 @@ struct StoreRankingService {
         userCoordinate: CLLocationCoordinate2D? = nil
     ) -> [(store: MapStore, ranking: StoreScore)] {
         stores
+            .filter { store in
+                let storeDistance: CLLocationDistance?
+                if let userCoordinate {
+                    storeDistance = distance(from: userCoordinate, to: store.coordinate)
+                } else {
+                    storeDistance = nil
+                }
+                return ShoppingStoreCategoryFilter.isEligible(
+                    storeTitle: store.title,
+                    storeCategories: store.storeCategories,
+                    requestedCategories: request.storeCategories,
+                    distanceMeters: storeDistance
+                )
+            }
             .map { store in
                 (
                     store: store,

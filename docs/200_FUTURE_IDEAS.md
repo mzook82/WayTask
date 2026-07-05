@@ -346,3 +346,21 @@ WayTask will also understand:
 - What should I avoid buying again?
 
 The ultimate goal is to help users make smarter purchasing decisions while reducing waste, saving time, and saving money.
+
+## Shopping Cart Scan
+
+Users can scan their shopping cart before checkout.
+
+WayTask compares:
+
+Shopping List
+
+↓
+
+Cart Contents
+
+↓
+
+Missing Products
+
+Future AI can identify products directly from the cart.

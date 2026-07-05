@@ -5,6 +5,11 @@ import SwiftData
 #if DEBUG
 struct DebugSeedStoreService {
     static let seedStoreID = UUID(uuidString: "D0E3A8A8-9C2E-4D93-BD21-8242D9E4A111")!
+    static let enabledUserDefaultsKey = "waytask.debugSeedStore.enabled"
+
+    static var isEnabled: Bool {
+        UserDefaults.standard.bool(forKey: enabledUserDefaultsKey)
+    }
 
     private static let seedStoreName = "גבעון מרקט"
     private static let fallbackCoordinate = CLLocationCoordinate2D(latitude: 31.9022, longitude: 35.2034)

@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 
 struct ShoppingStoreSuggestionRequest: Equatable {
@@ -99,6 +100,212 @@ enum ShoppingStoreCategory: String, CaseIterable, Identifiable, Equatable, Hasha
     }
 }
 
+enum ShoppingStoreCategoryFilter {
+    static let groceryPracticalDistance: CLLocationDistance = 5_000
+
+    static func shouldExclude(
+        storeTitle: String,
+        storeCategories: [ShoppingStoreCategory] = [],
+        pointOfInterestCategory: String? = nil,
+        for requestedCategories: [ShoppingStoreCategory]
+    ) -> Bool {
+        guard isGroceryProductRequest(requestedCategories) else {
+            return false
+        }
+
+        if explicitGroceryRejectionReason(
+            storeTitle: storeTitle,
+            pointOfInterestCategory: pointOfInterestCategory
+        ) != nil {
+            return true
+        }
+
+        return !isAllowedGroceryStore(
+            storeTitle: storeTitle,
+            storeCategories: storeCategories,
+            requestedCategories: requestedCategories
+        )
+    }
+
+    static func isEligible(
+        storeTitle: String,
+        storeCategories: [ShoppingStoreCategory],
+        requestedCategories: [ShoppingStoreCategory],
+        distanceMeters: CLLocationDistance? = nil
+    ) -> Bool {
+        guard !shouldExclude(
+            storeTitle: storeTitle,
+            storeCategories: storeCategories,
+            for: requestedCategories
+        ) else {
+            return false
+        }
+
+        guard isGroceryProductRequest(requestedCategories),
+              let distanceMeters else {
+            return true
+        }
+
+        return distanceMeters <= groceryPracticalDistance
+    }
+
+    static func isGroceryProductRequest(_ storeCategories: [ShoppingStoreCategory]) -> Bool {
+        storeCategories.contains { category in
+            category == .grocery || category == .supermarket || category == .convenienceStore
+        }
+    }
+
+    static func isAllowedGroceryStore(
+        storeTitle: String,
+        storeCategories: [ShoppingStoreCategory],
+        requestedCategories: [ShoppingStoreCategory]
+    ) -> Bool {
+        let title = storeTitle.lowercased()
+        let allowedTitleTerms = [
+            "grocery", "supermarket", "market", "mini market", "minimarket",
+            "convenience", "corner store", "bodega", "deli",
+            "bakery", "bake shop", "bread",
+            "coffee", "cafe", "café",
+            "candy", "sweets", "chocolate",
+            "food", "snack", "drink", "beverage", "juice", "produce"
+        ]
+
+        if allowedTitleTerms.contains(where: { title.contains($0) }) {
+            return true
+        }
+
+        if storeCategories.contains(where: { category in
+            category != .generalStore && requestedCategories.contains(category)
+        }) {
+            return true
+        }
+
+        if storeCategories.contains(where: { $0 == .grocery || $0 == .supermarket || $0 == .convenienceStore }) {
+            return true
+        }
+
+        if storeCategories.contains(.coffeeShop) {
+            return requestedCategories.contains(.coffeeShop)
+        }
+
+        if storeCategories.contains(.pharmacy) {
+            return requestedCategories.contains(.pharmacy)
+        }
+
+        if title.contains("pharmacy") || title.contains("drugstore") {
+            return requestedCategories.contains(.pharmacy)
+        }
+
+        return false
+    }
+
+    static func mapKitGroceryRejectionReason(
+        storeTitle: String,
+        storeCategories: [ShoppingStoreCategory],
+        pointOfInterestCategory: String?,
+        requestedCategories: [ShoppingStoreCategory],
+        distanceMeters: CLLocationDistance?
+    ) -> String? {
+        guard isGroceryProductRequest(requestedCategories) else {
+            return shouldExclude(
+                storeTitle: storeTitle,
+                storeCategories: storeCategories,
+                pointOfInterestCategory: pointOfInterestCategory,
+                for: requestedCategories
+            ) ? "filtered by category" : nil
+        }
+
+        if let explicitReason = explicitGroceryRejectionReason(
+            storeTitle: storeTitle,
+            pointOfInterestCategory: pointOfInterestCategory
+        ) {
+            return explicitReason
+        }
+
+        if let distanceMeters, distanceMeters > groceryPracticalDistance {
+            return "outside grocery distance cap (\(Int(distanceMeters))m)"
+        }
+
+        return nil
+    }
+
+    static func rejectionReason(
+        storeTitle: String,
+        storeCategories: [ShoppingStoreCategory],
+        requestedCategories: [ShoppingStoreCategory],
+        distanceMeters: CLLocationDistance? = nil
+    ) -> String? {
+        if shouldExclude(
+            storeTitle: storeTitle,
+            storeCategories: storeCategories,
+            for: requestedCategories
+        ) {
+            return isGroceryProductRequest(requestedCategories)
+                ? "not an allowed grocery store"
+                : "filtered by category"
+        }
+
+        if isGroceryProductRequest(requestedCategories),
+           let distanceMeters,
+           distanceMeters > groceryPracticalDistance {
+            return "outside grocery distance cap (\(Int(distanceMeters))m)"
+        }
+
+        return nil
+    }
+
+    static func isWithinPracticalDistance(
+        from userCoordinate: CLLocationCoordinate2D?,
+        to storeCoordinate: CLLocationCoordinate2D,
+        requestedCategories: [ShoppingStoreCategory]
+    ) -> Bool {
+        guard isGroceryProductRequest(requestedCategories),
+              let userCoordinate else {
+            return true
+        }
+
+        let distance = CLLocation(latitude: userCoordinate.latitude, longitude: userCoordinate.longitude)
+            .distance(from: CLLocation(latitude: storeCoordinate.latitude, longitude: storeCoordinate.longitude))
+        return distance <= groceryPracticalDistance
+    }
+
+    private static func explicitGroceryRejectionReason(
+        storeTitle: String,
+        pointOfInterestCategory: String?
+    ) -> String? {
+        let title = storeTitle.lowercased()
+        let poiCategory = pointOfInterestCategory?.lowercased() ?? ""
+        let excludedTerms = [
+            "jewelry", "jewellery", "jeweler", "jeweller",
+            "florist", "flower shop", "flower", "flowers",
+            "law office", "law firm", "lawyer", "attorney", "legal",
+            "insurance",
+            "bank", "banking", "credit union",
+            "office", "real estate", "accounting", "consulting",
+            "boutique", "clothing", "fashion", "shoe", "furniture",
+            "salon", "beauty", "repair shop", "auto", "car dealer"
+        ]
+
+        let titleTokens = Set(title.components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty })
+        guard let matchedTerm = excludedTerms.first(where: { term in
+            let normalizedPOITerm = term.replacingOccurrences(of: " ", with: "")
+            if poiCategory.contains(normalizedPOITerm) {
+                return true
+            }
+
+            if term.contains(" ") {
+                return title.contains(term)
+            }
+
+            return titleTokens.contains(term)
+        }) else {
+            return nil
+        }
+
+        return "explicit grocery reject term: \(matchedTerm)"
+    }
+}
+
 struct ShoppingIntentMatcher {
     var categoryMappings: [ShoppingStoreCategory: [String]]
 
@@ -160,7 +367,10 @@ struct ShoppingIntentMatcher {
 
     static let defaultCategoryMappings: [ShoppingStoreCategory: [String]] = [
         .grocery: [
-            "grocery", "groceries", "food", "snack", "drink", "milk", "bread", "cheese", "fruit", "vegetable", "cereal", "chocolate", "water"
+            "grocery", "groceries", "food", "snack", "snacks", "drink", "drinks", "beverage", "beverages",
+            "milk", "bread", "cheese", "fruit", "vegetable", "vegetables", "cereal", "chocolate", "water",
+            "juice", "soda", "cookie", "cookies", "cracker", "crackers", "chips", "pasta", "rice", "sauce",
+            "yogurt", "butter", "egg", "eggs", "meat", "fish", "frozen", "canned", "candy"
         ],
         .supermarket: [
             "supermarket", "market"

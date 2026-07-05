@@ -50,6 +50,9 @@ WayTask should help users remember, discover, compare, and make better shopping 
 - [ ] Product Categories
 - [ ] Favorites
 - [ ] Search Products
+- [x] Products-first Experience *(Sprint 21B)*
+- [x] Product Knowledge Engine *(Sprint 22)*
+- [x] AI Product Memory *(Sprint 22)*
 
 ---
 
@@ -139,6 +142,11 @@ WayTask should help users remember, discover, compare, and make better shopping 
 - [ ] Gift Suggestions
 - [ ] Persist AI Search Keywords
 - [ ] AI Learning Loop
+- [x] Gemini Vision *(Sprint 19)*
+- [x] Product Knowledge Engine *(Sprint 22)*
+- [x] Local AI Learning *(Sprint 22)*
+- [ ] Cloud Product Knowledge
+- [ ] AI Diagnostics
 
 ---
 

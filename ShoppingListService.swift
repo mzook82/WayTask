@@ -65,7 +65,7 @@ struct ShoppingListService: ShoppingListServicing {
         ShoppingItem(
             name: candidate.name,
             isCompleted: false,
-            imageData: candidate.imageData ?? fallbackImageData,
+            imageData: productImageData(for: candidate, fallbackImageData: fallbackImageData),
             brand: candidate.brand,
             category: candidate.category,
             barcode: candidate.barcode,
@@ -162,5 +162,17 @@ struct ShoppingListService: ShoppingListServicing {
         case .unknown:
             return .manual
         }
+    }
+
+    private func productImageData(for candidate: ProductCandidate, fallbackImageData: Data?) -> Data? {
+        if let imageData = candidate.imageData {
+            return imageData
+        }
+
+        if candidate.imageURL != nil {
+            return nil
+        }
+
+        return fallbackImageData
     }
 }

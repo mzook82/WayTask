@@ -23,6 +23,7 @@ struct ProductListView: View {
     @State private var isShowingNearbyOpportunities = false
     @State private var isShowingBuyingOptions = false
     @State private var isShowingSettings = false
+    @State private var isShowingScanner = false
     private let shoppingListService = ShoppingListService()
     private let shoppingIntentMatcher = ShoppingIntentMatcher()
     private let buyingOptionsService = BuyingOptionsService()
@@ -32,6 +33,8 @@ struct ProductListView: View {
     private let storeSearchService = MapKitStoreSearchService()
     @State private var suggestions: [MKMapItem] = []
     @State private var isSearchingSuggestions = false
+    @State private var isRefreshingBuyingOptions = false
+    @State private var suggestionRefreshGeneration = 0
     @State private var searchText = ""
     @State private var selectedFilter: ProductFilter = .all
 
@@ -72,6 +75,8 @@ struct ProductListView: View {
                     options: appStateManager.buyingOptions,
                     tripCoverages: appStateManager.shoppingTripCoverages,
                     activeTripItemCount: activeShoppingItems.count,
+                    isRefreshing: isRefreshingBuyingOptions,
+                    onRefresh: refreshCurrentBuyingOptions,
                     onViewOnMap: { _ in
                         openBuyingOptionsOnMap()
                     },
@@ -86,6 +91,11 @@ struct ProductListView: View {
             .sheet(isPresented: $isShowingSettings) {
                 SettingsView()
                     .environmentObject(locationManager)
+            }
+            .fullScreenCover(isPresented: $isShowingScanner) {
+                CameraView {
+                    isShowingScanner = false
+                }
             }
             .onChange(of: selectedPhotoItem) {
                 loadSelectedPhoto()
@@ -283,7 +293,7 @@ struct ProductListView: View {
             .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 44, cornerRadius: 14, shadow: true))
 
             Button {
-                appStateManager.selectedTab = .camera
+                isShowingScanner = true
             } label: {
                 Label("Scan", systemImage: "barcode.viewfinder")
                     .frame(maxWidth: .infinity)
@@ -467,6 +477,12 @@ struct ProductListView: View {
                         },
                         onSuggest: {
                             findSuggestions(for: item)
+                        },
+                        onImageSelected: { imageData in
+                            replaceImage(for: item, imageData: imageData)
+                        },
+                        onRemoteImageLoaded: { imageData in
+                            cacheRemoteImage(for: item, imageData: imageData)
                         },
                         onOpenMap: { location in
                             appStateManager.focusMap(on: location.id)
@@ -757,6 +773,27 @@ struct ProductListView: View {
         }
     }
 
+    private func replaceImage(for item: ShoppingItem, imageData: Data?) {
+        guard let imageData else {
+            return
+        }
+
+        item.imageData = imageData
+        try? modelContext.save()
+        _ = try? ProductKnowledgeService().learn(from: item, in: modelContext)
+        appStateManager.shoppingListDidChange(revealing: item.id)
+    }
+
+    private func cacheRemoteImage(for item: ShoppingItem, imageData: Data) {
+        guard item.imageData == nil else {
+            return
+        }
+
+        item.imageData = imageData
+        try? modelContext.save()
+        _ = try? ProductKnowledgeService().learn(from: item, in: modelContext)
+    }
+
     private func memoryIndicators(for item: ShoppingItem) -> [String] {
         guard let history = try? shoppingMemoryService.productHistory(for: item, in: modelContext),
               productHistories.contains(where: { $0.id == history.id }) else {
@@ -783,13 +820,25 @@ struct ProductListView: View {
 
     private func findSuggestions(for item: ShoppingItem) {
         let request = fullListSuggestionRequest(for: item)
-        let candidateStores = suggestionStores(for: request)
-        let buyingOptions = buyingOptionsService.localOptions(for: request, stores: candidateStores)
+        let userCoordinate = locationManager.currentCoordinate
+        let candidateStores = suggestionStores(for: request, userCoordinate: userCoordinate)
+        auditBuyingOptionsStores(
+            phase: "initial",
+            stores: candidateStores,
+            request: request,
+            userCoordinate: userCoordinate,
+            fallbackUsed: candidateStores.contains { $0.sourceType == .local }
+        )
+        let buyingOptions = buyingOptionsService.localOptions(
+            for: request,
+            stores: candidateStores,
+            userCoordinate: userCoordinate
+        )
         let tripCoverages = shoppingTripService.coverage(
             for: activeShoppingItems,
             stores: candidateStores,
             request: request,
-            userCoordinate: nil
+            userCoordinate: userCoordinate
         )
         buyingOptionsRequest = request
         appStateManager.storeSuggestionRequest = request
@@ -800,22 +849,49 @@ struct ProductListView: View {
         refreshSuggestionsWithMapKit(for: request)
     }
 
-    private func refreshSuggestionsWithMapKit(for request: ShoppingStoreSuggestionRequest) {
+    private func refreshCurrentBuyingOptions() {
+        guard let buyingOptionsRequest else {
+            return
+        }
+
+        refreshSuggestionsWithMapKit(for: buyingOptionsRequest, forceRefresh: true)
+    }
+
+    private func refreshSuggestionsWithMapKit(for request: ShoppingStoreSuggestionRequest, forceRefresh: Bool = false) {
         guard let coordinate = locationManager.currentCoordinate else {
             return
         }
 
         let shoppingItemNames = activeShoppingItems.map(\.name)
+        suggestionRefreshGeneration += 1
+        let refreshGeneration = suggestionRefreshGeneration
+        isRefreshingBuyingOptions = true
         Task {
-            let discoveredStores = await storeSearchService.stores(
-                around: coordinate,
-                shoppingItems: shoppingItemNames,
-                storeCategories: request.storeCategories
-            )
+            let discoveredStores: [MapStore]
+            if forceRefresh {
+                discoveredStores = await storeSearchService.refreshedStores(
+                    around: coordinate,
+                    shoppingItems: shoppingItemNames,
+                    storeCategories: request.storeCategories
+                )
+            } else {
+                discoveredStores = await storeSearchService.stores(
+                    around: coordinate,
+                    shoppingItems: shoppingItemNames,
+                    storeCategories: request.storeCategories
+                )
+            }
             let mergedStores = mergedSuggestionStores(
                 savedStores: savedStoresForTripPlanning(),
                 discoveredStores: discoveredStores,
                 request: request
+            )
+            auditBuyingOptionsStores(
+                phase: forceRefresh ? "mapkit-refresh" : "mapkit",
+                stores: mergedStores,
+                request: request,
+                userCoordinate: coordinate,
+                fallbackUsed: mergedStores.contains { $0.sourceType == .local }
             )
             let buyingOptions = buyingOptionsService.localOptions(
                 for: request,
@@ -829,8 +905,13 @@ struct ProductListView: View {
                 userCoordinate: coordinate
             )
 
+            guard refreshGeneration == suggestionRefreshGeneration else {
+                return
+            }
+
             appStateManager.buyingOptions = buyingOptions
             appStateManager.shoppingTripCoverages = tripCoverages
+            isRefreshingBuyingOptions = false
         }
     }
 
@@ -881,17 +962,21 @@ struct ProductListView: View {
         )
     }
 
-    private func suggestionStores(for request: ShoppingStoreSuggestionRequest) -> [MapStore] {
+    private func suggestionStores(for request: ShoppingStoreSuggestionRequest, userCoordinate: CLLocationCoordinate2D?) -> [MapStore] {
         let savedStores = savedStoresForTripPlanning()
         let relevantSavedStores = savedStores.filter { store in
-            storeMatches(store, request: request)
+            storeMatches(store, request: request, userCoordinate: userCoordinate)
         }
 
         if !relevantSavedStores.isEmpty {
             return relevantSavedStores
         }
 
-        return savedStores + buyingOptionsService.suggestedStores(for: request)
+        if userCoordinate != nil {
+            return []
+        }
+
+        return savedStores.filter { storeMatches($0, request: request, userCoordinate: nil) }
     }
 
     private func mergedSuggestionStores(
@@ -899,18 +984,22 @@ struct ProductListView: View {
         discoveredStores: [MapStore],
         request: ShoppingStoreSuggestionRequest
     ) -> [MapStore] {
-        let relevantSavedStores = savedStores.filter { storeMatches($0, request: request) }
+        let relevantSavedStores = savedStores.filter { storeMatches($0, request: request, userCoordinate: locationManager.currentCoordinate) }
         let baseSavedStores = relevantSavedStores.isEmpty ? savedStores : relevantSavedStores
         let shouldDropFallback = !relevantSavedStores.isEmpty || discoveredStores.contains { $0.sourceType == .appleMaps }
         let filteredDiscoveredStores = shouldDropFallback
             ? discoveredStores.filter { $0.sourceType != .local }
             : discoveredStores
 
-        return (baseSavedStores + filteredDiscoveredStores).deduplicatedStores()
+        return (baseSavedStores + filteredDiscoveredStores)
+            .deduplicatedStores()
+            .filter { store in
+                storeMatches(store, request: request, userCoordinate: locationManager.currentCoordinate)
+            }
     }
 
     private func savedStoresForTripPlanning() -> [MapStore] {
-        locations.map { location in
+        locations.filter(shouldIncludeLocationInRecommendations).map { location in
             let openItems = location.shoppingItems
                 .filter { !$0.isCompleted }
                 .map(\.name)
@@ -935,7 +1024,22 @@ struct ProductListView: View {
         }
     }
 
-    private func storeMatches(_ store: MapStore, request: ShoppingStoreSuggestionRequest) -> Bool {
+    private func storeMatches(_ store: MapStore, request: ShoppingStoreSuggestionRequest, userCoordinate: CLLocationCoordinate2D?) -> Bool {
+        let storeDistance: CLLocationDistance?
+        if let userCoordinate {
+            storeDistance = distance(from: userCoordinate, to: store.coordinate)
+        } else {
+            storeDistance = nil
+        }
+        guard ShoppingStoreCategoryFilter.isEligible(
+            storeTitle: store.title,
+            storeCategories: store.storeCategories,
+            requestedCategories: request.storeCategories,
+            distanceMeters: storeDistance
+        ) else {
+            return false
+        }
+
         let matchesItem = store.itemNames.contains { itemName in
             itemName.localizedCaseInsensitiveContains(request.itemName) ||
             request.itemName.localizedCaseInsensitiveContains(itemName)
@@ -952,6 +1056,58 @@ struct ProductListView: View {
         let genericRequestCanUseSavedCategory = request.storeCategories.contains(.generalStore) && store.isSavedLocation && !store.storeCategories.isEmpty
 
         return matchesItem || matchesCategory || matchesTitle || genericRequestCanUseSavedCategory
+    }
+
+    private func auditBuyingOptionsStores(
+        phase: String,
+        stores: [MapStore],
+        request: ShoppingStoreSuggestionRequest,
+        userCoordinate: CLLocationCoordinate2D?,
+        fallbackUsed: Bool
+    ) {
+        #if DEBUG
+        print("[WayTask Store Audit] BuyingOptions phase=\(phase) count=\(stores.count) fallbackUsed=\(fallbackUsed) categories=\(request.storeCategories.map(\.rawValue).joined(separator: ","))")
+        for store in stores {
+            let distanceText: String
+            if let userCoordinate {
+                distanceText = "\(Int(distance(from: userCoordinate, to: store.coordinate)))m"
+            } else {
+                distanceText = "unknown"
+            }
+
+            let rejectionReason = ShoppingStoreCategoryFilter.rejectionReason(
+                storeTitle: store.title,
+                storeCategories: store.storeCategories,
+                requestedCategories: request.storeCategories,
+                distanceMeters: {
+                    guard let userCoordinate else {
+                        return nil
+                    }
+
+                    return distance(from: userCoordinate, to: store.coordinate)
+                }()
+            )
+            let status = rejectionReason == nil ? "accepted" : "rejected"
+            print("[WayTask Store Audit] \(status) name=\"\(store.title)\" source=\(store.sourceType.rawValue) distance=\(distanceText) category=\(store.storeCategories.map(\.rawValue).joined(separator: ",")) reason=\"\(rejectionReason ?? "eligible")\"")
+        }
+        #endif
+    }
+
+    private func distance(from userCoordinate: CLLocationCoordinate2D, to storeCoordinate: CLLocationCoordinate2D) -> CLLocationDistance {
+        CLLocation(latitude: userCoordinate.latitude, longitude: userCoordinate.longitude)
+            .distance(from: CLLocation(latitude: storeCoordinate.latitude, longitude: storeCoordinate.longitude))
+    }
+
+    private func shouldIncludeLocationInRecommendations(_ location: GeoLocation) -> Bool {
+        guard location.sourceType == .debugSeed else {
+            return true
+        }
+
+        #if DEBUG
+        return DebugSeedStoreService.isEnabled
+        #else
+        return false
+        #endif
     }
 
     private func assign(_ item: ShoppingItem, to mapItem: MKMapItem) {
@@ -1000,12 +1156,21 @@ private struct ProductRowCard: View {
     let memoryIndicators: [String]
     let onToggle: () -> Void
     let onSuggest: () -> Void
+    let onImageSelected: (Data?) -> Void
+    let onRemoteImageLoaded: (Data) -> Void
     let onOpenMap: (GeoLocation) -> Void
+    @State private var selectedPhotoItem: PhotosPickerItem?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 14) {
-                WayTaskProductThumbnail(data: item.imageData, size: 72, cornerRadius: 17)
+                WayTaskProductThumbnail(
+                    data: item.imageData,
+                    url: item.imageURL,
+                    size: 72,
+                    cornerRadius: 17,
+                    onRemoteImageLoaded: onRemoteImageLoaded
+                )
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text(item.name)
@@ -1065,6 +1230,16 @@ private struct ProductRowCard: View {
                 }
                 .buttonStyle(WayTaskSecondaryPillButtonStyle())
 
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    Image(systemName: "photo")
+                        .frame(width: 42)
+                }
+                .buttonStyle(WayTaskSecondaryPillButtonStyle())
+                .accessibilityLabel("Change Product Image")
+                .onChange(of: selectedPhotoItem) {
+                    loadSelectedPhoto()
+                }
+
                 if let location {
                     Button {
                         onOpenMap(location)
@@ -1078,6 +1253,14 @@ private struct ProductRowCard: View {
         }
         .padding(16)
         .wayTaskCard()
+    }
+
+    private func loadSelectedPhoto() {
+        Task {
+            let imageData = try? await selectedPhotoItem?.loadTransferable(type: Data.self)
+            onImageSelected(imageData)
+            selectedPhotoItem = nil
+        }
     }
 
     private var productDetails: String? {
@@ -1247,7 +1430,7 @@ private struct ShoppingSessionItemRow: View {
                     .foregroundStyle(isCollected ? WayTaskDesign.accent : WayTaskDesign.tertiaryText)
                     .animation(.spring(response: 0.28, dampingFraction: 0.82), value: isCollected)
 
-                WayTaskProductThumbnail(data: item.imageData, size: 52, cornerRadius: 14)
+                WayTaskProductThumbnail(data: item.imageData, url: item.imageURL, size: 52, cornerRadius: 14)
                     .opacity(isCollected ? 0.6 : 1)
 
                 VStack(alignment: .leading, spacing: 4) {

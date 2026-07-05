@@ -4,6 +4,8 @@ struct BuyingOptionsSheet: View {
     let options: [BuyingOption]
     let tripCoverages: [StoreCoverage]
     let activeTripItemCount: Int
+    let isRefreshing: Bool
+    let onRefresh: () -> Void
     let onViewOnMap: (BuyingOption) -> Void
     let onViewTripOnMap: () -> Void
     let onClose: () -> Void
@@ -54,6 +56,20 @@ struct BuyingOptionsSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close", action: onClose)
                         .tint(WayTaskDesign.accent)
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: onRefresh) {
+                        if isRefreshing {
+                            ProgressView()
+                                .tint(WayTaskDesign.accent)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
+                    .disabled(isRefreshing)
+                    .tint(WayTaskDesign.accent)
+                    .accessibilityLabel("Refresh Suggested Places")
                 }
             }
         }

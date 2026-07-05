@@ -1,3 +1,4 @@
+import AppIntents
 import CoreLocation
 import MapKit
 import SwiftData
@@ -9,8 +10,12 @@ struct SettingsView: View {
     @EnvironmentObject private var locationManager: LocationManager
 
     @Query private var locations: [GeoLocation]
+    @Query private var productKnowledge: [ProductKnowledge]
     @State private var isShowingStoreEditor = false
     @State private var editingStore: GeoLocation?
+    #if DEBUG
+    @AppStorage(DebugSeedStoreService.enabledUserDefaultsKey) private var isDebugStoreEnabled = false
+    #endif
 
     private var customStores: [GeoLocation] {
         locations
@@ -94,13 +99,26 @@ struct SettingsView: View {
     }
 
     private var aboutSection: some View {
-        Section("About") {
+        Section {
+            LabeledContent("App name", value: "WayTask")
+            LabeledContent("Version", value: "1.8 Beta")
+            LabeledContent("AI", value: "Gemini Vision")
+            LabeledContent("Product Knowledge", value: "Enabled")
+            LabeledContent("Learned products", value: "\(productKnowledge.count)")
             LabeledContent("Store sources", value: "Saved, Apple Maps, fallback")
             LabeledContent("Custom stores", value: "\(customStores.filter { $0.sourceType == .userGenerated }.count)")
 
             #if DEBUG
+            Toggle("Debug Store", isOn: $isDebugStoreEnabled)
             LabeledContent("Debug seed", value: customStores.contains { $0.sourceType == .debugSeed } ? "Enabled" : "Not seeded")
             #endif
+        } header: {
+            Text("About WayTask")
+        } footer: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("WayTask remembers confirmed products on this device to make future scans faster.")
+                Text("Product Knowledge is stored locally on this device.")
+            }
         }
     }
 

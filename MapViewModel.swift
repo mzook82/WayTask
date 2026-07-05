@@ -101,9 +101,10 @@ final class MapViewModel: ObservableObject {
     }
 
     func update(locations: [GeoLocation]) {
-        savedStores = locations.map(makeStore)
-        savedProducts = locations.flatMap(makeProducts)
-        activeShoppingItemNames = locations
+        let visibleLocations = locations.filter(shouldIncludeLocationInResults)
+        savedStores = visibleLocations.map(makeStore)
+        savedProducts = visibleLocations.flatMap(makeProducts)
+        activeShoppingItemNames = visibleLocations
             .flatMap(\.shoppingItems)
             .filter { !$0.isCompleted }
             .map(\.name)
@@ -236,6 +237,21 @@ final class MapViewModel: ObservableObject {
     }
 
     private func storeMatchesSuggestion(_ store: MapStore, request: ShoppingStoreSuggestionRequest) -> Bool {
+        let storeDistance: CLLocationDistance?
+        if let userCoordinate {
+            storeDistance = distance(from: userCoordinate, to: store.coordinate)
+        } else {
+            storeDistance = nil
+        }
+        guard ShoppingStoreCategoryFilter.isEligible(
+            storeTitle: store.title,
+            storeCategories: store.storeCategories,
+            requestedCategories: request.storeCategories,
+            distanceMeters: storeDistance
+        ) else {
+            return false
+        }
+
         let matchesItem = store.itemNames.contains { itemName in
             itemName.localizedCaseInsensitiveContains(request.itemName) ||
             request.itemName.localizedCaseInsensitiveContains(itemName)
@@ -252,6 +268,18 @@ final class MapViewModel: ObservableObject {
         let genericRequestCanUseSavedCategory = request.storeCategories.contains(.generalStore) && store.isSavedLocation && !store.storeCategories.isEmpty
 
         return matchesItem || matchesCategory || matchesTitle || genericRequestCanUseSavedCategory
+    }
+
+    private func shouldIncludeLocationInResults(_ location: GeoLocation) -> Bool {
+        guard location.sourceType == .debugSeed else {
+            return true
+        }
+
+        #if DEBUG
+        return DebugSeedStoreService.isEnabled
+        #else
+        return false
+        #endif
     }
 
     private func isNearbySavedStore(_ store: MapStore) -> Bool {
@@ -308,9 +336,27 @@ final class MapViewModel: ObservableObject {
         let filteredDiscoveredStores = relevantSavedStoreExists
             ? discoveredStores.filter { $0.sourceType != .local }
             : discoveredStores
-        let mergedStores = savedStorePrioritized(savedStores + filteredDiscoveredStores)
+        let eligibleStores = (savedStores + filteredDiscoveredStores).filter { store in
+            guard let activeSuggestionRequest else {
+                return true
+            }
+
+            let storeDistance: CLLocationDistance?
+            if let userCoordinate {
+                storeDistance = distance(from: userCoordinate, to: store.coordinate)
+            } else {
+                storeDistance = nil
+            }
+            return ShoppingStoreCategoryFilter.isEligible(
+                storeTitle: store.title,
+                storeCategories: store.storeCategories,
+                requestedCategories: activeSuggestionRequest.storeCategories,
+                distanceMeters: storeDistance
+            )
+        }
+        let mergedStores = savedStorePrioritized(eligibleStores)
         stores = mergedStores
-        products = savedProducts + filteredDiscoveredStores.flatMap(makeProducts)
+        products = savedProducts + eligibleStores.filter { !$0.isSavedLocation }.flatMap(makeProducts)
         selectSuggestedStoreIfAvailable()
     }
 
@@ -404,6 +450,23 @@ final class MapViewModel: ObservableObject {
     }
 
     private func matchesFilters(_ store: MapStore) -> Bool {
+        if let activeSuggestionRequest {
+            let storeDistance: CLLocationDistance?
+            if let userCoordinate {
+                storeDistance = distance(from: userCoordinate, to: store.coordinate)
+            } else {
+                storeDistance = nil
+            }
+            guard ShoppingStoreCategoryFilter.isEligible(
+                storeTitle: store.title,
+                storeCategories: store.storeCategories,
+                requestedCategories: activeSuggestionRequest.storeCategories,
+                distanceMeters: storeDistance
+            ) else {
+                return false
+            }
+        }
+
         if shoppingListOnly && store.openItemCount == 0 {
             if isNearbySavedStore(store) {
                 return true

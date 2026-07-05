@@ -47,7 +47,7 @@ struct ProductKnowledgeService: ProductKnowledgeServicing {
             productType: candidate.productType,
             flavor: candidate.flavor,
             packageSize: candidate.packageSize,
-            thumbnailData: candidate.imageData ?? fallbackImageData,
+            thumbnailData: productImageData(for: candidate, fallbackImageData: fallbackImageData),
             imageURL: candidate.imageURL,
             searchKeywords: candidate.searchKeywords.isEmpty ? candidate.productHints : candidate.searchKeywords,
             aiConfidence: candidate.confidence,
@@ -236,6 +236,18 @@ struct ProductKnowledgeService: ProductKnowledgeServicing {
         case .discover:
             return .unknown
         }
+    }
+
+    private func productImageData(for candidate: ProductCandidate, fallbackImageData: Data?) -> Data? {
+        if let imageData = candidate.imageData {
+            return imageData
+        }
+
+        if candidate.imageURL != nil {
+            return nil
+        }
+
+        return fallbackImageData
     }
 }
 

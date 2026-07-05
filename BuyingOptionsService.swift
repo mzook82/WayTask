@@ -49,7 +49,21 @@ struct BuyingOptionsService: BuyingOptionsServicing {
     }
 
     func localOptions(for request: ShoppingStoreSuggestionRequest, stores: [MapStore], userCoordinate: CLLocationCoordinate2D?) -> [BuyingOption] {
-        let matchingStores = stores.filter { store in
+        let eligibleStores = stores.filter { store in
+            let storeDistance: CLLocationDistance?
+            if let userCoordinate {
+                storeDistance = distance(from: userCoordinate, to: store.coordinate)
+            } else {
+                storeDistance = nil
+            }
+            return ShoppingStoreCategoryFilter.isEligible(
+                storeTitle: store.title,
+                storeCategories: store.storeCategories,
+                requestedCategories: request.storeCategories,
+                distanceMeters: storeDistance
+            )
+        }
+        let matchingStores = eligibleStores.filter { store in
             let matchesItem = store.itemNames.contains { itemName in
                 itemName.localizedCaseInsensitiveContains(request.itemName) ||
                 request.itemName.localizedCaseInsensitiveContains(itemName)
@@ -63,7 +77,7 @@ struct BuyingOptionsService: BuyingOptionsServicing {
             return matchesItem || matchesCategory || genericRequestCanUseSavedCategory
         }
 
-        let sourceStores = matchingStores.isEmpty ? stores : matchingStores
+        let sourceStores = matchingStores.isEmpty ? eligibleStores : matchingStores
 
         let rankedStores = storeRankingService.rankedStores(
             sourceStores,
@@ -154,6 +168,11 @@ struct BuyingOptionsService: BuyingOptionsServicing {
         }
 
         return "\(max(Int(distance), 1)) m away"
+    }
+
+    private func distance(from userCoordinate: CLLocationCoordinate2D, to storeCoordinate: CLLocationCoordinate2D) -> CLLocationDistance {
+        CLLocation(latitude: userCoordinate.latitude, longitude: userCoordinate.longitude)
+            .distance(from: CLLocation(latitude: storeCoordinate.latitude, longitude: storeCoordinate.longitude))
     }
 
     private func recommendationReasons(for store: MapStore, ranking: StoreScore) -> [String] {
