@@ -513,3 +513,46 @@ Build completed successfully.
 **Review:** Fixed one P2 false-rejection risk in explicit term matching before the final build.
 
 **Status:** ✅ Completed
+
+## Sprint 24 - Store Reality Score
+
+### Goal
+
+Improve store recommendations so they rank stores by real-world likelihood instead of implying certain inventory.
+
+### User Value
+
+Users should see nearby, relevant, category-appropriate stores first, with clear reasons for why each store is suggested and without claims of guaranteed availability.
+
+### Completed
+
+- Added Store Reality Score as the source of truth for local store likelihood.
+- Refactored Store Reality Score into independent scoring signals for category relevance, item hints, known store type, distance, list coverage, saved stores, and future provider inputs.
+- Added stricter category matching for grocery, supermarket, convenience, pharmacy, pet, electronics, and related title signals.
+- Added lower-confidence large grocery/supermarket fallback matching for pet food.
+- Added store type confidence reasons such as known grocery, pharmacy, pet, and electronics stores.
+- Kept saved/custom store boost conditional on nearby and relevant signals.
+- Routed Buying Options ranking through Store Reality Score.
+- Routed Map suggestion ordering and automatic selected-store choice through Store Reality Score.
+- Routed nearby recommendation ordering through Store Reality Score.
+- Added exact shopping-list coverage scoring and reasons such as `Covers 3/5 items`.
+- Tightened grocery MapKit rejection so non-allowed grocery results are filtered before display.
+- Updated recommendation wording to safer labels including `Suggested store`, `Likely available`, `High confidence`, `Good match`, `Possible match`, and `May have this item`.
+- Prepared a local `StoreRealityFeedback` structure for future found/not-found signals.
+
+### Out of Scope
+
+- Paid external inventory APIs
+- Gemini changes
+- Product Knowledge architecture changes
+- User feedback UI
+- Cloud sync
+- Guaranteed inventory claims
+
+### Result
+
+Build completed successfully.
+
+**Review:** Fixed mixed-category reason generation and nearby saved-store relevance consistency before the final build.
+
+**Status:** ✅ Completed

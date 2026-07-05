@@ -26,6 +26,7 @@ struct NearbyShoppingOpportunity: Identifiable, Equatable {
     let itemNames: [String]
     let sourceType: String
     let distanceMeters: CLLocationDistance
+    let realityScore: Double
     let latitude: CLLocationDegrees
     let longitude: CLLocationDegrees
     let detectedAt: Date
@@ -71,6 +72,7 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
 
     private let nearbyStoreSearchService = MapKitStoreSearchService()
     private let nearbyIntentMatcher = ShoppingIntentMatcher()
+    private let storeRankingService = StoreRankingService()
     private let nearbyRadius: CLLocationDistance = 350
     private let maxNearbyOpportunities = 8
     private let nearbyDismissCooldown: TimeInterval = 15 * 60
@@ -198,7 +200,13 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         )
 
         nearbyOpportunities = deduplicatedNearbyOpportunities(savedOpportunities + mapOpportunities)
-            .sorted { $0.distanceMeters < $1.distanceMeters }
+            .sorted { lhs, rhs in
+                if lhs.realityScore == rhs.realityScore {
+                    return lhs.distanceMeters < rhs.distanceMeters
+                }
+
+                return lhs.realityScore > rhs.realityScore
+            }
             .prefixArray(maxNearbyOpportunities)
     }
 
@@ -255,11 +263,29 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
             let distance = userLocation.distance(from: storeLocation)
 
             let itemCategories = matchedStoreCategories(for: matchingItems)
-            guard ShoppingStoreCategoryFilter.isEligible(
-                storeTitle: location.title,
+            let request = nearbyRealityRequest(
+                itemNames: notificationItemNames(from: matchingItems),
+                categories: itemCategories,
+                fallbackID: location.id
+            )
+            let store = MapStore(
+                id: location.id,
+                locationID: location.id,
+                title: location.title,
+                coordinate: coordinate,
+                radius: location.radius,
+                itemNames: notificationItemNames(from: matchingItems),
+                completedItemNames: [],
+                isOpen: true,
+                rating: nil,
                 storeCategories: location.storeCategory.map { [$0] } ?? [],
-                requestedCategories: itemCategories,
-                distanceMeters: distance
+                websiteURL: nil,
+                sourceType: location.sourceType
+            )
+            guard storeRankingService.isRelevant(
+                store: store,
+                request: request,
+                userCoordinate: currentCoordinate
             ) else {
                 return nil
             }
@@ -268,14 +294,25 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
                 return nil
             }
 
+            let ranking = storeRankingService.score(
+                store: store,
+                request: request,
+                userCoordinate: currentCoordinate,
+                coverage: StoreRealityCoverage(
+                    matchedItemCount: matchingItems.count,
+                    totalItemCount: activeItems.count
+                )
+            )
+
             return NearbyShoppingOpportunity(
                 id: "saved-\(location.id.uuidString)",
                 storeID: location.id,
                 locationID: location.id,
                 title: location.title,
-                itemNames: notificationItemNames(from: matchingItems),
+                itemNames: store.itemNames,
                 sourceType: location.sourceType.rawValue,
                 distanceMeters: distance,
+                realityScore: ranking.score,
                 latitude: coordinate.latitude,
                 longitude: coordinate.longitude,
                 detectedAt: Date()
@@ -302,16 +339,20 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         currentCoordinate: CLLocationCoordinate2D
     ) -> [NearbyShoppingOpportunity] {
         let userLocation = CLLocation(latitude: currentCoordinate.latitude, longitude: currentCoordinate.longitude)
+        let request = nearbyRealityRequest(
+            itemNames: itemNames,
+            categories: requestedCategories,
+            fallbackID: UUID()
+        )
 
         return stores.compactMap { store in
             let storeLocation = CLLocation(latitude: store.coordinate.latitude, longitude: store.coordinate.longitude)
             let distance = userLocation.distance(from: storeLocation)
 
-            guard ShoppingStoreCategoryFilter.isEligible(
-                storeTitle: store.title,
-                storeCategories: store.storeCategories,
-                requestedCategories: requestedCategories,
-                distanceMeters: distance
+            guard storeRankingService.isRelevant(
+                store: store,
+                request: request,
+                userCoordinate: currentCoordinate
             ) else {
                 return nil
             }
@@ -319,6 +360,12 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
             guard distance <= nearbyRadius else {
                 return nil
             }
+
+            let ranking = storeRankingService.score(
+                store: store,
+                request: request,
+                userCoordinate: currentCoordinate
+            )
 
             return NearbyShoppingOpportunity(
                 id: stableOpportunityID(for: store),
@@ -328,11 +375,27 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
                 itemNames: store.itemNames.isEmpty ? itemNames : store.itemNames,
                 sourceType: store.sourceType.rawValue,
                 distanceMeters: distance,
+                realityScore: ranking.score,
                 latitude: store.coordinate.latitude,
                 longitude: store.coordinate.longitude,
                 detectedAt: Date()
             )
         }
+    }
+
+    private func nearbyRealityRequest(
+        itemNames: [String],
+        categories: [ShoppingStoreCategory],
+        fallbackID: UUID
+    ) -> ShoppingStoreSuggestionRequest {
+        let itemName = itemNames.first ?? "Shopping list"
+        return ShoppingStoreSuggestionRequest(
+            itemID: fallbackID,
+            itemName: itemName,
+            itemCategory: nil,
+            storeCategories: categories.isEmpty ? [.generalStore] : categories,
+            searchTerms: itemNames
+        )
     }
 
     private func stableOpportunityID(for store: MapStore) -> String {

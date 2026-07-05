@@ -63,6 +63,7 @@ final class MapViewModel: ObservableObject {
     @Published var userCoordinate: CLLocationCoordinate2D?
 
     private let storeSearchService: StoreSearchService
+    private let storeRankingService = StoreRankingService()
     private var savedStores: [MapStore] = []
     private var savedProducts: [MapProduct] = []
     private var activeShoppingItemNames: [String] = []
@@ -222,52 +223,17 @@ final class MapViewModel: ObservableObject {
             return
         }
 
-        if let savedStore = stores.first(where: { store in
-            store.isSavedLocation && storeMatchesSuggestion(store, request: request)
-        }) {
-            selectStore(id: savedStore.id)
-            return
-        }
-
-        if let firstSuggestedStore = stores.first(where: { store in
-            !store.isSavedLocation && storeMatchesSuggestion(store, request: request)
-        }) ?? stores.first(where: { !$0.isSavedLocation }) {
+        if let firstSuggestedStore = stores.first(where: { storeMatchesSuggestion($0, request: request) }) {
             selectStore(id: firstSuggestedStore.id)
         }
     }
 
     private func storeMatchesSuggestion(_ store: MapStore, request: ShoppingStoreSuggestionRequest) -> Bool {
-        let storeDistance: CLLocationDistance?
-        if let userCoordinate {
-            storeDistance = distance(from: userCoordinate, to: store.coordinate)
-        } else {
-            storeDistance = nil
-        }
-        guard ShoppingStoreCategoryFilter.isEligible(
-            storeTitle: store.title,
-            storeCategories: store.storeCategories,
-            requestedCategories: request.storeCategories,
-            distanceMeters: storeDistance
-        ) else {
-            return false
-        }
-
-        let matchesItem = store.itemNames.contains { itemName in
-            itemName.localizedCaseInsensitiveContains(request.itemName) ||
-            request.itemName.localizedCaseInsensitiveContains(itemName)
-        }
-        let matchesCategory = store.storeCategories.contains { storeCategory in
-            request.storeCategories.contains { requestCategory in
-                storeCategory.matches(requestCategory)
-            }
-        }
-        let matchesTitle = request.storeCategories.contains { category in
-            store.title.localizedCaseInsensitiveContains(category.sampleStoreName) ||
-            store.title.localizedCaseInsensitiveContains(category.storeFormTitle)
-        }
-        let genericRequestCanUseSavedCategory = request.storeCategories.contains(.generalStore) && store.isSavedLocation && !store.storeCategories.isEmpty
-
-        return matchesItem || matchesCategory || matchesTitle || genericRequestCanUseSavedCategory
+        storeRankingService.isRelevant(
+            store: store,
+            request: request,
+            userCoordinate: userCoordinate
+        )
     }
 
     private func shouldIncludeLocationInResults(_ location: GeoLocation) -> Bool {
@@ -298,7 +264,7 @@ final class MapViewModel: ObservableObject {
         let nextStores = savedStores
         let nextProducts = savedProducts
 
-        stores = savedStorePrioritized(nextStores)
+        stores = displayStores(from: nextStores)
         products = nextProducts
 
         guard let userCoordinate else {
@@ -341,23 +307,31 @@ final class MapViewModel: ObservableObject {
                 return true
             }
 
-            let storeDistance: CLLocationDistance?
-            if let userCoordinate {
-                storeDistance = distance(from: userCoordinate, to: store.coordinate)
-            } else {
-                storeDistance = nil
-            }
-            return ShoppingStoreCategoryFilter.isEligible(
-                storeTitle: store.title,
-                storeCategories: store.storeCategories,
-                requestedCategories: activeSuggestionRequest.storeCategories,
-                distanceMeters: storeDistance
+            return storeRankingService.isRelevant(
+                store: store,
+                request: activeSuggestionRequest,
+                userCoordinate: userCoordinate
             )
         }
-        let mergedStores = savedStorePrioritized(eligibleStores)
+        let mergedStores = displayStores(from: eligibleStores)
         stores = mergedStores
         products = savedProducts + eligibleStores.filter { !$0.isSavedLocation }.flatMap(makeProducts)
         selectSuggestedStoreIfAvailable()
+    }
+
+    private func displayStores(from stores: [MapStore]) -> [MapStore] {
+        let deduplicatedStores = savedStorePrioritized(stores)
+
+        guard let activeSuggestionRequest else {
+            return deduplicatedStores
+        }
+
+        return storeRankingService.rankedStores(
+            deduplicatedStores,
+            request: activeSuggestionRequest,
+            userCoordinate: userCoordinate
+        )
+        .map(\.store)
     }
 
     private func savedStorePrioritized(_ stores: [MapStore]) -> [MapStore] {
@@ -451,17 +425,10 @@ final class MapViewModel: ObservableObject {
 
     private func matchesFilters(_ store: MapStore) -> Bool {
         if let activeSuggestionRequest {
-            let storeDistance: CLLocationDistance?
-            if let userCoordinate {
-                storeDistance = distance(from: userCoordinate, to: store.coordinate)
-            } else {
-                storeDistance = nil
-            }
-            guard ShoppingStoreCategoryFilter.isEligible(
-                storeTitle: store.title,
-                storeCategories: store.storeCategories,
-                requestedCategories: activeSuggestionRequest.storeCategories,
-                distanceMeters: storeDistance
+            guard storeRankingService.isRelevant(
+                store: store,
+                request: activeSuggestionRequest,
+                userCoordinate: userCoordinate
             ) else {
                 return false
             }

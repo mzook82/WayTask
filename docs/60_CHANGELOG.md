@@ -555,3 +555,46 @@ Beta testing can now distinguish real MapKit results from saved/debug/fallback s
 ## Notes
 
 Build completed successfully after focused P1/P2 review. One P2 false-rejection risk in explicit term matching was fixed before the final build.
+
+# Version 1.11 Beta
+
+**Date:** July 5, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 24 - Store Reality Score
+
+## Added
+
+- Store Reality Score as a signal-based local likelihood engine for store recommendations.
+- Store reality signal metadata for category relevance, item hints, known store type, distance, list coverage, saved stores, and future provider signals.
+- Local feedback-ready `StoreRealityFeedback` structure for future found/not-found learning.
+- Store coverage metadata for exact list coverage reasons such as `Covers 3/5 items`.
+
+## Improved
+
+- Buying Options and Map suggestions now rank through the same Store Reality Score.
+- Map display ordering and automatic selected-store choice now use Reality Score.
+- Nearby recommendations now carry and sort by Reality Score before distance.
+- Category relevance is stricter for grocery, pharmacy, pet, and electronics requests.
+- Pet food can rank large grocery/supermarket stores as lower-confidence fallback matches.
+- Grocery MapKit filtering rejects non-grocery results that are not allowed by category or business name.
+- Saved/custom stores receive a boost only when nearby and relevant.
+- Store recommendation wording now uses safer labels such as `Suggested store`, `Likely available`, `High confidence`, `Good match`, `Possible match`, and `May have this item`.
+
+## Preserved
+
+- No paid external inventory APIs.
+- No Gemini changes.
+- No Product Knowledge architecture changes.
+- No user feedback UI or cloud sync.
+
+## User Value Added
+
+Store recommendations should feel closer to real-world product availability while remaining honest that WayTask is ranking likelihood, not guaranteed inventory.
+
+## Notes
+
+Build completed successfully after implementation. Focused P1/P2 review fixed mixed-category reason generation and nearby saved-store relevance consistency before the final build.

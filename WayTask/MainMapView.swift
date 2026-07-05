@@ -258,11 +258,11 @@ struct MainMapView: View {
         }
 
         guard let coverage = appStateManager.shoppingTripCoverages.first else {
-            return "Trip mode active — finding the best store for your list."
+            return "Trip mode active - finding the best match for your list."
         }
 
         let totalItemCount = max(coverage.matchedItemCount + coverage.missingItemCount, 1)
-        return "Best store for your trip • Covers \(coverage.matchedItemCount)/\(totalItemCount) items"
+        return "Best match for your trip • Covers \(coverage.matchedItemCount)/\(totalItemCount) items"
     }
 
     private var mapSignatures: [String] {

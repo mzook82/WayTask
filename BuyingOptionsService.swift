@@ -12,22 +12,15 @@ struct BuyingOptionsService: BuyingOptionsServicing {
     private let storeRankingService = StoreRankingService()
 
     func localOptions(for request: ShoppingStoreSuggestionRequest) -> [BuyingOption] {
-        let rankedStores = suggestedStores(for: request).enumerated().map { index, store in
-            let ranking = StoreScore(
-                score: max(78 - Double(index * 6), 60),
-                confidence: max(0.78 - Double(index) * 0.06, 0.6),
-                reasons: [
-                    "Matches product category",
-                    "Likely available",
-                    "Nearby suggestion"
-                ]
-            )
-            return (store: store, ranking: ranking)
-        }
+        let rankedStores = storeRankingService.rankedStores(
+            suggestedStores(for: request),
+            request: request,
+            userCoordinate: nil
+        )
 
         let storeOptions = rankedStores.map { rankedStore in
             BuyingOption(
-                title: "Find \(request.itemName)",
+                title: "Suggested store for \(request.itemName)",
                 subtitle: "Likely available at suggested nearby stores.",
                 optionType: .suggestedStore,
                 storeName: rankedStore.store.title,
@@ -49,38 +42,8 @@ struct BuyingOptionsService: BuyingOptionsServicing {
     }
 
     func localOptions(for request: ShoppingStoreSuggestionRequest, stores: [MapStore], userCoordinate: CLLocationCoordinate2D?) -> [BuyingOption] {
-        let eligibleStores = stores.filter { store in
-            let storeDistance: CLLocationDistance?
-            if let userCoordinate {
-                storeDistance = distance(from: userCoordinate, to: store.coordinate)
-            } else {
-                storeDistance = nil
-            }
-            return ShoppingStoreCategoryFilter.isEligible(
-                storeTitle: store.title,
-                storeCategories: store.storeCategories,
-                requestedCategories: request.storeCategories,
-                distanceMeters: storeDistance
-            )
-        }
-        let matchingStores = eligibleStores.filter { store in
-            let matchesItem = store.itemNames.contains { itemName in
-                itemName.localizedCaseInsensitiveContains(request.itemName) ||
-                request.itemName.localizedCaseInsensitiveContains(itemName)
-            }
-            let matchesCategory = store.storeCategories.contains { storeCategory in
-                request.storeCategories.contains { requestCategory in
-                    storeCategory.matches(requestCategory)
-                }
-            }
-            let genericRequestCanUseSavedCategory = request.storeCategories.contains(.generalStore) && store.isSavedLocation && !store.storeCategories.isEmpty
-            return matchesItem || matchesCategory || genericRequestCanUseSavedCategory
-        }
-
-        let sourceStores = matchingStores.isEmpty ? eligibleStores : matchingStores
-
         let rankedStores = storeRankingService.rankedStores(
-            sourceStores,
+            stores,
             request: request,
             userCoordinate: userCoordinate
         )
@@ -91,8 +54,8 @@ struct BuyingOptionsService: BuyingOptionsServicing {
                 ranking: rankedStore.ranking
             )
             return BuyingOption(
-                title: "Buy \(request.itemName)",
-                subtitle: rankedStore.store.matchingItemsLabel,
+                title: "Suggested store for \(request.itemName)",
+                subtitle: subtitle(for: rankedStore.store),
                 optionType: rankedStore.store.isSavedLocation ? .nearbyStore : .suggestedStore,
                 storeName: rankedStore.store.title,
                 distanceText: distanceText(from: userCoordinate, to: rankedStore.store.coordinate),
@@ -130,7 +93,7 @@ struct BuyingOptionsService: BuyingOptionsServicing {
     private func futureOptions(for request: ShoppingStoreSuggestionRequest) -> [BuyingOption] {
         [
             BuyingOption(
-                title: "Online buying options",
+                title: "Online store options",
                 subtitle: "Online store lookup is planned for a future release.",
                 optionType: .onlineStore,
                 storeName: "Online",
@@ -175,11 +138,19 @@ struct BuyingOptionsService: BuyingOptionsServicing {
             .distance(from: CLLocation(latitude: storeCoordinate.latitude, longitude: storeCoordinate.longitude))
     }
 
+    private func subtitle(for store: MapStore) -> String {
+        guard !store.itemNames.isEmpty else {
+            return "May have this item."
+        }
+
+        return store.matchingItemsLabel
+    }
+
     private func recommendationReasons(for store: MapStore, ranking: StoreScore) -> [String] {
         var reasons = ranking.reasons
 
         if store.itemNames.count > 1 {
-            reasons.insert("Covers \(store.itemNames.count) list items", at: 0)
+            reasons.insert("Covers \(store.itemNames.count) items", at: 0)
         }
 
         return reasons.deduplicatedCaseInsensitive()

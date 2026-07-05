@@ -187,7 +187,7 @@ private struct ShoppingTripCoverageCard: View {
                         .foregroundStyle(WayTaskDesign.primaryText)
                         .lineLimit(2)
 
-                    Text("Best store for this trip")
+                    Text("Best match for this trip")
                         .font(.subheadline)
                         .foregroundStyle(WayTaskDesign.secondaryText)
                 }
@@ -419,7 +419,7 @@ private struct BuyingOptionCard: View {
                     .font(.caption2.weight(.bold))
                     .imageScale(.small)
 
-                Text("Best Match")
+                Text("Best match")
                     .font(.caption2.weight(.bold))
             }
             .foregroundStyle(.white)

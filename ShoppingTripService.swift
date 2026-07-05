@@ -74,13 +74,18 @@ struct ShoppingTripService: ShoppingTripServicing {
             store: store,
             request: rankingRequest,
             userCoordinate: userCoordinate,
-            coverageScore: coverageScore
+            coverageScore: coverageScore,
+            coverage: StoreRealityCoverage(
+                matchedItemCount: matchedItems.count,
+                totalItemCount: shoppingItems.count
+            )
         )
         let coverageReason = "Covers \(matchedItems.count)/\(shoppingItems.count) items"
         let coverageRanking = StoreScore(
             score: ranking.score,
             confidence: ranking.confidence,
-            reasons: ([coverageReason] + ranking.reasons).deduplicatedCaseInsensitive()
+            reasons: ([coverageReason] + ranking.reasons).deduplicatedCaseInsensitive(),
+            signals: ranking.signals
         )
 
         return StoreCoverage(

@@ -226,6 +226,14 @@ enum ShoppingStoreCategoryFilter {
             return "outside grocery distance cap (\(Int(distanceMeters))m)"
         }
 
+        if !isAllowedGroceryStore(
+            storeTitle: storeTitle,
+            storeCategories: storeCategories,
+            requestedCategories: requestedCategories
+        ) {
+            return "not an allowed grocery store"
+        }
+
         return nil
     }
 

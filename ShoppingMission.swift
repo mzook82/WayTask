@@ -18,9 +18,9 @@ enum ShoppingMission: String, CaseIterable, Codable, Identifiable, Sendable {
     var displayName: String {
         switch self {
         case .buyGroceries:
-            return "Buy Groceries"
+            return "Shop for Groceries"
         case .buyHouseholdItems:
-            return "Buy Household Items"
+            return "Shop for Household Items"
         case .findNearbyStore:
             return "Find Nearby Store"
         case .completeShoppingList:
@@ -30,7 +30,7 @@ enum ShoppingMission: String, CaseIterable, Codable, Identifiable, Sendable {
         case .comparePrices:
             return "Compare Prices"
         case .buyGift:
-            return "Buy Gift"
+            return "Find Gift"
         case .cookRecipe:
             return "Cook Recipe"
         case .exploreNearby:

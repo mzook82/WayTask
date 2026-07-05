@@ -31,6 +31,7 @@ struct ProductListView: View {
     private let shoppingTripService = ShoppingTripService()
     private let shoppingSessionService = ShoppingSessionService()
     private let storeSearchService = MapKitStoreSearchService()
+    private let storeRankingService = StoreRankingService()
     @State private var suggestions: [MKMapItem] = []
     @State private var isSearchingSuggestions = false
     @State private var isRefreshingBuyingOptions = false
@@ -1025,37 +1026,11 @@ struct ProductListView: View {
     }
 
     private func storeMatches(_ store: MapStore, request: ShoppingStoreSuggestionRequest, userCoordinate: CLLocationCoordinate2D?) -> Bool {
-        let storeDistance: CLLocationDistance?
-        if let userCoordinate {
-            storeDistance = distance(from: userCoordinate, to: store.coordinate)
-        } else {
-            storeDistance = nil
-        }
-        guard ShoppingStoreCategoryFilter.isEligible(
-            storeTitle: store.title,
-            storeCategories: store.storeCategories,
-            requestedCategories: request.storeCategories,
-            distanceMeters: storeDistance
-        ) else {
-            return false
-        }
-
-        let matchesItem = store.itemNames.contains { itemName in
-            itemName.localizedCaseInsensitiveContains(request.itemName) ||
-            request.itemName.localizedCaseInsensitiveContains(itemName)
-        }
-        let matchesCategory = store.storeCategories.contains { storeCategory in
-            request.storeCategories.contains { requestCategory in
-                storeCategory.matches(requestCategory)
-            }
-        }
-        let matchesTitle = request.storeCategories.contains { category in
-            store.title.localizedCaseInsensitiveContains(category.sampleStoreName) ||
-            store.title.localizedCaseInsensitiveContains(category.storeFormTitle)
-        }
-        let genericRequestCanUseSavedCategory = request.storeCategories.contains(.generalStore) && store.isSavedLocation && !store.storeCategories.isEmpty
-
-        return matchesItem || matchesCategory || matchesTitle || genericRequestCanUseSavedCategory
+        storeRankingService.isRelevant(
+            store: store,
+            request: request,
+            userCoordinate: userCoordinate
+        )
     }
 
     private func auditBuyingOptionsStores(

@@ -282,7 +282,11 @@ final class MapKitStoreSearchService: StoreSearchService {
             return (nil, "missing title")
         }
 
-        let storeCategories = [category(from: item.pointOfInterestCategory) ?? inferredCategory]
+        let mapKitCategory = category(from: item.pointOfInterestCategory)
+        let storeCategory = mapKitCategory == .generalStore && inferredCategory != .generalStore
+            ? inferredCategory
+            : (mapKitCategory ?? inferredCategory)
+        let storeCategories = [storeCategory]
         let storeDistance = distance(from: queryCoordinate, to: item.location.coordinate)
         let rejectionReason: String?
         if isGroceryMapKitSearch(inferredCategory: inferredCategory, requestedCategories: requestedCategories) {
