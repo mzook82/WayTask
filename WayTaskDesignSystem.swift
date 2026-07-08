@@ -520,6 +520,63 @@ struct WayTaskProductCard: View {
     }
 }
 
+struct WayTaskCompactProductCard: View {
+    let title: String
+    var subtitle: String?
+    var imageData: Data?
+    var imageURL: URL?
+    var actionSystemImage: String?
+    var action: (() -> Void)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.sm) {
+            ZStack(alignment: .bottomTrailing) {
+                WayTaskProductThumbnail(
+                    data: imageData,
+                    url: imageURL,
+                    size: 88,
+                    cornerRadius: WayTaskDesign.Radius.md
+                )
+                .frame(maxWidth: .infinity)
+
+                if let actionSystemImage, let action {
+                    Button {
+                        WayTaskHaptics.selection()
+                        action()
+                    } label: {
+                        Image(systemName: actionSystemImage)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 28, height: 28)
+                            .background(WayTaskDesign.accent)
+                            .clipShape(RoundedRectangle(cornerRadius: WayTaskDesign.Radius.xs, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Product action")
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(WayTaskDesign.Typography.subheadline.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(WayTaskDesign.Typography.caption)
+                        .foregroundStyle(WayTaskDesign.tertiaryText)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .frame(width: 120)
+        .padding(WayTaskDesign.Spacing.sm)
+        .wayTaskGlassCard(cornerRadius: WayTaskDesign.Radius.lg)
+    }
+}
+
 struct WayTaskStoreCard: View {
     let title: String
     var subtitle: String?
@@ -637,6 +694,37 @@ struct WayTaskShoppingListCard: View {
             .wayTaskGlassCard(highlighted: isActive)
         }
         .buttonStyle(.plain)
+    }
+}
+
+struct WayTaskMetricCard: View {
+    let value: String
+    let title: String
+    var systemImage: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xs) {
+            if let systemImage {
+                Image(systemName: systemImage)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.accent)
+            }
+
+            Text(value)
+                .font(WayTaskDesign.Typography.metric)
+                .foregroundStyle(WayTaskDesign.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+
+            Text(title)
+                .font(WayTaskDesign.Typography.caption)
+                .foregroundStyle(WayTaskDesign.secondaryText)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(WayTaskDesign.Spacing.md)
+        .wayTaskGlassCard()
     }
 }
 

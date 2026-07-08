@@ -914,3 +914,65 @@ Build completed successfully after implementation and after focused review.
 **Review:** Focused review found no P1/P2 business-logic changes. The only follow-up was documentation alignment for the new foundation boundary.
 
 **Status:** Completed
+
+## Sprint 26B – Home v1.0
+
+### Goal
+
+Replace the Home placeholder with the approved Version 1.0 Home dashboard using the Sprint 26A design system.
+
+### Completed
+
+- Added `HomeView` as the Home tab content.
+- Added the approved dashboard structure:
+  - Greeting/date header
+  - Shopping Today card
+  - Coverage ring
+  - Best store summary
+  - Start Shopping button
+  - Shopping Lists section
+  - Best Shopping Plan preview
+  - Nearby Opportunity card
+  - Recent Products section
+  - Monthly stats section
+  - Quick Scan entry point
+- Reused existing scanner flow through `CameraView`.
+- Reused existing shopping-session entry through `ShoppingSessionService`.
+- Reused existing `AppStateManager` buying options, trip coverage, and nearby opportunity state where available.
+- Added reusable compact product and metric cards to the design system.
+
+### Real Data
+
+- Active shopping item count comes from `ShoppingItem`.
+- Start Shopping creates an existing `ShoppingSession` from current active items.
+- Recent Products come from existing `ShoppingItem` records.
+- Monthly trips come from completed `ShoppingSession` records.
+- Monthly item count comes from `ShoppingItem.dateAdded`.
+- Best plan preview uses `AppStateManager.shoppingTripCoverages` when available.
+- Nearby opportunity uses `AppStateManager.visibleNearbyOpportunity` when available.
+
+### Placeholder Data
+
+- User display name remains a safe Home-only placeholder.
+- Shopping-list cards are summaries over existing `ShoppingItem` state until the future `ShoppingList` model exists.
+- Best plan preview falls back to approved prototype sample stores when no trip coverage has been generated.
+- Nearby Opportunity falls back to the approved prototype sample when no real nearby opportunity exists.
+- Recent Products fall back to approved prototype sample products when there are no saved products.
+
+### Preserved
+
+- Product Knowledge
+- Gemini
+- Store Reality Score
+- Store Aggregation
+- MapKit logic
+- SwiftData models
+- Existing Products and Map screens
+
+### Result
+
+Build completed successfully after implementation.
+
+**Review:** Focused P1/P2 review confirmed the sprint is UI-only except for invoking the existing scanner and shopping-session service entry points.
+
+**Status:** Completed

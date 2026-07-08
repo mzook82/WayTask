@@ -21,11 +21,7 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $appStateManager.selectedTab) {
-            WayTaskFoundationPlaceholderView(
-                title: "Home",
-                subtitle: "Version 1.0 home surface is ready for implementation.",
-                systemImage: "house.fill"
-            )
+            HomeView()
             .tabItem {
                 Label(AppTab.home.title, systemImage: AppTab.home.systemImageName)
             }

@@ -885,3 +885,41 @@ Sprint 26A – Design System Foundation
 ## Notes
 
 Build completed successfully after implementation and after focused review. This sprint prepares UI architecture only and does not migrate Products, Shopping, Store Details, Shopping Mode, Map, or Settings screens to the approved Version 1.0 UI.
+
+# Version 1.13.1 Beta
+
+**Date:** July 8, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 26B – Home v1.0
+
+## Added
+
+- Approved Version 1.0 Home dashboard.
+- Shopping Today card with coverage ring, best-store summary, trip progress, and Start Shopping.
+- Shopping Lists, Best Shopping Plan, Nearby Opportunity, Recent Products, and monthly stats sections.
+- Home Quick Scan entry using the existing scanner.
+- Reusable compact product card and metric card components in the design system.
+
+## Reused
+
+- Existing `ShoppingItem` data for active item count, recent products, and monthly item stats.
+- Existing `ShoppingSessionService` for Start Shopping.
+- Existing `CameraView` for Quick Scan.
+- Existing `AppStateManager` trip coverage, buying options, and nearby opportunity state.
+
+## Preserved
+
+- Product Knowledge behavior.
+- Gemini behavior.
+- Store Reality Score.
+- Store aggregation and MapKit discovery.
+- SwiftData model schema.
+- Existing Products and Map screens.
+
+## Notes
+
+Build completed successfully after implementation and focused review. Placeholder Home-only data remains where Version 1.0 backing models are not available yet.
