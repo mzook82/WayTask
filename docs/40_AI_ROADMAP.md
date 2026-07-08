@@ -6,10 +6,11 @@ Current flow:
 
 1. User scans a barcode or captures a product photo.
 2. Barcode mode checks Open Food Facts first.
-3. If Open Food Facts cannot identify the product, WayTask sends the captured product image to Gemini Vision.
-4. Gemini returns a structured product suggestion.
-5. The user reviews, edits, or rejects the suggestion before saving.
-6. If Gemini is unavailable, fails, or returns a low-confidence result, the manual product form remains available.
+3. If Product Knowledge or Open Food Facts returns weak product data, WayTask shows `Improve with AI`.
+4. If the user chooses to improve, WayTask asks for a clear front package photo and sends that photo to Gemini Vision.
+5. Gemini returns a structured product suggestion.
+6. The user reviews, edits, or rejects the suggestion before saving.
+7. If Gemini is unavailable, fails, or returns a low-confidence result, the original barcode result and manual product form remain available.
 
 Current provider:
 
@@ -44,10 +45,10 @@ If the key is missing, empty, or unresolved, Gemini fails gracefully and the use
 Gemini is used only when it adds value:
 
 - Direct AI Vision photo recognition.
-- Barcode fallback after Open Food Facts returns no usable product.
-- Barcode fallback after product lookup fails and a captured reference image is available.
+- User-requested barcode enrichment after Product Knowledge or Open Food Facts returns weak data.
+- User-requested barcode enrichment after product lookup fails and the user provides a reference image.
 
-Gemini should not automatically create shopping-list items. User confirmation is required.
+Gemini should not be called automatically from barcode lookup. It should not automatically create shopping-list items. User confirmation is required.
 
 ## Planned JSON Product Schema
 

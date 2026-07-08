@@ -77,24 +77,45 @@ The legacy Info.plist and environment paths exist only for compatibility and deb
 Scan barcode
     |
     v
-Capture reference product image
+Confirm barcode
     |
     v
-Open Food Facts lookup
+Product Knowledge / Open Food Facts lookup
     |
-    +-- Product found -> Review product -> Add to Shopping List
+    +-- Strong product found -> Review product -> Add to Shopping List
     |
-    +-- Product not found / lookup failed
+    +-- Weak product found / product not found / lookup failed
             |
             v
-        Gemini Vision
+        Improve with AI option
             |
-            +-- Good confidence -> AI review card
+            +-- User skips -> Original result or manual product form
             |
-            +-- Low confidence / unavailable / failed -> Manual product form
+            +-- User taps -> Clear front package photo prompt
+                    |
+                    v
+                Gemini Vision
+                    |
+                    +-- Good confidence -> AI review card
+                    |
+                    +-- Low confidence / unavailable / failed -> Original result or manual product form
 ```
 
-Barcode metadata is preserved when Gemini returns a product suggestion.
+Barcode metadata is preserved when Gemini returns a product suggestion. Existing Product Knowledge image data or image URLs remain available if Gemini fails.
+
+## Weak Barcode Data
+
+WayTask treats barcode product data as weak when the result has one or more of these signals:
+
+- Short or partial product name.
+- Generic product name such as `Product`, `Drink`, `Snack`, or `Food`.
+- Missing brand.
+- Missing category.
+- Missing product type.
+- Missing flavor.
+- Missing package size.
+
+Weak data does not trigger Gemini automatically. It only enables the `Improve with AI` action.
 
 ## AI Vision Mode
 
@@ -121,8 +142,25 @@ Manual product entry remains available when:
 - Gemini returns no usable product
 - confidence is too low
 - the user wants to edit the AI result
+- barcode lookup returns no usable product
 
 Manual fallback does not invent product data.
+
+## Guidance on Low Confidence
+
+When Gemini cannot confidently identify a product, WayTask avoids generic failure copy and gives the user a concrete next step.
+
+Guidance examples:
+
+- `Move closer to one product.`
+- `Fill the frame with a single package.`
+- `Center the package inside the guide frame.`
+- `Try a clearer front photo.`
+- `Retake the photo with one package filling the frame.`
+
+Gemini still uses the same request and JSON response shape. The app maps low-confidence, unavailable, or unusable recognition results into clearer guidance while preserving manual fallback.
+
+AI success uses a subtle haptic only when a confident product suggestion is ready for review.
 
 ---
 

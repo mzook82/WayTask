@@ -14,6 +14,7 @@ struct MapStore: Identifiable {
     let isOpen: Bool?
     let rating: Double?
     let storeCategories: [ShoppingStoreCategory]
+    let queryEvidenceCategories: [ShoppingStoreCategory]
     let websiteURL: URL?
     let sourceType: DataSourceType
 
@@ -31,6 +32,16 @@ struct MapStore: Identifiable {
         }
 
         return itemNames.joined(separator: ", ")
+    }
+}
+
+private extension Array where Element == String {
+    func deduplicatedCaseInsensitive() -> [String] {
+        reduce(into: [String]()) { result, value in
+            if !result.contains(where: { $0.localizedCaseInsensitiveCompare(value) == .orderedSame }) {
+                result.append(value)
+            }
+        }
     }
 }
 
@@ -64,9 +75,11 @@ final class MapViewModel: ObservableObject {
 
     private let storeSearchService: StoreSearchService
     private let storeRankingService = StoreRankingService()
+    private let intentMatcher = ShoppingIntentMatcher()
     private var savedStores: [MapStore] = []
     private var savedProducts: [MapProduct] = []
     private var activeShoppingItemNames: [String] = []
+    private var activeShoppingItems: [ShoppingItem] = []
     private var activeSuggestionRequest: ShoppingStoreSuggestionRequest?
     private var hasCenteredOnUser = false
     private var storeSearchTask: Task<Void, Never>?
@@ -94,10 +107,25 @@ final class MapViewModel: ObservableObject {
     }
 
     var filteredProducts: [MapProduct] {
-        let visibleStoreIDs = Set(filteredStores.map(\.id))
+        let visibleStores = filteredStores
+        let visibleStoreIDs = Set(visibleStores.map(\.id))
+        let visibleItemNamesByStoreID = Dictionary(
+            uniqueKeysWithValues: visibleStores.map { store in
+                (store.id, Set(store.itemNames.map { $0.lowercased() }))
+            }
+        )
 
         return products.filter { product in
-            visibleStoreIDs.contains(product.storeID)
+            guard visibleStoreIDs.contains(product.storeID) else {
+                return false
+            }
+
+            guard !activeShoppingItems.isEmpty,
+                  let visibleItemNames = visibleItemNamesByStoreID[product.storeID] else {
+                return true
+            }
+
+            return visibleItemNames.contains(product.name.lowercased())
         }
     }
 
@@ -167,6 +195,21 @@ final class MapViewModel: ObservableObject {
     func applyStoreSuggestion(_ request: ShoppingStoreSuggestionRequest, shoppingItems: [String]) {
         activeSuggestionRequest = request
         activeShoppingItemNames = shoppingItems.isEmpty ? [request.itemName] : shoppingItems
+        activeShoppingItems = []
+        searchText = ""
+        selectedCategory = .shoppingList
+        shoppingListOnly = true
+        rebuildDisplayStores()
+        selectSuggestedStoreIfAvailable()
+    }
+
+    func applyStoreSuggestion(_ request: ShoppingStoreSuggestionRequest, shoppingItems: [ShoppingItem]) {
+        activeSuggestionRequest = request
+        activeShoppingItems = shoppingItems.filter { !$0.isCompleted }
+        activeShoppingItemNames = activeShoppingItems.map(\.name)
+        if activeShoppingItemNames.isEmpty {
+            activeShoppingItemNames = [request.itemName]
+        }
         searchText = ""
         selectedCategory = .shoppingList
         shoppingListOnly = true
@@ -229,7 +272,17 @@ final class MapViewModel: ObservableObject {
     }
 
     private func storeMatchesSuggestion(_ store: MapStore, request: ShoppingStoreSuggestionRequest) -> Bool {
-        storeRankingService.isRelevant(
+        if !activeShoppingItems.isEmpty {
+            return !store.itemNames.isEmpty && groupedRequests().contains { groupedRequest in
+                storeRankingService.isRelevant(
+                    store: store,
+                    request: groupedRequest,
+                    userCoordinate: userCoordinate
+                )
+            }
+        }
+
+        return storeRankingService.isRelevant(
             store: store,
             request: request,
             userCoordinate: userCoordinate
@@ -273,18 +326,22 @@ final class MapViewModel: ObservableObject {
             return
         }
 
-        let suggestionItems = activeSuggestionRequest.map { [$0.itemName] } ?? activeShoppingItemNames
-        let storeCategories = activeSuggestionRequest?.storeCategories ?? []
+        let groups = intentMatcher.groupedIntents(for: activeShoppingItems)
+        let discoveryRequests = groupedStoreDiscoveryRequests()
+        ShoppingDiscoveryDebugLogger.logStoreSearchRequests(
+            context: "Map suggested discovery",
+            groups: groups,
+            requests: discoveryRequests
+        )
         storeSearchTask?.cancel()
         storeSearchTask = Task { [weak self] in
             guard let self else {
                 return
             }
 
-            let discoveredStores = await storeSearchService.stores(
+            let discoveredStores = await discoveredStoresByGroup(
                 around: userCoordinate,
-                shoppingItems: suggestionItems,
-                storeCategories: storeCategories
+                discoveryRequests: discoveryRequests
             )
 
             guard !Task.isCancelled else {
@@ -296,22 +353,18 @@ final class MapViewModel: ObservableObject {
     }
 
     private func applyDiscoveredStores(_ discoveredStores: [MapStore]) {
-        let relevantSavedStoreExists = activeSuggestionRequest.map { request in
-            savedStores.contains { storeMatchesSuggestion($0, request: request) }
-        } ?? false
-        let filteredDiscoveredStores = relevantSavedStoreExists
-            ? discoveredStores.filter { $0.sourceType != .local }
-            : discoveredStores
-        let eligibleStores = (savedStores + filteredDiscoveredStores).filter { store in
+        let appleMapStores = discoveredStores.filter { $0.sourceType == .appleMaps }
+        let filteredDiscoveredStores = discoveredStores.filter { store in
+            store.sourceType != .local || !hasAppleMapsMatch(for: store, in: appleMapStores)
+        }
+        let eligibleStores = (savedStores + filteredDiscoveredStores)
+            .map(retagStoreForActiveIntentGroups)
+            .filter { store in
             guard let activeSuggestionRequest else {
                 return true
             }
 
-            return storeRankingService.isRelevant(
-                store: store,
-                request: activeSuggestionRequest,
-                userCoordinate: userCoordinate
-            )
+            return storeMatchesSuggestion(store, request: activeSuggestionRequest)
         }
         let mergedStores = displayStores(from: eligibleStores)
         stores = mergedStores
@@ -321,9 +374,33 @@ final class MapViewModel: ObservableObject {
 
     private func displayStores(from stores: [MapStore]) -> [MapStore] {
         let deduplicatedStores = savedStorePrioritized(stores)
+            .map(retagStoreForActiveIntentGroups)
 
         guard let activeSuggestionRequest else {
             return deduplicatedStores
+        }
+
+        if !activeShoppingItems.isEmpty {
+            let requests = groupedRequests()
+            return deduplicatedStores
+                .filter { store in
+                    !store.itemNames.isEmpty && requests.contains { request in
+                        storeRankingService.isRelevant(
+                            store: store,
+                            request: request,
+                            userCoordinate: userCoordinate
+                        )
+                    }
+                }
+                .sorted { lhs, rhs in
+                    let lhsScore = bestGroupedScore(for: lhs, requests: requests)
+                    let rhsScore = bestGroupedScore(for: rhs, requests: requests)
+                    if lhsScore == rhsScore {
+                        return distanceForSort(to: lhs.coordinate) < distanceForSort(to: rhs.coordinate)
+                    }
+
+                    return lhsScore > rhsScore
+                }
         }
 
         return storeRankingService.rankedStores(
@@ -332,6 +409,102 @@ final class MapViewModel: ObservableObject {
             userCoordinate: userCoordinate
         )
         .map(\.store)
+    }
+
+    private func groupedRequests() -> [ShoppingStoreSuggestionRequest] {
+        intentMatcher.groupedIntents(for: activeShoppingItems).map(\.request)
+    }
+
+    private func groupedStoreDiscoveryRequests() -> [(request: ShoppingStoreSuggestionRequest, itemNames: [String])] {
+        let groups = intentMatcher.groupedIntents(for: activeShoppingItems)
+        if !groups.isEmpty {
+            return groups.map { group in
+                (request: group.request, itemNames: group.itemNames)
+            }
+        }
+
+        guard let activeSuggestionRequest else {
+            return []
+        }
+
+        let suggestionItems = activeShoppingItemNames.isEmpty
+            ? [activeSuggestionRequest.itemName]
+            : activeShoppingItemNames
+        return [(request: activeSuggestionRequest, itemNames: suggestionItems)]
+    }
+
+    private func discoveredStoresByGroup(
+        around coordinate: CLLocationCoordinate2D,
+        discoveryRequests: [(request: ShoppingStoreSuggestionRequest, itemNames: [String])]
+    ) async -> [MapStore] {
+        var discoveredStores: [MapStore] = []
+
+        for discoveryRequest in discoveryRequests {
+            let groupStores = await storeSearchService.stores(
+                around: coordinate,
+                shoppingItems: discoveryRequest.itemNames,
+                storeCategories: discoveryRequest.request.storeCategories
+            )
+            discoveredStores.append(contentsOf: groupStores)
+        }
+
+        return savedStorePrioritized(discoveredStores)
+    }
+
+    private func hasAppleMapsMatch(for store: MapStore, in appleMapStores: [MapStore]) -> Bool {
+        appleMapStores.contains { appleStore in
+            appleStore.storeCategories.contains { appleCategory in
+                store.storeCategories.contains { storeCategory in
+                    appleCategory.matches(storeCategory) || storeCategory.matches(appleCategory)
+                }
+            }
+        }
+    }
+
+    private func bestGroupedScore(for store: MapStore, requests: [ShoppingStoreSuggestionRequest]) -> Double {
+        requests.map { request in
+            storeRankingService.score(
+                store: store,
+                request: request,
+                userCoordinate: userCoordinate,
+                coverage: StoreRealityCoverage(
+                    matchedItemCount: store.itemNames.count,
+                    totalItemCount: max(store.itemNames.count, 1)
+                )
+            ).score
+        }
+        .max() ?? 0
+    }
+
+    private func retagStoreForActiveIntentGroups(_ store: MapStore) -> MapStore {
+        guard !activeShoppingItems.isEmpty else {
+            return store
+        }
+
+        let relevantItems = intentMatcher.relevantItems(from: activeShoppingItems, for: store)
+        return MapStore(
+            id: store.id,
+            locationID: store.locationID,
+            title: store.title,
+            coordinate: store.coordinate,
+            radius: store.radius,
+            itemNames: relevantItems.map(\.name).deduplicatedCaseInsensitive(),
+            completedItemNames: store.completedItemNames,
+            isOpen: store.isOpen,
+            rating: store.rating,
+            storeCategories: store.storeCategories,
+            queryEvidenceCategories: store.queryEvidenceCategories,
+            websiteURL: store.websiteURL,
+            sourceType: store.sourceType
+        )
+    }
+
+    private func distanceForSort(to coordinate: CLLocationCoordinate2D) -> CLLocationDistance {
+        guard let userCoordinate else {
+            return .greatestFiniteMagnitude
+        }
+
+        return distance(from: userCoordinate, to: coordinate)
     }
 
     private func savedStorePrioritized(_ stores: [MapStore]) -> [MapStore] {
@@ -367,6 +540,7 @@ final class MapViewModel: ObservableObject {
             isOpen: true,
             rating: rating(for: location),
             storeCategories: location.storeCategory.map { [$0] } ?? [],
+            queryEvidenceCategories: [],
             websiteURL: nil,
             sourceType: location.sourceType
         )
@@ -425,11 +599,7 @@ final class MapViewModel: ObservableObject {
 
     private func matchesFilters(_ store: MapStore) -> Bool {
         if let activeSuggestionRequest {
-            guard storeRankingService.isRelevant(
-                store: store,
-                request: activeSuggestionRequest,
-                userCoordinate: userCoordinate
-            ) else {
+            guard storeMatchesSuggestion(store, request: activeSuggestionRequest) else {
                 return false
             }
         }

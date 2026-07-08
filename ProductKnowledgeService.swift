@@ -124,23 +124,75 @@ struct ProductKnowledgeService: ProductKnowledgeServicing {
         productName: String,
         now: Date
     ) {
-        knowledge.productName = productName
-        knowledge.preferredDisplayName = normalizedOptionalText(record.preferredDisplayName) ?? productName
-        knowledge.barcode = record.barcode
-        knowledge.brand = normalizedOptionalText(record.brand)
-        knowledge.category = normalizedOptionalText(record.category)
-        knowledge.productType = normalizedOptionalText(record.productType)
-        knowledge.flavor = normalizedOptionalText(record.flavor)
-        knowledge.packageSize = normalizedOptionalText(record.packageSize)
-        knowledge.thumbnailData = record.thumbnailData ?? knowledge.thumbnailData
+        let existingSource = knowledge.recognitionSource
+        let incomingSource = record.recognitionSource
 
-        if let imageURL = record.imageURL {
+        knowledge.productName = refreshedRequiredText(
+            existing: knowledge.productName,
+            incoming: productName,
+            protectsDescriptiveText: true,
+            existingSource: existingSource,
+            incomingSource: incomingSource
+        )
+        knowledge.preferredDisplayName = refreshedOptionalText(
+            existing: knowledge.preferredDisplayName,
+            incoming: record.preferredDisplayName,
+            protectsDescriptiveText: true,
+            existingSource: existingSource,
+            incomingSource: incomingSource
+        ) ?? knowledge.productName
+        knowledge.barcode = record.barcode ?? knowledge.barcode
+        knowledge.brand = refreshedOptionalText(
+            existing: knowledge.brand,
+            incoming: record.brand,
+            protectsDescriptiveText: false,
+            existingSource: existingSource,
+            incomingSource: incomingSource
+        )
+        knowledge.category = refreshedOptionalText(
+            existing: knowledge.category,
+            incoming: record.category,
+            protectsDescriptiveText: false,
+            existingSource: existingSource,
+            incomingSource: incomingSource
+        )
+        knowledge.productType = refreshedOptionalText(
+            existing: knowledge.productType,
+            incoming: record.productType,
+            protectsDescriptiveText: false,
+            existingSource: existingSource,
+            incomingSource: incomingSource
+        )
+        knowledge.flavor = refreshedOptionalText(
+            existing: knowledge.flavor,
+            incoming: record.flavor,
+            protectsDescriptiveText: false,
+            existingSource: existingSource,
+            incomingSource: incomingSource
+        )
+        knowledge.packageSize = refreshedOptionalText(
+            existing: knowledge.packageSize,
+            incoming: record.packageSize,
+            protectsDescriptiveText: false,
+            existingSource: existingSource,
+            incomingSource: incomingSource
+        )
+
+        if let thumbnailData = record.thumbnailData,
+           knowledge.thumbnailData == nil || shouldRefreshValue(existingSource: existingSource, incomingSource: incomingSource) {
+            knowledge.thumbnailData = thumbnailData
+        }
+
+        if let imageURL = record.imageURL,
+           knowledge.imageURLString == nil || shouldRefreshValue(existingSource: existingSource, incomingSource: incomingSource) {
             knowledge.imageURLString = imageURL.absoluteString
         }
 
         knowledge.searchKeywords = mergedKeywords(knowledge.searchKeywords, record.searchKeywords)
-        knowledge.aiConfidence = record.aiConfidence ?? knowledge.aiConfidence
-        knowledge.recognitionSource = record.recognitionSource ?? knowledge.recognitionSource
+        if shouldRefreshValue(existingSource: existingSource, incomingSource: incomingSource) {
+            knowledge.aiConfidence = record.aiConfidence ?? knowledge.aiConfidence
+            knowledge.recognitionSource = record.recognitionSource ?? knowledge.recognitionSource
+        }
         knowledge.lastUsed = now
         knowledge.timesUsed += 1
         knowledge.updatedAt = now
@@ -210,6 +262,79 @@ struct ProductKnowledgeService: ProductKnowledgeServicing {
         }
 
         return normalized
+    }
+
+    private func refreshedRequiredText(
+        existing: String,
+        incoming: String,
+        protectsDescriptiveText: Bool,
+        existingSource: ProductCandidateSource?,
+        incomingSource: ProductCandidateSource?
+    ) -> String {
+        refreshedOptionalText(
+            existing: existing,
+            incoming: incoming,
+            protectsDescriptiveText: protectsDescriptiveText,
+            existingSource: existingSource,
+            incomingSource: incomingSource
+        ) ?? existing
+    }
+
+    private func refreshedOptionalText(
+        existing: String?,
+        incoming: String?,
+        protectsDescriptiveText: Bool,
+        existingSource: ProductCandidateSource?,
+        incomingSource: ProductCandidateSource?
+    ) -> String? {
+        guard let incoming = normalizedOptionalText(incoming) else {
+            return normalizedOptionalText(existing)
+        }
+
+        guard let existing = normalizedOptionalText(existing) else {
+            return incoming
+        }
+
+        guard shouldRefreshValue(existingSource: existingSource, incomingSource: incomingSource) else {
+            return existing
+        }
+
+        return protectsDescriptiveText && isClearlyWeaker(incoming, than: existing) ? existing : incoming
+    }
+
+    private func shouldRefreshValue(
+        existingSource: ProductCandidateSource?,
+        incomingSource: ProductCandidateSource?
+    ) -> Bool {
+        sourcePriority(incomingSource) >= sourcePriority(existingSource)
+    }
+
+    private func sourcePriority(_ source: ProductCandidateSource?) -> Int {
+        switch source {
+        case .manual:
+            return 4
+        case .ai:
+            return 3
+        case .barcode:
+            return 2
+        case .cameraPhoto, .photoLibrary:
+            return 1
+        case .unknown, nil:
+            return 0
+        }
+    }
+
+    private func isClearlyWeaker(_ incoming: String, than existing: String) -> Bool {
+        let incomingWords = wordCount(incoming)
+        let existingWords = wordCount(existing)
+
+        return incoming.count < existing.count / 2 && incomingWords < existingWords
+    }
+
+    private func wordCount(_ value: String) -> Int {
+        value.components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .count
     }
 
     private func mergedKeywords(_ existing: [String], _ incoming: [String]) -> [String] {

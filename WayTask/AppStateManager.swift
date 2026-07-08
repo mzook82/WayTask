@@ -11,11 +11,44 @@ import Foundation
 import SwiftUI
 import UserNotifications
 
-enum AppTab: Hashable {
+enum AppTab: String, CaseIterable, Identifiable, Hashable {
+    case home
     case products
-    case camera
-    case discover
+    case shopping
     case map
+    case settings
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .home:
+            return "Home"
+        case .products:
+            return "Products"
+        case .shopping:
+            return "Shopping"
+        case .map:
+            return "Map"
+        case .settings:
+            return "Settings"
+        }
+    }
+
+    var systemImageName: String {
+        switch self {
+        case .home:
+            return "house.fill"
+        case .products:
+            return "shippingbox.fill"
+        case .shopping:
+            return "list.bullet.rectangle.fill"
+        case .map:
+            return "map.fill"
+        case .settings:
+            return "gearshape.fill"
+        }
+    }
 }
 
 struct NearbyShoppingOpportunity: Identifiable, Equatable {
@@ -59,7 +92,7 @@ struct NearbyShoppingOpportunity: Identifiable, Equatable {
 }
 
 final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
-    @Published var selectedTab: AppTab = .products
+    @Published var selectedTab: AppTab = .home
     @Published var navigationPath = NavigationPath()
     @Published var focusedLocationID: UUID?
     @Published var shoppingListRevision = UUID()
@@ -174,18 +207,20 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
             return
         }
 
-        let activeItemNames = notificationItemNames(from: activeItems)
-        let categories = matchedStoreCategories(for: activeItems)
+        let activeGroups = nearbyIntentMatcher.groupedIntents(for: activeItems)
+        ShoppingDiscoveryDebugLogger.logGroups(
+            context: "Nearby",
+            groups: activeGroups
+        )
         let visibleSavedLocations = savedLocations.filter(shouldIncludeLocationInNearbyResults)
         let savedOpportunities = nearbySavedOpportunities(
             for: activeItems,
             savedLocations: visibleSavedLocations,
             currentCoordinate: currentCoordinate
         )
-        let mapStores = await nearbyStoreSearchService.stores(
+        let mapStores = await nearbyStoresByGroup(
+            activeGroups,
             around: currentCoordinate,
-            shoppingItems: activeItemNames,
-            storeCategories: categories
         )
 
         guard refreshGeneration == nearbyRefreshGeneration else {
@@ -194,8 +229,7 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
 
         let mapOpportunities = nearbyMapOpportunities(
             from: mapStores,
-            itemNames: activeItemNames,
-            requestedCategories: categories,
+            activeItems: activeItems,
             currentCoordinate: currentCoordinate
         )
 
@@ -250,7 +284,7 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
                 }
 
                 let itemCategories = nearbyIntentMatcher.matchStoreCategories(for: item)
-                return itemCategories.contains { $0.matches(storeCategory) } || itemCategories.contains(.generalStore)
+                return itemCategories.contains { $0.matches(storeCategory) }
             }
             let matchingItems = directlyMatchedItems.isEmpty ? categoryMatchedItems : directlyMatchedItems
 
@@ -262,12 +296,6 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
             let storeLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
             let distance = userLocation.distance(from: storeLocation)
 
-            let itemCategories = matchedStoreCategories(for: matchingItems)
-            let request = nearbyRealityRequest(
-                itemNames: notificationItemNames(from: matchingItems),
-                categories: itemCategories,
-                fallbackID: location.id
-            )
             let store = MapStore(
                 id: location.id,
                 locationID: location.id,
@@ -279,12 +307,39 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
                 isOpen: true,
                 rating: nil,
                 storeCategories: location.storeCategory.map { [$0] } ?? [],
+                queryEvidenceCategories: [],
                 websiteURL: nil,
                 sourceType: location.sourceType
             )
+            let groupMatchedItems = nearbyIntentMatcher.relevantItems(from: activeItems, for: store)
+            guard !groupMatchedItems.isEmpty else {
+                return nil
+            }
+            let groupItemNames = notificationItemNames(from: groupMatchedItems)
+            let groupCategories = matchedStoreCategories(for: groupMatchedItems)
+            let groupRequest = nearbyRealityRequest(
+                itemNames: groupItemNames,
+                categories: groupCategories,
+                fallbackID: location.id
+            )
+            let groupedStore = MapStore(
+                id: store.id,
+                locationID: store.locationID,
+                title: store.title,
+                coordinate: store.coordinate,
+                radius: store.radius,
+                itemNames: groupItemNames,
+                completedItemNames: store.completedItemNames,
+                isOpen: store.isOpen,
+                rating: store.rating,
+                storeCategories: store.storeCategories,
+                queryEvidenceCategories: store.queryEvidenceCategories,
+                websiteURL: store.websiteURL,
+                sourceType: store.sourceType
+            )
             guard storeRankingService.isRelevant(
-                store: store,
-                request: request,
+                store: groupedStore,
+                request: groupRequest,
                 userCoordinate: currentCoordinate
             ) else {
                 return nil
@@ -295,12 +350,12 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
             }
 
             let ranking = storeRankingService.score(
-                store: store,
-                request: request,
+                store: groupedStore,
+                request: groupRequest,
                 userCoordinate: currentCoordinate,
                 coverage: StoreRealityCoverage(
-                    matchedItemCount: matchingItems.count,
-                    totalItemCount: activeItems.count
+                    matchedItemCount: groupMatchedItems.count,
+                    totalItemCount: groupMatchedItems.count
                 )
             )
 
@@ -309,7 +364,7 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
                 storeID: location.id,
                 locationID: location.id,
                 title: location.title,
-                itemNames: store.itemNames,
+                itemNames: groupedStore.itemNames,
                 sourceType: location.sourceType.rawValue,
                 distanceMeters: distance,
                 realityScore: ranking.score,
@@ -318,6 +373,33 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
                 detectedAt: Date()
             )
         }
+    }
+
+    private func nearbyStoresByGroup(
+        _ groups: [ShoppingIntentGroupResult],
+        around coordinate: CLLocationCoordinate2D
+    ) async -> [MapStore] {
+        var stores: [MapStore] = []
+
+        let requests = groups.map { group in
+            (request: group.request, itemNames: group.itemNames)
+        }
+        ShoppingDiscoveryDebugLogger.logStoreSearchRequests(
+            context: "Nearby",
+            groups: groups,
+            requests: requests
+        )
+
+        for group in groups {
+            let groupStores = await nearbyStoreSearchService.stores(
+                around: coordinate,
+                shoppingItems: group.itemNames,
+                storeCategories: group.request.storeCategories
+            )
+            stores.append(contentsOf: groupStores)
+        }
+
+        return deduplicatedStores(stores)
     }
 
     private func shouldIncludeLocationInNearbyResults(_ location: GeoLocation) -> Bool {
@@ -334,23 +416,44 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
 
     private func nearbyMapOpportunities(
         from stores: [MapStore],
-        itemNames: [String],
-        requestedCategories: [ShoppingStoreCategory],
+        activeItems: [ShoppingItem],
         currentCoordinate: CLLocationCoordinate2D
     ) -> [NearbyShoppingOpportunity] {
         let userLocation = CLLocation(latitude: currentCoordinate.latitude, longitude: currentCoordinate.longitude)
-        let request = nearbyRealityRequest(
-            itemNames: itemNames,
-            categories: requestedCategories,
-            fallbackID: UUID()
-        )
 
         return stores.compactMap { store in
+            let matchingItems = nearbyIntentMatcher.relevantItems(from: activeItems, for: store)
+            guard !matchingItems.isEmpty else {
+                return nil
+            }
+
+            let itemNames = notificationItemNames(from: matchingItems)
+            let requestedCategories = matchedStoreCategories(for: matchingItems)
+            let request = nearbyRealityRequest(
+                itemNames: itemNames,
+                categories: requestedCategories,
+                fallbackID: store.id
+            )
+            let groupedStore = MapStore(
+                id: store.id,
+                locationID: store.locationID,
+                title: store.title,
+                coordinate: store.coordinate,
+                radius: store.radius,
+                itemNames: itemNames,
+                completedItemNames: store.completedItemNames,
+                isOpen: store.isOpen,
+                rating: store.rating,
+                storeCategories: store.storeCategories,
+                queryEvidenceCategories: store.queryEvidenceCategories,
+                websiteURL: store.websiteURL,
+                sourceType: store.sourceType
+            )
             let storeLocation = CLLocation(latitude: store.coordinate.latitude, longitude: store.coordinate.longitude)
             let distance = userLocation.distance(from: storeLocation)
 
             guard storeRankingService.isRelevant(
-                store: store,
+                store: groupedStore,
                 request: request,
                 userCoordinate: currentCoordinate
             ) else {
@@ -362,9 +465,13 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
             }
 
             let ranking = storeRankingService.score(
-                store: store,
+                store: groupedStore,
                 request: request,
-                userCoordinate: currentCoordinate
+                userCoordinate: currentCoordinate,
+                coverage: StoreRealityCoverage(
+                    matchedItemCount: matchingItems.count,
+                    totalItemCount: matchingItems.count
+                )
             )
 
             return NearbyShoppingOpportunity(
@@ -372,7 +479,7 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
                 storeID: store.locationID ?? store.id,
                 locationID: store.locationID,
                 title: store.title,
-                itemNames: store.itemNames.isEmpty ? itemNames : store.itemNames,
+                itemNames: groupedStore.itemNames,
                 sourceType: store.sourceType.rawValue,
                 distanceMeters: distance,
                 realityScore: ranking.score,
@@ -393,8 +500,9 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
             itemID: fallbackID,
             itemName: itemName,
             itemCategory: nil,
-            storeCategories: categories.isEmpty ? [.generalStore] : categories,
-            searchTerms: itemNames
+            storeCategories: categories,
+            searchTerms: itemNames,
+            intentProfile: nil
         )
     }
 
@@ -411,7 +519,7 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     private func matchedStoreCategories(for items: [ShoppingItem]) -> [ShoppingStoreCategory] {
         let categories = items.flatMap { nearbyIntentMatcher.matchStoreCategories(for: $0) }
         let uniqueCategories = Array(Set(categories))
-        return uniqueCategories.isEmpty ? [.generalStore] : uniqueCategories.sorted { $0.displayName < $1.displayName }
+        return uniqueCategories.sorted { $0.displayName < $1.displayName }
     }
 
     private func notificationItemNames(from items: [ShoppingItem]) -> [String] {
@@ -455,6 +563,23 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         return result
     }
 
+    private func deduplicatedStores(_ stores: [MapStore]) -> [MapStore] {
+        var result: [MapStore] = []
+
+        for store in stores {
+            let isDuplicate = result.contains { existing in
+                existing.title.localizedCaseInsensitiveCompare(store.title) == .orderedSame ||
+                distance(from: existing.coordinate, to: store.coordinate) < 35
+            }
+
+            if !isDuplicate {
+                result.append(store)
+            }
+        }
+
+        return result
+    }
+
     private func distance(from lhs: CLLocationCoordinate2D, to rhs: CLLocationCoordinate2D) -> CLLocationDistance {
         CLLocation(latitude: lhs.latitude, longitude: lhs.longitude)
             .distance(from: CLLocation(latitude: rhs.latitude, longitude: rhs.longitude))
@@ -478,5 +603,15 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
 private extension Array {
     func prefixArray(_ maxLength: Int) -> [Element] {
         Array(prefix(maxLength))
+    }
+}
+
+private extension Array where Element == ShoppingStoreCategory {
+    func deduplicated() -> [ShoppingStoreCategory] {
+        reduce(into: [ShoppingStoreCategory]()) { result, category in
+            if !result.contains(category) {
+                result.append(category)
+            }
+        }
     }
 }

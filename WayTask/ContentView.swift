@@ -21,24 +21,50 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $appStateManager.selectedTab) {
+            WayTaskFoundationPlaceholderView(
+                title: "Home",
+                subtitle: "Version 1.0 home surface is ready for implementation.",
+                systemImage: "house.fill"
+            )
+            .tabItem {
+                Label(AppTab.home.title, systemImage: AppTab.home.systemImageName)
+            }
+            .tag(AppTab.home)
+
             ProductListView()
                 .tabItem {
-                    Label("Products", systemImage: "checklist")
+                    Label(AppTab.products.title, systemImage: AppTab.products.systemImageName)
                 }
                 .tag(AppTab.products)
 
-            DiscoverView()
+            WayTaskFoundationPlaceholderView(
+                title: "Shopping",
+                subtitle: "Shopping lists and planner migration will be implemented in a later sprint.",
+                systemImage: "list.bullet.rectangle.fill"
+            )
                 .tabItem {
-                    Label("Discover", systemImage: "sparkle.magnifyingglass")
+                    Label(AppTab.shopping.title, systemImage: AppTab.shopping.systemImageName)
                 }
-                .tag(AppTab.discover)
+                .tag(AppTab.shopping)
 
             MainMapView()
                 .tabItem {
-                    Label("Map", systemImage: "map")
+                    Label(AppTab.map.title, systemImage: AppTab.map.systemImageName)
                 }
                 .tag(AppTab.map)
+
+            WayTaskFoundationPlaceholderView(
+                title: "Settings",
+                subtitle: "Settings tab foundation is ready. Existing settings logic remains unchanged.",
+                systemImage: "gearshape.fill"
+            )
+            .tabItem {
+                Label(AppTab.settings.title, systemImage: AppTab.settings.systemImageName)
+            }
+            .tag(AppTab.settings)
         }
+        .tint(WayTaskDesign.accent)
+        .preferredColorScheme(.dark)
         .onAppear {
             seedDebugStoreIfNeeded()
             refreshShoppingGeofences()
@@ -133,4 +159,35 @@ struct ContentView: View {
     ContentView()
         .environmentObject(AppStateManager())
         .environmentObject(LocationManager())
+}
+
+private struct WayTaskFoundationPlaceholderView: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                WayTaskDesign.background
+                    .ignoresSafeArea()
+
+                VStack(spacing: WayTaskDesign.Spacing.xl) {
+                    WayTaskNavigationBar(title: title, subtitle: "Foundation")
+
+                    Spacer(minLength: WayTaskDesign.Spacing.lg)
+
+                    WayTaskEmptyState(
+                        title: title,
+                        message: subtitle,
+                        systemImage: systemImage
+                    )
+                    .padding(.horizontal, WayTaskDesign.Spacing.lg)
+
+                    Spacer(minLength: WayTaskDesign.Spacing.lg)
+                }
+            }
+            .toolbar(.hidden, for: .navigationBar)
+        }
+    }
 }

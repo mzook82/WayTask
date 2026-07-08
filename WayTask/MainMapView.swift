@@ -12,6 +12,7 @@ struct MainMapView: View {
     @StateObject private var mapViewModel = MapViewModel()
     private let buyingOptionsService = BuyingOptionsService()
     private let shoppingTripService = ShoppingTripService()
+    private let shoppingIntentMatcher = ShoppingIntentMatcher()
 
     @State private var mapCenter = CLLocationCoordinate2D(latitude: 32.0853, longitude: 34.7818)
     @State private var showingAddLocationSheet = false
@@ -262,7 +263,7 @@ struct MainMapView: View {
         }
 
         let totalItemCount = max(coverage.matchedItemCount + coverage.missingItemCount, 1)
-        return "Best match for your trip • Covers \(coverage.matchedItemCount)/\(totalItemCount) items"
+        return "Best match for your trip • Covers \(coverage.matchedItemCount)/\(totalItemCount) \(coverage.group.displayName.lowercased()) items"
     }
 
     private var mapSignatures: [String] {
@@ -358,12 +359,18 @@ struct MainMapView: View {
             return
         }
 
+        let tripItems = currentTripItems()
+        ShoppingDiscoveryDebugLogger.logGroups(
+            context: appStateManager.isTripMapMode ? "Shopping Trip map handoff" : "Buying Options map handoff",
+            groups: shoppingIntentMatcher.groupedIntents(for: tripItems)
+        )
         mapViewModel.applyStoreSuggestion(
             request,
-            shoppingItems: currentTripItems().map(\.name)
+            shoppingItems: tripItems
         )
         appStateManager.buyingOptions = buyingOptionsService.localOptions(
             for: request,
+            shoppingItems: tripItems,
             stores: mapViewModel.filteredStores,
             userCoordinate: mapViewModel.userCoordinate
         )
@@ -383,6 +390,7 @@ struct MainMapView: View {
 
         appStateManager.buyingOptions = buyingOptionsService.localOptions(
             for: request,
+            shoppingItems: currentTripItems(),
             stores: mapViewModel.filteredStores,
             userCoordinate: mapViewModel.userCoordinate
         )

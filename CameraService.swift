@@ -101,7 +101,7 @@ final class CameraService: NSObject, ObservableObject {
 
     func startBarcodeScanning(onDetected: @escaping (BarcodeResult) -> Void) {
         sessionQueue.async { [weak self] in
-            guard let self, self.isConfigured else {
+            guard let self else {
                 return
             }
 

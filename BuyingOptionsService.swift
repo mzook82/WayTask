@@ -5,11 +5,13 @@ protocol BuyingOptionsServicing {
     func localOptions(for request: ShoppingStoreSuggestionRequest) -> [BuyingOption]
     func localOptions(for request: ShoppingStoreSuggestionRequest, stores: [MapStore]) -> [BuyingOption]
     func localOptions(for request: ShoppingStoreSuggestionRequest, stores: [MapStore], userCoordinate: CLLocationCoordinate2D?) -> [BuyingOption]
+    func localOptions(for request: ShoppingStoreSuggestionRequest, shoppingItems: [ShoppingItem], stores: [MapStore], userCoordinate: CLLocationCoordinate2D?) -> [BuyingOption]
     func suggestedStores(for request: ShoppingStoreSuggestionRequest) -> [MapStore]
 }
 
 struct BuyingOptionsService: BuyingOptionsServicing {
     private let storeRankingService = StoreRankingService()
+    private let intentMatcher = ShoppingIntentMatcher()
 
     func localOptions(for request: ShoppingStoreSuggestionRequest) -> [BuyingOption] {
         let rankedStores = storeRankingService.rankedStores(
@@ -34,7 +36,7 @@ struct BuyingOptionsService: BuyingOptionsServicing {
             )
         }
 
-        return storeOptions + futureOptions(for: request)
+        return storeOptions + futureOptionsIfAppropriate(for: request)
     }
 
     func localOptions(for request: ShoppingStoreSuggestionRequest, stores: [MapStore]) -> [BuyingOption] {
@@ -42,6 +44,52 @@ struct BuyingOptionsService: BuyingOptionsServicing {
     }
 
     func localOptions(for request: ShoppingStoreSuggestionRequest, stores: [MapStore], userCoordinate: CLLocationCoordinate2D?) -> [BuyingOption] {
+        localOptions(
+            for: request,
+            shoppingItems: [],
+            stores: stores,
+            userCoordinate: userCoordinate
+        )
+    }
+
+    func localOptions(
+        for request: ShoppingStoreSuggestionRequest,
+        shoppingItems: [ShoppingItem],
+        stores: [MapStore],
+        userCoordinate: CLLocationCoordinate2D?
+    ) -> [BuyingOption] {
+        let activeGroups = intentMatcher.groupedIntents(for: shoppingItems)
+        guard !activeGroups.isEmpty else {
+            return ungroupedLocalOptions(
+                for: request,
+                stores: stores,
+                userCoordinate: userCoordinate
+            )
+        }
+
+        let storeOptions = activeGroups.flatMap { group in
+            groupedStoreOptions(
+                for: group,
+                stores: stores,
+                userCoordinate: userCoordinate
+            )
+        }
+        .sorted { lhs, rhs in
+            if (lhs.ranking?.score ?? 0) == (rhs.ranking?.score ?? 0) {
+                return lhs.storeName < rhs.storeName
+            }
+
+            return (lhs.ranking?.score ?? 0) > (rhs.ranking?.score ?? 0)
+        }
+
+        return storeOptions + futureOptionsIfAppropriate(for: request)
+    }
+
+    private func ungroupedLocalOptions(
+        for request: ShoppingStoreSuggestionRequest,
+        stores: [MapStore],
+        userCoordinate: CLLocationCoordinate2D?
+    ) -> [BuyingOption] {
         let rankedStores = storeRankingService.rankedStores(
             stores,
             request: request,
@@ -68,7 +116,55 @@ struct BuyingOptionsService: BuyingOptionsServicing {
             )
         }
 
-        return storeOptions + futureOptions(for: request)
+        return storeOptions + futureOptionsIfAppropriate(for: request)
+    }
+
+    private func groupedStoreOptions(
+        for group: ShoppingIntentGroupResult,
+        stores: [MapStore],
+        userCoordinate: CLLocationCoordinate2D?
+    ) -> [BuyingOption] {
+        let groupRequest = intentMatcher.request(for: group)
+
+        return stores.compactMap { store in
+            let relevantStore = storeWithRelevantItems(store, itemNames: group.itemNames)
+            guard storeRankingService.isRelevant(
+                store: relevantStore,
+                request: groupRequest,
+                userCoordinate: userCoordinate
+            ) else {
+                return nil
+            }
+
+            let ranking = storeRankingService.score(
+                store: relevantStore,
+                request: groupRequest,
+                userCoordinate: userCoordinate,
+                coverage: StoreRealityCoverage(
+                    matchedItemCount: group.items.count,
+                    totalItemCount: group.items.count
+                )
+            )
+            let recommendationReasons = recommendationReasons(
+                for: relevantStore,
+                ranking: ranking,
+                group: group
+            )
+
+            return BuyingOption(
+                title: "\(group.group.displayName) option",
+                subtitle: subtitle(for: relevantStore, group: group.group),
+                optionType: relevantStore.isSavedLocation ? .nearbyStore : .suggestedStore,
+                storeName: relevantStore.title,
+                distanceText: distanceText(from: userCoordinate, to: relevantStore.coordinate),
+                priceText: nil,
+                websiteURL: relevantStore.websiteURL,
+                confidenceLabel: ranking.confidenceLabel,
+                source: relevantStore.sourceType,
+                ranking: ranking,
+                recommendationReasons: recommendationReasons
+            )
+        }
     }
 
     func suggestedStores(for request: ShoppingStoreSuggestionRequest) -> [MapStore] {
@@ -84,6 +180,7 @@ struct BuyingOptionsService: BuyingOptionsServicing {
                 isOpen: true,
                 rating: 4.5 + min(Double(index) * 0.1, 0.3),
                 storeCategories: [category],
+                queryEvidenceCategories: [],
                 websiteURL: URL(string: "https://maps.apple.com"),
                 sourceType: .local
             )
@@ -117,6 +214,14 @@ struct BuyingOptionsService: BuyingOptionsServicing {
         ]
     }
 
+    private func futureOptionsIfAppropriate(for request: ShoppingStoreSuggestionRequest) -> [BuyingOption] {
+        if request.intentProfile?.isUnresolved == true {
+            return []
+        }
+
+        return futureOptions(for: request)
+    }
+
     private func distanceText(from userCoordinate: CLLocationCoordinate2D?, to storeCoordinate: CLLocationCoordinate2D) -> String {
         guard let userCoordinate else {
             return "Nearby"
@@ -146,6 +251,14 @@ struct BuyingOptionsService: BuyingOptionsServicing {
         return store.matchingItemsLabel
     }
 
+    private func subtitle(for store: MapStore, group: ShoppingIntentGroup) -> String {
+        guard !store.itemNames.isEmpty else {
+            return "May have \(group.displayName.lowercased()) items."
+        }
+
+        return store.matchingItemsLabel
+    }
+
     private func recommendationReasons(for store: MapStore, ranking: StoreScore) -> [String] {
         var reasons = ranking.reasons
 
@@ -154,6 +267,38 @@ struct BuyingOptionsService: BuyingOptionsServicing {
         }
 
         return reasons.deduplicatedCaseInsensitive()
+    }
+
+    private func recommendationReasons(
+        for store: MapStore,
+        ranking: StoreScore,
+        group: ShoppingIntentGroupResult
+    ) -> [String] {
+        var reasons = ranking.reasons.filter { !$0.hasPrefix("Covers ") }
+
+        if !group.items.isEmpty {
+            reasons.insert("Covers \(group.items.count) \(group.group.displayName.lowercased()) items", at: 0)
+        }
+
+        return reasons.deduplicatedCaseInsensitive()
+    }
+
+    private func storeWithRelevantItems(_ store: MapStore, itemNames: [String]) -> MapStore {
+        MapStore(
+            id: store.id,
+            locationID: store.locationID,
+            title: store.title,
+            coordinate: store.coordinate,
+            radius: store.radius,
+            itemNames: itemNames,
+            completedItemNames: store.completedItemNames,
+            isOpen: store.isOpen,
+            rating: store.rating,
+            storeCategories: store.storeCategories,
+            queryEvidenceCategories: store.queryEvidenceCategories,
+            websiteURL: store.websiteURL,
+            sourceType: store.sourceType
+        )
     }
 }
 

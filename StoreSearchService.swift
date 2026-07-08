@@ -24,7 +24,19 @@ struct LocalStoreSearchService: StoreSearchService {
         shoppingItems: [String],
         storeCategories: [ShoppingStoreCategory] = []
     ) async -> [MapStore] {
-        fallbackStores(
+        guard !shoppingItems.isEmpty || !storeCategories.isEmpty else {
+            return fallbackStores(
+                around: coordinate,
+                shoppingItems: shoppingItems,
+                storeCategories: storeCategories
+            )
+        }
+
+        guard shoppingItems.isEmpty || !storeCategories.isEmpty else {
+            return []
+        }
+
+        return fallbackStores(
             around: coordinate,
             shoppingItems: shoppingItems,
             storeCategories: storeCategories
@@ -36,7 +48,11 @@ struct LocalStoreSearchService: StoreSearchService {
         shoppingItems: [String],
         storeCategories: [ShoppingStoreCategory] = []
     ) -> [MapStore] {
-        provider.localStores(
+        guard shoppingItems.isEmpty || !storeCategories.isEmpty else {
+            return []
+        }
+
+        return provider.localStores(
             around: coordinate,
             shoppingItems: shoppingItems,
             storeCategories: storeCategories
@@ -48,6 +64,40 @@ final class MapKitStoreSearchService: StoreSearchService {
     private struct CacheEntry {
         let stores: [MapStore]
         let timestamp: Date
+    }
+
+    private struct StoreSearchEvidence {
+        let store: MapStore
+        let query: String
+        let queryCategory: ShoppingStoreCategory
+        let evidenceCategory: ShoppingStoreCategory
+        let pointOfInterestCategory: String?
+    }
+
+    private struct StoreAggregate {
+        var evidence: [StoreSearchEvidence]
+
+        var representative: StoreSearchEvidence {
+            evidence.sorted { lhs, rhs in
+                if lhs.store.title.count == rhs.store.title.count {
+                    return lhs.store.title < rhs.store.title
+                }
+
+                return lhs.store.title.count > rhs.store.title.count
+            }.first ?? evidence[0]
+        }
+
+        var evidenceCategories: [ShoppingStoreCategory] {
+            evidence.map(\.evidenceCategory).deduplicated()
+        }
+
+        var queryCategories: [ShoppingStoreCategory] {
+            evidence.map(\.queryCategory).deduplicated()
+        }
+
+        var queryEvidenceText: String {
+            queryCategories.map(\.rawValue).joined(separator: ",")
+        }
     }
 
     private let fallbackProvider = LocalStoreSearchService()
@@ -63,6 +113,17 @@ final class MapKitStoreSearchService: StoreSearchService {
         shoppingItems: [String],
         storeCategories: [ShoppingStoreCategory] = []
     ) async -> [MapStore] {
+        guard shoppingItems.isEmpty || !storeCategories.isEmpty else {
+            auditFallbackUsed(
+                true,
+                reason: "Unresolved product intent has no allowed store categories",
+                coordinate: coordinate,
+                requestedCategories: storeCategories,
+                storeCount: 0
+            )
+            return []
+        }
+
         let cacheKey = cacheKey(
             coordinate: coordinate,
             storeCategories: storeCategories
@@ -111,6 +172,17 @@ final class MapKitStoreSearchService: StoreSearchService {
         shoppingItems: [String],
         storeCategories: [ShoppingStoreCategory] = []
     ) async -> [MapStore] {
+        guard shoppingItems.isEmpty || !storeCategories.isEmpty else {
+            auditFallbackUsed(
+                true,
+                reason: "Unresolved product intent has no allowed store categories",
+                coordinate: coordinate,
+                requestedCategories: storeCategories,
+                storeCount: 0
+            )
+            return []
+        }
+
         let cacheKey = cacheKey(
             coordinate: coordinate,
             storeCategories: storeCategories
@@ -154,7 +226,11 @@ final class MapKitStoreSearchService: StoreSearchService {
         shoppingItems: [String],
         storeCategories: [ShoppingStoreCategory] = []
     ) -> [MapStore] {
-        fallbackProvider.fallbackStores(
+        guard shoppingItems.isEmpty || !storeCategories.isEmpty else {
+            return []
+        }
+
+        return fallbackProvider.fallbackStores(
             around: coordinate,
             shoppingItems: shoppingItems,
             storeCategories: storeCategories
@@ -169,7 +245,7 @@ final class MapKitStoreSearchService: StoreSearchService {
         let categories = storeCategories.isEmpty ? defaultDiscoveryCategories : storeCategories
         let queries = categories.flatMap(searchQueries(for:)).deduplicatedCaseInsensitive()
 
-        let searchResults = await withTaskGroup(of: [MapStore].self) { group in
+        let searchResults = await withTaskGroup(of: [StoreSearchEvidence].self) { group in
             for query in queries {
                 group.addTask {
                     await self.searchMapKit(
@@ -182,34 +258,14 @@ final class MapKitStoreSearchService: StoreSearchService {
                 }
             }
 
-            var combinedStores: [MapStore] = []
+            var combinedStores: [StoreSearchEvidence] = []
             for await stores in group {
                 combinedStores.append(contentsOf: stores)
             }
             return combinedStores
         }
 
-        let nearbySearchResults = searchResults.filter { store in
-            ShoppingStoreCategoryFilter.isWithinPracticalDistance(
-                from: coordinate,
-                to: store.coordinate,
-                requestedCategories: categories
-            )
-        }
-        auditDistanceFiltering(
-            acceptedStores: nearbySearchResults,
-            rejectedStores: searchResults.filter { store in
-                !ShoppingStoreCategoryFilter.isWithinPracticalDistance(
-                    from: coordinate,
-                    to: store.coordinate,
-                    requestedCategories: categories
-                )
-            },
-            coordinate: coordinate,
-            requestedCategories: categories
-        )
-
-        return deduplicated(nearbySearchResults, around: coordinate)
+        return aggregate(searchResults, around: coordinate).prefixArray(12)
     }
 
     private func searchMapKit(
@@ -218,7 +274,7 @@ final class MapKitStoreSearchService: StoreSearchService {
         shoppingItems: [String],
         requestedCategories: [ShoppingStoreCategory],
         inferredCategory: ShoppingStoreCategory
-    ) async -> [MapStore] {
+    ) async -> [StoreSearchEvidence] {
         let region = MKCoordinateRegion(
             center: coordinate,
             latitudinalMeters: 3_000,
@@ -229,12 +285,13 @@ final class MapKitStoreSearchService: StoreSearchService {
 
         do {
             let response = try await MKLocalSearch(request: request).start()
-            var acceptedStores: [MapStore] = []
+            var acceptedStores: [StoreSearchEvidence] = []
             var rejectedStores: [(name: String, category: String, distance: CLLocationDistance, reason: String)] = []
 
             for item in response.mapItems {
-                let evaluation = makeMapStore(
+                let evaluation = makeMapStoreEvidence(
                     from: item,
+                    query: query,
                     shoppingItems: shoppingItems,
                     requestedCategories: requestedCategories,
                     inferredCategory: inferredCategory,
@@ -270,20 +327,22 @@ final class MapKitStoreSearchService: StoreSearchService {
         }
     }
 
-    private func makeMapStore(
+    private func makeMapStoreEvidence(
         from item: MKMapItem,
+        query: String,
         shoppingItems: [String],
         requestedCategories: [ShoppingStoreCategory],
         inferredCategory: ShoppingStoreCategory,
         queryCoordinate: CLLocationCoordinate2D
-    ) -> (store: MapStore?, rejectionReason: String?) {
+    ) -> (store: StoreSearchEvidence?, rejectionReason: String?) {
         guard let title = item.name?.trimmingCharacters(in: .whitespacesAndNewlines),
               !title.isEmpty else {
             return (nil, "missing title")
         }
 
         let mapKitCategory = category(from: item.pointOfInterestCategory)
-        let storeCategory = mapKitCategory == .generalStore && inferredCategory != .generalStore
+        let canInheritQueryCategory = canInheritCategoryFromQuery(item.pointOfInterestCategory)
+        let storeCategory = mapKitCategory == .generalStore && inferredCategory != .generalStore && canInheritQueryCategory
             ? inferredCategory
             : (mapKitCategory ?? inferredCategory)
         let storeCategories = [storeCategory]
@@ -312,7 +371,7 @@ final class MapKitStoreSearchService: StoreSearchService {
             return (nil, rejectionReason)
         }
 
-        return (MapStore(
+        let store = MapStore(
             id: UUID(),
             locationID: nil,
             title: title,
@@ -323,8 +382,16 @@ final class MapKitStoreSearchService: StoreSearchService {
             isOpen: nil,
             rating: nil,
             storeCategories: storeCategories,
+            queryEvidenceCategories: [],
             websiteURL: item.url,
             sourceType: .appleMaps
+        )
+        return (StoreSearchEvidence(
+            store: store,
+            query: query,
+            queryCategory: inferredCategory,
+            evidenceCategory: storeCategory,
+            pointOfInterestCategory: item.pointOfInterestCategory?.rawValue
         ), nil)
     }
 
@@ -341,28 +408,143 @@ final class MapKitStoreSearchService: StoreSearchService {
                 isOpen: store.isOpen,
                 rating: store.rating,
                 storeCategories: store.storeCategories,
+                queryEvidenceCategories: store.queryEvidenceCategories,
                 websiteURL: store.websiteURL,
                 sourceType: store.sourceType
             )
         }
     }
 
-    private func deduplicated(_ stores: [MapStore], around coordinate: CLLocationCoordinate2D) -> [MapStore] {
-        stores
+    private func aggregate(_ evidence: [StoreSearchEvidence], around coordinate: CLLocationCoordinate2D) -> [MapStore] {
+        var aggregates: [StoreAggregate] = []
+
+        for result in evidence.sorted(by: { lhs, rhs in
+            distance(from: coordinate, to: lhs.store.coordinate) < distance(from: coordinate, to: rhs.store.coordinate)
+        }) {
+            if let index = aggregates.firstIndex(where: { aggregateMatches($0, result) }) {
+                aggregates[index].evidence.append(result)
+            } else {
+                aggregates.append(StoreAggregate(evidence: [result]))
+            }
+        }
+
+        let stores = aggregates
+            .map(makeAggregatedStore)
             .sorted { lhs, rhs in
                 distance(from: coordinate, to: lhs.coordinate) < distance(from: coordinate, to: rhs.coordinate)
             }
-            .reduce(into: [MapStore]()) { result, store in
-                let isDuplicate = result.contains { existingStore in
-                    existingStore.title.localizedCaseInsensitiveCompare(store.title) == .orderedSame ||
-                    distance(from: existingStore.coordinate, to: store.coordinate) < 35
-                }
 
-                if !isDuplicate {
-                    result.append(store)
-                }
-            }
-            .prefixArray(12)
+        auditAggregation(aggregates: aggregates, stores: stores, coordinate: coordinate)
+        return stores
+    }
+
+    private func aggregateMatches(_ aggregate: StoreAggregate, _ result: StoreSearchEvidence) -> Bool {
+        aggregate.evidence.contains { existing in
+            let storeDistance = distance(from: existing.store.coordinate, to: result.store.coordinate)
+            return (
+                normalizedStoreName(existing.store.title) == normalizedStoreName(result.store.title) &&
+                storeDistance < 80
+            ) || (
+                storeDistance < 35 &&
+                namesLikelyMatch(existing.store.title, result.store.title)
+            )
+        }
+    }
+
+    private func makeAggregatedStore(_ aggregate: StoreAggregate) -> MapStore {
+        let representative = aggregate.representative.store
+        let strongestCategory = strongestCategory(
+            for: aggregate.evidenceCategories,
+            title: representative.title
+        )
+
+        return MapStore(
+            id: representative.id,
+            locationID: representative.locationID,
+            title: representative.title,
+            coordinate: representative.coordinate,
+            radius: representative.radius,
+            itemNames: representative.itemNames,
+            completedItemNames: representative.completedItemNames,
+            isOpen: representative.isOpen,
+            rating: representative.rating,
+            storeCategories: [strongestCategory],
+            queryEvidenceCategories: aggregate.queryCategories,
+            websiteURL: representative.websiteURL,
+            sourceType: representative.sourceType
+        )
+    }
+
+    private func strongestCategory(
+        for categories: [ShoppingStoreCategory],
+        title: String
+    ) -> ShoppingStoreCategory {
+        let lowercasedTitle = title.lowercased()
+        if categories.contains(.coffeeShop) || lowercasedTitle.contains("coffee") || lowercasedTitle.contains("cafe") || lowercasedTitle.contains("café") {
+            return .coffeeShop
+        }
+
+        return categories.max { lhs, rhs in
+            categoryConfidence(lhs, title: lowercasedTitle) < categoryConfidence(rhs, title: lowercasedTitle)
+        } ?? .generalStore
+    }
+
+    private func categoryConfidence(_ category: ShoppingStoreCategory, title: String) -> Int {
+        switch category {
+        case .coffeeShop:
+            return 100
+        case .petStore:
+            return titleContainsAny(title, ["pet", "petco", "petsmart"]) ? 95 : 75
+        case .electronicsStore:
+            return titleContainsAny(title, ["electronics", "computer", "phone", "mobile", "apple", "best buy", "micro center"]) ? 95 : 75
+        case .pharmacy:
+            return titleContainsAny(title, ["pharmacy", "drugstore", "drug store", "chemist", "cvs", "walgreens", "rite aid"]) ? 95 : 75
+        case .homeImprovement:
+            return titleContainsAny(title, ["hardware", "home improvement", "home depot", "lowe"]) ? 95 : 75
+        case .supermarket:
+            return 90
+        case .grocery:
+            return 80
+        case .convenienceStore:
+            return 70
+        case .generalStore:
+            return 10
+        }
+    }
+
+    private func titleContainsAny(_ title: String, _ terms: [String]) -> Bool {
+        terms.contains { title.contains($0) }
+    }
+
+    private func normalizedStoreName(_ title: String) -> String {
+        title
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
+    private func namesLikelyMatch(_ lhs: String, _ rhs: String) -> Bool {
+        let lhsName = normalizedStoreName(lhs)
+        let rhsName = normalizedStoreName(rhs)
+        if lhsName == rhsName || lhsName.contains(rhsName) || rhsName.contains(lhsName) {
+            return true
+        }
+
+        let lhsTokens = significantTokens(lhsName)
+        let rhsTokens = significantTokens(rhsName)
+        guard !lhsTokens.isEmpty, !rhsTokens.isEmpty else {
+            return false
+        }
+
+        return !lhsTokens.isDisjoint(with: rhsTokens)
+    }
+
+    private func significantTokens(_ normalizedTitle: String) -> Set<String> {
+        let genericTokens: Set<String> = ["store", "market", "shop", "supermarket", "grocery", "food", "mini", "the"]
+        return Set(normalizedTitle.split(separator: " ").map(String.init).filter { token in
+            token.count > 2 && !genericTokens.contains(token)
+        })
     }
 
     private var defaultDiscoveryCategories: [ShoppingStoreCategory] {
@@ -458,9 +640,19 @@ final class MapKitStoreSearchService: StoreSearchService {
             return .coffeeShop
         case .store:
             return .generalStore
+        case .restaurant:
+            return .generalStore
         default:
             return nil
         }
+    }
+
+    private func canInheritCategoryFromQuery(_ pointOfInterestCategory: MKPointOfInterestCategory?) -> Bool {
+        guard let pointOfInterestCategory else {
+            return true
+        }
+
+        return pointOfInterestCategory == .store
     }
 
     private func cacheKey(
@@ -496,17 +688,18 @@ final class MapKitStoreSearchService: StoreSearchService {
         inferredCategory: ShoppingStoreCategory,
         requestedCategories: [ShoppingStoreCategory],
         rawCount: Int,
-        acceptedStores: [MapStore],
+        acceptedStores: [StoreSearchEvidence],
         rejectedStores: [(name: String, category: String, distance: CLLocationDistance, reason: String)],
         coordinate: CLLocationCoordinate2D
     ) {
         #if DEBUG
         let categoryText = requestedCategories.map(\.rawValue).joined(separator: ",")
         print("[WayTask Store Audit] MapKit query=\"\(query)\" category=\(inferredCategory.rawValue) requested=\(categoryText) raw=\(rawCount) accepted=\(acceptedStores.count) rejected=\(rejectedStores.count)")
-        for store in acceptedStores {
+        for evidence in acceptedStores {
+            let store = evidence.store
             let distanceMeters = Int(distance(from: coordinate, to: store.coordinate))
             let storeCategoryText = store.storeCategories.map(\.rawValue).joined(separator: ",")
-            print("[WayTask Store Audit] accepted name=\"\(store.title)\" source=\(store.sourceType.rawValue) distance=\(distanceMeters)m category=\(storeCategoryText)")
+            print("[WayTask Store Audit] accepted name=\"\(store.title)\" source=\(store.sourceType.rawValue) distance=\(distanceMeters)m category=\(storeCategoryText) queryEvidence=\"\(evidence.queryCategory.rawValue)\"")
         }
         for rejectedStore in rejectedStores {
             print("[WayTask Store Audit] rejected name=\"\(rejectedStore.name)\" source=\(DataSourceType.appleMaps.rawValue) distance=\(Int(rejectedStore.distance))m category=\(rejectedStore.category) reason=\"\(rejectedStore.reason)\"")
@@ -514,30 +707,21 @@ final class MapKitStoreSearchService: StoreSearchService {
         #endif
     }
 
-    private func auditDistanceFiltering(
-        acceptedStores: [MapStore],
-        rejectedStores: [MapStore],
-        coordinate: CLLocationCoordinate2D,
-        requestedCategories: [ShoppingStoreCategory]
+    private func auditAggregation(
+        aggregates: [StoreAggregate],
+        stores: [MapStore],
+        coordinate: CLLocationCoordinate2D
     ) {
         #if DEBUG
-        guard !rejectedStores.isEmpty else {
-            return
-        }
-
-        print("[WayTask Store Audit] practical-distance accepted=\(acceptedStores.count) rejected=\(rejectedStores.count)")
-        for store in rejectedStores {
+        print("[WayTask Store Aggregation] raw=\(aggregates.reduce(0) { $0 + $1.evidence.count }) aggregated=\(stores.count)")
+        for aggregate in aggregates {
+            let store = makeAggregatedStore(aggregate)
             let distanceMeters = Int(distance(from: coordinate, to: store.coordinate))
-            let reason = ShoppingStoreCategoryFilter.rejectionReason(
-                storeTitle: store.title,
-                storeCategories: store.storeCategories,
-                requestedCategories: requestedCategories,
-                distanceMeters: CLLocationDistance(distanceMeters)
-            ) ?? "outside practical distance"
-            print("[WayTask Store Audit] rejected name=\"\(store.title)\" source=\(store.sourceType.rawValue) distance=\(distanceMeters)m category=\(store.storeCategories.map(\.rawValue).joined(separator: ",")) reason=\"\(reason)\"")
+            print("[WayTask Store Aggregation] store=\"\(store.title)\" distance=\(distanceMeters)m category=\(store.storeCategories.map(\.rawValue).joined(separator: ",")) returnedBy=\(aggregate.queryEvidenceText)")
         }
         #endif
     }
+
 }
 
 private extension Array where Element == String {
@@ -545,6 +729,16 @@ private extension Array where Element == String {
         reduce(into: [String]()) { result, value in
             if !result.contains(where: { $0.localizedCaseInsensitiveCompare(value) == .orderedSame }) {
                 result.append(value)
+            }
+        }
+    }
+}
+
+private extension Array where Element == ShoppingStoreCategory {
+    func deduplicated() -> [ShoppingStoreCategory] {
+        reduce(into: [ShoppingStoreCategory]()) { result, category in
+            if !result.contains(category) {
+                result.append(category)
             }
         }
     }

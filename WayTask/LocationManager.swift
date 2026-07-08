@@ -155,7 +155,7 @@ final class LocationManager: NSObject, ObservableObject {
                 }
 
                 let itemCategories = intentMatcher.matchStoreCategories(for: item)
-                return itemCategories.contains { $0.matches(storeCategory) } || itemCategories.contains(.generalStore)
+                return itemCategories.contains { $0.matches(storeCategory) }
             }
             let matchingItems = directlyMatchedItems.isEmpty ? categoryMatchedItems : directlyMatchedItems
 
@@ -199,14 +199,27 @@ final class LocationManager: NSObject, ObservableObject {
     }
 
     private func nearbyFallbackCandidates(for items: [ShoppingItem], around coordinate: CLLocationCoordinate2D) -> [ShoppingGeofenceCandidate] {
-        let categories = matchedStoreCategories(for: items)
-        let stores = storeSearchService.fallbackStores(
-            around: coordinate,
-            shoppingItems: items.map(\.name),
-            storeCategories: categories
+        let groups = intentMatcher.groupedIntents(for: items)
+        ShoppingDiscoveryDebugLogger.logGroups(
+            context: "Nearby geofence fallback",
+            groups: groups
+        )
+        let requests = groups.map { group in
+            (request: group.request, itemNames: group.itemNames)
+        }
+        ShoppingDiscoveryDebugLogger.logStoreSearchRequests(
+            context: "Nearby geofence fallback",
+            groups: groups,
+            requests: requests
         )
 
-        let itemNames = notificationItemNames(from: items)
+        let stores = groups.flatMap { group in
+            return storeSearchService.fallbackStores(
+                around: coordinate,
+                shoppingItems: group.itemNames,
+                storeCategories: group.request.storeCategories
+            )
+        }
 
         return stores.prefix(6).map { store in
             ShoppingGeofenceCandidate(
@@ -215,7 +228,7 @@ final class LocationManager: NSObject, ObservableObject {
                 title: store.title,
                 coordinate: store.coordinate,
                 radius: notificationRadius(for: store.radius),
-                itemNames: itemNames,
+                itemNames: store.itemNames.isEmpty ? notificationItemNames(from: items) : store.itemNames,
                 sourceType: store.isSavedLocation ? "saved" : "fallback",
                 distanceMeters: distanceFromCurrentUser(to: store.coordinate)
             )
@@ -248,7 +261,7 @@ final class LocationManager: NSObject, ObservableObject {
     private func matchedStoreCategories(for items: [ShoppingItem]) -> [ShoppingStoreCategory] {
         let categories = items.flatMap { intentMatcher.matchStoreCategories(for: $0) }
         let uniqueCategories = Array(Set(categories))
-        return uniqueCategories.isEmpty ? [.generalStore] : uniqueCategories.sorted { $0.displayName < $1.displayName }
+        return uniqueCategories.sorted { $0.displayName < $1.displayName }
     }
 
     private func startMonitoring(candidate: ShoppingGeofenceCandidate) {

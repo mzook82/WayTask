@@ -496,7 +496,7 @@ Sprint 23.1 – Store Ranking + Product Image Stability
 ## Improved
 
 - Buying Options and Map suggestions now use current user location for distance-sensitive ranking.
-- Grocery suggestions use a practical 5 km distance cap.
+- Grocery suggestions use distance-sensitive ranking. Sprint 25A later removed the hard 5 km grocery cutoff.
 - Nearby stores receive stronger ranking priority.
 - Saved/custom store boost applies only when the store is nearby.
 - Grocery filtering now uses relevant store categories and business-name allow/reject rules.
@@ -598,3 +598,290 @@ Store recommendations should feel closer to real-world product availability whil
 ## Notes
 
 Build completed successfully after implementation. Focused P1/P2 review fixed mixed-category reason generation and nearby saved-store relevance consistency before the final build.
+
+# Version 1.11.1 Beta
+
+**Date:** July 6, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 24.1 – Product Knowledge Refresh
+
+## Improved
+
+- Product Knowledge now refreshes existing records conservatively when better confirmed product data is learned later.
+- Product name, display name, brand, category, product type, flavor, package size, thumbnail data, image URL, confidence, source, and keywords can improve over time.
+- Empty incoming values no longer overwrite stored Product Knowledge fields.
+- Lower-priority sources no longer overwrite higher-priority stored identity fields.
+- Product Knowledge refresh priority is user-confirmed/manual values, then Gemini, then Open Food Facts barcode data, then existing stored values.
+- Missing thumbnails can still be filled by later product image learning.
+
+## Preserved
+
+- Product Knowledge architecture.
+- Barcode, date learned, usage count, last-used timestamp, and learning history.
+- Shopping History and ShoppingMemoryService.
+- Gemini behavior.
+- Camera UI and scan flow.
+
+## User Value Added
+
+Products learned before later recognition improvements can become more accurate after a better confirmed product is added, instead of returning older barcode identity forever.
+
+## Notes
+
+Build completed successfully after implementation. Focused P1/P2 review fixed one merge-risk so shorter but legitimate brand/category/type/flavor/package-size improvements are not blocked by the descriptive-name safety check.
+
+# Version 1.11.2 Beta
+
+**Date:** July 6, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 24.2 – Better AI Recognition Guidance
+
+## Improved
+
+- Gemini low-confidence and unusable recognition results now produce clearer user guidance instead of generic failure copy.
+- Guidance covers common capture issues including product too small, multiple products, blurry images, and package outside the guide frame.
+- AI loading copy now says `Analyzing product...`.
+- Manual fallback remains available when AI is unavailable, low confidence, or cannot produce a usable product.
+- AI success now uses a subtle haptic only when a confident product suggestion is ready for review.
+
+## Guidance Messages
+
+- `Move closer to one product.`
+- `Fill the frame with a single package.`
+- `Center the package inside the guide frame.`
+- `Try a clearer front photo.`
+- `Retake the photo with one package filling the frame.`
+
+## Preserved
+
+- No Gemini API changes.
+- No Product Knowledge changes.
+- No barcode logic changes.
+- No Camera UI redesign.
+
+## User Value Added
+
+Users get a clear next action when AI cannot confidently recognize the product, instead of being stranded by generic failure text.
+
+## Notes
+
+Build completed successfully after implementation. Focused P1/P2 review fixed one manual-fallback edge case so low-confidence Gemini candidates are treated as unavailable for UI fallback purposes.
+
+# Version 1.11.3 Beta
+
+**Date:** July 7, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 24.3 – Smart AI Enrichment
+
+## Added
+
+- `Improve with AI` action for weak barcode, Open Food Facts, and Product Knowledge results.
+- Weak-data detection for short or generic names and missing brand, category, product type, flavor, or package size.
+- Explicit clear front package photo step before Gemini enrichment starts.
+
+## Improved
+
+- Barcode enrichment now calls Gemini only after the user chooses `Improve with AI`.
+- Improved AI suggestions preserve barcode metadata and can be accepted or edited before saving.
+- Product Knowledge updates existing barcode records through the normal confirmed-product learning path when an improved result is accepted.
+- Gemini failure keeps the original barcode result available and leaves manual entry available.
+
+## Preserved
+
+- Barcode detection.
+- Gemini API key handling.
+- Store Reality Score.
+- Existing Scan screen layout.
+- Existing Product Knowledge barcode keys, usage history, dates, and learning history.
+- Existing product images when Gemini fails.
+
+## User Value Added
+
+Users can repair weak barcode database results without losing the original scan result or silently spending AI calls.
+
+## Notes
+
+Build completed successfully before and after focused P1/P2 review. One P2 interaction risk was fixed so existing candidate accept/edit actions are disabled while AI enrichment is actively analyzing.
+
+# Version 1.11.4 Beta
+
+**Date:** July 7, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 24.4 – Store Grouping Logic
+
+## Added
+
+- Shopping intent grouping for grocery/supermarket, electronics, pet store, pharmacy/health, and other/unknown.
+- Group-specific Buying Options and Shopping Trip coverage.
+- Group-aware map matching item labels and nearby opportunity item names.
+
+## Improved
+
+- Store recommendations now group mixed shopping lists before scoring with Store Reality Score.
+- Grocery stores no longer claim electronics coverage.
+- Electronics stores no longer claim grocery coverage.
+- Shopping Trip coverage now prefers realistic grouped stops, such as one grocery stop plus one electronics stop.
+- Map store cards and product annotations now show only relevant matching items for the store group.
+
+## Preserved
+
+- Store Reality Score remains the scoring engine.
+- Product Knowledge was not changed.
+- Gemini was not changed.
+- The overall UI layout was not redesigned.
+
+## User Value Added
+
+Mixed shopping lists should produce realistic store suggestions instead of making one broad store appear to cover unrelated product categories.
+
+## Notes
+
+Build completed successfully before and after focused P1/P2 review. One P1 overclaim risk was fixed so generic/unknown stores no longer inherit every active item from provider tagging, and map product annotations now follow the narrowed store item list.
+
+# Version 1.11.5 Beta
+
+**Date:** July 7, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 24.6 – Product Intent Resolver
+
+## Added
+
+- `ProductIntentResolver` for normalized product intent before store scoring.
+- `ProductIntentProfile` with normalized category, intent group, confidence, evidence, primary/secondary/fallback allowed store types, and excluded store types.
+- Product intent support for baking soda, vinegar, coffee, milk, protein drink, cat food, dog food, USB-C charger, iPhone cable, medicine, bleach, and cleaning products.
+- DEBUG logs for product intent resolution and store eligibility accept/reject decisions.
+
+## Improved
+
+- Store eligibility now runs before Store Reality Score.
+- Store Reality Score only scores eligible store/product matches.
+- Cat food and dog food can match pet stores first and grocery/supermarket stores as secondary matches.
+- Cleaning products can match grocery/supermarket stores first and pharmacy/home-improvement stores as secondary matches.
+- Buying Options can show no suitable store for unresolved products instead of surfacing generic store suggestions.
+- Map matching, trip coverage, nearby opportunities, and geofence candidates now use resolved intent eligibility.
+
+## Changed
+
+- Unknown/Other intent no longer falls back to broad general-store discovery.
+- Empty allowed-store categories with active shopping items return no discovered stores.
+- Saved/custom item history can still make an unknown product eligible when the saved store directly contains that item.
+
+## Preserved
+
+- Product Knowledge schema.
+- Gemini behavior and API key handling.
+- Store Reality Score as the scoring engine.
+- Existing UI layout.
+
+## User Value Added
+
+WayTask should stop recommending unrelated door stores, electronics stores, and random businesses for grocery-like products that previously fell into Other/general store.
+
+## Notes
+
+Build completed successfully before and after focused P1/P2 review. The review removed a stale general-store trip-matching fallback and confirmed unresolved intent no longer broadens store discovery.
+
+# Version 1.12.0 Beta
+
+**Date:** July 7, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 25 – Group-first Store Discovery
+
+## Improved
+
+- Store discovery now runs per shopping intent group before results are merged.
+- Product List suggestions no longer merge all active item categories into one pre-discovery request.
+- Map suggested-place discovery now searches each group separately.
+- Nearby recommendations now search each group separately instead of flattening categories first.
+- Geofence fallback discovery now uses grouped requests.
+- Store results are merged after discovery, then retagged to show only relevant matching items.
+
+## Preserved
+
+- Product Knowledge schema.
+- Product Intent model.
+- Store Reality Score scoring behavior.
+- Existing UI layout.
+
+## User Value Added
+
+Mixed lists should discover realistic stores per group, such as grocery stores for grocery items, pet stores for pet food, and electronics stores for chargers, before ranking and display.
+
+## Notes
+
+Build completed successfully before and after focused review. One P1 fallback issue was fixed so Apple Maps or saved results for one group do not remove local fallback stores for unrelated groups.
+
+# Version 1.12.1 Beta
+
+**Date:** July 7, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 25A – Discovery Pipeline Verification
+
+## Improved
+
+- DEBUG builds now log the actual runtime discovery pipeline from Suggest Places, Buying Options, Shopping Trip, Nearby opportunities, map suggested discovery, and geofence fallback discovery.
+- Discovery logs include `ShoppingIntentGroups created`, group item names, StoreSearch request count, requested categories, and grouped-versus-merged discovery status.
+- Removed hard grocery distance rejection; distance now reduces Store Reality Score instead of making a store ineligible by itself.
+- Explicit unrelated-store rejection remains for jewelry, lawyers, florists, banks, insurance, offices, and similar impossible business types.
+
+## Notes
+
+Build completed successfully before and after focused review. The review removed stale distance-cap helper code and kept Store Reality Score as the place where distance affects ranking.
+
+# Version 1.13.0 Beta
+
+**Date:** July 8, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 26A – Design System Foundation
+
+## Added
+
+- Version 1.0 design tokens for color, typography, spacing, corner radius, elevation, glass effects, animation, and haptics.
+- Reusable SwiftUI components for primary and secondary buttons, glass cards, store cards, product cards, shopping list cards, coverage rings, progress rings, badges, search, empty states, loading skeletons, offline states, bottom sheets, section headers, floating scan, and navigation.
+- Version 1.0 navigation shell with Home, Products, Shopping, Map, and Settings tabs.
+- Foundation placeholders for Home, Shopping, and Settings.
+
+## Preserved
+
+- Product Knowledge behavior.
+- Gemini behavior.
+- Store Reality Score.
+- Store aggregation and MapKit discovery.
+- Shopping Planner and Shopping Session logic.
+- Existing SwiftData models.
+
+## Notes
+
+Build completed successfully after implementation and after focused review. This sprint prepares UI architecture only and does not migrate Products, Shopping, Store Details, Shopping Mode, Map, or Settings screens to the approved Version 1.0 UI.

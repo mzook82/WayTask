@@ -288,7 +288,21 @@ struct CameraView: View {
 
     private var actionPanel: some View {
         VStack(spacing: isShowingBarcodeResult || isShowingProductResult ? 10 : 16) {
-            if let product = displayedProduct {
+            if viewModel.isWaitingForBarcodePackagePhoto {
+                if let product = displayedProduct {
+                    recognizedProductCard(product)
+                } else if let barcode = viewModel.barcodeResult ?? viewModel.confirmedBarcodeResult {
+                    barcodeResultCard(barcode)
+                }
+
+                barcodePackagePhotoPrompt
+
+                if viewModel.isShowingPhotoPreview {
+                    photoReviewControls
+                } else {
+                    captureControls
+                }
+            } else if let product = displayedProduct {
                 recognizedProductCard(product)
                 productResultControls(product)
             } else {
@@ -324,7 +338,34 @@ struct CameraView: View {
 
     @ViewBuilder
     private var captureControls: some View {
-        if isShowingProductResult {
+        if viewModel.isWaitingForBarcodePackagePhoto {
+            HStack(spacing: 12) {
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    WayTaskModeTile(title: "Library", systemName: "photo")
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    viewModel.capturePhoto()
+                } label: {
+                    ZStack {
+                        Circle()
+                            .stroke(.white.opacity(0.34), lineWidth: 4)
+                            .frame(width: 70, height: 70)
+
+                        Circle()
+                            .fill(WayTaskDesign.accentGradient)
+                            .frame(width: 56, height: 56)
+                            .shadow(color: WayTaskDesign.accent.opacity(0.36), radius: 18, y: 8)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Take package photo")
+
+                WayTaskModeTile(title: "AI", systemName: "sparkles")
+            }
+        } else if isShowingProductResult {
             EmptyView()
         } else if isShowingBarcodeResult && !viewModel.isWaitingForBarcodePackagePhoto {
             compactBarcodeCameraState
@@ -416,45 +457,57 @@ struct CameraView: View {
     }
 
     private func productResultControls(_ product: ProductCandidate) -> some View {
-        HStack(spacing: 12) {
-            if viewModel.canAddProduct {
-                Button {
-                    addRecognizedProduct(product)
-                } label: {
-                    centeredCTAContent(title: "Add to Shopping List", systemName: "plus.circle.fill")
-                }
-                .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 50, cornerRadius: 16, shadow: true))
-            } else if viewModel.canConfirmCandidate {
-                Button {
-                    if product.source == .ai {
+        VStack(spacing: 10) {
+            HStack(spacing: 12) {
+                if viewModel.canAddProduct {
+                    Button {
                         addRecognizedProduct(product)
-                    } else {
-                        viewModel.confirmSelectedCandidate()
+                    } label: {
+                        centeredCTAContent(title: "Add to Shopping List", systemName: "plus.circle.fill")
                     }
-                } label: {
-                    centeredCTAContent(
-                        title: product.source == .ai ? "Add to Shopping List" : "Use Product",
-                        systemName: product.source == .ai ? "plus.circle.fill" : "checkmark.seal.fill"
-                    )
+                    .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 50, cornerRadius: 16, shadow: true))
+                } else if viewModel.canConfirmCandidate {
+                    Button {
+                        if product.source == .ai {
+                            addRecognizedProduct(product)
+                        } else {
+                            viewModel.confirmSelectedCandidate()
+                        }
+                    } label: {
+                        centeredCTAContent(
+                            title: product.source == .ai ? "Add to Shopping List" : "Use Product",
+                            systemName: product.source == .ai ? "plus.circle.fill" : "checkmark.seal.fill"
+                        )
+                    }
+                    .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 50, cornerRadius: 16, shadow: true))
+
+                    Button {
+                        editSuggestedProduct(product)
+                    } label: {
+                        Label("Edit", systemImage: "pencil")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 50, cornerRadius: 16))
                 }
-                .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 50, cornerRadius: 16, shadow: true))
 
                 Button {
-                    editSuggestedProduct(product)
+                    scanAgain()
                 } label: {
-                    Label("Edit", systemImage: "pencil")
+                    Label("Scan Again", systemImage: "barcode.viewfinder")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 50, cornerRadius: 16))
             }
 
-            Button {
-                scanAgain()
-            } label: {
-                Label("Scan Again", systemImage: "barcode.viewfinder")
-                    .frame(maxWidth: .infinity)
+            if viewModel.canImproveProductWithAI {
+                Button {
+                    viewModel.requestAIImprovementForBarcodeProduct()
+                } label: {
+                    Label("Improve with AI", systemImage: "sparkles")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 46, cornerRadius: 15))
             }
-            .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 50, cornerRadius: 16))
         }
     }
 
@@ -474,6 +527,16 @@ struct CameraView: View {
                 barcodePackagePhotoPrompt
             } else if viewModel.canCreateProductFromBarcode {
                 manualBarcodeProductForm
+            }
+
+            if viewModel.canImproveProductWithAI {
+                Button {
+                    viewModel.requestAIImprovementForBarcodeProduct()
+                } label: {
+                    Label("Improve with AI", systemImage: "sparkles")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 44, cornerRadius: 14))
             }
 
             HStack(spacing: 12) {
@@ -512,7 +575,7 @@ struct CameraView: View {
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(WayTaskDesign.primaryText)
 
-                Text("Open Food Facts did not find this barcode. Take a clear front photo so Gemini can suggest product details.")
+                Text("Take a clear front photo so Gemini can improve the product details.")
                     .font(.caption)
                     .foregroundStyle(WayTaskDesign.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)

@@ -116,11 +116,11 @@ struct BuyingOptionsSheet: View {
                 .font(.system(size: 42, weight: .semibold))
                 .foregroundStyle(WayTaskDesign.tertiaryText)
 
-            Text("No buying options yet")
+            Text("No suitable stores found")
                 .font(.headline)
                 .foregroundStyle(WayTaskDesign.primaryText)
 
-            Text("Try another item or check the map for nearby places.")
+            Text("WayTask could not resolve a realistic store type for this item.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(WayTaskDesign.secondaryText)
@@ -208,7 +208,7 @@ private struct ShoppingTripCoverageCard: View {
                     Label(distanceText, systemImage: "location")
                 }
 
-                Label("Covers \(coverage.matchedItemCount) of \(max(totalItemCount, 1)) list items", systemImage: "checklist")
+                Label("Covers \(coverage.matchedItemCount) of \(max(totalItemCount, 1)) \(coverage.group.displayName.lowercased()) items", systemImage: "checklist")
             }
             .font(.caption.weight(.semibold))
             .foregroundStyle(WayTaskDesign.secondaryText)

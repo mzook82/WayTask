@@ -27,13 +27,13 @@ struct GeminiProductRecognitionService: AIProductRecognitionServicing {
 
         guard let apiKey = apiKeyProvider() else {
             return unavailableResult(
-                message: "AI recognition is not configured yet. Add the product details manually."
+                message: "AI recognition is not configured yet. Add the details manually."
             )
         }
 
         guard let imageData else {
             return unavailableResult(
-                message: "AI recognition needs a product photo. Add the product details manually."
+                message: "Take a clear front photo of one package."
             )
         }
 
@@ -71,12 +71,21 @@ struct GeminiProductRecognitionService: AIProductRecognitionServicing {
                 .compactMap(\.text)
                 .joined(separator: "\n")
 
-            guard let suggestion = try decodeSuggestion(from: text),
+            let suggestion = try decodeSuggestion(from: text)
+            let captureGuidance = guidanceMessage(
+                from: [
+                    suggestion?.description,
+                    suggestion?.visibleText,
+                    text
+                ]
+            )
+
+            guard let suggestion,
                   let productName = suggestion.productName?.trimmedNonEmpty else {
                 #if DEBUG
                 print("[WayTask Gemini] No usable product suggestion. Response time: \(String(format: "%.2f", elapsed))s")
                 #endif
-                return unavailableResult(message: "AI could not identify this product confidently. Add the details manually.")
+                return unavailableResult(message: captureGuidance ?? "Retake the photo with one package filling the frame.")
             }
 
             let confidence = min(max(suggestion.confidence ?? 0, 0), 1)
@@ -115,16 +124,35 @@ struct GeminiProductRecognitionService: AIProductRecognitionServicing {
             return RecognitionResult(
                 status: .recognized,
                 candidates: [candidate],
-                message: suggestion.description?.trimmedNonEmpty ?? "AI suggested this product. Review before adding.",
+                message: recognitionMessage(
+                    confidence: confidence,
+                    description: suggestion.description,
+                    guidance: captureGuidance
+                ),
                 inputSource: .barcode
             )
         } catch is CancellationError {
             return unavailableResult(message: "AI recognition was cancelled.")
+        } catch let error as GeminiRecognitionError {
+            #if DEBUG
+            print("[WayTask Gemini] Gemini image handling failed | fallback reason: \(error)")
+            #endif
+            switch error {
+            case .invalidImage:
+                return unavailableResult(message: "Try a clearer front photo.")
+            case .invalidRequest:
+                return unavailableResult(message: "AI recognition is unavailable right now. Add the details manually.")
+            }
+        } catch let error as URLError {
+            #if DEBUG
+            print("[WayTask Gemini] Gemini call failed | fallback reason: \(error.localizedDescription)")
+            #endif
+            return unavailableResult(message: "AI recognition is unavailable right now. Add the details manually.")
         } catch {
             #if DEBUG
             print("[WayTask Gemini] Gemini call failed | fallback reason: \(error.localizedDescription)")
             #endif
-            return unavailableResult(message: "AI recognition failed. Add the details manually.")
+            return unavailableResult(message: "Try a clearer front photo or add the details manually.")
         }
     }
 
@@ -163,7 +191,7 @@ struct GeminiProductRecognitionService: AIProductRecognitionServicing {
         let barcodeContext = barcode.map { "The scanned barcode is \($0.value) (\($0.type.displayName))." } ?? "No barcode is available for this image."
 
         return """
-        Act as a retail product recognition system for a shopping list app. Identify the product visible on the front packaging image. \(barcodeContext) For productName, return the common shopper-friendly name a person would search for or add to a shopping list. Prefer a visible Hebrew common product name when the package clearly shows one. Do not use a technical manufacturing name, regulatory name, nutrition panel phrase, SKU, barcode text, or long ingredient-style phrase as productName unless it is the only visible product identity. Keep technical names, regulatory wording, and alternate printed names in visibleText, description, or searchKeywords instead. Prefer the complete visible retail name over a generic term. For example, if the package shows "PRO 20 Banana & Oats", productName must be "PRO 20 Banana & Oats", not "Banana" or "Drink". Use visible packaging and readable text only. Avoid guessing. If a field is not visible, leave it empty and lower confidence. Summarize visible text/OCR from the package in visibleText. Return 3 to 8 useful searchKeywords that describe the product, category, product type, flavor, shopping intent, and any technical/alternate names for future store matching. Do not include random guesses, private data, or user-specific data. Return ONLY valid JSON with this exact shape:
+        Act as a retail product recognition system for a shopping list app. Identify the product visible on the front packaging image. \(barcodeContext) For productName, return the common shopper-friendly name a person would search for or add to a shopping list. Prefer a visible Hebrew common product name when the package clearly shows one. Do not use a technical manufacturing name, regulatory name, nutrition panel phrase, SKU, barcode text, or long ingredient-style phrase as productName unless it is the only visible product identity. Keep technical names, regulatory wording, and alternate printed names in visibleText, description, or searchKeywords instead. Prefer the complete visible retail name over a generic term. For example, if the package shows "PRO 20 Banana & Oats", productName must be "PRO 20 Banana & Oats", not "Banana" or "Drink". Use visible packaging and readable text only. Avoid guessing. If a field is not visible, leave it empty and lower confidence. If the image is blurry, too far away, contains multiple products, or the package is outside the guide frame, explain that briefly in description. Summarize visible text/OCR from the package in visibleText. Return 3 to 8 useful searchKeywords that describe the product, category, product type, flavor, shopping intent, and any technical/alternate names for future store matching. Do not include random guesses, private data, or user-specific data. Return ONLY valid JSON with this exact shape:
         {
           "productName": "",
           "brand": "",
@@ -230,6 +258,46 @@ struct GeminiProductRecognitionService: AIProductRecognitionServicing {
         }
 
         return try JSONDecoder().decode(GeminiProductSuggestion.self, from: data)
+    }
+
+    private func recognitionMessage(confidence: Double, description: String?, guidance: String?) -> String {
+        if confidence < 0.55 {
+            return guidance ?? "Try a clearer front photo."
+        }
+
+        return description?.trimmedNonEmpty ?? "AI suggested this product. Review before adding."
+    }
+
+    private func guidanceMessage(from values: [String?]) -> String? {
+        let text = values
+            .compactMap { $0?.lowercased() }
+            .joined(separator: " ")
+
+        guard !text.isEmpty else {
+            return nil
+        }
+
+        if containsAny(text, ["multiple", "several", "many products", "more than one", "cluttered"]) {
+            return "Fill the frame with a single package."
+        }
+
+        if containsAny(text, ["small", "far away", "too far", "distant", "tiny"]) {
+            return "Move closer to one product."
+        }
+
+        if containsAny(text, ["outside", "frame", "cropped", "partial", "partially", "cut off"]) {
+            return "Center the package inside the guide frame."
+        }
+
+        if containsAny(text, ["blur", "blurry", "unclear", "out of focus", "low resolution", "not sharp"]) {
+            return "Try a clearer front photo."
+        }
+
+        return nil
+    }
+
+    private func containsAny(_ text: String, _ needles: [String]) -> Bool {
+        needles.contains { text.contains($0) }
     }
 
     private func unavailableResult(message: String) -> RecognitionResult {

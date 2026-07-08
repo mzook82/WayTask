@@ -102,11 +102,11 @@ final class CameraViewModel: ObservableObject {
     }
 
     var canAddProduct: Bool {
-        confirmedCandidate != nil
+        confirmedCandidate != nil && !isRecognizing
     }
 
     var canConfirmCandidate: Bool {
-        selectedCandidate != nil && confirmedCandidate == nil
+        selectedCandidate != nil && confirmedCandidate == nil && !isRecognizing
     }
 
     var canConfirmBarcode: Bool {
@@ -125,6 +125,29 @@ final class CameraViewModel: ObservableObject {
         return recognitionResult?.status == .noMatch || recognitionResult?.status == .failed || recognitionResult?.status == .unavailable
     }
 
+    var canImproveProductWithAI: Bool {
+        guard confirmedBarcodeResult != nil,
+              !isWaitingForBarcodePackagePhoto,
+              !isRecognizing else {
+            return false
+        }
+
+        if let selectedCandidate {
+            return Self.weakProductDataReasons(for: selectedCandidate).isEmpty == false
+        }
+
+        return recognitionResult?.status == .noMatch
+            || recognitionResult?.status == .failed
+            || recognitionResult?.status == .unavailable
+    }
+
+    var weakProductDataReasons: [String] {
+        guard let selectedCandidate else {
+            return []
+        }
+
+        return Self.weakProductDataReasons(for: selectedCandidate)
+    }
 
     var isShowingPhotoPreview: Bool {
         pendingPhotoData != nil
@@ -210,7 +233,9 @@ final class CameraViewModel: ObservableObject {
                 case .success(let photo):
                     self.pendingPhotoData = photo.data
                     self.recognitionPhase = .captured
-                    self.statusMessage = "Review your photo before using it."
+                    self.statusMessage = self.isWaitingForBarcodePackagePhoto
+                        ? "Use this package photo for AI analysis."
+                        : "Review your photo before using it."
                 case .failure:
                     self.recognitionPhase = .failed
                     self.statusMessage = "Photo capture failed. Please try again."
@@ -294,6 +319,19 @@ final class CameraViewModel: ObservableObject {
         isWaitingForBarcodePackagePhoto = false
         recognitionPhase = .result
         statusMessage = "Product found in WayTask. Review and add it."
+    }
+
+    func requestAIImprovementForBarcodeProduct() {
+        guard confirmedBarcodeResult != nil,
+              !isRecognizing else {
+            return
+        }
+
+        pendingPhotoData = nil
+        capturedImageData = nil
+        isWaitingForBarcodePackagePhoto = true
+        recognitionPhase = .unavailable
+        statusMessage = "Take a clear front photo of the package."
     }
 
     func productAddFailed(_ error: Error? = nil) {
@@ -446,9 +484,9 @@ final class CameraViewModel: ObservableObject {
                 isRecognizing = false
 
                 guard let candidate = candidates.first else {
-                    requestPackagePhotoForAIFallback(
+                    showBarcodeManualFallback(
                         barcode: barcode,
-                        message: "Product not found. Show the front of the package."
+                        message: "Product not found. You can add details manually or improve with AI."
                     )
                     return
                 }
@@ -462,7 +500,9 @@ final class CameraViewModel: ObservableObject {
                 selectedCandidate = candidate
                 confirmedCandidate = nil
                 recognitionPhase = .result
-                statusMessage = "Review and add this product."
+                statusMessage = Self.weakProductDataReasons(for: candidate).isEmpty
+                    ? "Review and add this product."
+                    : "This result may be incomplete. Review it or improve with AI."
             } catch is CancellationError {
                 return
             } catch {
@@ -470,15 +510,15 @@ final class CameraViewModel: ObservableObject {
                     return
                 }
 
-                requestPackagePhotoForAIFallback(
+                showBarcodeManualFallback(
                     barcode: barcode,
-                    message: "Product lookup failed. Show the front of the package."
+                    message: "\(productLookupMessage(for: error)) You can add details manually or improve with AI."
                 )
             }
         }
     }
 
-    private func requestPackagePhotoForAIFallback(barcode: BarcodeResult, message: String) {
+    private func showBarcodeManualFallback(barcode: BarcodeResult, message: String) {
         recognitionResult = RecognitionResult(
             status: .noMatch,
             candidates: [],
@@ -491,7 +531,7 @@ final class CameraViewModel: ObservableObject {
         capturedImageData = nil
         pendingPhotoData = nil
         isRecognizing = false
-        isWaitingForBarcodePackagePhoto = true
+        isWaitingForBarcodePackagePhoto = false
         recognitionPhase = .unavailable
         statusMessage = message
     }
@@ -499,7 +539,7 @@ final class CameraViewModel: ObservableObject {
     private func analyzeAIProductPhoto(_ imageData: Data) {
         recognitionPhase = .analyzing
         isRecognizing = true
-        statusMessage = "Analyzing product with AI..."
+        statusMessage = "Analyzing product..."
 
         recognitionTask?.cancel()
         recognitionTask = Task { [weak self] in
@@ -515,7 +555,7 @@ final class CameraViewModel: ObservableObject {
     private func analyzeAIProductFallback(for barcode: BarcodeResult, imageData: Data) {
         recognitionPhase = .analyzing
         isRecognizing = true
-        statusMessage = "Analyzing product with AI..."
+        statusMessage = "Analyzing product..."
 
         recognitionTask?.cancel()
         recognitionTask = Task { [weak self] in
@@ -537,12 +577,32 @@ final class CameraViewModel: ObservableObject {
             return
         }
 
-        playRecognitionCompletedHaptic()
-        recognitionResult = result
+        let preservedBarcodeCandidate = selectedMode == .barcode ? selectedCandidate : nil
+        let preservedBarcodeResult = selectedMode == .barcode ? recognitionResult : nil
         isRecognizing = false
 
         guard let candidate = result.bestCandidate,
               (candidate.confidence ?? 0) >= 0.55 else {
+            if let preservedBarcodeCandidate {
+                recognitionResult = preservedBarcodeResult ?? RecognitionResult(
+                    status: .recognized,
+                    candidates: [preservedBarcodeCandidate],
+                    message: "Original barcode result preserved.",
+                    inputSource: .barcode
+                )
+                selectedCandidate = preservedBarcodeCandidate
+                confirmedCandidate = nil
+                recognitionPhase = .result
+                statusMessage = "\(result.message) Original barcode result is still available."
+                return
+            }
+
+            recognitionResult = RecognitionResult(
+                status: .unavailable,
+                candidates: [],
+                message: result.message,
+                inputSource: result.inputSource
+            )
             selectedCandidate = nil
             confirmedCandidate = nil
             recognitionPhase = .unavailable
@@ -550,11 +610,67 @@ final class CameraViewModel: ObservableObject {
             return
         }
 
+        recognitionResult = result
+        playAIRecognitionSucceededHaptic()
         selectedCandidate = candidate
         confirmedCandidate = nil
         recognitionPhase = .result
         statusMessage = "We think this is \(candidate.name). Review before adding."
     }
+
+    private static func weakProductDataReasons(for candidate: ProductCandidate) -> [String] {
+        var reasons: [String] = []
+        let normalizedName = candidate.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let words = normalizedName.components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+
+        if normalizedName.count < 8 || words.count <= 2 {
+            reasons.append("short or partial product name")
+        }
+
+        if genericProductNames.contains(normalizedName.lowercased()) {
+            reasons.append("generic product name")
+        }
+
+        if candidate.brand?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
+            reasons.append("missing brand")
+        }
+
+        if candidate.category?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
+            reasons.append("missing category")
+        }
+
+        if candidate.productType?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
+            reasons.append("missing product type")
+        }
+
+        if candidate.flavor?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
+            reasons.append("missing flavor")
+        }
+
+        if candidate.packageSize?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
+            reasons.append("missing package size")
+        }
+
+        return reasons
+    }
+
+    private static let genericProductNames: Set<String> = [
+        "beverage",
+        "bread",
+        "candy",
+        "cereal",
+        "chocolate",
+        "cookies",
+        "drink",
+        "food",
+        "juice",
+        "milk",
+        "product",
+        "snack",
+        "water",
+        "yogurt"
+    ]
 
     func useCandidateForManualEditing() {
         selectedCandidate = nil
@@ -663,6 +779,10 @@ final class CameraViewModel: ObservableObject {
 
     private func playRecognitionCompletedHaptic() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    private func playAIRecognitionSucceededHaptic() {
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
     }
 
     private func playProductAddedHaptic() {

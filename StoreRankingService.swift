@@ -27,6 +27,7 @@ struct StoreRealityFeedback: Codable, Equatable, Sendable {
 enum StoreRealitySignalKind: String, Codable, Equatable, Sendable {
     case itemHint
     case categoryRelevance
+    case storeSearchEvidence
     case knownStoreType
     case distance
     case shoppingListCoverage
@@ -124,6 +125,21 @@ struct StoreRankingService {
         request: ShoppingStoreSuggestionRequest,
         userCoordinate: CLLocationCoordinate2D? = nil
     ) -> Bool {
+        let intentEligibility = ProductIntentStoreEligibility.evaluate(
+            store: store,
+            request: request,
+            userCoordinate: userCoordinate
+        )
+        guard intentEligibility.isEligible else {
+            debugLogEligibility(
+                accepted: false,
+                store: store,
+                request: request,
+                reason: intentEligibility.reason
+            )
+            return false
+        }
+
         let context = StoreRealityScoreContext(
             store: store,
             request: request,
@@ -136,18 +152,48 @@ struct StoreRankingService {
             requestedCategories: request.storeCategories,
             distanceMeters: context.distanceMeters
         ) else {
+            debugLogEligibility(
+                accepted: false,
+                store: store,
+                request: request,
+                reason: ShoppingStoreCategoryFilter.rejectionReason(
+                    storeTitle: store.title,
+                    storeCategories: store.storeCategories,
+                    requestedCategories: request.storeCategories,
+                    distanceMeters: context.distanceMeters
+                ) ?? "store category filter rejected"
+            )
             return false
         }
 
         if context.hasRelevantCategory {
+            debugLogEligibility(
+                accepted: true,
+                store: store,
+                request: request,
+                reason: intentEligibility.reason
+            )
             return true
         }
 
         if context.store.isSavedLocation && context.rawItemHintMatched {
+            debugLogEligibility(
+                accepted: true,
+                store: store,
+                request: request,
+                reason: "saved item history"
+            )
             return true
         }
 
-        return context.requestIsOnlyGeneralStore && !context.store.storeCategories.isEmpty
+        let acceptsLegacyGeneralStore = context.requestIsOnlyGeneralStore && !context.store.storeCategories.isEmpty
+        debugLogEligibility(
+            accepted: acceptsLegacyGeneralStore,
+            store: store,
+            request: request,
+            reason: acceptsLegacyGeneralStore ? "legacy general-store request" : "Store Reality category check rejected"
+        )
+        return acceptsLegacyGeneralStore
     }
 
     func rankedStores(
@@ -187,6 +233,7 @@ struct StoreRankingService {
         [
             ItemHintSignal(),
             CategoryRelevanceSignal(),
+            StoreSearchEvidenceSignal(),
             KnownStoreTypeSignal(),
             DistanceSignal(),
             ShoppingListCoverageSignal(),
@@ -204,6 +251,22 @@ struct StoreRankingService {
 
         return CLLocation(latitude: start.latitude, longitude: start.longitude)
             .distance(from: CLLocation(latitude: end.latitude, longitude: end.longitude))
+    }
+
+    private func debugLogEligibility(
+        accepted: Bool,
+        store: MapStore,
+        request: ShoppingStoreSuggestionRequest,
+        reason: String
+    ) {
+        #if DEBUG
+        let status = accepted ? "accepted" : "rejected"
+        let intent = request.intentProfile?.intentGroup.rawValue ?? "legacy"
+        let confidence = request.intentProfile.map { String(format: "%.2f", $0.confidence) } ?? "n/a"
+        let allowed = request.storeCategories.map(\.rawValue).joined(separator: ",")
+        let excluded = request.intentProfile?.excludedStoreTypes.map(\.rawValue).joined(separator: ",") ?? ""
+        print("[WayTask Store Eligibility] \(status) store=\"\(store.title)\" item=\"\(request.itemName)\" intent=\(intent) confidence=\(confidence) allowed=\(allowed) excluded=\(excluded) reason=\"\(reason)\"")
+        #endif
     }
 }
 
@@ -376,6 +439,35 @@ private struct CategoryRelevanceSignal: StoreRealitySignal {
         }
 
         return "Matches product category"
+    }
+}
+
+private struct StoreSearchEvidenceSignal: StoreRealitySignal {
+    func evaluate(context: StoreRealityScoreContext) -> StoreRealitySignalResult {
+        let matchingEvidence = context.store.queryEvidenceCategories.filter { evidenceCategory in
+            context.requestedSpecificCategories.contains { requestedCategory in
+                requestedCategory.matches(evidenceCategory)
+            }
+        }.deduplicated()
+
+        guard !matchingEvidence.isEmpty else {
+            return StoreRealitySignalResult(kind: .storeSearchEvidence, score: 0)
+        }
+
+        if matchingEvidence.count > 1 {
+            return StoreRealitySignalResult(
+                kind: .storeSearchEvidence,
+                score: min(Double(matchingEvidence.count) * 4, 10),
+                confidenceCap: 0.88,
+                reason: "Returned by multiple matching searches"
+            )
+        }
+
+        return StoreRealitySignalResult(
+            kind: .storeSearchEvidence,
+            score: 3,
+            confidenceCap: 0.76
+        )
     }
 }
 
@@ -687,6 +779,16 @@ private extension Array where Element == String {
         reduce(into: [String]()) { result, value in
             if !result.contains(where: { $0.localizedCaseInsensitiveCompare(value) == .orderedSame }) {
                 result.append(value)
+            }
+        }
+    }
+}
+
+private extension Array where Element == ShoppingStoreCategory {
+    func deduplicated() -> [ShoppingStoreCategory] {
+        reduce(into: [ShoppingStoreCategory]()) { result, category in
+            if !result.contains(category) {
+                result.append(category)
             }
         }
     }

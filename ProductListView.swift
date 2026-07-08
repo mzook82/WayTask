@@ -820,7 +820,12 @@ struct ProductListView: View {
     }
 
     private func findSuggestions(for item: ShoppingItem) {
-        let request = fullListSuggestionRequest(for: item)
+        let request = shoppingIntentMatcher.suggestionRequest(for: item)
+        let groups = shoppingIntentMatcher.groupedIntents(for: activeShoppingItems)
+        ShoppingDiscoveryDebugLogger.logGroups(
+            context: "Suggest Places / Buying Options",
+            groups: groups
+        )
         let userCoordinate = locationManager.currentCoordinate
         let candidateStores = suggestionStores(for: request, userCoordinate: userCoordinate)
         auditBuyingOptionsStores(
@@ -832,6 +837,7 @@ struct ProductListView: View {
         )
         let buyingOptions = buyingOptionsService.localOptions(
             for: request,
+            shoppingItems: activeShoppingItems,
             stores: candidateStores,
             userCoordinate: userCoordinate
         )
@@ -847,6 +853,13 @@ struct ProductListView: View {
         appStateManager.shoppingTripCoverages = tripCoverages
         isShowingBuyingOptions = true
 
+        if userCoordinate == nil {
+            ShoppingDiscoveryDebugLogger.logStoreSearchRequests(
+                context: "Suggest Places / Buying Options: no current coordinate",
+                groups: groups,
+                requests: []
+            )
+        }
         refreshSuggestionsWithMapKit(for: request)
     }
 
@@ -863,25 +876,22 @@ struct ProductListView: View {
             return
         }
 
-        let shoppingItemNames = activeShoppingItems.map(\.name)
+        let groups = shoppingIntentMatcher.groupedIntents(for: activeShoppingItems)
+        let discoveryRequests = groupedStoreDiscoveryRequests(fallback: request)
+        ShoppingDiscoveryDebugLogger.logStoreSearchRequests(
+            context: forceRefresh ? "Buying Options refresh" : "Buying Options MapKit discovery",
+            groups: groups,
+            requests: discoveryRequests
+        )
         suggestionRefreshGeneration += 1
         let refreshGeneration = suggestionRefreshGeneration
         isRefreshingBuyingOptions = true
         Task {
-            let discoveredStores: [MapStore]
-            if forceRefresh {
-                discoveredStores = await storeSearchService.refreshedStores(
-                    around: coordinate,
-                    shoppingItems: shoppingItemNames,
-                    storeCategories: request.storeCategories
-                )
-            } else {
-                discoveredStores = await storeSearchService.stores(
-                    around: coordinate,
-                    shoppingItems: shoppingItemNames,
-                    storeCategories: request.storeCategories
-                )
-            }
+            let discoveredStores = await discoveredStoresByGroup(
+                around: coordinate,
+                discoveryRequests: discoveryRequests,
+                forceRefresh: forceRefresh
+            )
             let mergedStores = mergedSuggestionStores(
                 savedStores: savedStoresForTripPlanning(),
                 discoveredStores: discoveredStores,
@@ -896,6 +906,7 @@ struct ProductListView: View {
             )
             let buyingOptions = buyingOptionsService.localOptions(
                 for: request,
+                shoppingItems: activeShoppingItems,
                 stores: mergedStores,
                 userCoordinate: coordinate
             )
@@ -916,23 +927,44 @@ struct ProductListView: View {
         }
     }
 
-    private func fullListSuggestionRequest(for selectedItem: ShoppingItem) -> ShoppingStoreSuggestionRequest {
-        let selectedRequest = shoppingIntentMatcher.suggestionRequest(for: selectedItem)
-        let listRequests = activeShoppingItems.map { shoppingIntentMatcher.suggestionRequest(for: $0) }
-        let categories = listRequests
-            .flatMap(\.storeCategories)
-            .deduplicated()
-        let searchTerms = listRequests
-            .flatMap(\.searchTerms)
-            .deduplicatedCaseInsensitive()
+    private func groupedStoreDiscoveryRequests(fallback request: ShoppingStoreSuggestionRequest) -> [(request: ShoppingStoreSuggestionRequest, itemNames: [String])] {
+        let groups = shoppingIntentMatcher.groupedIntents(for: activeShoppingItems)
+        guard !groups.isEmpty else {
+            return [(request, [request.itemName])]
+        }
 
-        return ShoppingStoreSuggestionRequest(
-            itemID: selectedRequest.itemID,
-            itemName: selectedRequest.itemName,
-            itemCategory: selectedRequest.itemCategory,
-            storeCategories: categories.isEmpty ? selectedRequest.storeCategories : categories,
-            searchTerms: searchTerms.isEmpty ? selectedRequest.searchTerms : searchTerms
-        )
+        return groups.map { group in
+            (shoppingIntentMatcher.request(for: group), group.itemNames)
+        }
+    }
+
+    private func discoveredStoresByGroup(
+        around coordinate: CLLocationCoordinate2D,
+        discoveryRequests: [(request: ShoppingStoreSuggestionRequest, itemNames: [String])],
+        forceRefresh: Bool
+    ) async -> [MapStore] {
+        var discoveredStores: [MapStore] = []
+
+        for discoveryRequest in discoveryRequests {
+            let groupStores: [MapStore]
+            if forceRefresh {
+                groupStores = await storeSearchService.refreshedStores(
+                    around: coordinate,
+                    shoppingItems: discoveryRequest.itemNames,
+                    storeCategories: discoveryRequest.request.storeCategories
+                )
+            } else {
+                groupStores = await storeSearchService.stores(
+                    around: coordinate,
+                    shoppingItems: discoveryRequest.itemNames,
+                    storeCategories: discoveryRequest.request.storeCategories
+                )
+            }
+
+            discoveredStores.append(contentsOf: groupStores)
+        }
+
+        return discoveredStores.deduplicatedStores()
     }
 
     private func openBuyingOptionsOnMap() {
@@ -941,6 +973,11 @@ struct ProductListView: View {
             return
         }
 
+        let groups = shoppingIntentMatcher.groupedIntents(for: activeShoppingItems)
+        ShoppingDiscoveryDebugLogger.logGroups(
+            context: "Buying Options View Map",
+            groups: groups
+        )
         isShowingBuyingOptions = false
         appStateManager.suggestStores(
             for: buyingOptionsRequest,
@@ -955,6 +992,11 @@ struct ProductListView: View {
             return
         }
 
+        let groups = shoppingIntentMatcher.groupedIntents(for: activeShoppingItems)
+        ShoppingDiscoveryDebugLogger.logGroups(
+            context: "Shopping Trip View Map",
+            groups: groups
+        )
         isShowingBuyingOptions = false
         appStateManager.showTripOnMap(
             for: buyingOptionsRequest,
@@ -965,7 +1007,7 @@ struct ProductListView: View {
 
     private func suggestionStores(for request: ShoppingStoreSuggestionRequest, userCoordinate: CLLocationCoordinate2D?) -> [MapStore] {
         let savedStores = savedStoresForTripPlanning()
-        let relevantSavedStores = savedStores.filter { store in
+        let relevantSavedStores = savedStores.map(retagStoreForActiveIntentGroups).filter { store in
             storeMatches(store, request: request, userCoordinate: userCoordinate)
         }
 
@@ -977,7 +1019,9 @@ struct ProductListView: View {
             return []
         }
 
-        return savedStores.filter { storeMatches($0, request: request, userCoordinate: nil) }
+        return savedStores
+            .map(retagStoreForActiveIntentGroups)
+            .filter { storeMatches($0, request: request, userCoordinate: nil) }
     }
 
     private func mergedSuggestionStores(
@@ -985,18 +1029,30 @@ struct ProductListView: View {
         discoveredStores: [MapStore],
         request: ShoppingStoreSuggestionRequest
     ) -> [MapStore] {
-        let relevantSavedStores = savedStores.filter { storeMatches($0, request: request, userCoordinate: locationManager.currentCoordinate) }
-        let baseSavedStores = relevantSavedStores.isEmpty ? savedStores : relevantSavedStores
-        let shouldDropFallback = !relevantSavedStores.isEmpty || discoveredStores.contains { $0.sourceType == .appleMaps }
-        let filteredDiscoveredStores = shouldDropFallback
-            ? discoveredStores.filter { $0.sourceType != .local }
-            : discoveredStores
+        let retaggedSavedStores = savedStores.map(retagStoreForActiveIntentGroups)
+        let retaggedDiscoveredStores = discoveredStores.map(retagStoreForActiveIntentGroups)
+        let relevantSavedStores = retaggedSavedStores.filter { storeMatches($0, request: request, userCoordinate: locationManager.currentCoordinate) }
+        let baseSavedStores = relevantSavedStores.isEmpty ? retaggedSavedStores : relevantSavedStores
+        let appleMapStores = retaggedDiscoveredStores.filter { $0.sourceType == .appleMaps }
+        let filteredDiscoveredStores = retaggedDiscoveredStores.filter { store in
+            store.sourceType != .local || !hasAppleMapsMatch(for: store, in: appleMapStores)
+        }
 
         return (baseSavedStores + filteredDiscoveredStores)
             .deduplicatedStores()
             .filter { store in
                 storeMatches(store, request: request, userCoordinate: locationManager.currentCoordinate)
             }
+    }
+
+    private func hasAppleMapsMatch(for store: MapStore, in appleMapStores: [MapStore]) -> Bool {
+        appleMapStores.contains { appleStore in
+            appleStore.storeCategories.contains { appleCategory in
+                store.storeCategories.contains { storeCategory in
+                    appleCategory.matches(storeCategory) || storeCategory.matches(appleCategory)
+                }
+            }
+        }
     }
 
     private func savedStoresForTripPlanning() -> [MapStore] {
@@ -1019,6 +1075,7 @@ struct ProductListView: View {
                 isOpen: true,
                 rating: 4.4 + (Double(min(location.shoppingItems.count, 4)) * 0.1),
                 storeCategories: location.storeCategory.map { [$0] } ?? [],
+                queryEvidenceCategories: [],
                 websiteURL: nil,
                 sourceType: location.sourceType
             )
@@ -1026,10 +1083,46 @@ struct ProductListView: View {
     }
 
     private func storeMatches(_ store: MapStore, request: ShoppingStoreSuggestionRequest, userCoordinate: CLLocationCoordinate2D?) -> Bool {
-        storeRankingService.isRelevant(
+        guard !store.itemNames.isEmpty else {
+            return false
+        }
+
+        let groupRequests = shoppingIntentMatcher.groupedIntents(for: activeShoppingItems).map(\.request)
+        if !groupRequests.isEmpty {
+            return groupRequests.contains { groupRequest in
+                storeRankingService.isRelevant(
+                    store: store,
+                    request: groupRequest,
+                    userCoordinate: userCoordinate
+                )
+            }
+        }
+
+        return storeRankingService.isRelevant(
             store: store,
             request: request,
             userCoordinate: userCoordinate
+        )
+    }
+
+    private func retagStoreForActiveIntentGroups(_ store: MapStore) -> MapStore {
+        let relevantItems = shoppingIntentMatcher.relevantItems(from: activeShoppingItems, for: store)
+        let itemNames = relevantItems.map(\.name).deduplicatedCaseInsensitive()
+
+        return MapStore(
+            id: store.id,
+            locationID: store.locationID,
+            title: store.title,
+            coordinate: store.coordinate,
+            radius: store.radius,
+            itemNames: itemNames,
+            completedItemNames: store.completedItemNames,
+            isOpen: store.isOpen,
+            rating: store.rating,
+            storeCategories: store.storeCategories,
+            queryEvidenceCategories: store.queryEvidenceCategories,
+            websiteURL: store.websiteURL,
+            sourceType: store.sourceType
         )
     }
 

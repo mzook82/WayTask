@@ -37,6 +37,10 @@ User-created shopping items, saved places, images, and geofence-backed locations
 
 Barcode scanning checks local ProductKnowledge before external product providers. If a barcode has already been learned, WayTask can return the local product candidate without calling Open Food Facts or Gemini.
 
+ProductKnowledge refreshes existing records conservatively when the same product is confirmed again. User-confirmed/manual values outrank Gemini, Gemini outranks Open Food Facts barcode data, and stored values are kept when incoming data is empty or lower priority.
+
+Weak ProductKnowledge or Open Food Facts barcode results can be enriched with Gemini only after the user taps `Improve with AI` and provides a clear front package photo. Gemini enrichment preserves the barcode and updates the existing ProductKnowledge record through the normal confirmed-product learning path.
+
 ProductKnowledge is separate from ProductHistory. ProductKnowledge stores identity; ProductHistory stores shopping usage memory.
 
 ### Product Recognition Data

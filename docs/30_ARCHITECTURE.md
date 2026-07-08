@@ -338,6 +338,61 @@ Future architecture improvements may include:
 - AI Engine abstraction
 - Prompt Library
 - Recommendation Engine
+
+---
+
+# 13. Version 1.0 UI Foundation
+
+Sprint 26A introduces the Version 1.0 design-system foundation without changing business logic.
+
+## Design System Layer
+
+`WayTaskDesignSystem.swift` is the shared SwiftUI UI layer for Version 1.0 screens.
+
+It contains:
+
+- Design tokens for color, typography, spacing, radius, elevation, animation, glass effects, and haptics.
+- Shared components for buttons, cards, rings, badges, search, empty states, loading, offline states, bottom sheets, section headers, floating scan, and navigation.
+
+Future screens should use this layer first and avoid duplicating visual styles inside feature views.
+
+## Navigation Foundation
+
+`ContentView` now defines the Version 1.0 application shell:
+
+```text
+Home
+Products
+Shopping
+Map
+Settings
+```
+
+Only shell structure is introduced in Sprint 26A.
+
+Existing feature screens, services, models, ViewModels, and providers remain in place until their migration sprint.
+
+## Current Layering Policy
+
+The approved layer order remains:
+
+```text
+SwiftUI Views
+        │
+        ▼
+ViewModels
+        │
+        ▼
+Services
+        │
+        ▼
+Models
+        │
+        ▼
+SwiftData / System APIs
+```
+
+Business logic must continue to live in Services and ViewModels, not reusable UI components.
 - Feature Flags
 - Backend API layer
 - Cloud sync

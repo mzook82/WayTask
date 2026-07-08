@@ -2,9 +2,10 @@ import CoreLocation
 import Foundation
 
 struct StoreCoverage: Identifiable {
-    var id: UUID { store.id }
+    var id: String { "\(store.id.uuidString)-\(group.rawValue)" }
 
     let store: MapStore
+    let group: ShoppingIntentGroup
     let matchedItems: [ShoppingItem]
     let missingItems: [ShoppingItem]
     let coverageScore: Double

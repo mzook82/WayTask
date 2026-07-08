@@ -107,6 +107,7 @@ struct LocalStoreDataProvider: StoreDataProvider {
             isOpen: true,
             rating: rating,
             storeCategories: storeCategories,
+            queryEvidenceCategories: [],
             websiteURL: websiteURL,
             sourceType: .local
         )
