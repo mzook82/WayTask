@@ -923,3 +923,82 @@ Sprint 26B – Home v1.0
 ## Notes
 
 Build completed successfully after implementation and focused review. Placeholder Home-only data remains where Version 1.0 backing models are not available yet.
+
+# Version 1.14.0 Beta
+
+**Date:** July 8, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 27A – Shopping Workspace
+
+## Added
+
+- Version 1.0 Shopping Workspace as the Shopping tab content.
+- Shopping List selector, Shopping Summary, Recommended Stores, Coverage Cards, Grouped Products, Plan bottom sheet, and Start Shopping action.
+- Presentation-only grouped product rows for empty-state prototype coverage.
+
+## Reused
+
+- Existing `ShoppingItem` data.
+- Existing `ShoppingSession` and `ShoppingSessionService`.
+- Existing `AppStateManager.shoppingTripCoverages` and `AppStateManager.buyingOptions`.
+- Existing `ShoppingIntentMatcher`.
+- Existing design-system components.
+
+## Preserved
+
+- Product Knowledge.
+- Gemini.
+- Barcode.
+- Store Reality Score.
+- Store aggregation and MapKit discovery.
+- Product Intent Resolver.
+- ShoppingTripService and BuyingOptionsService.
+- SwiftData model schema.
+
+## Notes
+
+Build completed successfully after implementation and focused review. The Shopping Workspace is presentation-only; real v1.0 Shopping List and Shopping Plan model migration remains future work.
+
+# Version 1.14.1 Beta
+
+**Date:** July 9, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 27A.1 – Remove Demo Data From Home & Shopping
+
+## Changed
+
+- Home no longer falls back to prototype stores, coverage percentages, distances, fake duration, fake open status, sample nearby opportunity, or sample recent products.
+- Shopping no longer falls back to prototype recommended stores, coverage cards, or sample grouped products.
+- Empty planner states now show `Plan not ready yet` instead of invented stores.
+- Shopping can route to the existing trip-map planner entry point with Generate plan when active shopping items exist.
+- Removed the small Home header scan button; the orange floating scan button remains the scanner entry point and opens `CameraView`.
+
+## Reused
+
+- Existing `ShoppingItem` data.
+- Existing `ShoppingSession` and `ShoppingSessionService`.
+- Existing `AppStateManager.shoppingTripCoverages`.
+- Existing `AppStateManager.visibleNearbyOpportunity`.
+- Existing displayable real `BuyingOption` rows.
+- Existing `ShoppingIntentMatcher` grouped list behavior.
+
+## Preserved
+
+- Product Knowledge.
+- Gemini.
+- Barcode.
+- Store Reality Score.
+- Store aggregation and MapKit discovery.
+- ShoppingItem models.
+
+## Notes
+
+Product Intelligence validation remains needed in a later sprint, including health/pharmacy classification review. Real v1.0 Shopping List and Shopping Plan model migration remains future work.

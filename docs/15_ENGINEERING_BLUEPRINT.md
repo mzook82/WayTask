@@ -611,3 +611,39 @@ It does not change:
 - Product, shopping, or map business logic
 
 Any placeholder Home data is isolated inside `HomeView` and should be replaced by real Product v1.0 and Shopping v1.0 models in later migration phases.
+
+---
+
+# 20. Sprint 27A Shopping Workspace Update
+
+Sprint 27A replaces the Shopping placeholder with the approved Version 1.0 Shopping Workspace.
+
+## Implemented Shopping Surface
+
+- Shopping List selector using the existing `ShoppingItem` collection until the future Shopping List model migration.
+- Shopping Summary with open item count, grouped intent count, collected count, and session progress.
+- Recommended Stores section using existing planner state from `AppStateManager.shoppingTripCoverages` when available.
+- Coverage Cards using existing `StoreCoverage` and `BuyingOption` state when available.
+- Grouped Products section using `ShoppingIntentMatcher` for presentation grouping.
+- Start Shopping action using the existing `ShoppingSessionService`.
+- Plan bottom sheet using reusable design-system components.
+
+## Reuse Boundary
+
+Sprint 27A remains a presentation-layer migration.
+
+It does not change:
+
+- Product Knowledge
+- Gemini
+- Barcode
+- Store Reality Score
+- Store Aggregation
+- MapKit discovery
+- Product Intent Resolver
+- ShoppingTripService
+- BuyingOptionsService
+- ShoppingSession
+- SwiftData models
+
+Temporary store/list/product placeholders are isolated inside `ShoppingWorkspaceView` and should be removed when the Version 1.0 Shopping List and Shopping Plan backing models are migrated.

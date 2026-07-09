@@ -33,11 +33,7 @@ struct ContentView: View {
                 }
                 .tag(AppTab.products)
 
-            WayTaskFoundationPlaceholderView(
-                title: "Shopping",
-                subtitle: "Shopping lists and planner migration will be implemented in a later sprint.",
-                systemImage: "list.bullet.rectangle.fill"
-            )
+            ShoppingWorkspaceView()
                 .tabItem {
                     Label(AppTab.shopping.title, systemImage: AppTab.shopping.systemImageName)
                 }

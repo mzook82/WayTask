@@ -976,3 +976,103 @@ Build completed successfully after implementation.
 **Review:** Focused P1/P2 review confirmed the sprint is UI-only except for invoking the existing scanner and shopping-session service entry points.
 
 **Status:** Completed
+
+## Sprint 27A – Shopping Workspace
+
+### Goal
+
+Replace the Shopping placeholder with the approved Version 1.0 Shopping Workspace while preserving existing planner, store, session, and product-intent systems.
+
+### Completed
+
+- Added `ShoppingWorkspaceView` as the Shopping tab content.
+- Added Shopping List selector chips.
+- Added Shopping Summary with open item count, grouped intent count, collected count, and progress.
+- Added Recommended Stores section.
+- Added Coverage Cards section.
+- Added Grouped Products section.
+- Added Plan bottom sheet.
+- Added Start Shopping action using the existing `ShoppingSessionService`.
+- Reused existing `AppStateManager.shoppingTripCoverages`, `AppStateManager.buyingOptions`, and `ShoppingIntentMatcher` for presentation data.
+- Replaced only the Shopping tab placeholder in `ContentView`.
+
+### Real Data
+
+- Active/open shopping items come from `ShoppingItem`.
+- Session progress and collected count come from `ShoppingSession`.
+- Store coverage comes from existing `StoreCoverage` state when available.
+- Recommended store fallback can use existing `BuyingOption` state.
+- Product grouping uses existing `ShoppingIntentMatcher`.
+- Start Shopping uses existing `ShoppingSessionService`.
+
+### Placeholder Data
+
+- Shopping list selector remains a presentation summary over current `ShoppingItem` data until real v1.0 Shopping List models are migrated.
+- Recommended store cards fall back to approved prototype sample stores when planner state is empty.
+- Grouped product rows fall back to approved prototype sample products only when there are no active items.
+
+### Preserved
+
+- Product Knowledge
+- Gemini
+- Barcode
+- Store Reality Score
+- Store Aggregation
+- Product Intent Resolver
+- MapKit
+- ShoppingTripService
+- BuyingOptionsService
+- ShoppingSession model
+- SwiftData schema
+
+### Result
+
+Build completed successfully after implementation and after focused review.
+
+**Review:** Fixed one P2 empty-state issue by using view-local product-row placeholders and disabling Map plan routing when no real plan/list state exists.
+
+**Status:** Completed
+
+## Sprint 27A.1 – Remove Demo Data From Home & Shopping
+
+### Goal
+
+Remove prototype store, plan, metric, nearby opportunity, and product fallback data from the Home and Shopping screens while preserving the existing visual implementation and business systems.
+
+### Completed
+
+- Removed Home fallback plan stores, prototype coverage percentages, prototype distances, fake duration, fake open-state label, sample nearby opportunity, and sample recent products.
+- Removed the Home header scan button; the orange floating scan button remains wired to `CameraView`.
+- Updated Home to show real `AppStateManager.shoppingTripCoverages` rows only, with `Plan not ready yet` empty states when planner data is unavailable.
+- Updated Home Nearby Opportunity to render only `AppStateManager.visibleNearbyOpportunity`.
+- Removed Shopping fallback recommended stores, coverage metrics, and grouped sample product rows.
+- Updated Shopping Recommended Stores and Plan sheet to use real `StoreCoverage` and displayable real `BuyingOption` store rows only.
+- Added a `Plan not ready yet` empty state with a Generate plan action that routes through the existing trip-map planner entry point when active shopping items exist.
+- Kept grouped list behavior using `ShoppingIntentMatcher`, but no longer labels groups as prototype stores.
+
+### Real Data
+
+- Home item counts, recent products, monthly stats, and shopping sessions come from `ShoppingItem` and `ShoppingSession`.
+- Home best plan and plan rows come from `AppStateManager.shoppingTripCoverages`.
+- Home nearby opportunity comes from `AppStateManager.visibleNearbyOpportunity`.
+- Shopping products come from real `ShoppingItem` records.
+- Shopping plan rows come from `AppStateManager.shoppingTripCoverages`, or displayable non-local store `BuyingOption` rows when available.
+
+### Preserved
+
+- Product Knowledge
+- Gemini
+- Barcode
+- Store Reality Score
+- Store Aggregation
+- ShoppingTripService
+- BuyingOptionsService
+- ShoppingItem models
+- Existing product grouping behavior
+
+### Notes
+
+- Product Intelligence validation is still needed in a later sprint, including validation of health/pharmacy product classification such as Acamol.
+- Real v1.0 Shopping List and Shopping Plan model migration remains future work.
+
+**Status:** Completed

@@ -9,7 +9,6 @@ struct HomeView: View {
     @Query private var shoppingSessions: [ShoppingSession]
 
     @State private var isShowingScanner = false
-    @State private var isSampleNearbyHidden = false
 
     private let shoppingSessionService = ShoppingSessionService()
 
@@ -65,26 +64,20 @@ struct HomeView: View {
 
             Spacer(minLength: WayTaskDesign.Spacing.sm)
 
-            HStack(spacing: WayTaskDesign.Spacing.xs) {
-                WayTaskIconButton(systemName: "barcode.viewfinder") {
-                    isShowingScanner = true
-                }
-
-                Button {
-                    WayTaskHaptics.selection()
-                    appStateManager.selectedTab = .settings
-                } label: {
-                    Text("M")
-                        .font(.headline.weight(.bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
-                        .background(WayTaskDesign.accentGradient)
-                        .clipShape(Circle())
-                        .shadow(color: WayTaskDesign.Elevation.buttonShadow, radius: 14, y: 6)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Open settings")
+            Button {
+                WayTaskHaptics.selection()
+                appStateManager.selectedTab = .settings
+            } label: {
+                Text("M")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(WayTaskDesign.accentGradient)
+                    .clipShape(Circle())
+                    .shadow(color: WayTaskDesign.Elevation.buttonShadow, radius: 14, y: 6)
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open settings")
             .padding(.top, WayTaskDesign.Spacing.xs)
         }
     }
@@ -98,32 +91,46 @@ struct HomeView: View {
 
                 Spacer()
 
-                WayTaskBadge(title: bestStoreOpenLabel, systemImage: "circle.fill", tone: bestStoreOpenTone)
+                if bestCoverage?.store.isOpen == false {
+                    WayTaskBadge(title: "Closed", systemImage: "circle.fill", tone: .danger)
+                }
             }
 
-            Text("\(displayItemCount) \(displayItemCount == 1 ? "item" : "items") to buy")
+            Text("\(activeItemCount) \(activeItemCount == 1 ? "item" : "items") to buy")
                 .font(WayTaskDesign.Typography.title)
                 .foregroundStyle(WayTaskDesign.primaryText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.82)
 
-            HStack(alignment: .center, spacing: WayTaskDesign.Spacing.md) {
-                WayTaskCoverageRing(progress: bestCoverageProgress, size: 70, lineWidth: 7)
+            if let bestCoverage {
+                HStack(alignment: .center, spacing: WayTaskDesign.Spacing.md) {
+                    WayTaskCoverageRing(progress: bestCoverage.coverageScore, size: 70, lineWidth: 7)
 
-                VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.sm) {
-                    Text("\(bestStoreName) - best store")
+                    VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.sm) {
+                        Text("\(bestCoverage.store.title) - best store")
+                            .font(WayTaskDesign.Typography.headline)
+                            .foregroundStyle(WayTaskDesign.primaryText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.78)
+
+                        if let distance = bestCoverage.distance {
+                            WayTaskBadge(title: distanceText(for: distance), systemImage: "location", tone: .neutral)
+                        }
+                    }
+
+                    Spacer(minLength: 0)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xs) {
+                    Text("Plan not ready yet")
                         .font(WayTaskDesign.Typography.headline)
                         .foregroundStyle(WayTaskDesign.primaryText)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.78)
 
-                    HStack(spacing: WayTaskDesign.Spacing.xs) {
-                        WayTaskBadge(title: bestStoreTimeText, systemImage: "clock", tone: .neutral)
-                        WayTaskBadge(title: bestStoreDistanceText, systemImage: "location", tone: .neutral)
-                    }
+                    Text(activeItemCount == 0 ? "Add shopping items to build a plan." : "Open Shopping to generate a plan from your current list.")
+                        .font(WayTaskDesign.Typography.caption)
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-
-                Spacer(minLength: 0)
             }
 
             VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xs) {
@@ -139,7 +146,7 @@ struct HomeView: View {
                     .tint(WayTaskDesign.accent)
             }
 
-            WayTaskPrimaryButton("Start Shopping", systemImage: "play.fill") {
+            WayTaskPrimaryButton("Start Shopping", systemImage: "play.fill", isDisabled: activeItemCount == 0) {
                 startShopping()
             }
         }
@@ -190,17 +197,28 @@ struct HomeView: View {
                 appStateManager.selectedTab = .shopping
             }
 
-            VStack(spacing: WayTaskDesign.Spacing.sm) {
-                ForEach(planRows) { row in
-                    WayTaskStoreCard(
-                        title: row.storeName,
-                        subtitle: row.subtitle,
-                        distanceText: row.distanceText,
-                        coverage: row.coverage,
-                        confidenceText: row.confidenceText,
-                        isBestMatch: row.isBestMatch
-                    ) {
-                        appStateManager.selectedTab = .shopping
+            if planRows.isEmpty {
+                WayTaskEmptyState(
+                    title: "Plan not ready yet",
+                    message: activeItemCount == 0 ? "Add shopping items to create a store plan." : "Open Shopping to generate a plan from real store data.",
+                    systemImage: "storefront",
+                    actionTitle: activeItemCount == 0 ? nil : "Open Shopping"
+                ) {
+                    appStateManager.selectedTab = .shopping
+                }
+            } else {
+                VStack(spacing: WayTaskDesign.Spacing.sm) {
+                    ForEach(planRows) { row in
+                        WayTaskStoreCard(
+                            title: row.storeName,
+                            subtitle: row.subtitle,
+                            distanceText: row.distanceText,
+                            coverage: row.coverage,
+                            confidenceText: row.confidenceText,
+                            isBestMatch: row.isBestMatch
+                        ) {
+                            appStateManager.selectedTab = .shopping
+                        }
                     }
                 }
             }
@@ -216,14 +234,6 @@ struct HomeView: View {
                 primaryActionTitle: "Map",
                 primaryAction: { appStateManager.openNearbyOpportunityOnMap(opportunity) },
                 dismissAction: { appStateManager.dismissNearbyOpportunity(opportunity) }
-            )
-        } else if !isSampleNearbyHidden {
-            nearbyCard(
-                title: "Coffee",
-                subtitle: "AM:PM Express - 300 m",
-                primaryActionTitle: "Add",
-                primaryAction: { appStateManager.selectedTab = .products },
-                dismissAction: { isSampleNearbyHidden = true }
             )
         }
     }
@@ -276,23 +286,31 @@ struct HomeView: View {
                 appStateManager.selectedTab = .products
             }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: WayTaskDesign.Spacing.sm) {
-                    ForEach(recentProductCards) { product in
-                        WayTaskCompactProductCard(
-                            title: product.title,
-                            subtitle: product.subtitle,
-                            imageData: product.imageData,
-                            imageURL: product.imageURL,
-                            actionSystemImage: "plus"
-                        ) {
-                            appStateManager.selectedTab = .products
+            if recentProductCards.isEmpty {
+                WayTaskEmptyState(
+                    title: "No recent products",
+                    message: "Scanned or added products will appear here.",
+                    systemImage: "shippingbox"
+                )
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: WayTaskDesign.Spacing.sm) {
+                        ForEach(recentProductCards) { product in
+                            WayTaskCompactProductCard(
+                                title: product.title,
+                                subtitle: product.subtitle,
+                                imageData: product.imageData,
+                                imageURL: product.imageURL,
+                                actionSystemImage: "plus"
+                            ) {
+                                appStateManager.selectedTab = .products
+                            }
                         }
                     }
+                    .padding(.vertical, 2)
                 }
-                .padding(.vertical, 2)
+                .scrollClipDisabled()
             }
-            .scrollClipDisabled()
         }
     }
 
@@ -314,10 +332,6 @@ struct HomeView: View {
 
     private var activeItemCount: Int {
         activeItems.count
-    }
-
-    private var displayItemCount: Int {
-        activeItemCount == 0 ? 7 : activeItemCount
     }
 
     private var activeSession: ShoppingSession? {
@@ -343,42 +357,6 @@ struct HomeView: View {
         appStateManager.shoppingTripCoverages.first
     }
 
-    private var bestCoverageProgress: Double {
-        bestCoverage?.coverageScore ?? 0.72
-    }
-
-    private var bestStoreName: String {
-        bestCoverage?.store.title ?? appStateManager.buyingOptions.first?.storeName ?? "Rami Levy"
-    }
-
-    private var bestStoreDistanceText: String {
-        if let distance = bestCoverage?.distance {
-            return distanceText(for: distance)
-        }
-
-        if let distance = appStateManager.buyingOptions.first?.distanceText, !distance.isEmpty {
-            return distance
-        }
-
-        return "2.2 km"
-    }
-
-    private var bestStoreTimeText: String {
-        if let bestCoverage {
-            return "\(max(bestCoverage.matchedItemCount * 3, 4)) min"
-        }
-
-        return "15 min"
-    }
-
-    private var bestStoreOpenLabel: String {
-        bestCoverage?.store.isOpen == false ? "Closed" : "Open now"
-    }
-
-    private var bestStoreOpenTone: WayTaskBadge.Tone {
-        bestCoverage?.store.isOpen == false ? .danger : .success
-    }
-
     private var shoppingListSummaries: [HomeShoppingListSummary] {
         let completed = items.filter(\.isCompleted)
         let recent = items
@@ -388,9 +366,9 @@ struct HomeView: View {
         return [
             HomeShoppingListSummary(
                 title: "Weekly Shopping",
-                itemCount: max(activeItemCount, displayItemCount),
+                itemCount: activeItemCount,
                 completedCount: collectedCount,
-                subtitle: activeItemCount == 0 ? "Sample v1.0 list" : "\(activeItemCount) open items",
+                subtitle: activeItemCount == 0 ? "No open items" : "\(activeItemCount) open items",
                 isActive: true
             ),
             HomeShoppingListSummary(
@@ -411,7 +389,7 @@ struct HomeView: View {
     }
 
     private var planRows: [HomePlanRow] {
-        let realRows = appStateManager.shoppingTripCoverages.prefix(3).enumerated().map { index, coverage in
+        appStateManager.shoppingTripCoverages.prefix(3).enumerated().map { index, coverage in
             HomePlanRow(
                 storeName: coverage.store.title,
                 subtitle: "\(coverage.matchedItemCount)/\(coverage.matchedItemCount + coverage.missingItemCount) items - \(coverage.group.displayName)",
@@ -421,20 +399,10 @@ struct HomeView: View {
                 isBestMatch: index == 0
             )
         }
-
-        if !realRows.isEmpty {
-            return realRows
-        }
-
-        return [
-            HomePlanRow(storeName: "Rami Levy", subtitle: "5/7 items - Supermarket", distanceText: "2.2 km", coverage: 0.72, confidenceText: "High confidence", isBestMatch: true),
-            HomePlanRow(storeName: "Shufersal Deal", subtitle: "3/7 items - Supermarket", distanceText: "1.4 km", coverage: 0.48, confidenceText: "Good match", isBestMatch: false),
-            HomePlanRow(storeName: "AM:PM Express", subtitle: "2/7 items - Convenience", distanceText: "600 m", coverage: 0.22, confidenceText: "Possible match", isBestMatch: false)
-        ]
     }
 
     private var recentProductCards: [HomeProductCardData] {
-        let realProducts = items
+        items
             .sorted { $0.dateAdded > $1.dateAdded }
             .prefix(8)
             .map {
@@ -445,17 +413,6 @@ struct HomeView: View {
                     imageURL: $0.imageURL
                 )
             }
-
-        if !realProducts.isEmpty {
-            return Array(realProducts)
-        }
-
-        return [
-            HomeProductCardData(title: "Milk", subtitle: "Tnuva"),
-            HomeProductCardData(title: "Coffee", subtitle: "Elite"),
-            HomeProductCardData(title: "Protein Shake", subtitle: "Optimum"),
-            HomeProductCardData(title: "USB-C Cable", subtitle: "Anker")
-        ]
     }
 
     private var completedTripsThisMonth: Int {
