@@ -91,15 +91,232 @@ struct NearbyShoppingOpportunity: Identifiable, Equatable {
     }
 }
 
+struct ShoppingPlan: Identifiable {
+    let id: UUID
+    let request: ShoppingStoreSuggestionRequest
+    let items: [ShoppingItem]
+    let stores: [MapStore]
+    let buyingOptions: [BuyingOption]
+    let shoppingTripCoverages: [StoreCoverage]
+    let generatedAt: Date
+    let contentSignature: String
+
+    init(
+        id: UUID = UUID(),
+        request: ShoppingStoreSuggestionRequest,
+        items: [ShoppingItem],
+        stores: [MapStore],
+        buyingOptions: [BuyingOption],
+        shoppingTripCoverages: [StoreCoverage],
+        generatedAt: Date = Date()
+    ) {
+        self.id = id
+        self.request = request
+        self.items = items.filter { !$0.isCompleted }
+        self.stores = stores
+        self.buyingOptions = buyingOptions
+        self.shoppingTripCoverages = shoppingTripCoverages
+        self.generatedAt = generatedAt
+        self.contentSignature = ShoppingPlan.makeContentSignature(
+            request: request,
+            items: self.items,
+            stores: stores,
+            buyingOptions: buyingOptions,
+            shoppingTripCoverages: shoppingTripCoverages
+        )
+    }
+
+    var bestCoverage: StoreCoverage? {
+        shoppingTripCoverages.first
+    }
+
+    private static func makeContentSignature(
+        request: ShoppingStoreSuggestionRequest,
+        items: [ShoppingItem],
+        stores: [MapStore],
+        buyingOptions: [BuyingOption],
+        shoppingTripCoverages: [StoreCoverage]
+    ) -> String {
+        [
+            requestSignature(request),
+            itemSignature(items),
+            storeSignature(stores),
+            buyingOptionSignature(buyingOptions),
+            coverageSignature(shoppingTripCoverages)
+        ].joined(separator: "|")
+    }
+
+    private static func requestSignature(_ request: ShoppingStoreSuggestionRequest) -> String {
+        [
+            request.itemID.uuidString,
+            request.itemName,
+            request.itemCategory ?? "",
+            request.storeCategories.map(\.rawValue).joined(separator: ","),
+            request.searchTerms.joined(separator: ","),
+            intentProfileSignature(request.intentProfile)
+        ].joined(separator: ":")
+    }
+
+    private static func intentProfileSignature(_ profile: ProductIntentProfile?) -> String {
+        guard let profile else {
+            return ""
+        }
+
+        return [
+            profile.normalizedCategory.rawValue,
+            profile.intentGroup.rawValue,
+            String(format: "%.2f", profile.confidence),
+            profile.evidence.sorted().joined(separator: ","),
+            profile.primaryAllowedStoreTypes.map(\.rawValue).sorted().joined(separator: ","),
+            profile.secondaryAllowedStoreTypes.map(\.rawValue).sorted().joined(separator: ","),
+            profile.fallbackStoreTypes.map(\.rawValue).sorted().joined(separator: ","),
+            profile.excludedStoreTypes.map(\.rawValue).sorted().joined(separator: ",")
+        ].joined(separator: "/")
+    }
+
+    private static func itemSignature(_ items: [ShoppingItem]) -> String {
+        items
+            .map { item in
+                [
+                    item.id.uuidString,
+                    item.name,
+                    item.brand ?? "",
+                    item.category ?? "",
+                    item.isCompleted ? "1" : "0"
+                ].joined(separator: ":")
+            }
+            .sorted()
+            .joined(separator: ";")
+    }
+
+    private static func storeSignature(_ stores: [MapStore]) -> String {
+        stores
+            .map { store in
+                [
+                    store.id.uuidString,
+                    store.title,
+                    String(format: "%.5f", store.coordinate.latitude),
+                    String(format: "%.5f", store.coordinate.longitude),
+                    store.itemNames.sorted().joined(separator: ","),
+                    store.completedItemNames.sorted().joined(separator: ","),
+                    store.storeCategories.map(\.rawValue).sorted().joined(separator: ","),
+                    store.sourceType.rawValue
+                ].joined(separator: ":")
+            }
+            .sorted()
+            .joined(separator: ";")
+    }
+
+    private static func buyingOptionSignature(_ buyingOptions: [BuyingOption]) -> String {
+        buyingOptions
+            .map { option in
+                [
+                    option.title,
+                    option.subtitle,
+                    option.optionType.rawValue,
+                    option.storeName,
+                    option.distanceText,
+                    option.source.rawValue,
+                    String(format: "%.2f", option.ranking?.score ?? -1),
+                    option.confidenceLabel ?? ""
+                ].joined(separator: ":")
+            }
+            .joined(separator: ";")
+    }
+
+    private static func coverageSignature(_ coverages: [StoreCoverage]) -> String {
+        coverages
+            .map { coverage in
+                [
+                    coverage.id,
+                    coverage.store.title,
+                    coverage.group.rawValue,
+                    coverage.matchedItems.map(\.id.uuidString).sorted().joined(separator: ","),
+                    coverage.missingItems.map(\.id.uuidString).sorted().joined(separator: ","),
+                    String(format: "%.4f", coverage.coverageScore),
+                    String(format: "%.1f", coverage.distance ?? -1),
+                    String(format: "%.2f", coverage.ranking.score),
+                    String(format: "%.2f", coverage.ranking.confidence)
+                ].joined(separator: ":")
+            }
+            .joined(separator: ";")
+    }
+}
+
+enum ShoppingPlanGenerationStage: String, CaseIterable, Equatable {
+    case preparingList
+    case findingStores
+    case matchingProducts
+    case calculatingCoverage
+    case rankingOptions
+
+    var title: String {
+        switch self {
+        case .preparingList:
+            return "Preparing your shopping list"
+        case .findingStores:
+            return "Finding nearby stores"
+        case .matchingProducts:
+            return "Matching products to stores"
+        case .calculatingCoverage:
+            return "Calculating coverage"
+        case .rankingOptions:
+            return "Ranking the best options"
+        }
+    }
+}
+
+enum ShoppingPlanGenerationState: Equatable {
+    case idle
+    case generating(stage: ShoppingPlanGenerationStage, startedAt: Date)
+    case ready(generatedAt: Date)
+    case failed(message: String, actionTitle: String?)
+    case stale(reason: String)
+
+    var isGenerating: Bool {
+        if case .generating = self {
+            return true
+        }
+
+        return false
+    }
+
+    var isReady: Bool {
+        if case .ready = self {
+            return true
+        }
+
+        return false
+    }
+
+    var stageTitle: String? {
+        if case let .generating(stage, _) = self {
+            return stage.title
+        }
+
+        return nil
+    }
+
+    var startedAt: Date? {
+        if case let .generating(_, startedAt) = self {
+            return startedAt
+        }
+
+        return nil
+    }
+}
+
 final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
     @Published var selectedTab: AppTab = .home
     @Published var navigationPath = NavigationPath()
     @Published var focusedLocationID: UUID?
     @Published var shoppingListRevision = UUID()
     @Published var recentlyAddedShoppingItemID: UUID?
-    @Published var storeSuggestionRequest: ShoppingStoreSuggestionRequest?
-    @Published var buyingOptions: [BuyingOption] = []
-    @Published var shoppingTripCoverages: [StoreCoverage] = []
+    @Published private(set) var shoppingPlan: ShoppingPlan?
+    @Published private(set) var shoppingPlanState: ShoppingPlanGenerationState = .idle
+    @Published private(set) var currentShoppingListID: UUID?
+    @Published var selectedShoppingListID: UUID?
+    @Published private(set) var currentProductLibraryIDs: [UUID] = []
     @Published var isTripMapMode = false
     @Published private(set) var nearbyOpportunities: [NearbyShoppingOpportunity] = []
 
@@ -121,6 +338,18 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         nearbyOpportunities.first { !isNearbyOpportunityDismissed($0) }
     }
 
+    var storeSuggestionRequest: ShoppingStoreSuggestionRequest? {
+        shoppingPlan?.request
+    }
+
+    var buyingOptions: [BuyingOption] {
+        shoppingPlan?.buyingOptions ?? []
+    }
+
+    var shoppingTripCoverages: [StoreCoverage] {
+        shoppingPlan?.shoppingTripCoverages ?? []
+    }
+
     var hasNearbyOpportunityBadge: Bool {
         visibleNearbyOpportunity != nil
     }
@@ -136,37 +365,113 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         shoppingListRevision = UUID()
     }
 
+    func setCurrentShoppingList(_ listID: UUID?) {
+        currentShoppingListID = listID
+
+        if selectedShoppingListID == nil {
+            selectedShoppingListID = listID
+        }
+    }
+
+    func setCurrentProductLibrary(_ products: [Product]) {
+        currentProductLibraryIDs = products
+            .map(\.id)
+            .sorted { $0.uuidString < $1.uuidString }
+    }
+
     func suggestStores(
         for request: ShoppingStoreSuggestionRequest,
+        items: [ShoppingItem] = [],
+        stores: [MapStore] = [],
         buyingOptions: [BuyingOption] = [],
         shoppingTripCoverages: [StoreCoverage] = []
     ) {
         navigationPath = NavigationPath()
-        storeSuggestionRequest = request
-        self.buyingOptions = buyingOptions
-        self.shoppingTripCoverages = shoppingTripCoverages
+        setShoppingPlan(
+            request: request,
+            items: items,
+            stores: stores,
+            buyingOptions: buyingOptions,
+            shoppingTripCoverages: shoppingTripCoverages
+        )
         isTripMapMode = false
         selectedTab = .map
     }
 
     func showTripOnMap(
         for request: ShoppingStoreSuggestionRequest,
+        items: [ShoppingItem] = [],
+        stores: [MapStore] = [],
         buyingOptions: [BuyingOption] = [],
         shoppingTripCoverages: [StoreCoverage] = []
     ) {
         navigationPath = NavigationPath()
-        storeSuggestionRequest = request
-        self.buyingOptions = buyingOptions
-        self.shoppingTripCoverages = shoppingTripCoverages
+        setShoppingPlan(
+            request: request,
+            items: items,
+            stores: stores,
+            buyingOptions: buyingOptions,
+            shoppingTripCoverages: shoppingTripCoverages
+        )
         isTripMapMode = true
         selectedTab = .map
     }
 
+    func setShoppingPlan(
+        request: ShoppingStoreSuggestionRequest,
+        items: [ShoppingItem],
+        stores: [MapStore],
+        buyingOptions: [BuyingOption],
+        shoppingTripCoverages: [StoreCoverage]
+    ) {
+        let nextPlan = ShoppingPlan(
+            request: request,
+            items: items,
+            stores: stores,
+            buyingOptions: buyingOptions,
+            shoppingTripCoverages: shoppingTripCoverages
+        )
+
+        if shoppingPlan?.contentSignature == nextPlan.contentSignature {
+            markShoppingPlanReady(generatedAt: shoppingPlan?.generatedAt ?? Date())
+            return
+        }
+
+        shoppingPlan = nextPlan
+        markShoppingPlanReady(generatedAt: nextPlan.generatedAt)
+    }
+
+    func clearShoppingPlan() {
+        shoppingPlan = nil
+        shoppingPlanState = .idle
+    }
+
+    func beginShoppingPlanGeneration(stage: ShoppingPlanGenerationStage = .preparingList) {
+        shoppingPlanState = .generating(stage: stage, startedAt: Date())
+    }
+
+    func updateShoppingPlanGeneration(stage: ShoppingPlanGenerationStage) {
+        let startedAt = shoppingPlanState.startedAt ?? Date()
+        shoppingPlanState = .generating(stage: stage, startedAt: startedAt)
+    }
+
+    func markShoppingPlanReady(generatedAt: Date = Date()) {
+        shoppingPlanState = .ready(generatedAt: generatedAt)
+    }
+
+    func markShoppingPlanFailed(message: String, actionTitle: String? = "Try Again") {
+        shoppingPlan = nil
+        shoppingPlanState = .failed(message: message, actionTitle: actionTitle)
+    }
+
+    func markShoppingPlanStale(reason: String) {
+        shoppingPlan = nil
+        shoppingPlanState = .stale(reason: reason)
+    }
+
     func openShoppingNotificationOnMap(storeID: UUID?, locationID: UUID?) {
         navigationPath = NavigationPath()
-        storeSuggestionRequest = nil
-        buyingOptions = []
-        shoppingTripCoverages = []
+        clearShoppingPlan()
         isTripMapMode = true
         focusedLocationID = locationID ?? storeID
         selectedTab = .map

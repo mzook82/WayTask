@@ -176,6 +176,61 @@ LocationManager
 MapKit
 ```
 
+Example: Shared Shopping Plan
+
+```text
+Generate Plan / Start Shopping
+        │
+        ▼
+Existing planner services
+        │
+        ▼
+AppStateManager.shoppingPlan
+AppStateManager.shoppingPlanState
+        │
+        ├── HomeView
+        ├── ShoppingWorkspaceView
+        └── MainMapView
+```
+
+`ShoppingPlan` is an app-state value, not a SwiftData model. It contains the current planner request, active shopping items, planner stores, buying options, trip coverage rows, and generation timestamp. Home, Shopping, and Map observe this single shared value so they display the same generated plan.
+
+`shoppingPlanState` is the shared runtime state machine for the current plan:
+
+- `idle`
+- `generating`
+- `ready`
+- `failed`
+- `stale`
+
+Shopping owns explicit generation actions. Home observes the same state and does not generate an independent plan. Map receives the existing shared plan only after the plan is ready and contains usable stores.
+
+Example: Product Library and Shopping Lists
+
+```text
+Product
+        │
+        ▼
+ShoppingList
+        │
+        ▼
+ShoppingListEntry
+        │
+        ▼
+Temporary ShoppingItem adapter
+        │
+        ▼
+ShoppingPlan
+```
+
+Sprint 27B.1 introduced persistent `Product`, `ShoppingList`, and `ShoppingListEntry` models. Sprint 27B.2 connected Products to Shopping: scanning and manual product creation now save/update `Product` records first, and users explicitly add Products to the selected Shopping list.
+
+Sprint 27B.4.1 changed migration behavior so legacy `ShoppingItem` records backfill `Product` records and default Shopping lists only. They no longer auto-create Weekly Shopping entries. Sprint 27B.4.2 added explicit first-shopping ownership: new users see a one-time onboarding and chooser, while legacy users with existing Weekly Shopping entries see a one-time review before those entries are treated as intentional. `Start Fresh` removes only temporary Weekly Shopping entries and marks linked compatibility `ShoppingItem` records completed; it never deletes Products.
+
+Shopping reads `ShoppingListEntry` records only. Each entry still adapts to a temporary `ShoppingItem` record for current planner, Shopping Mode, Product Knowledge, Shopping Memory, and saved-store compatibility. This preserves existing services while keeping the user-facing distinction clear: Products are permanent library records; Shopping is a temporary list.
+
+Sprint 27B.3 removed the runtime UI override where an active Shopping Session replaced the Products tab. Sprint 27B.4 formalized Shopping plan state and gated Map/Shopping Mode entry behind a ready shared plan. Shopping Mode remains on the legacy `ShoppingSession` path, but it no longer owns Product Library presentation.
+
 This architecture keeps presentation logic separated from reusable services.
 
 ---

@@ -9,9 +9,12 @@ struct ProductListView: View {
     @EnvironmentObject private var locationManager: LocationManager
 
     @Query private var items: [ShoppingItem]
+    @Query private var products: [Product]
     @Query private var locations: [GeoLocation]
     @Query private var productHistories: [ProductHistory]
     @Query private var shoppingSessions: [ShoppingSession]
+    @Query private var shoppingLists: [ShoppingList]
+    @Query private var shoppingListEntries: [ShoppingListEntry]
 
     @State private var newItemName = ""
     @State private var selectedLocationID: UUID?
@@ -46,19 +49,13 @@ struct ProductListView: View {
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    if let activeSession {
-                        shoppingSessionContent(for: activeSession)
-                    } else {
-                        header
-                        filterBar
-                        productList
-                    }
+                    header
+                    filterBar
+                    productList
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                if activeSession == nil {
-                    bottomActionBar
-                }
+                bottomActionBar
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
@@ -111,6 +108,12 @@ struct ProductListView: View {
                     showAllProducts()
                 }
             }
+            .onAppear {
+                appStateManager.setCurrentProductLibrary(products)
+            }
+            .onChange(of: productLibrarySignature) {
+                appStateManager.setCurrentProductLibrary(products)
+            }
         }
         .preferredColorScheme(.dark)
     }
@@ -119,7 +122,7 @@ struct ProductListView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("My Lists")
+                    Text("Products")
                         .font(.largeTitle.weight(.bold))
                         .foregroundStyle(WayTaskDesign.primaryText)
 
@@ -248,14 +251,10 @@ struct ProductListView: View {
                         .font(.headline)
                         .foregroundStyle(WayTaskDesign.primaryText)
 
-                    Picker("Place", selection: $selectedLocationID) {
-                        Text("No place yet").tag(Optional<UUID>.none)
-
-                        ForEach(locations) { location in
-                            Text(location.title).tag(Optional(location.id))
-                        }
-                    }
-                    .tint(WayTaskDesign.accent)
+                    Text("Saved here first. Add products to Shopping only when you plan to buy them.")
+                        .font(.caption)
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
@@ -303,15 +302,13 @@ struct ProductListView: View {
             .accessibilityLabel("Scan Product")
 
             Button {
-                startShopping()
+                appStateManager.selectedTab = .shopping
             } label: {
-                Label("Start", systemImage: "play.fill")
+                Label("Shopping", systemImage: "list.bullet.rectangle.fill")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 44, cornerRadius: 14))
-            .disabled(activeShoppingItems.isEmpty)
-            .opacity(activeShoppingItems.isEmpty ? 0.42 : 1)
-            .accessibilityLabel("Start Shopping")
+            .accessibilityLabel("Open Shopping")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -460,40 +457,35 @@ struct ProductListView: View {
                     .listRowSeparator(.hidden)
             }
 
-            if filteredItems.isEmpty {
+            if filteredProducts.isEmpty {
                 emptyState
                     .listRowInsets(EdgeInsets(top: 42, leading: 20, bottom: 42, trailing: 20))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             } else {
-                ForEach(filteredItems) { item in
+                ForEach(filteredProducts) { product in
                     ProductRowCard(
-                        item: item,
-                        location: assignedLocation(for: item),
-                        memoryIndicators: memoryIndicators(for: item),
-                        onToggle: {
-                            withAnimation(.spring()) {
-                                item.isCompleted.toggle()
-                            }
+                        product: product,
+                        isInShopping: isProductInCurrentShoppingList(product),
+                        memoryIndicators: memoryIndicators(for: product),
+                        onAddToShopping: {
+                            addProductToShopping(product)
                         },
-                        onSuggest: {
-                            findSuggestions(for: item)
+                        onRemoveFromShopping: {
+                            removeProductFromShopping(product)
                         },
                         onImageSelected: { imageData in
-                            replaceImage(for: item, imageData: imageData)
+                            replaceImage(for: product, imageData: imageData)
                         },
                         onRemoteImageLoaded: { imageData in
-                            cacheRemoteImage(for: item, imageData: imageData)
-                        },
-                        onOpenMap: { location in
-                            appStateManager.focusMap(on: location.id)
+                            cacheRemoteImage(for: product, imageData: imageData)
                         }
                     )
                     .listRowInsets(EdgeInsets(top: 5, leading: 20, bottom: 5, trailing: 20))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 }
-                .onDelete(perform: deleteFilteredItems)
+                .onDelete(perform: deleteFilteredProducts)
             }
         }
         .listStyle(.plain)
@@ -568,11 +560,11 @@ struct ProductListView: View {
                 .font(.system(size: 48, weight: .semibold))
                 .foregroundStyle(WayTaskDesign.tertiaryText)
 
-            Text(items.isEmpty ? "No products yet" : "No matching products")
+            Text(products.isEmpty ? "No products yet" : "No matching products")
                 .font(.headline)
                 .foregroundStyle(WayTaskDesign.primaryText)
 
-            Text(items.isEmpty ? "Add products here first, then connect them to nearby places." : "Try changing the search or filter.")
+            Text(products.isEmpty ? "Scan or add products to build your permanent library." : "Try changing the search or filter.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(WayTaskDesign.secondaryText)
@@ -636,13 +628,27 @@ struct ProductListView: View {
     }
 
     private var summaryText: String {
-        let openCount = items.filter { !$0.isCompleted }.count
-        let assignedCount = items.filter { assignedLocation(for: $0) != nil }.count
-        return "\(items.count) items • \(openCount) open • \(assignedCount) placed"
+        "\(products.count) library products • \(currentShoppingEntries.count) in Shopping"
     }
 
     private var activeShoppingItems: [ShoppingItem] {
-        items.filter { !$0.isCompleted }
+        currentShoppingEntries
+            .sorted { lhs, rhs in
+                if lhs.sortOrder == rhs.sortOrder {
+                    return lhs.createdAt < rhs.createdAt
+                }
+
+                return lhs.sortOrder < rhs.sortOrder
+            }
+            .compactMap(legacyItem)
+            .filter { !$0.isCompleted }
+    }
+
+    private var productLibrarySignature: String {
+        products
+            .map { "\($0.id.uuidString)-\($0.updatedAt.timeIntervalSince1970)" }
+            .sorted()
+            .joined(separator: "|")
     }
 
     private var activeSession: ShoppingSession? {
@@ -668,14 +674,52 @@ struct ProductListView: View {
             switch selectedFilter {
             case .all:
                 return true
-            case .open:
+            case .inShopping:
                 return !item.isCompleted
-            case .placed:
-                return assignedLocation(for: item) != nil
-            case .done:
+            case .notInShopping:
                 return item.isCompleted
             }
         }
+    }
+
+    private var filteredProducts: [Product] {
+        products
+            .filter { product in
+                let matchesSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                    product.name.localizedCaseInsensitiveContains(searchText) ||
+                    (product.brand?.localizedCaseInsensitiveContains(searchText) ?? false) ||
+                    (product.category?.localizedCaseInsensitiveContains(searchText) ?? false)
+
+                guard matchesSearch else {
+                    return false
+                }
+
+                switch selectedFilter {
+                case .all:
+                    return true
+                case .inShopping:
+                    return isProductInCurrentShoppingList(product)
+                case .notInShopping:
+                    return !isProductInCurrentShoppingList(product)
+                }
+            }
+            .sorted { lhs, rhs in
+                lhs.updatedAt > rhs.updatedAt
+            }
+    }
+
+    private var selectedShoppingListID: UUID? {
+        appStateManager.selectedShoppingListID ??
+            appStateManager.currentShoppingListID ??
+            shoppingLists.first { $0.kind == .weekly }?.id
+    }
+
+    private var currentShoppingEntries: [ShoppingListEntry] {
+        guard let selectedShoppingListID else {
+            return []
+        }
+
+        return shoppingListEntries.filter { $0.shoppingListID == selectedShoppingListID }
     }
 
     private func shoppingSessionItems(for session: ShoppingSession) -> [ShoppingItem] {
@@ -684,11 +728,42 @@ struct ProductListView: View {
     }
 
     private func startShopping() {
+        refreshSharedShoppingPlanForActiveItems()
+
         do {
             try shoppingSessionService.startShopping(with: activeShoppingItems, in: modelContext)
         } catch {
             assertionFailure("Failed to start shopping session: \(error.localizedDescription)")
         }
+    }
+
+    private func refreshSharedShoppingPlanForActiveItems() {
+        guard !activeShoppingItems.isEmpty else {
+            return
+        }
+
+        let request = appStateManager.storeSuggestionRequest ?? shoppingIntentMatcher.request(for: activeShoppingItems, in: .grocery)
+        let userCoordinate = locationManager.currentCoordinate
+        let candidateStores = suggestionStores(for: request, userCoordinate: userCoordinate)
+        let buyingOptions = buyingOptionsService.localOptions(
+            for: request,
+            shoppingItems: activeShoppingItems,
+            stores: candidateStores,
+            userCoordinate: userCoordinate
+        )
+        let tripCoverages = shoppingTripService.coverage(
+            for: activeShoppingItems,
+            stores: candidateStores,
+            request: request,
+            userCoordinate: userCoordinate
+        )
+        appStateManager.setShoppingPlan(
+            request: request,
+            items: activeShoppingItems,
+            stores: candidateStores,
+            buyingOptions: buyingOptions,
+            shoppingTripCoverages: tripCoverages
+        )
     }
 
     private func toggleCollected(_ item: ShoppingItem, in session: ShoppingSession) {
@@ -718,18 +793,14 @@ struct ProductListView: View {
             return
         }
 
-        let location = selectedLocationID.flatMap { locationID in
-            locations.first { $0.id == locationID }
-        }
-
         do {
-            try shoppingListService.addManualItem(
+            try shoppingListService.addManualProduct(
                 name: name,
                 imageData: selectedImageData,
-                location: location,
                 in: modelContext
             )
             appStateManager.shoppingListDidChange()
+            appStateManager.markShoppingPlanStale(reason: "Shopping list changed. Generate a new plan before viewing stores.")
             resetForm()
         } catch {
             assertionFailure("Failed to add manual shopping item: \(error.localizedDescription)")
@@ -754,12 +825,68 @@ struct ProductListView: View {
         selectedFilter = .all
     }
 
-    private func deleteFilteredItems(at offsets: IndexSet) {
+    private func deleteFilteredProducts(at offsets: IndexSet) {
         for index in offsets.sorted(by: >) {
-            let item = filteredItems[index]
-            remove(item, from: locations)
-            modelContext.delete(item)
+            let product = filteredProducts[index]
+            let listIDs = Set(shoppingListEntries.filter { $0.productID == product.id }.map(\.shoppingListID))
+            for shoppingListID in listIDs {
+                try? shoppingListService.removeProductFromShopping(
+                    product,
+                    shoppingListID: shoppingListID,
+                    in: modelContext
+                )
+            }
+            modelContext.delete(product)
         }
+        appStateManager.markShoppingPlanStale(reason: "Shopping list changed. Generate a new plan before viewing stores.")
+    }
+
+    private func addProductToShopping(_ product: Product) {
+        guard let selectedShoppingListID else {
+            return
+        }
+
+        do {
+            try shoppingListService.addProductToShopping(
+                product,
+                shoppingListID: selectedShoppingListID,
+                in: modelContext
+            )
+            appStateManager.shoppingListDidChange()
+            appStateManager.markShoppingPlanStale(reason: "Shopping list changed. Generate a new plan before viewing stores.")
+        } catch {
+            assertionFailure("Failed to add product to shopping: \(error.localizedDescription)")
+        }
+    }
+
+    private func removeProductFromShopping(_ product: Product) {
+        guard let selectedShoppingListID else {
+            return
+        }
+
+        do {
+            try shoppingListService.removeProductFromShopping(
+                product,
+                shoppingListID: selectedShoppingListID,
+                in: modelContext
+            )
+            appStateManager.shoppingListDidChange()
+            appStateManager.markShoppingPlanStale(reason: "Shopping list changed. Generate a new plan before viewing stores.")
+        } catch {
+            assertionFailure("Failed to remove product from shopping: \(error.localizedDescription)")
+        }
+    }
+
+    private func isProductInCurrentShoppingList(_ product: Product) -> Bool {
+        currentShoppingEntries.contains { $0.productID == product.id }
+    }
+
+    private func legacyItem(for entry: ShoppingListEntry) -> ShoppingItem? {
+        guard let legacyShoppingItemID = entry.legacyShoppingItemID else {
+            return nil
+        }
+
+        return items.first { $0.id == legacyShoppingItemID }
     }
 
     private func assignedLocation(for item: ShoppingItem) -> GeoLocation? {
@@ -774,28 +901,35 @@ struct ProductListView: View {
         }
     }
 
-    private func replaceImage(for item: ShoppingItem, imageData: Data?) {
+    private func replaceImage(for product: Product, imageData: Data?) {
         guard let imageData else {
             return
         }
 
-        item.imageData = imageData
+        product.imageData = imageData
+        product.updatedAt = Date()
+        syncCompatibilityItems(from: product)
         try? modelContext.save()
-        _ = try? ProductKnowledgeService().learn(from: item, in: modelContext)
-        appStateManager.shoppingListDidChange(revealing: item.id)
+        appStateManager.shoppingListDidChange()
     }
 
-    private func cacheRemoteImage(for item: ShoppingItem, imageData: Data) {
-        guard item.imageData == nil else {
+    private func cacheRemoteImage(for product: Product, imageData: Data) {
+        guard product.imageData == nil else {
             return
         }
 
-        item.imageData = imageData
+        product.imageData = imageData
+        product.updatedAt = Date()
+        syncCompatibilityItems(from: product)
         try? modelContext.save()
-        _ = try? ProductKnowledgeService().learn(from: item, in: modelContext)
+        appStateManager.shoppingListDidChange()
     }
 
-    private func memoryIndicators(for item: ShoppingItem) -> [String] {
+    private func memoryIndicators(for product: Product) -> [String] {
+        guard let item = compatibilityItem(for: product) else {
+            return []
+        }
+
         guard let history = try? shoppingMemoryService.productHistory(for: item, in: modelContext),
               productHistories.contains(where: { $0.id == history.id }) else {
             return []
@@ -817,6 +951,42 @@ struct ProductListView: View {
         }
 
         return Array(indicators.prefix(2))
+    }
+
+    private func compatibilityItem(for product: Product) -> ShoppingItem? {
+        if let legacyShoppingItemID = product.legacyShoppingItemID,
+           let item = items.first(where: { $0.id == legacyShoppingItemID }) {
+            return item
+        }
+
+        if let barcode = product.barcode?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+           !barcode.isEmpty,
+           let item = items.first(where: { $0.barcode?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == barcode }) {
+            return item
+        }
+
+        return nil
+    }
+
+    private func syncCompatibilityItems(from product: Product) {
+        let matchingEntries = shoppingListEntries.filter { $0.productID == product.id }
+        let legacyIDs = Set(matchingEntries.compactMap(\.legacyShoppingItemID) + [product.legacyShoppingItemID].compactMap { $0 })
+
+        for item in items where legacyIDs.contains(item.id) {
+            item.name = product.name
+            item.imageData = product.imageData
+            item.brand = product.brand
+            item.category = product.category
+            item.barcode = product.barcode
+            item.imageURLString = product.imageURL?.absoluteString
+            item.sourceRawValue = product.source.rawValue
+            item.productType = product.productType
+            item.flavor = product.flavor
+            item.packageSize = product.packageSize
+            item.packageType = product.packageType
+            item.visibleText = product.visibleText
+            item.searchKeywords = product.searchKeywords
+        }
     }
 
     private func findSuggestions(for item: ShoppingItem) {
@@ -848,9 +1018,13 @@ struct ProductListView: View {
             userCoordinate: userCoordinate
         )
         buyingOptionsRequest = request
-        appStateManager.storeSuggestionRequest = request
-        appStateManager.buyingOptions = buyingOptions
-        appStateManager.shoppingTripCoverages = tripCoverages
+        appStateManager.setShoppingPlan(
+            request: request,
+            items: activeShoppingItems,
+            stores: candidateStores,
+            buyingOptions: buyingOptions,
+            shoppingTripCoverages: tripCoverages
+        )
         isShowingBuyingOptions = true
 
         if userCoordinate == nil {
@@ -921,8 +1095,13 @@ struct ProductListView: View {
                 return
             }
 
-            appStateManager.buyingOptions = buyingOptions
-            appStateManager.shoppingTripCoverages = tripCoverages
+            appStateManager.setShoppingPlan(
+                request: request,
+                items: activeShoppingItems,
+                stores: mergedStores,
+                buyingOptions: buyingOptions,
+                shoppingTripCoverages: tripCoverages
+            )
             isRefreshingBuyingOptions = false
         }
     }
@@ -981,6 +1160,8 @@ struct ProductListView: View {
         isShowingBuyingOptions = false
         appStateManager.suggestStores(
             for: buyingOptionsRequest,
+            items: activeShoppingItems,
+            stores: appStateManager.shoppingPlan?.stores ?? [],
             buyingOptions: appStateManager.buyingOptions,
             shoppingTripCoverages: appStateManager.shoppingTripCoverages
         )
@@ -1000,6 +1181,8 @@ struct ProductListView: View {
         isShowingBuyingOptions = false
         appStateManager.showTripOnMap(
             for: buyingOptionsRequest,
+            items: activeShoppingItems,
+            stores: appStateManager.shoppingPlan?.stores ?? [],
             buyingOptions: appStateManager.buyingOptions,
             shoppingTripCoverages: appStateManager.shoppingTripCoverages
         )
@@ -1198,9 +1381,8 @@ struct ProductListView: View {
 
 private enum ProductFilter: String, CaseIterable, Identifiable {
     case all
-    case open
-    case placed
-    case done
+    case inShopping
+    case notInShopping
 
     var id: String { rawValue }
 
@@ -1208,46 +1390,42 @@ private enum ProductFilter: String, CaseIterable, Identifiable {
         switch self {
         case .all:
             return "All"
-        case .open:
-            return "Open"
-        case .placed:
-            return "Placed"
-        case .done:
-            return "Done"
+        case .inShopping:
+            return "In Shopping"
+        case .notInShopping:
+            return "Library Only"
         }
     }
 }
 
 private struct ProductRowCard: View {
-    @Bindable var item: ShoppingItem
-    let location: GeoLocation?
+    @Bindable var product: Product
+    let isInShopping: Bool
     let memoryIndicators: [String]
-    let onToggle: () -> Void
-    let onSuggest: () -> Void
+    let onAddToShopping: () -> Void
+    let onRemoveFromShopping: () -> Void
     let onImageSelected: (Data?) -> Void
     let onRemoteImageLoaded: (Data) -> Void
-    let onOpenMap: (GeoLocation) -> Void
     @State private var selectedPhotoItem: PhotosPickerItem?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 14) {
                 WayTaskProductThumbnail(
-                    data: item.imageData,
-                    url: item.imageURL,
+                    data: product.imageData,
+                    url: product.imageURL,
                     size: 72,
                     cornerRadius: 17,
                     onRemoteImageLoaded: onRemoteImageLoaded
                 )
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(item.name)
+                    Text(product.name)
                         .font(.headline)
                         .foregroundStyle(WayTaskDesign.primaryText)
-                        .strikethrough(item.isCompleted)
                         .lineLimit(2)
 
-                    if let brand = item.brand?.trimmingCharacters(in: .whitespacesAndNewlines), !brand.isEmpty {
+                    if let brand = product.brand?.trimmingCharacters(in: .whitespacesAndNewlines), !brand.isEmpty {
                         Text(brand)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(WayTaskDesign.secondaryText)
@@ -1262,16 +1440,10 @@ private struct ProductRowCard: View {
                             .minimumScaleFactor(0.82)
                     }
 
-                    if let location {
-                        Label(location.title, systemImage: "mappin.and.ellipse")
-                            .font(.caption)
-                            .foregroundStyle(WayTaskDesign.secondaryText)
-                            .lineLimit(1)
-                    } else {
-                        Label("No place selected", systemImage: "mappin.slash")
-                            .font(.caption)
-                            .foregroundStyle(WayTaskDesign.secondaryText)
-                    }
+                    Label(isInShopping ? "Already in Shopping" : "Product Library", systemImage: isInShopping ? "cart.badge.checkmark" : "shippingbox")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(isInShopping ? WayTaskDesign.accent : WayTaskDesign.secondaryText)
+                        .lineLimit(1)
 
                     if !memoryIndicators.isEmpty {
                         MemoryIndicatorRow(indicators: memoryIndicators)
@@ -1280,23 +1452,29 @@ private struct ProductRowCard: View {
 
                 Spacer(minLength: 8)
 
-                Button(action: onToggle) {
-                    Image(systemName: item.isCompleted ? "checkmark.square.fill" : "square")
-                        .font(.title2)
-                        .foregroundStyle(item.isCompleted ? WayTaskDesign.accent : WayTaskDesign.tertiaryText)
-                        .animation(.spring(), value: item.isCompleted)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(item.isCompleted ? "Mark product incomplete" : "Mark product complete")
+                Image(systemName: isInShopping ? "checkmark.circle.fill" : "circle")
+                    .font(.title2)
+                    .foregroundStyle(isInShopping ? WayTaskDesign.accent : WayTaskDesign.tertiaryText)
+                    .animation(.spring(), value: isInShopping)
+                    .accessibilityHidden(true)
             }
-            .opacity(item.isCompleted ? 0.58 : 1)
 
             HStack(spacing: 10) {
-                Button(action: onSuggest) {
-                    Label("Suggest Places", systemImage: "sparkle.magnifyingglass")
-                        .frame(maxWidth: location == nil ? .infinity : nil)
+                if isInShopping {
+                    Button(action: onRemoveFromShopping) {
+                        Label("Remove from Shopping", systemImage: "minus.circle")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(WayTaskSecondaryPillButtonStyle())
+                    .accessibilityLabel("Remove \(product.name) from Shopping")
+                } else {
+                    Button(action: onAddToShopping) {
+                        Label("Add to Shopping", systemImage: "cart.badge.plus")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(WayTaskPrimaryPillButtonStyle())
+                    .accessibilityLabel("Add \(product.name) to Shopping")
                 }
-                .buttonStyle(WayTaskSecondaryPillButtonStyle())
 
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                     Image(systemName: "photo")
@@ -1306,16 +1484,6 @@ private struct ProductRowCard: View {
                 .accessibilityLabel("Change Product Image")
                 .onChange(of: selectedPhotoItem) {
                     loadSelectedPhoto()
-                }
-
-                if let location {
-                    Button {
-                        onOpenMap(location)
-                    } label: {
-                        Label("Map", systemImage: "map")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(WayTaskSecondaryPillButtonStyle())
                 }
             }
         }
@@ -1333,9 +1501,9 @@ private struct ProductRowCard: View {
 
     private var productDetails: String? {
         let aiDetails = [
-            item.productType,
-            item.flavor,
-            item.packageSize
+            product.productType,
+            product.flavor,
+            product.packageSize
         ]
         .compactDetails()
 
@@ -1343,7 +1511,7 @@ private struct ProductRowCard: View {
             return aiDetails.prefix(3).joined(separator: " • ")
         }
 
-        let fallbackDetails = [item.category]
+        let fallbackDetails = [product.category]
             .compactDetails()
 
         guard !fallbackDetails.isEmpty else {

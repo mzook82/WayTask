@@ -463,7 +463,7 @@ struct CameraView: View {
                     Button {
                         addRecognizedProduct(product)
                     } label: {
-                        centeredCTAContent(title: "Add to Shopping List", systemName: "plus.circle.fill")
+                        centeredCTAContent(title: "Save Product", systemName: "plus.circle.fill")
                     }
                     .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 50, cornerRadius: 16, shadow: true))
                 } else if viewModel.canConfirmCandidate {
@@ -475,7 +475,7 @@ struct CameraView: View {
                         }
                     } label: {
                         centeredCTAContent(
-                            title: product.source == .ai ? "Add to Shopping List" : "Use Product",
+                            title: product.source == .ai ? "Save Product" : "Use Product",
                             systemName: product.source == .ai ? "plus.circle.fill" : "checkmark.seal.fill"
                         )
                     }
@@ -931,13 +931,13 @@ struct CameraView: View {
     private func addRecognizedProduct(_ product: ProductCandidate) {
         do {
             let productToAdd = productWithLoadedImageIfAvailable(product)
-            let item = try shoppingListService.addRecognizedProduct(
+            try shoppingListService.upsertRecognizedProduct(
                 productToAdd,
                 fallbackImageData: viewModel.capturedImageData,
                 in: modelContext
             )
-            appStateManager.shoppingListDidChange(revealing: item.id)
-            viewModel.productWasAddedToShoppingList(productToAdd)
+            appStateManager.shoppingListDidChange()
+            viewModel.productWasAddedToLibrary(productToAdd)
             closeScanner()
         } catch {
             viewModel.productAddFailed(error)

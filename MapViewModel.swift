@@ -81,6 +81,7 @@ final class MapViewModel: ObservableObject {
     private var activeShoppingItemNames: [String] = []
     private var activeShoppingItems: [ShoppingItem] = []
     private var activeSuggestionRequest: ShoppingStoreSuggestionRequest?
+    private var isUsingSharedShoppingPlan = false
     private var hasCenteredOnUser = false
     private var storeSearchTask: Task<Void, Never>?
 
@@ -133,11 +134,19 @@ final class MapViewModel: ObservableObject {
         let visibleLocations = locations.filter(shouldIncludeLocationInResults)
         savedStores = visibleLocations.map(makeStore)
         savedProducts = visibleLocations.flatMap(makeProducts)
+
+        if isUsingSharedShoppingPlan {
+            products = savedProducts + stores.filter { !$0.isSavedLocation }.flatMap(makeProducts)
+            if let selectedStoreID, !stores.contains(where: { $0.id == selectedStoreID }) {
+                self.selectedStoreID = nil
+            }
+            return
+        }
+
         activeShoppingItemNames = visibleLocations
             .flatMap(\.shoppingItems)
             .filter { !$0.isCompleted }
             .map(\.name)
-
         rebuildDisplayStores()
 
         if let selectedStoreID, !stores.contains(where: { $0.id == selectedStoreID }) {
@@ -193,6 +202,7 @@ final class MapViewModel: ObservableObject {
     }
 
     func applyStoreSuggestion(_ request: ShoppingStoreSuggestionRequest, shoppingItems: [String]) {
+        isUsingSharedShoppingPlan = false
         activeSuggestionRequest = request
         activeShoppingItemNames = shoppingItems.isEmpty ? [request.itemName] : shoppingItems
         activeShoppingItems = []
@@ -204,6 +214,7 @@ final class MapViewModel: ObservableObject {
     }
 
     func applyStoreSuggestion(_ request: ShoppingStoreSuggestionRequest, shoppingItems: [ShoppingItem]) {
+        isUsingSharedShoppingPlan = false
         activeSuggestionRequest = request
         activeShoppingItems = shoppingItems.filter { !$0.isCompleted }
         activeShoppingItemNames = activeShoppingItems.map(\.name)
@@ -217,11 +228,32 @@ final class MapViewModel: ObservableObject {
         selectSuggestedStoreIfAvailable()
     }
 
+    func applyShoppingPlan(_ plan: ShoppingPlan) {
+        isUsingSharedShoppingPlan = true
+        storeSearchTask?.cancel()
+        storeSearchTask = nil
+        activeSuggestionRequest = plan.request
+        activeShoppingItems = plan.items.filter { !$0.isCompleted }
+        activeShoppingItemNames = activeShoppingItems.map(\.name)
+        if activeShoppingItemNames.isEmpty {
+            activeShoppingItemNames = [plan.request.itemName]
+        }
+        searchText = ""
+        selectedCategory = .shoppingList
+        shoppingListOnly = true
+        stores = displayStores(from: plan.stores)
+        products = savedProducts + stores.filter { !$0.isSavedLocation }.flatMap(makeProducts)
+        selectSuggestedStoreIfAvailable()
+        focusPlanRegionIfPossible()
+    }
+
     func setUserCoordinate(_ coordinate: CLLocationCoordinate2D) {
         let shouldRefreshFallback = userCoordinate == nil || distance(from: userCoordinate, to: coordinate) > 50
         userCoordinate = coordinate
 
-        if shouldRefreshFallback {
+        if shouldRefreshFallback && isUsingSharedShoppingPlan {
+            focusPlanRegionIfPossible()
+        } else if shouldRefreshFallback && !isUsingSharedShoppingPlan {
             rebuildDisplayStores()
             selectSuggestedStoreIfAvailable()
         }
@@ -229,7 +261,9 @@ final class MapViewModel: ObservableObject {
         if !hasCenteredOnUser {
             hasCenteredOnUser = true
 
-            if activeSuggestionRequest == nil {
+            if isUsingSharedShoppingPlan {
+                focusPlanRegionIfPossible()
+            } else if activeSuggestionRequest == nil {
                 followUser()
             }
         }
@@ -269,6 +303,29 @@ final class MapViewModel: ObservableObject {
         if let firstSuggestedStore = stores.first(where: { storeMatchesSuggestion($0, request: request) }) {
             selectStore(id: firstSuggestedStore.id)
         }
+    }
+
+    private func focusPlanRegionIfPossible() {
+        guard isUsingSharedShoppingPlan else {
+            return
+        }
+
+        let relevantStores = stores.filter { !$0.itemNames.isEmpty }
+        let planStores = relevantStores.isEmpty ? stores : relevantStores
+        var coordinates = planStores.prefix(4).map(\.coordinate)
+
+        if let userCoordinate {
+            coordinates.append(userCoordinate)
+        }
+
+        guard !coordinates.isEmpty else {
+            if userCoordinate != nil {
+                followUser()
+            }
+            return
+        }
+
+        cameraTarget = region(containing: coordinates)
     }
 
     private func storeMatchesSuggestion(_ store: MapStore, request: ShoppingStoreSuggestionRequest) -> Bool {
@@ -409,6 +466,32 @@ final class MapViewModel: ObservableObject {
             userCoordinate: userCoordinate
         )
         .map(\.store)
+    }
+
+    private func region(containing coordinates: [CLLocationCoordinate2D]) -> MKCoordinateRegion {
+        guard let first = coordinates.first else {
+            return region(centeredOn: userCoordinate ?? CLLocationCoordinate2D(latitude: 32.0853, longitude: 34.7818), latitudeDelta: 0.01, longitudeDelta: 0.01)
+        }
+
+        var minLatitude = first.latitude
+        var maxLatitude = first.latitude
+        var minLongitude = first.longitude
+        var maxLongitude = first.longitude
+
+        for coordinate in coordinates.dropFirst() {
+            minLatitude = min(minLatitude, coordinate.latitude)
+            maxLatitude = max(maxLatitude, coordinate.latitude)
+            minLongitude = min(minLongitude, coordinate.longitude)
+            maxLongitude = max(maxLongitude, coordinate.longitude)
+        }
+
+        let center = CLLocationCoordinate2D(
+            latitude: (minLatitude + maxLatitude) / 2,
+            longitude: (minLongitude + maxLongitude) / 2
+        )
+        let latitudeDelta = max((maxLatitude - minLatitude) * 1.8, 0.01)
+        let longitudeDelta = max((maxLongitude - minLongitude) * 1.8, 0.01)
+        return region(centeredOn: center, latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
     }
 
     private func groupedRequests() -> [ShoppingStoreSuggestionRequest] {

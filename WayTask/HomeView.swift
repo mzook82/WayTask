@@ -1,15 +1,28 @@
+import Combine
+import CoreLocation
 import SwiftData
 import SwiftUI
 
 struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var appStateManager: AppStateManager
+    @EnvironmentObject private var locationManager: LocationManager
 
     @Query private var items: [ShoppingItem]
+    @Query private var products: [Product]
+    @Query private var locations: [GeoLocation]
     @Query private var shoppingSessions: [ShoppingSession]
+    @Query private var shoppingLists: [ShoppingList]
+    @Query private var shoppingListEntries: [ShoppingListEntry]
 
     @State private var isShowingScanner = false
+    @State private var cachedPlanRows: [HomePlanRow] = []
+    @State private var cachedRecentProductCards: [HomeProductCardData] = []
+    @State private var homeNow = Date()
 
+    private let buyingOptionsService = BuyingOptionsService()
+    private let intentMatcher = ShoppingIntentMatcher()
+    private let shoppingTripPlanningService = ShoppingTripService()
     private let shoppingSessionService = ShoppingSessionService()
 
     var body: some View {
@@ -44,6 +57,26 @@ struct HomeView: View {
                 CameraView {
                     isShowingScanner = false
                 }
+            }
+            .onAppear {
+                refreshHomePresentationCache()
+            }
+            .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { now in
+                if appStateManager.shoppingPlanState.isGenerating {
+                    homeNow = now
+                }
+            }
+            .onChange(of: appStateManager.shoppingPlan?.id) {
+                refreshPlanRowsCache()
+            }
+            .onChange(of: appStateManager.shoppingPlanState) {
+                refreshPlanRowsCache()
+            }
+            .onChange(of: homeItemPresentationSignature) {
+                refreshRecentProductCardsCache()
+            }
+            .onChange(of: productPresentationSignature) {
+                refreshRecentProductCardsCache()
             }
         }
     }
@@ -113,24 +146,19 @@ struct HomeView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.78)
 
+                        WayTaskBadge(title: bestCoverageItemsText, systemImage: "basket.fill", tone: .neutral)
+
                         if let distance = bestCoverage.distance {
                             WayTaskBadge(title: distanceText(for: distance), systemImage: "location", tone: .neutral)
                         }
+
+                        WayTaskBadge(title: "ETA unavailable", systemImage: "clock", tone: .neutral)
                     }
 
                     Spacer(minLength: 0)
                 }
             } else {
-                VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xs) {
-                    Text("Plan not ready yet")
-                        .font(WayTaskDesign.Typography.headline)
-                        .foregroundStyle(WayTaskDesign.primaryText)
-
-                    Text(activeItemCount == 0 ? "Add shopping items to build a plan." : "Open Shopping to generate a plan from your current list.")
-                        .font(WayTaskDesign.Typography.caption)
-                        .foregroundStyle(WayTaskDesign.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                homePlanStatusBlock
             }
 
             VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xs) {
@@ -146,8 +174,8 @@ struct HomeView: View {
                     .tint(WayTaskDesign.accent)
             }
 
-            WayTaskPrimaryButton("Start Shopping", systemImage: "play.fill", isDisabled: activeItemCount == 0) {
-                startShopping()
+            WayTaskPrimaryButton(homePrimaryActionTitle, systemImage: homePrimaryActionImage, isDisabled: isHomePrimaryDisabled) {
+                handleHomePrimaryAction()
             }
         }
         .padding(WayTaskDesign.Spacing.lg)
@@ -198,14 +226,7 @@ struct HomeView: View {
             }
 
             if planRows.isEmpty {
-                WayTaskEmptyState(
-                    title: "Plan not ready yet",
-                    message: activeItemCount == 0 ? "Add shopping items to create a store plan." : "Open Shopping to generate a plan from real store data.",
-                    systemImage: "storefront",
-                    actionTitle: activeItemCount == 0 ? nil : "Open Shopping"
-                ) {
-                    appStateManager.selectedTab = .shopping
-                }
+                bestPlanEmptyState
             } else {
                 VStack(spacing: WayTaskDesign.Spacing.sm) {
                     ForEach(planRows) { row in
@@ -222,6 +243,32 @@ struct HomeView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var homePlanStatusBlock: some View {
+        VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xs) {
+            Text(homePlanStatusTitle)
+                .font(WayTaskDesign.Typography.headline)
+                .foregroundStyle(WayTaskDesign.primaryText)
+
+            Text(homePlanStatusMessage)
+                .font(WayTaskDesign.Typography.caption)
+                .foregroundStyle(WayTaskDesign.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(homePlanStatusTitle). \(homePlanStatusMessage)")
+    }
+
+    private var bestPlanEmptyState: some View {
+        WayTaskEmptyState(
+            title: homePlanStatusTitle,
+            message: homePlanStatusMessage,
+            systemImage: "storefront",
+            actionTitle: activeItemCount == 0 ? nil : "Open Shopping"
+        ) {
+            appStateManager.selectedTab = .shopping
         }
     }
 
@@ -321,13 +368,20 @@ struct HomeView: View {
             HStack(spacing: WayTaskDesign.Spacing.sm) {
                 WayTaskMetricCard(value: "\(completedTripsThisMonth)", title: "Trips", systemImage: "figure.walk")
                 WayTaskMetricCard(value: "\(itemsAddedThisMonth)", title: "Items", systemImage: "basket.fill")
-                WayTaskMetricCard(value: "\(items.count)", title: "Products", systemImage: "shippingbox.fill")
+                WayTaskMetricCard(value: "\(productLibraryCount)", title: "Products", systemImage: "shippingbox.fill")
             }
         }
     }
 
     private var activeItems: [ShoppingItem] {
-        items.filter { !$0.isCompleted }
+        if !shoppingListEntries.isEmpty {
+            return selectedShoppingEntries
+                .filter { !$0.isChecked }
+                .compactMap(legacyItem)
+                .filter { !$0.isCompleted }
+        }
+
+        return items.filter { !$0.isCompleted }
     }
 
     private var activeItemCount: Int {
@@ -354,10 +408,43 @@ struct HomeView: View {
     }
 
     private var bestCoverage: StoreCoverage? {
-        appStateManager.shoppingTripCoverages.first
+        appStateManager.shoppingPlanState.isReady ? appStateManager.shoppingPlan?.bestCoverage : nil
+    }
+
+    private var bestCoverageItemsText: String {
+        guard let bestCoverage else {
+            return "0/0 items"
+        }
+
+        let totalItemCount = bestCoverage.matchedItemCount + bestCoverage.missingItemCount
+        return "\(bestCoverage.matchedItemCount)/\(totalItemCount) items"
     }
 
     private var shoppingListSummaries: [HomeShoppingListSummary] {
+        if !shoppingLists.isEmpty {
+            let sortedLists = shoppingLists.sorted { lhs, rhs in
+                if lhs.isDefault != rhs.isDefault {
+                    return lhs.isDefault && !rhs.isDefault
+                }
+
+                return lhs.createdAt < rhs.createdAt
+            }
+
+            return sortedLists.map { list in
+                let entries = shoppingListEntries.filter { $0.shoppingListID == list.id }
+                let neededCount = entries.filter { !$0.isChecked }.count
+                let completedCount = entries.filter(\.isChecked).count
+
+                return HomeShoppingListSummary(
+                    title: list.title,
+                    itemCount: neededCount,
+                    completedCount: completedCount,
+                    subtitle: neededCount == 0 ? "No open items" : "\(neededCount) open items",
+                    isActive: list.id == selectedShoppingListID
+                )
+            }
+        }
+
         let completed = items.filter(\.isCompleted)
         let recent = items
             .sorted { $0.dateAdded > $1.dateAdded }
@@ -389,7 +476,127 @@ struct HomeView: View {
     }
 
     private var planRows: [HomePlanRow] {
-        appStateManager.shoppingTripCoverages.prefix(3).enumerated().map { index, coverage in
+        cachedPlanRows
+    }
+
+    private var recentProductCards: [HomeProductCardData] {
+        cachedRecentProductCards
+    }
+
+    private var homeCanStartShopping: Bool {
+        appStateManager.shoppingPlanState.isReady && bestCoverage != nil && activeItemCount > 0
+    }
+
+    private var homePrimaryActionTitle: String {
+        switch appStateManager.shoppingPlanState {
+        case .generating:
+            return "Planning..."
+        case .ready:
+            return "Start Shopping"
+        case .failed:
+            return "Open Shopping"
+        case .idle, .stale:
+            return activeItemCount == 0 ? "Add Products" : "Open Shopping"
+        }
+    }
+
+    private var homePrimaryActionImage: String? {
+        switch appStateManager.shoppingPlanState {
+        case .generating:
+            return "hourglass"
+        case .ready:
+            return "play.fill"
+        case .failed:
+            return "exclamationmark.triangle"
+        case .idle, .stale:
+            return activeItemCount == 0 ? "shippingbox.fill" : "list.bullet.rectangle.fill"
+        }
+    }
+
+    private var isHomePrimaryDisabled: Bool {
+        appStateManager.shoppingPlanState.isGenerating
+    }
+
+    private var homePlanStatusTitle: String {
+        switch appStateManager.shoppingPlanState {
+        case .generating:
+            return "Planning your shopping"
+        case .failed:
+            return "Plan failed"
+        case .stale:
+            return "Plan needs updating"
+        case .ready:
+            return "Plan not ready yet"
+        case .idle:
+            return "Plan not ready yet"
+        }
+    }
+
+    private var homePlanStatusMessage: String {
+        switch appStateManager.shoppingPlanState {
+        case let .generating(_, startedAt):
+            let elapsedSeconds = max(Int(homeNow.timeIntervalSince(startedAt)), 0)
+            let stage = appStateManager.shoppingPlanState.stageTitle ?? "Preparing your shopping list"
+            return "\(elapsedSeconds) seconds elapsed - \(stage)"
+        case let .failed(message, _):
+            return message
+        case let .stale(reason):
+            return reason
+        case .ready:
+            return "Open Shopping to review the latest plan."
+        case .idle:
+            return activeItemCount == 0 ? "Add shopping items to build a plan." : "Open Shopping to generate a plan from your current list."
+        }
+    }
+
+    private var homeItemPresentationSignature: String {
+        items
+            .map {
+                [
+                    $0.id.uuidString,
+                    $0.name,
+                    $0.brand ?? "",
+                    $0.category ?? "",
+                    String($0.dateAdded.timeIntervalSince1970),
+                    $0.isCompleted ? "1" : "0",
+                    $0.imageURL?.absoluteString ?? "",
+                    String($0.imageData?.count ?? 0)
+                ].joined(separator: ":")
+            }
+            .sorted()
+            .joined(separator: ";")
+    }
+
+    private var productPresentationSignature: String {
+        products
+            .map {
+                [
+                    $0.id.uuidString,
+                    $0.name,
+                    $0.brand ?? "",
+                    $0.category ?? "",
+                    String($0.dateAdded.timeIntervalSince1970),
+                    String($0.updatedAt.timeIntervalSince1970),
+                    $0.imageURL?.absoluteString ?? "",
+                    String($0.imageData?.count ?? 0)
+                ].joined(separator: ":")
+            }
+            .sorted()
+            .joined(separator: ";")
+    }
+
+    private func refreshHomePresentationCache() {
+        refreshPlanRowsCache()
+        refreshRecentProductCardsCache()
+    }
+
+    private func refreshPlanRowsCache() {
+        guard appStateManager.shoppingPlanState.isReady else {
+            cachedPlanRows = []
+            return
+        }
+
+        cachedPlanRows = (appStateManager.shoppingPlan?.shoppingTripCoverages ?? []).prefix(3).enumerated().map { index, coverage in
             HomePlanRow(
                 storeName: coverage.store.title,
                 subtitle: "\(coverage.matchedItemCount)/\(coverage.matchedItemCount + coverage.missingItemCount) items - \(coverage.group.displayName)",
@@ -401,8 +608,23 @@ struct HomeView: View {
         }
     }
 
-    private var recentProductCards: [HomeProductCardData] {
-        items
+    private func refreshRecentProductCardsCache() {
+        if !products.isEmpty {
+            cachedRecentProductCards = products
+                .sorted { $0.updatedAt > $1.updatedAt }
+                .prefix(8)
+                .map {
+                    HomeProductCardData(
+                        title: $0.name,
+                        subtitle: $0.brand ?? $0.category ?? "Product",
+                        imageData: $0.imageData,
+                        imageURL: $0.imageURL
+                    )
+                }
+            return
+        }
+
+        cachedRecentProductCards = items
             .sorted { $0.dateAdded > $1.dateAdded }
             .prefix(8)
             .map {
@@ -427,7 +649,37 @@ struct HomeView: View {
     }
 
     private var itemsAddedThisMonth: Int {
-        items.filter { Calendar.current.isDate($0.dateAdded, equalTo: Date(), toGranularity: .month) }.count
+        if !products.isEmpty {
+            return products.filter { Calendar.current.isDate($0.dateAdded, equalTo: Date(), toGranularity: .month) }.count
+        }
+
+        return items.filter { Calendar.current.isDate($0.dateAdded, equalTo: Date(), toGranularity: .month) }.count
+    }
+
+    private var productLibraryCount: Int {
+        products.isEmpty ? items.count : products.count
+    }
+
+    private var selectedShoppingListID: UUID? {
+        appStateManager.selectedShoppingListID ??
+            appStateManager.currentShoppingListID ??
+            shoppingLists.first { $0.kind == .weekly }?.id
+    }
+
+    private var selectedShoppingEntries: [ShoppingListEntry] {
+        guard let selectedShoppingListID else {
+            return []
+        }
+
+        return shoppingListEntries.filter { $0.shoppingListID == selectedShoppingListID }
+    }
+
+    private func legacyItem(for entry: ShoppingListEntry) -> ShoppingItem? {
+        guard let legacyShoppingItemID = entry.legacyShoppingItemID else {
+            return nil
+        }
+
+        return items.first { $0.id == legacyShoppingItemID }
     }
 
     private var greeting: String {
@@ -449,17 +701,42 @@ struct HomeView: View {
             .uppercased()
     }
 
-    private func startShopping() {
-        guard !activeItems.isEmpty else {
+    private func handleHomePrimaryAction() {
+        if activeItemCount == 0 {
             appStateManager.selectedTab = .products
+            return
+        }
+
+        guard homeCanStartShopping else {
+            appStateManager.selectedTab = .shopping
             return
         }
 
         do {
             try shoppingSessionService.startShopping(with: activeItems, in: modelContext)
-            appStateManager.selectedTab = .products
+            appStateManager.selectedTab = .shopping
         } catch {
             assertionFailure("Failed to start shopping session: \(error.localizedDescription)")
+        }
+    }
+
+    private func savedStoresForPlanning() -> [MapStore] {
+        locations.filter { $0.sourceType != .debugSeed }.map { location in
+            MapStore(
+                id: location.id,
+                locationID: location.id,
+                title: location.title,
+                coordinate: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude),
+                radius: location.radius,
+                itemNames: location.shoppingItems.filter { !$0.isCompleted }.map(\.name),
+                completedItemNames: location.shoppingItems.filter(\.isCompleted).map(\.name),
+                isOpen: true,
+                rating: nil,
+                storeCategories: location.storeCategory.map { [$0] } ?? [],
+                queryEvidenceCategories: [],
+                websiteURL: nil,
+                sourceType: location.sourceType
+            )
         }
     }
 

@@ -28,6 +28,9 @@ struct WayTaskApp: App {
         .modelContainer(for: [
             GeoLocation.self,
             ShoppingItem.self,
+            Product.self,
+            ShoppingList.self,
+            ShoppingListEntry.self,
             ProductHistory.self,
             ProductKnowledge.self,
             ShoppingSession.self

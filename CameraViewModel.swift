@@ -339,7 +339,7 @@ final class CameraViewModel: ObservableObject {
         statusMessage = "Could not add this product. Please try again."
     }
 
-    func productWasAddedToShoppingList(_ candidate: ProductCandidate) {
+    func productWasAddedToLibrary(_ candidate: ProductCandidate) {
         playProductAddedHaptic()
         latestShoppingContext = ShoppingContext(
             activeShoppingListItems: [
@@ -358,7 +358,7 @@ final class CameraViewModel: ObservableObject {
         pendingPhotoSource = .cameraCapture
         clearRecognition()
         recognitionPhase = .idle
-        statusMessage = "Added to your Shopping List"
+        statusMessage = "Saved to Product Library"
 
         if selectedMode == .barcode {
             startBarcodeScanning()

@@ -10,11 +10,10 @@ struct MainMapView: View {
 
     @Query private var locations: [GeoLocation]
     @StateObject private var mapViewModel = MapViewModel()
-    private let buyingOptionsService = BuyingOptionsService()
-    private let shoppingTripService = ShoppingTripService()
     private let shoppingIntentMatcher = ShoppingIntentMatcher()
 
     @State private var mapCenter = CLLocationCoordinate2D(latitude: 32.0853, longitude: 34.7818)
+    @State private var appliedShoppingPlanID: UUID?
     @State private var showingAddLocationSheet = false
     @State private var newLocationTitle = ""
     @State private var selectedStoreCategory: ShoppingStoreCategory = .generalStore
@@ -65,6 +64,7 @@ struct MainMapView: View {
                 mapViewModel.update(locations: locations)
                 focusSelectedLocation()
                 applyStoreSuggestion()
+                focusUserIfNoReadyPlan()
             }
             .onChange(of: mapSignatures) {
                 startMonitoringSavedLocations()
@@ -73,7 +73,7 @@ struct MainMapView: View {
             .onChange(of: appStateManager.focusedLocationID) {
                 focusSelectedLocation()
             }
-            .onChange(of: appStateManager.storeSuggestionRequest) {
+            .onChange(of: appStateManager.shoppingPlan?.id) {
                 applyStoreSuggestion()
             }
             .onChange(of: appStateManager.isTripMapMode) {
@@ -82,6 +82,7 @@ struct MainMapView: View {
             .onChange(of: appStateManager.selectedTab) {
                 if appStateManager.selectedTab == .map {
                     activateTripMapIfNeeded()
+                    focusUserIfNoReadyPlan()
                 }
             }
         }
@@ -355,47 +356,38 @@ struct MainMapView: View {
     }
 
     private func applyStoreSuggestion() {
-        guard let request = appStateManager.storeSuggestionRequest else {
+        guard let plan = appStateManager.shoppingPlan else {
+            appliedShoppingPlanID = nil
             return
         }
 
-        let tripItems = currentTripItems()
+        if appliedShoppingPlanID == plan.id {
+            activateTripMapSelectionIfNeeded()
+            return
+        }
+
         ShoppingDiscoveryDebugLogger.logGroups(
             context: appStateManager.isTripMapMode ? "Shopping Trip map handoff" : "Buying Options map handoff",
-            groups: shoppingIntentMatcher.groupedIntents(for: tripItems)
+            groups: shoppingIntentMatcher.groupedIntents(for: plan.items)
         )
-        mapViewModel.applyStoreSuggestion(
-            request,
-            shoppingItems: tripItems
-        )
-        appStateManager.buyingOptions = buyingOptionsService.localOptions(
-            for: request,
-            shoppingItems: tripItems,
-            stores: mapViewModel.filteredStores,
-            userCoordinate: mapViewModel.userCoordinate
-        )
-        refreshShoppingTripCoverage(for: request)
+        mapViewModel.applyShoppingPlan(plan)
+        appliedShoppingPlanID = plan.id
         activateTripMapSelectionIfNeeded()
     }
 
     private func handleUserLocationChanged(_ coordinate: CLLocationCoordinate2D) {
         mapViewModel.setUserCoordinate(coordinate)
-        refreshBuyingOptionsForCurrentSuggestion()
     }
 
-    private func refreshBuyingOptionsForCurrentSuggestion() {
-        guard let request = appStateManager.storeSuggestionRequest else {
+    private func focusUserIfNoReadyPlan() {
+        guard appStateManager.selectedTab == .map,
+              appStateManager.shoppingPlan == nil,
+              let coordinate = locationManager.currentCoordinate else {
             return
         }
 
-        appStateManager.buyingOptions = buyingOptionsService.localOptions(
-            for: request,
-            shoppingItems: currentTripItems(),
-            stores: mapViewModel.filteredStores,
-            userCoordinate: mapViewModel.userCoordinate
-        )
-        refreshShoppingTripCoverage(for: request)
-        activateTripMapSelectionIfNeeded()
+        mapViewModel.setUserCoordinate(coordinate)
+        mapViewModel.followUser()
     }
 
     private func activateTripMapIfNeeded() {
@@ -408,30 +400,6 @@ struct MainMapView: View {
         } else {
             activateTripMapSelectionIfNeeded()
         }
-    }
-
-    private func refreshShoppingTripCoverage(for request: ShoppingStoreSuggestionRequest) {
-        let tripItems = currentTripItems()
-        guard !tripItems.isEmpty, !mapViewModel.filteredStores.isEmpty else {
-            return
-        }
-
-        appStateManager.shoppingTripCoverages = shoppingTripService.coverage(
-            for: tripItems,
-            stores: mapViewModel.filteredStores,
-            request: request,
-            userCoordinate: mapViewModel.userCoordinate
-        )
-    }
-
-    private func currentTripItems() -> [ShoppingItem] {
-        if let existingCoverage = appStateManager.shoppingTripCoverages.first {
-            return existingCoverage.matchedItems + existingCoverage.missingItems
-        }
-
-        return locations
-            .flatMap(\.shoppingItems)
-            .filter { !$0.isCompleted }
     }
 
     private func activateTripMapSelectionIfNeeded() {

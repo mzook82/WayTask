@@ -10,15 +10,25 @@ struct ShoppingWorkspaceView: View {
     @Query private var items: [ShoppingItem]
     @Query private var locations: [GeoLocation]
     @Query private var shoppingSessions: [ShoppingSession]
+    @Query private var products: [Product]
+    @Query private var shoppingLists: [ShoppingList]
+    @Query private var shoppingListEntries: [ShoppingListEntry]
 
-    @State private var selectedListID = "weekly"
+    @State private var selectedListID = ""
     @State private var searchText = ""
     @State private var isShowingPlanSheet = false
+    @State private var isShowingProductChooser = false
+    @State private var cachedRecommendedStoreRows: [ShoppingWorkspaceStoreRow] = []
+    @State private var cachedGroupedProductRows: [ShoppingWorkspaceGroup] = []
+    @State private var planningElapsedSeconds = 0
+    @State private var planningTimerTask: Task<Void, Never>?
 
     private let intentMatcher = ShoppingIntentMatcher()
     private let buyingOptionsService = BuyingOptionsService()
     private let shoppingTripPlanningService = ShoppingTripService()
     private let shoppingSessionService = ShoppingSessionService()
+    private let shoppingListService = ShoppingListService()
+    private let planningTimeoutSeconds: TimeInterval = 30
 
     var body: some View {
         NavigationStack {
@@ -30,6 +40,7 @@ struct ShoppingWorkspaceView: View {
                     VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xl) {
                         header
                         listSelector
+                        chooseProductsPanel
                         summaryCard
                         recommendedStoresSection
                         coverageCardsSection
@@ -49,13 +60,58 @@ struct ShoppingWorkspaceView: View {
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.hidden)
             }
+            .sheet(isPresented: $isShowingProductChooser) {
+                ProductShoppingSelectionSheet(
+                    title: "Choose products",
+                    subtitle: "Add products from your permanent library to the selected shopping list.",
+                    preferredShoppingListID: selectedShoppingListID,
+                    showsSkipAction: false,
+                    onComplete: {
+                        isShowingProductChooser = false
+                        refreshShoppingPresentationCache()
+                    },
+                    onSkip: {
+                        isShowingProductChooser = false
+                    }
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+            .onAppear {
+                syncSelectedListIfNeeded()
+                refreshShoppingPresentationCache()
+            }
+            .onChange(of: appStateManager.shoppingPlan?.id) {
+                refreshShoppingPresentationCache()
+            }
+            .onChange(of: appStateManager.shoppingPlanState) { _, state in
+                handlePlanStateChange(state)
+                refreshShoppingPresentationCache()
+            }
+            .onChange(of: shoppingWorkspaceItemPresentationSignature) {
+                refreshGroupedProductRowsCache()
+            }
+            .onChange(of: searchText) {
+                refreshGroupedProductRowsCache()
+            }
+            .onChange(of: shoppingListEntrySignature) {
+                syncSelectedListIfNeeded()
+                refreshShoppingPresentationCache()
+            }
+            .onChange(of: shoppingListSignature) {
+                syncSelectedListIfNeeded()
+                refreshShoppingPresentationCache()
+            }
+        }
+        .onDisappear {
+            stopPlanningTimer()
         }
     }
 
     private var header: some View {
         WayTaskScreenHeader(
             title: "Shopping",
-            subtitle: "\(selectedListTitle) - \(activeItemCount) \(activeItemCount == 1 ? "item" : "items") - \(recommendedStoreCount) stores",
+            subtitle: "\(selectedListTitle) - \(displayItemCount) \(displayItemCount == 1 ? "item" : "items") - \(recommendedStoreCount) stores",
             trailingIcons: ["cart.fill"]
         )
     }
@@ -66,12 +122,45 @@ struct ShoppingWorkspaceView: View {
                 ForEach(listChips) { chip in
                     WayTaskFilterChip(title: "\(chip.title) \(chip.count)", isSelected: chip.id == selectedListID) {
                         selectedListID = chip.id
+                        appStateManager.selectedShoppingListID = UUID(uuidString: chip.id)
                     }
                 }
             }
             .padding(.vertical, 2)
         }
         .scrollClipDisabled()
+    }
+
+    private var chooseProductsPanel: some View {
+        VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.md) {
+            HStack(alignment: .top, spacing: WayTaskDesign.Spacing.md) {
+                Image(systemName: "cart.badge.plus")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.accent)
+                    .frame(width: 44, height: 44)
+                    .background(WayTaskDesign.accent.opacity(0.16))
+                    .clipShape(RoundedRectangle(cornerRadius: WayTaskDesign.Radius.sm, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Choose products")
+                        .font(WayTaskDesign.Typography.headline)
+                        .foregroundStyle(WayTaskDesign.primaryText)
+
+                    Text("Products stay in your library. Shopping contains only what you choose for this trip.")
+                        .font(WayTaskDesign.Typography.caption)
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: WayTaskDesign.Spacing.xs)
+            }
+
+            WayTaskPrimaryButton("Choose Products", systemImage: "cart.badge.plus") {
+                isShowingProductChooser = true
+            }
+        }
+        .padding(WayTaskDesign.Spacing.md)
+        .wayTaskGlassCard(highlighted: workspaceItems.isEmpty)
     }
 
     private var summaryCard: some View {
@@ -96,7 +185,7 @@ struct ShoppingWorkspaceView: View {
             }
 
             HStack(spacing: WayTaskDesign.Spacing.sm) {
-                WayTaskMetricCard(value: "\(activeItemCount)", title: "Open", systemImage: "basket.fill")
+                WayTaskMetricCard(value: "\(displayItemCount)", title: "Open", systemImage: "basket.fill")
                 WayTaskMetricCard(value: "\(groupedProductRows.count)", title: "Groups", systemImage: "square.grid.2x2.fill")
                 WayTaskMetricCard(value: "\(collectedCount)", title: "Collected", systemImage: "checkmark.circle.fill")
             }
@@ -111,29 +200,102 @@ struct ShoppingWorkspaceView: View {
                 isShowingPlanSheet = true
             }
 
-            if let bestStore = recommendedStoreRows.first {
-                WayTaskStoreCard(
-                    title: bestStore.storeName,
-                    subtitle: bestStore.subtitle,
-                    distanceText: bestStore.distanceText,
-                    coverage: bestStore.coverage,
-                    confidenceText: bestStore.confidenceText,
-                    isBestMatch: true,
-                    actionTitle: "View Plan"
-                ) {
-                    isShowingPlanSheet = true
-                }
-            } else {
+            switch appStateManager.shoppingPlanState {
+            case .generating:
+                planningStatusCard
+            case let .failed(message, actionTitle):
                 WayTaskEmptyState(
-                    title: "Plan not ready yet",
-                    message: activeItems.isEmpty ? "Add products to generate a shopping plan." : "Generate a plan from your current shopping list.",
-                    systemImage: "storefront",
-                    actionTitle: activeItems.isEmpty ? nil : "Generate plan",
-                    action: generatePlan
+                    title: "Plan failed",
+                    message: message,
+                    systemImage: "exclamationmark.triangle",
+                    actionTitle: actionTitle,
+                    action: actionTitle == nil ? nil : { handlePlanFailureAction(actionTitle) }
                 )
+            case .ready where recommendedStoreRows.first != nil:
+                if let bestStore = recommendedStoreRows.first {
+                    WayTaskStoreCard(
+                        title: bestStore.storeName,
+                        subtitle: bestStore.subtitle,
+                        distanceText: bestStore.distanceText,
+                        coverage: bestStore.coverage,
+                        confidenceText: bestStore.confidenceText,
+                        isBestMatch: true,
+                        actionTitle: "View Plan"
+                    ) {
+                        isShowingPlanSheet = true
+                    }
+                }
+            default:
+                planNotReadyState
             }
         }
     }
+
+    private var planningStatusCard: some View {
+        VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.md) {
+            HStack(spacing: WayTaskDesign.Spacing.sm) {
+                ProgressView()
+                    .tint(WayTaskDesign.accent)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Planning your shopping...")
+                        .font(WayTaskDesign.Typography.headline)
+                        .foregroundStyle(WayTaskDesign.primaryText)
+
+                    Text("\(planningElapsedSeconds) seconds elapsed")
+                        .font(WayTaskDesign.Typography.caption)
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                }
+
+                Spacer(minLength: WayTaskDesign.Spacing.xs)
+            }
+
+            Text(appStateManager.shoppingPlanState.stageTitle ?? ShoppingPlanGenerationStage.preparingList.title)
+                .font(WayTaskDesign.Typography.subheadline.weight(.semibold))
+                .foregroundStyle(WayTaskDesign.accent)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(WayTaskDesign.Spacing.md)
+        .wayTaskGlassCard(highlighted: true)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Planning your shopping. \(planningElapsedSeconds) seconds elapsed. \(appStateManager.shoppingPlanState.stageTitle ?? ShoppingPlanGenerationStage.preparingList.title).")
+    }
+
+    private var planNotReadyState: some View {
+        WayTaskEmptyState(
+            title: planNotReadyTitle,
+            message: planNotReadyMessage,
+            systemImage: "storefront",
+            actionTitle: planNotReadyActionTitle,
+            action: planNotReadyActionTitle == nil ? nil : {
+                generateShoppingPlan()
+                isShowingPlanSheet = true
+            }
+        )
+    }
+
+    private var planNotReadyTitle: String {
+        switch appStateManager.shoppingPlanState {
+        case .stale:
+            return "Plan needs updating"
+        default:
+            return "Plan not ready yet"
+        }
+    }
+
+    private var planNotReadyMessage: String {
+        switch appStateManager.shoppingPlanState {
+        case let .stale(reason):
+            return reason
+        default:
+            return activeItems.isEmpty ? "Add products to generate a shopping plan." : "Generate a plan from your current shopping list."
+        }
+    }
+
+    private var planNotReadyActionTitle: String? {
+        activeItems.isEmpty ? nil : "Generate plan"
+    }
+
 
     @ViewBuilder
     private var coverageCardsSection: some View {
@@ -163,16 +325,20 @@ struct ShoppingWorkspaceView: View {
 
     private var groupedProductsSection: some View {
         VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.sm) {
-            WayTaskSectionHeader(title: "Your list", subtitle: "Grouped by store intent")
+            WayTaskSectionHeader(title: "Your list", subtitle: "Grouped by store intent", actionTitle: "Choose products") {
+                isShowingProductChooser = true
+            }
 
             WayTaskSearchField(placeholder: "Search shopping list", text: $searchText)
 
             VStack(spacing: WayTaskDesign.Spacing.md) {
                 if groupedProductRows.isEmpty {
                     WayTaskEmptyState(
-                        title: activeItems.isEmpty ? "No shopping items" : "No matching items",
-                        message: activeItems.isEmpty ? "Add products to build your shopping list." : "Clear search to see the current shopping list.",
-                        systemImage: activeItems.isEmpty ? "basket" : "magnifyingglass"
+                        title: workspaceItems.isEmpty ? "No products selected" : "No matching items",
+                        message: workspaceItems.isEmpty ? "Choose products to begin planning your shopping trip." : "Clear search to see the current shopping list.",
+                        systemImage: workspaceItems.isEmpty ? "basket" : "magnifyingglass",
+                        actionTitle: workspaceItems.isEmpty ? "Choose products" : nil,
+                        action: workspaceItems.isEmpty ? { isShowingProductChooser = true } : nil
                     )
                 } else {
                     ForEach(groupedProductRows) { group in
@@ -208,6 +374,18 @@ struct ShoppingWorkspaceView: View {
             VStack(spacing: 0) {
                 ForEach(group.items) { item in
                     HStack(spacing: WayTaskDesign.Spacing.sm) {
+                        Button {
+                            toggleEntryChecked(item)
+                        } label: {
+                            Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(item.isChecked ? WayTaskDesign.accent : WayTaskDesign.tertiaryText)
+                                .frame(width: 44, height: 44)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(item.isChecked ? "Mark \(item.name) needed" : "Mark \(item.name) checked")
+                        .accessibilityValue(item.isChecked ? "Checked" : "Needed")
+
                         WayTaskProductThumbnail(
                             data: item.imageData,
                             url: item.imageURL,
@@ -219,6 +397,7 @@ struct ShoppingWorkspaceView: View {
                             Text(item.name)
                                 .font(WayTaskDesign.Typography.subheadline.weight(.semibold))
                                 .foregroundStyle(WayTaskDesign.primaryText)
+                                .strikethrough(item.isChecked)
                                 .lineLimit(1)
 
                             Text(item.subtitle)
@@ -229,11 +408,45 @@ struct ShoppingWorkspaceView: View {
 
                         Spacer(minLength: WayTaskDesign.Spacing.xs)
 
-                        if item.isCompleted {
-                            WayTaskBadge(title: "Done", systemImage: "checkmark", tone: .success)
+                        HStack(spacing: 4) {
+                            Button {
+                                adjustQuantity(for: item, delta: -1)
+                            } label: {
+                                Image(systemName: "minus.circle")
+                                    .frame(width: 44, height: 44)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(item.quantity <= 1)
+                            .opacity(item.quantity <= 1 ? 0.35 : 1)
+                            .accessibilityLabel("Decrease \(item.name) quantity to \(quantityText(max(1, item.quantity - 1)))")
+
+                            Text(quantityText(item.quantity))
+                                .font(WayTaskDesign.Typography.captionStrong)
+                                .foregroundStyle(WayTaskDesign.secondaryText)
+                                .frame(minWidth: 24)
+
+                            Button {
+                                adjustQuantity(for: item, delta: 1)
+                            } label: {
+                                Image(systemName: "plus.circle")
+                                    .frame(width: 44, height: 44)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Increase \(item.name) quantity to \(quantityText(item.quantity + 1))")
                         }
+
+                        Button {
+                            removeEntry(item)
+                        } label: {
+                            Image(systemName: "trash")
+                                .foregroundStyle(WayTaskDesign.Colors.danger)
+                                .frame(width: 44, height: 44)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Remove \(item.name) from Shopping")
                     }
                     .padding(.vertical, WayTaskDesign.Spacing.xs)
+                    .opacity(item.isChecked ? 0.58 : 1)
 
                     if item.id != group.items.last?.id {
                         Divider()
@@ -249,18 +462,14 @@ struct ShoppingWorkspaceView: View {
     private var startShoppingBar: some View {
         VStack(spacing: WayTaskDesign.Spacing.sm) {
             HStack(spacing: WayTaskDesign.Spacing.sm) {
-                WayTaskSecondaryButton("Map", systemImage: "map.fill") {
-                    appStateManager.showTripOnMap(
-                        for: appStateManager.storeSuggestionRequest ?? fallbackSuggestionRequest,
-                        buyingOptions: appStateManager.buyingOptions,
-                        shoppingTripCoverages: appStateManager.shoppingTripCoverages
-                    )
+                WayTaskPrimaryButton(bottomPrimaryTitle, systemImage: bottomPrimarySystemImage, isDisabled: isBottomPrimaryDisabled) {
+                    handleBottomPrimaryAction()
                 }
-                .disabled(!canOpenMapPlan)
-                .opacity(canOpenMapPlan ? 1 : 0.45)
 
-                WayTaskPrimaryButton("Start Shopping", systemImage: "play.fill", isDisabled: activeItems.isEmpty) {
-                    startShopping()
+                if canViewMapPlan {
+                    WayTaskSecondaryButton("View Map", systemImage: "map.fill") {
+                        openPlanOnMap()
+                    }
                 }
             }
             .padding(.horizontal, WayTaskDesign.Spacing.lg)
@@ -277,15 +486,18 @@ struct ShoppingWorkspaceView: View {
     private var planBottomSheet: some View {
         WayTaskBottomSheet(title: "Shopping plan") {
             VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.md) {
-                if recommendedStoreRows.isEmpty {
+                switch appStateManager.shoppingPlanState {
+                case .generating:
+                    planningStatusCard
+                case let .failed(message, actionTitle):
                     WayTaskEmptyState(
-                        title: "Plan not ready yet",
-                        message: activeItems.isEmpty ? "Add products to generate a shopping plan." : "Generate a plan from your current shopping list.",
-                        systemImage: "storefront",
-                        actionTitle: activeItems.isEmpty ? nil : "Generate plan",
-                        action: generatePlan
+                        title: "Plan failed",
+                        message: message,
+                        systemImage: "exclamationmark.triangle",
+                        actionTitle: actionTitle,
+                        action: actionTitle == nil ? nil : { handlePlanFailureAction(actionTitle) }
                     )
-                } else {
+                case .ready where !recommendedStoreRows.isEmpty:
                     ForEach(recommendedStoreRows) { row in
                         HStack(spacing: WayTaskDesign.Spacing.md) {
                             if let coverage = row.coverage {
@@ -312,30 +524,47 @@ struct ShoppingWorkspaceView: View {
                         .wayTaskGlassCard(cornerRadius: WayTaskDesign.Radius.md, highlighted: row.isBestMatch)
                     }
 
-                    WayTaskPrimaryButton("Start Shopping", systemImage: "play.fill", isDisabled: activeItems.isEmpty) {
-                        isShowingPlanSheet = false
-                        startShopping()
+                    HStack(spacing: WayTaskDesign.Spacing.sm) {
+                        WayTaskSecondaryButton("View Map", systemImage: "map.fill") {
+                            isShowingPlanSheet = false
+                            openPlanOnMap()
+                        }
+
+                        WayTaskPrimaryButton("Start Shopping", systemImage: "play.fill", isDisabled: !canViewMapPlan) {
+                            isShowingPlanSheet = false
+                            startShopping()
+                        }
                     }
+                default:
+                    planNotReadyState
                 }
             }
         }
     }
 
     private var activeItems: [ShoppingItem] {
-        items.filter { !$0.isCompleted }
+        selectedShoppingListItems(includeChecked: false)
     }
 
     private var activeItemCount: Int {
         activeItems.count
     }
 
+    private var workspaceItems: [ShoppingItem] {
+        selectedShoppingListItems(includeChecked: true)
+    }
+
+    private var displayItemCount: Int {
+        workspaceItems.count
+    }
+
     private var filteredActiveItems: [ShoppingItem] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else {
-            return activeItems
+            return workspaceItems
         }
 
-        return activeItems.filter {
+        return workspaceItems.filter {
             $0.name.localizedCaseInsensitiveContains(query) ||
             ($0.brand?.localizedCaseInsensitiveContains(query) ?? false) ||
             ($0.category?.localizedCaseInsensitiveContains(query) ?? false)
@@ -366,31 +595,25 @@ struct ShoppingWorkspaceView: View {
     }
 
     private var listChips: [ShoppingWorkspaceListChip] {
-        [
-            ShoppingWorkspaceListChip(id: "weekly", title: "Weekly", count: activeItemCount),
-            ShoppingWorkspaceListChip(id: "open", title: "Open", count: activeItemCount),
-            ShoppingWorkspaceListChip(id: "done", title: "Done", count: items.filter(\.isCompleted).count),
-            ShoppingWorkspaceListChip(id: "recent", title: "Recent", count: min(items.count, 8))
-        ]
+        let sortedLists = shoppingLists.sorted { lhs, rhs in
+            if lhs.isDefault != rhs.isDefault {
+                return lhs.isDefault && !rhs.isDefault
+            }
+
+            return lhs.createdAt < rhs.createdAt
+        }
+
+        return sortedLists.map { list in
+            ShoppingWorkspaceListChip(
+                id: list.id.uuidString,
+                title: list.title,
+                count: shoppingListEntries.filter { $0.shoppingListID == list.id && !$0.isChecked }.count
+            )
+        }
     }
 
     private var recommendedStoreRows: [ShoppingWorkspaceStoreRow] {
-        let coverageRows = appStateManager.shoppingTripCoverages.prefix(4).enumerated().map { index, coverage in
-            ShoppingWorkspaceStoreRow(
-                storeName: coverage.store.title,
-                subtitle: "\(coverage.matchedItemCount)/\(coverage.matchedItemCount + coverage.missingItemCount) items - \(coverage.group.displayName)",
-                distanceText: coverage.distance.map(distanceText(for:)),
-                coverage: coverage.coverageScore,
-                confidenceText: coverage.ranking.confidenceLabel,
-                isBestMatch: index == 0
-            )
-        }
-
-        if !coverageRows.isEmpty {
-            return coverageRows
-        }
-
-        return realBuyingOptionRows
+        cachedRecommendedStoreRows
     }
 
     private var realBuyingOptionRows: [ShoppingWorkspaceStoreRow] {
@@ -415,72 +638,504 @@ struct ShoppingWorkspaceView: View {
     }
 
     private var canOpenMapPlan: Bool {
-        !activeItems.isEmpty || !appStateManager.shoppingTripCoverages.isEmpty || !realBuyingOptionRows.isEmpty
+        !activeItems.isEmpty || !appStateManager.shoppingTripCoverages.isEmpty || !recommendedStoreRows.isEmpty
+    }
+
+    private var canViewMapPlan: Bool {
+        appStateManager.shoppingPlanState.isReady && isCurrentShoppingPlanForActiveItems && !recommendedStoreRows.isEmpty
+    }
+
+    private var canStartShopping: Bool {
+        selectedShoppingListID != nil && !activeItems.isEmpty && canViewMapPlan
+    }
+
+    private var bottomPrimaryTitle: String {
+        if activeItems.isEmpty {
+            return "Choose Products"
+        }
+
+        switch appStateManager.shoppingPlanState {
+        case .generating:
+            return planningElapsedSeconds > 0 ? "Planning... \(planningElapsedSeconds)s" : "Planning..."
+        case .ready:
+            return "Start Shopping"
+        case .failed:
+            return "Try Again"
+        case .idle, .stale:
+            return "Generate Plan"
+        }
+    }
+
+    private var bottomPrimarySystemImage: String? {
+        if activeItems.isEmpty {
+            return "cart.badge.plus"
+        }
+
+        switch appStateManager.shoppingPlanState {
+        case .generating:
+            return "hourglass"
+        case .ready:
+            return "play.fill"
+        case .failed:
+            return "arrow.clockwise"
+        case .idle, .stale:
+            return "wand.and.stars"
+        }
+    }
+
+    private var isBottomPrimaryDisabled: Bool {
+        if activeItems.isEmpty {
+            return false
+        }
+
+        switch appStateManager.shoppingPlanState {
+        case .generating:
+            return true
+        case .ready:
+            return !canStartShopping
+        case .failed:
+            return false
+        case .idle, .stale:
+            return false
+        }
     }
 
     private var groupedProductRows: [ShoppingWorkspaceGroup] {
-        intentMatcher.groupedIntents(for: filteredActiveItems).map {
-            ShoppingWorkspaceGroup(
-                title: groupTitle(for: $0.group),
-                subtitle: groupSubtitle(for: $0.group),
-                items: $0.items.map { ShoppingWorkspaceItemRow(item: $0) }
+        cachedGroupedProductRows
+    }
+
+    private var shoppingWorkspaceItemPresentationSignature: String {
+        workspaceItems
+            .map {
+                [
+                    $0.id.uuidString,
+                    $0.name,
+                    $0.brand ?? "",
+                    $0.category ?? "",
+                    String($0.dateAdded.timeIntervalSince1970),
+                    $0.isCompleted ? "1" : "0",
+                    $0.imageURL?.absoluteString ?? "",
+                    String($0.imageData?.count ?? 0)
+                ].joined(separator: ":")
+            }
+            .sorted()
+            .joined(separator: ";")
+    }
+
+    private func refreshShoppingPresentationCache() {
+        refreshRecommendedStoreRowsCache()
+        refreshGroupedProductRowsCache()
+    }
+
+    private func refreshRecommendedStoreRowsCache() {
+        guard isCurrentShoppingPlanForActiveItems else {
+            cachedRecommendedStoreRows = []
+            return
+        }
+
+        let coverageRows = appStateManager.shoppingTripCoverages.prefix(4).enumerated().map { index, coverage in
+            ShoppingWorkspaceStoreRow(
+                storeName: coverage.store.title,
+                subtitle: "\(coverage.matchedItemCount)/\(coverage.matchedItemCount + coverage.missingItemCount) items - \(coverage.group.displayName)",
+                distanceText: coverage.distance.map(distanceText(for:)),
+                coverage: coverage.coverageScore,
+                confidenceText: coverage.ranking.confidenceLabel,
+                isBestMatch: index == 0
             )
         }
+
+        if !coverageRows.isEmpty {
+            cachedRecommendedStoreRows = coverageRows
+            return
+        }
+
+        cachedRecommendedStoreRows = realBuyingOptionRows
+    }
+
+    private var isCurrentShoppingPlanForActiveItems: Bool {
+        guard let planItems = appStateManager.shoppingPlan?.items else {
+            return false
+        }
+
+        return Set(planItems.map(\.id)) == Set(activeItems.map(\.id))
+    }
+
+    private func refreshGroupedProductRowsCache() {
+        let groupedItems = Dictionary(grouping: filteredActiveItems) { item in
+            intentMatcher.intentGroup(for: item)
+        }
+
+        cachedGroupedProductRows = ShoppingIntentGroup.allCases.compactMap { group in
+            guard let items = groupedItems[group] else {
+                return nil
+            }
+
+            return ShoppingWorkspaceGroup(
+                title: groupTitle(for: group),
+                subtitle: groupSubtitle(for: group),
+                items: items.compactMap { row(for: $0) }
+            )
+        }
+        .filter { !$0.items.isEmpty }
     }
 
     private var summaryText: String {
-        if activeItemCount == 0 {
+        if displayItemCount == 0 {
             return "No active items yet. The workspace is ready for the next shopping list."
         }
 
-        return "\(activeItemCount) open items grouped into \(groupedProductRows.count) shopping intents."
+        return "\(displayItemCount) open items grouped into \(groupedProductRows.count) shopping intents."
     }
 
     private var fallbackSuggestionRequest: ShoppingStoreSuggestionRequest {
         intentMatcher.request(for: activeItems, in: .grocery)
     }
 
-    private func generatePlan() {
-        guard !activeItems.isEmpty else {
+    private var selectedShoppingListID: UUID? {
+        UUID(uuidString: selectedListID) ??
+            appStateManager.selectedShoppingListID ??
+            appStateManager.currentShoppingListID ??
+            shoppingLists.first { $0.kind == .weekly }?.id
+    }
+
+    private func selectedShoppingListItems(includeChecked: Bool) -> [ShoppingItem] {
+        guard let selectedShoppingListID else {
+            return []
+        }
+
+        return shoppingListEntries
+            .filter { $0.shoppingListID == selectedShoppingListID && (includeChecked || !$0.isChecked) }
+            .sorted { lhs, rhs in
+                if lhs.sortOrder == rhs.sortOrder {
+                    return lhs.createdAt < rhs.createdAt
+                }
+
+                return lhs.sortOrder < rhs.sortOrder
+            }
+            .compactMap { entry in
+                guard let legacyShoppingItemID = entry.legacyShoppingItemID else {
+                    return nil
+                }
+
+                return items.first { $0.id == legacyShoppingItemID }
+            }
+    }
+
+    private var hasSelectedShoppingListEntries: Bool {
+        guard let selectedShoppingListID else {
+            return false
+        }
+
+        return shoppingListEntries.contains { $0.shoppingListID == selectedShoppingListID }
+    }
+
+    private var shoppingListEntrySignature: String {
+        shoppingListEntries
+            .map { entry in
+                [
+                    entry.id.uuidString,
+                    entry.shoppingListID.uuidString,
+                    entry.productID.uuidString,
+                    entry.legacyShoppingItemID?.uuidString ?? "",
+                    entry.isChecked ? "1" : "0",
+                    String(format: "%.2f", entry.quantity),
+                    String(format: "%.2f", entry.sortOrder)
+                ].joined(separator: ":")
+            }
+            .sorted()
+            .joined(separator: "|")
+    }
+
+    private var shoppingListSignature: String {
+        shoppingLists
+            .map { "\($0.id.uuidString)-\($0.title)-\($0.kindRawValue)-\($0.isDefault)" }
+            .sorted()
+            .joined(separator: "|")
+    }
+
+    private func syncSelectedListIfNeeded() {
+        guard selectedListID.isEmpty || UUID(uuidString: selectedListID) == nil else {
             return
         }
 
-        let request = appStateManager.storeSuggestionRequest ?? fallbackSuggestionRequest
-        let stores = savedStoresForPlanning()
-        let userCoordinate = locationManager.currentCoordinate
-        let buyingOptions = buyingOptionsService.localOptions(
-            for: request,
-            shoppingItems: activeItems,
-            stores: stores,
-            userCoordinate: userCoordinate
-        )
-        .filter(\.isDisplayableRealStore)
-        let shoppingTripCoverages = shoppingTripPlanningService.coverage(
-            for: activeItems,
-            stores: stores,
-            request: request,
-            userCoordinate: userCoordinate
-        )
+        if let selectedShoppingListID {
+            selectedListID = selectedShoppingListID.uuidString
+            appStateManager.selectedShoppingListID = selectedShoppingListID
+        }
+    }
 
-        isShowingPlanSheet = false
+    private func handleBottomPrimaryAction() {
+        guard !activeItems.isEmpty else {
+            isShowingProductChooser = true
+            return
+        }
+
+        switch appStateManager.shoppingPlanState {
+        case .generating:
+            return
+        case .ready:
+            startShopping()
+        case .failed, .idle, .stale:
+            generateShoppingPlan()
+            isShowingPlanSheet = true
+        }
+    }
+
+    private func handlePlanFailureAction(_ actionTitle: String?) {
+        switch actionTitle {
+        case "Enable Location":
+            locationManager.requestWhenInUseAuthorization()
+        case "Review Products", "Add products":
+            appStateManager.selectedTab = .products
+        default:
+            generateShoppingPlan()
+        }
+    }
+
+    private func generateShoppingPlan() {
+        guard !appStateManager.shoppingPlanState.isGenerating else {
+            return
+        }
+
+        guard selectedShoppingListID != nil else {
+            failShoppingPlan(
+                message: "Choose a shopping list before generating a plan.",
+                actionTitle: "Review Products"
+            )
+            return
+        }
+
+        let planningItems = activeItems
+        guard !planningItems.isEmpty else {
+            failShoppingPlan(
+                message: "Add at least one needed product before generating a plan.",
+                actionTitle: "Add products"
+            )
+            return
+        }
+
+        appStateManager.beginShoppingPlanGeneration(stage: .preparingList)
+        startPlanningTimer()
+
+        Task { @MainActor in
+            let startedAt = Date()
+
+            await Task.yield()
+            guard !failIfPlanningTimedOut(since: startedAt) else { return }
+
+            appStateManager.updateShoppingPlanGeneration(stage: .findingStores)
+            let stores = savedStoresForPlanning()
+            guard !stores.isEmpty else {
+                let hasLocation = locationManager.currentCoordinate != nil
+                failShoppingPlan(
+                    message: hasLocation ? "No eligible stores were found for this list." : "Location is unavailable, so WayTask cannot find nearby stores for this plan.",
+                    actionTitle: hasLocation ? "Try Again" : "Enable Location"
+                )
+                return
+            }
+            guard !failIfPlanningTimedOut(since: startedAt) else { return }
+
+            appStateManager.updateShoppingPlanGeneration(stage: .matchingProducts)
+            let request = intentMatcher.request(for: planningItems, in: .grocery)
+            let userCoordinate = locationManager.currentCoordinate
+            await Task.yield()
+            guard !failIfPlanningTimedOut(since: startedAt) else { return }
+
+            appStateManager.updateShoppingPlanGeneration(stage: .calculatingCoverage)
+            let buyingOptions = buyingOptionsService.localOptions(
+                for: request,
+                shoppingItems: planningItems,
+                stores: stores,
+                userCoordinate: userCoordinate
+            )
+            .filter(\.isDisplayableRealStore)
+            let shoppingTripCoverages = shoppingTripPlanningService.coverage(
+                for: planningItems,
+                stores: stores,
+                request: request,
+                userCoordinate: userCoordinate
+            )
+            guard !failIfPlanningTimedOut(since: startedAt) else { return }
+
+            appStateManager.updateShoppingPlanGeneration(stage: .rankingOptions)
+            guard !buyingOptions.isEmpty || !shoppingTripCoverages.isEmpty else {
+                failShoppingPlan(
+                    message: "No eligible stores matched the products in this list.",
+                    actionTitle: "Review Products"
+                )
+                return
+            }
+
+            appStateManager.setShoppingPlan(
+                request: request,
+                items: planningItems,
+                stores: stores,
+                buyingOptions: buyingOptions,
+                shoppingTripCoverages: shoppingTripCoverages
+            )
+            appStateManager.markShoppingPlanReady(generatedAt: appStateManager.shoppingPlan?.generatedAt ?? Date())
+            refreshShoppingPresentationCache()
+            isShowingPlanSheet = true
+        }
+    }
+
+    private func failShoppingPlan(message: String, actionTitle: String?) {
+        appStateManager.markShoppingPlanFailed(message: message, actionTitle: actionTitle)
+        stopPlanningTimer()
+        isShowingPlanSheet = true
+    }
+
+    private func failIfPlanningTimedOut(since startedAt: Date) -> Bool {
+        guard Date().timeIntervalSince(startedAt) > planningTimeoutSeconds else {
+            return false
+        }
+
+        failShoppingPlan(
+            message: "Planning timed out before a usable store plan was created.",
+            actionTitle: "Try Again"
+        )
+        return true
+    }
+
+    private func handlePlanStateChange(_ state: ShoppingPlanGenerationState) {
+        if state.isGenerating {
+            startPlanningTimer()
+        } else {
+            stopPlanningTimer()
+        }
+    }
+
+    private func startPlanningTimer() {
+        guard planningTimerTask == nil else {
+            return
+        }
+
+        planningElapsedSeconds = 0
+        planningTimerTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                await MainActor.run {
+                    planningElapsedSeconds += 1
+                }
+            }
+        }
+    }
+
+    private func stopPlanningTimer() {
+        planningTimerTask?.cancel()
+        planningTimerTask = nil
+    }
+
+    private func openPlanOnMap() {
+        guard canViewMapPlan,
+              let plan = appStateManager.shoppingPlan else {
+            return
+        }
+
         appStateManager.showTripOnMap(
-            for: request,
-            buyingOptions: buyingOptions,
-            shoppingTripCoverages: shoppingTripCoverages
+            for: plan.request,
+            items: plan.items,
+            stores: plan.stores,
+            buyingOptions: plan.buyingOptions,
+            shoppingTripCoverages: plan.shoppingTripCoverages
         )
     }
 
     private func startShopping() {
-        guard !activeItems.isEmpty else {
+        guard canStartShopping else {
             return
         }
 
         do {
             try shoppingSessionService.startShopping(with: activeItems, in: modelContext)
-            appStateManager.selectedTab = .products
         } catch {
             assertionFailure("Failed to start shopping session: \(error.localizedDescription)")
         }
+    }
+
+    private func row(for item: ShoppingItem) -> ShoppingWorkspaceItemRow? {
+        guard let entry = entry(for: item) else {
+            return nil
+        }
+
+        return ShoppingWorkspaceItemRow(item: item, entry: entry)
+    }
+
+    private func entry(for item: ShoppingItem) -> ShoppingListEntry? {
+        selectedShoppingEntries.first { $0.legacyShoppingItemID == item.id }
+    }
+
+    private var selectedShoppingEntries: [ShoppingListEntry] {
+        guard let selectedShoppingListID else {
+            return []
+        }
+
+        return shoppingListEntries.filter { $0.shoppingListID == selectedShoppingListID }
+    }
+
+    private func toggleEntryChecked(_ row: ShoppingWorkspaceItemRow) {
+        guard let entry = shoppingListEntries.first(where: { $0.id == row.entryID }) else {
+            return
+        }
+
+        entry.isChecked.toggle()
+        if let legacyShoppingItemID = entry.legacyShoppingItemID,
+           let item = items.first(where: { $0.id == legacyShoppingItemID }) {
+            item.isCompleted = entry.isChecked
+        }
+        saveShoppingEntryChange()
+    }
+
+    private func adjustQuantity(for row: ShoppingWorkspaceItemRow, delta: Double) {
+        guard let entry = shoppingListEntries.first(where: { $0.id == row.entryID }) else {
+            return
+        }
+
+        entry.quantity = max(1, entry.quantity + delta)
+        saveShoppingEntryChange()
+    }
+
+    private func removeEntry(_ row: ShoppingWorkspaceItemRow) {
+        guard let selectedShoppingListID,
+              let product = products.first(where: { $0.id == row.productID }) else {
+            return
+        }
+
+        do {
+            try shoppingListService.removeProductFromShopping(
+                product,
+                shoppingListID: selectedShoppingListID,
+                in: modelContext
+            )
+            appStateManager.shoppingListDidChange()
+            appStateManager.markShoppingPlanStale(reason: "Shopping list changed. Generate a new plan before viewing stores.")
+            refreshShoppingPresentationCache()
+        } catch {
+            assertionFailure("Failed to remove product from shopping: \(error.localizedDescription)")
+        }
+    }
+
+    private func saveShoppingEntryChange() {
+        do {
+            try modelContext.save()
+            appStateManager.shoppingListDidChange()
+            appStateManager.markShoppingPlanStale(reason: "Shopping list changed. Generate a new plan before viewing stores.")
+            refreshShoppingPresentationCache()
+        } catch {
+            assertionFailure("Failed to update shopping list entry: \(error.localizedDescription)")
+        }
+    }
+
+    private func quantityText(_ quantity: Double) -> String {
+        if quantity.rounded() == quantity {
+            return "x\(Int(quantity))"
+        }
+
+        return "x\(String(format: "%.1f", quantity))"
     }
 
     private func groupTitle(for group: ShoppingIntentGroup) -> String {
@@ -579,34 +1234,46 @@ private struct ShoppingWorkspaceGroup: Identifiable {
 
 private struct ShoppingWorkspaceItemRow: Identifiable {
     let id: UUID
+    let entryID: UUID
+    let productID: UUID
     let name: String
     let subtitle: String
     var imageData: Data?
     var imageURL: URL?
-    var isCompleted: Bool
+    var isChecked: Bool
+    var quantity: Double
 
     init(
         id: UUID = UUID(),
+        entryID: UUID = UUID(),
+        productID: UUID = UUID(),
         name: String,
         subtitle: String,
         imageData: Data? = nil,
         imageURL: URL? = nil,
-        isCompleted: Bool = false
+        isChecked: Bool = false,
+        quantity: Double = 1
     ) {
         self.id = id
+        self.entryID = entryID
+        self.productID = productID
         self.name = name
         self.subtitle = subtitle
         self.imageData = imageData
         self.imageURL = imageURL
-        self.isCompleted = isCompleted
+        self.isChecked = isChecked
+        self.quantity = quantity
     }
 
-    init(item: ShoppingItem) {
+    init(item: ShoppingItem, entry: ShoppingListEntry) {
         self.id = item.id
+        self.entryID = entry.id
+        self.productID = entry.productID
         self.name = item.name
         self.subtitle = item.brand ?? item.category ?? "Shopping item"
         self.imageData = item.imageData
         self.imageURL = item.imageURL
-        self.isCompleted = item.isCompleted
+        self.isChecked = entry.isChecked
+        self.quantity = entry.quantity
     }
 }

@@ -27,6 +27,7 @@
 | Version | Date | Description |
 |----------|------------|----------------------------|
 | 1.0 | 2026-07-08 | Initial Engineering Blueprint |
+| 1.1 | 2026-07-10 | Added shared ShoppingPlan state-machine ownership |
 
 ---
 
@@ -183,6 +184,8 @@ Product Knowledge remains independent.
 It supports Products.
 
 It does not become Shopping data.
+
+Shopping plan generation is owned by the Shopping journey. Home observes the shared `ShoppingPlan` and plan state but does not run an independent planner. Map receives the shared plan only after it is ready and contains usable stores.
 
 ---
 
@@ -590,7 +593,7 @@ Sprint 26B replaces the Home placeholder with the approved Version 1.0 Home dash
 - Greeting/date header with scan and settings actions.
 - Shopping Today hero with coverage ring, best-store summary, trip progress, and Start Shopping.
 - Shopping Lists section using current `ShoppingItem` state until the future `ShoppingList` model migration.
-- Best Shopping Plan preview using existing `AppStateManager.shoppingTripCoverages` when available.
+- Best Shopping Plan preview using the shared `AppStateManager.shoppingPlan` when available.
 - Nearby Opportunity card using existing nearby opportunity state when available.
 - Recent Products section using existing `ShoppingItem` records.
 - Monthly stats section using existing `ShoppingSession` and `ShoppingItem` records.
@@ -610,7 +613,7 @@ It does not change:
 - SwiftData models
 - Product, shopping, or map business logic
 
-Any placeholder Home data is isolated inside `HomeView` and should be replaced by real Product v1.0 and Shopping v1.0 models in later migration phases.
+Home no longer owns prototype planner data. Planner presentation reads from the shared `AppStateManager.shoppingPlan` value.
 
 ---
 
@@ -622,8 +625,8 @@ Sprint 27A replaces the Shopping placeholder with the approved Version 1.0 Shopp
 
 - Shopping List selector using the existing `ShoppingItem` collection until the future Shopping List model migration.
 - Shopping Summary with open item count, grouped intent count, collected count, and session progress.
-- Recommended Stores section using existing planner state from `AppStateManager.shoppingTripCoverages` when available.
-- Coverage Cards using existing `StoreCoverage` and `BuyingOption` state when available.
+- Recommended Stores section using the shared `AppStateManager.shoppingPlan` when available.
+- Coverage Cards using shared `StoreCoverage` and `BuyingOption` state from the current plan.
 - Grouped Products section using `ShoppingIntentMatcher` for presentation grouping.
 - Start Shopping action using the existing `ShoppingSessionService`.
 - Plan bottom sheet using reusable design-system components.
@@ -646,4 +649,33 @@ It does not change:
 - ShoppingSession
 - SwiftData models
 
-Temporary store/list/product placeholders are isolated inside `ShoppingWorkspaceView` and should be removed when the Version 1.0 Shopping List and Shopping Plan backing models are migrated.
+Shopping Workspace no longer owns prototype planner data. Recommended stores and coverage cards read from the shared `AppStateManager.shoppingPlan` value.
+
+---
+
+# 21. Sprint 27A.2 Shared Shopping Plan Update
+
+Sprint 27A.2 introduces a single app-state Shopping Plan for Home, Shopping, and Map.
+
+## Shared Planner State
+
+- `AppStateManager.shoppingPlan` is the single observed planner value.
+- The plan contains the active planner request, active shopping items, planner stores, buying options, coverage rows, and generation timestamp.
+- `storeSuggestionRequest`, `buyingOptions`, and `shoppingTripCoverages` remain compatibility accessors derived from `shoppingPlan`.
+- Generate Plan and Start Shopping refresh the shared plan through existing planner services.
+- Map applies the shared plan directly instead of creating a separate map-only planner result.
+
+## Reuse Boundary
+
+Sprint 27A.2 does not rewrite:
+
+- ShoppingTripService
+- BuyingOptionsService
+- StoreSearchService
+- StoreRankingService
+- Store Reality Score
+- Store Aggregation
+- Product Knowledge
+- Gemini
+- Barcode
+- SwiftData models

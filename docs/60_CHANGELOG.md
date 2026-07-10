@@ -1002,3 +1002,240 @@ Sprint 27A.1 – Remove Demo Data From Home & Shopping
 ## Notes
 
 Product Intelligence validation remains needed in a later sprint, including health/pharmacy classification review. Real v1.0 Shopping List and Shopping Plan model migration remains future work.
+
+# Version 1.14.2 Beta
+
+**Date:** July 9, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 27A.2 – Shared Shopping Plan Integration
+
+## Changed
+
+- Added shared `ShoppingPlan` state to `AppStateManager`.
+- Home, Shopping, Products, and Map now read planner request, stores, buying options, and coverage from the same shared plan.
+- Generate Plan refreshes the shared plan once and passes that same plan to Map.
+- Start Shopping refreshes the shared plan before starting a shopping session.
+- Map applies the shared plan's stores and items directly instead of creating a separate map-only planner result.
+
+## Reused
+
+- Existing `ShoppingTripService`.
+- Existing `BuyingOptionsService`.
+- Existing `ShoppingIntentMatcher`.
+- Existing `StoreCoverage`, `BuyingOption`, and `MapStore` presentation models.
+- Existing saved `GeoLocation` store data.
+
+## Preserved
+
+- Product Knowledge.
+- Gemini.
+- Barcode.
+- Store Reality Score.
+- Store aggregation.
+- Store search and ranking services.
+- SwiftData model schema.
+
+## Notes
+
+The shared plan is in app state and is not persisted yet. ETA is shown as unavailable when the existing planner has no ETA output.
+
+# Version 1.15.5 Beta
+
+**Date:** July 10, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 27B.4.2 – First Shopping Experience & Shopping Workflow Completion
+
+## Changed
+
+- Added one-time first-shopping onboarding explaining Products, Shopping, and Generate Plan.
+- Added one-time legacy Shopping review for users with existing Weekly Shopping entries from earlier migration behavior.
+- Added legacy review actions: Keep Current Shopping List, Edit Shopping List, and Start Fresh.
+- `Start Fresh` clears only Weekly Shopping entries, keeps Products, and marks linked compatibility `ShoppingItem` records completed.
+- Promoted `Choose Products` to a primary Shopping action near the top of Shopping.
+- Updated empty Shopping to show `No products selected`, explain the next step, and show `Choose Products` instead of `Generate Plan`.
+- Updated Home planning copy to show elapsed time from the shared planning state.
+
+## Preserved
+
+- Product Knowledge.
+- Gemini.
+- Barcode and Open Food Facts.
+- Shopping planner, trip, buying options, intent matching, store search, and store ranking services.
+- Store Reality Score and Store Aggregation.
+- MapKit discovery logic.
+- Product and ShoppingList persistence.
+- Temporary ShoppingItem compatibility.
+
+## Notes
+
+Existing Weekly Shopping entries are no longer assumed intentional until the user completes the legacy review. Products remain permanent library records and are never deleted by the review flow.
+
+# Version 1.15.4 Beta
+
+**Date:** July 10, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 27B.4.1 – Initial Shopping List Selection
+
+## Changed
+
+- Legacy migration no longer auto-adds every Product to Weekly Shopping.
+- Backfill now creates/updates Products and default Shopping lists without creating new `ShoppingListEntry` records.
+- Added one-time initial product selection for empty Weekly Shopping lists.
+- Added product image, name, brand/category, checkbox, Select All, Clear All, Add Selected to Shopping, and Skip for Now.
+- Added manual `Choose products` action in Shopping using the same selector.
+- Add Selected creates entries only for selected Products and does not duplicate existing entries.
+- Existing Weekly Shopping entries are treated as intentionally configured and are not overwritten or removed.
+- Adding selected products marks the shared ShoppingPlan stale.
+
+## Notes
+
+The one-time guard uses `waytask.initialShoppingSelectionCompleted.v1` plus an empty Weekly Shopping check. Skip for Now marks the prompt complete so it does not block every launch; users can later use `Choose products` from Shopping.
+
+# Version 1.15.3 Beta
+
+**Date:** July 10, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 27B.4 – Shopping UX, Plan States, and Runtime Clarity
+
+## Changed
+
+- Added shared Shopping plan states: idle, generating, ready, failed, and stale.
+- Shopping Generate Plan now stays inside Shopping, disables duplicate taps, and shows elapsed time plus the current planning stage.
+- Shopping rows now clearly separate needed/checked state from Remove from Shopping.
+- Checked rows remain visible with dimmed content, checked icon state, and accessibility labels.
+- Quantity changes, membership changes, checked-state changes, and removal mark the shared plan stale.
+- Shopping bottom action now changes by plan state: Generate Plan, Planning, Start Shopping, or Try Again.
+- Failure states now explain missing entries, unavailable location, missing stores, empty matches, and timeout cases.
+- Ready plans show shared recommended stores, estimated coverage, matched item counts, distance when available, and confidence.
+- Home now observes the same shared plan state and no longer generates an independent plan.
+- View Map and Start Shopping are gated behind a ready plan with usable stores.
+
+## Reused
+
+- Existing `ShoppingTripService`.
+- Existing `BuyingOptionsService`.
+- Existing `ShoppingIntentMatcher`.
+- Existing `ShoppingSessionService`.
+- Existing `StoreCoverage`, `BuyingOption`, and `MapStore` models.
+- Existing saved-store `GeoLocation` data.
+
+## Notes
+
+Coverage is still derived from `ShoppingTripService`: matched eligible shopping entries divided by total eligible shopping entries. Quantities remain on `ShoppingListEntry`; native quantity-aware planner migration remains future work if product requirements require quantity-weighted coverage.
+
+Deferred roadmap items recorded: category tiles, grocery-first defaults, category ordering/reordering, CloudKit sync, offline queue and persisted plans, Found Here / Not Found Here learning, WayTask-owned store database, manual store submission, merchant portal, website importer, and private backend migration.
+
+# Version 1.15.2 Beta
+
+**Date:** July 10, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 27B.3 – Runtime Workflow Fix
+
+## Changed
+
+- Products tab now always renders the Product Library instead of being replaced by active Shopping Mode.
+- Shopping rows are interactive: entries can be checked/needed, removed, and quantity-adjusted.
+- Shopping empty state includes an `Add products` action that opens Products.
+- Generate Plan remains inside Shopping and updates the shared plan from selected needed entries.
+- `View Map` appears only after a usable plan exists.
+- Map now focuses a ready plan by fitting relevant plan stores plus the user location when available.
+- Map follows the user's current location when opened without a ready plan.
+- Home visible counts and recent product cards now prefer `Product` and `ShoppingListEntry` data when available.
+
+## Preserved
+
+- Product Knowledge.
+- Gemini.
+- Barcode.
+- ShoppingTripService.
+- BuyingOptionsService.
+- StoreSearchService.
+- Store Reality Score.
+- Store Aggregation.
+- MapKit search logic.
+- Temporary `ShoppingItem` planner/session compatibility.
+
+## Notes
+
+Shopping Mode is still not redesigned. Active sessions no longer own the Products tab; moving Shopping Mode fully under the Shopping journey remains future migration work.
+
+# Version 1.15.1 Beta
+
+**Date:** July 10, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 27B.2 – Products to Shopping Workflow
+
+## Changed
+
+- Product Library now displays persistent `Product` records.
+- Product cards show `Add to Shopping`, `Remove from Shopping`, and `Already in Shopping` membership state for the selected list.
+- Scanner, barcode, and Gemini product recognition now save/update Products without automatically adding them to Shopping.
+- Shopping now displays only selected `ShoppingListEntry` items.
+- Shopping Generate Plan updates the shared plan in-place and stays inside Shopping.
+- Product add/remove clears stale Shopping plans so the user sees current list state before regenerating.
+
+## Reused
+
+- Existing Product Knowledge service.
+- Existing Gemini and barcode recognition flows.
+- Existing `ShoppingTripService`, `BuyingOptionsService`, `StoreSearchService`, Store Ranking, Store Reality Score, Store Aggregation, and MapKit behavior.
+- Existing planner compatibility path through temporary `ShoppingItem` adapters.
+
+## Notes
+
+`ShoppingItem` remains temporary compatibility for planner/session/Home/saved-store paths. Native `ShoppingListEntry` planner and Shopping Mode migration remains the recommended next sprint.
+
+# Version 1.15.0 Beta
+
+**Date:** July 9, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 27B.1 – Introduce Product Library and Shopping Lists
+
+## Changed
+
+- Added persistent `Product`, `ShoppingList`, and `ShoppingListEntry` models.
+- Registered the new product/list models in the SwiftData container.
+- Added default list foundations for Weekly Shopping, Completed, and Recent.
+- Added safe backfill from existing `ShoppingItem` records into Products and Weekly Shopping List entries.
+- Added app-state fields for current shopping list, selected shopping list, and current product library IDs.
+- Shopping now prefers selected/default Shopping List entries when available and falls back to incomplete `ShoppingItem` records for compatibility.
+- Products now syncs the current Product Library into app state without changing the visual screen yet.
+
+## Preserved
+
+- Existing scan, barcode, Gemini, Product Knowledge, and manual add paths.
+- Existing planner services and shared `ShoppingPlan`.
+- Existing Shopping Mode and `ShoppingSessionService`.
+- Existing Map, MapKit discovery, Store Ranking, Store Reality Score, and Store Aggregation.
+
+## Notes
+
+`ShoppingItem` remains a temporary compatibility model. Scanner/manual add, Product Knowledge, Shopping Memory, Home, planner services, saved-store item links, and Shopping Mode still depend on it until the follow-up migration sprint.
