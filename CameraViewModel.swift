@@ -304,6 +304,7 @@ final class CameraViewModel: ObservableObject {
     }
 
     func useKnownProduct(_ candidate: ProductCandidate, for barcode: BarcodeResult) {
+        BetaDiagnosticsCenter.shared.recognitionCache(hit: true, source: "Product Knowledge")
         recognitionTask?.cancel()
         recognitionTask = nil
         confirmedBarcodeResult = barcode
@@ -468,6 +469,8 @@ final class CameraViewModel: ObservableObject {
         isWaitingForBarcodePackagePhoto = false
         statusMessage = "Searching product database..."
 
+        let diagnosticsStartedAt = BetaDiagnosticsCenter.shared.recognitionStarted(kind: "Barcode", fallback: false)
+        BetaDiagnosticsCenter.shared.recognitionCache(hit: false, source: "OpenFoodFacts")
         recognitionTask?.cancel()
         recognitionTask = Task { [weak self] in
             guard let self else {
@@ -484,6 +487,12 @@ final class CameraViewModel: ObservableObject {
                 isRecognizing = false
 
                 guard let candidate = candidates.first else {
+                    BetaDiagnosticsCenter.shared.recognitionFinished(
+                        kind: "Barcode",
+                        success: false,
+                        startedAt: diagnosticsStartedAt,
+                        reason: "OpenFoodFacts returned no product"
+                    )
                     showBarcodeManualFallback(
                         barcode: barcode,
                         message: "Product not found. You can add details manually or improve with AI."
@@ -503,12 +512,25 @@ final class CameraViewModel: ObservableObject {
                 statusMessage = Self.weakProductDataReasons(for: candidate).isEmpty
                     ? "Review and add this product."
                     : "This result may be incomplete. Review it or improve with AI."
+                BetaDiagnosticsCenter.shared.recognitionFinished(
+                    kind: "Barcode",
+                    success: true,
+                    startedAt: diagnosticsStartedAt,
+                    reason: "OpenFoodFacts returned \(candidates.count) candidate(s)"
+                )
             } catch is CancellationError {
                 return
             } catch {
                 guard !Task.isCancelled else {
                     return
                 }
+
+                BetaDiagnosticsCenter.shared.recognitionFinished(
+                    kind: "Barcode",
+                    success: false,
+                    startedAt: diagnosticsStartedAt,
+                    reason: error.localizedDescription
+                )
 
                 showBarcodeManualFallback(
                     barcode: barcode,
@@ -541,6 +563,7 @@ final class CameraViewModel: ObservableObject {
         isRecognizing = true
         statusMessage = "Analyzing product..."
 
+        let diagnosticsStartedAt = BetaDiagnosticsCenter.shared.recognitionStarted(kind: "Gemini", fallback: false)
         recognitionTask?.cancel()
         recognitionTask = Task { [weak self] in
             guard let self else {
@@ -548,6 +571,12 @@ final class CameraViewModel: ObservableObject {
             }
 
             let result = await aiRecognitionService.suggestProduct(from: imageData, barcode: nil)
+            BetaDiagnosticsCenter.shared.recognitionFinished(
+                kind: "Gemini",
+                success: result.bestCandidate != nil && (result.bestCandidate?.confidence ?? 0) >= 0.55,
+                startedAt: diagnosticsStartedAt,
+                reason: result.message
+            )
             await applyAIRecognitionResult(result)
         }
     }
@@ -557,6 +586,7 @@ final class CameraViewModel: ObservableObject {
         isRecognizing = true
         statusMessage = "Analyzing product..."
 
+        let diagnosticsStartedAt = BetaDiagnosticsCenter.shared.recognitionStarted(kind: "Gemini", fallback: true)
         recognitionTask?.cancel()
         recognitionTask = Task { [weak self] in
             guard let self else {
@@ -566,6 +596,13 @@ final class CameraViewModel: ObservableObject {
             let result = await aiRecognitionService.suggestProduct(
                 from: imageData,
                 barcode: barcode
+            )
+
+            BetaDiagnosticsCenter.shared.recognitionFinished(
+                kind: "Gemini",
+                success: result.bestCandidate != nil && (result.bestCandidate?.confidence ?? 0) >= 0.55,
+                startedAt: diagnosticsStartedAt,
+                reason: result.message
             )
 
             await applyAIRecognitionResult(result)
@@ -721,9 +758,16 @@ final class CameraViewModel: ObservableObject {
         recognitionPhase = .analyzing
         isRecognizing = true
         statusMessage = "Analyzing photo..."
+        let diagnosticsStartedAt = BetaDiagnosticsCenter.shared.recognitionStarted(kind: "Camera", fallback: false)
 
         Task {
             let result = await recognitionService.analyzeProduct(from: imageData, inputSource: inputSource)
+            BetaDiagnosticsCenter.shared.recognitionFinished(
+                kind: "Camera",
+                success: result.status == .recognized,
+                startedAt: diagnosticsStartedAt,
+                reason: result.message
+            )
             playRecognitionCompletedHaptic()
             recognitionResult = result
             selectedCandidate = result.bestCandidate

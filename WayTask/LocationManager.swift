@@ -10,13 +10,17 @@ final class LocationManager: NSObject, ObservableObject {
     private let notificationCenter = UNUserNotificationCenter.current()
     private let notificationService = GeofenceNotificationService()
     private let intentMatcher = ShoppingIntentMatcher()
-    private let storeSearchService = LocalStoreSearchService()
     private let maxMonitoredShoppingRegions = 12
     private let maxTotalMonitoredRegions = 20
     private let smartNearbyRadius: CLLocationDistance = 50
     private var lastShoppingGeofenceSignature: String?
     private var cachedActiveShoppingItems: [ShoppingItem] = []
-    private var cachedSavedLocations: [GeoLocation] = []
+    private var cachedResolvedCandidates: [ShoppingGeofenceCandidate] = []
+    private var geofenceRefreshGeneration = 0
+    private var rawCurrentCoordinate: CLLocationCoordinate2D?
+    private var lastCoordinatePublication = Date.distantPast
+    private let coordinatePublicationMovementThreshold: CLLocationDistance = 15
+    private let coordinatePublicationMaximumInterval: TimeInterval = 10
 
     override init() {
         super.init()
@@ -78,26 +82,58 @@ final class LocationManager: NSObject, ObservableObject {
             coordinate: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude),
             radius: notificationRadius(for: location.radius),
             itemNames: Array(openItemNames),
+            itemIDs: location.shoppingItems.filter { !$0.isCompleted }.prefix(3).map(\.id),
+            shoppingListID: nil,
             sourceType: location.sourceType.rawValue,
-            distanceMeters: distanceFromCurrentUser(to: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude))
+            distanceMeters: distanceFromCurrentUser(to: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude)),
+            notificationType: "shoppingGeofence"
         )
 
         startMonitoring(candidate: candidate)
     }
 
-    func refreshShoppingGeofences(items: [ShoppingItem], savedLocations: [GeoLocation]) {
+    func refreshShoppingGeofences(
+        items: [ShoppingItem],
+        savedLocations: [GeoLocation],
+        shoppingListID: UUID? = nil
+    ) {
         let activeItems = items.filter { !$0.isCompleted }
         let visibleSavedLocations = savedLocations.filter(shouldIncludeLocationInGeofenceResults)
         cachedActiveShoppingItems = activeItems
-        cachedSavedLocations = visibleSavedLocations
+        geofenceRefreshGeneration += 1
+        let refreshGeneration = geofenceRefreshGeneration
+        let coordinate = rawCurrentCoordinate
 
-        let candidates = relevantCandidates(for: activeItems, savedLocations: visibleSavedLocations)
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let stores = await StoreResolutionEngine.shared.resolve(
+                savedLocations: visibleSavedLocations,
+                items: activeItems,
+                around: coordinate
+            )
+            guard refreshGeneration == geofenceRefreshGeneration else { return }
+            let candidates = geofenceCandidates(
+                from: stores,
+                items: activeItems,
+                shoppingListID: shoppingListID
+            )
+            applyResolvedGeofenceCandidates(candidates, activeItems: activeItems, savedLocations: visibleSavedLocations)
+        }
+    }
+
+    private func applyResolvedGeofenceCandidates(
+        _ candidates: [ShoppingGeofenceCandidate],
+        activeItems: [ShoppingItem],
+        savedLocations: [GeoLocation]
+    ) {
+        let candidates = deduplicated(candidates).prefixArray(maxMonitoredShoppingRegions)
+        cachedResolvedCandidates = candidates
+        BetaDiagnosticsCenter.shared.recordGeofenceCandidates(candidates)
         let signature = geofenceSignature(for: candidates)
-
         evaluateSmartNearbyDetection(reason: "geofence refresh")
 
         #if DEBUG
-        logGeofenceRefresh(activeItems: activeItems, savedLocations: visibleSavedLocations, candidates: candidates)
+        logGeofenceRefresh(activeItems: activeItems, savedLocations: savedLocations, candidates: candidates)
         #endif
 
         guard signature != lastShoppingGeofenceSignature else {
@@ -109,81 +145,68 @@ final class LocationManager: NSObject, ObservableObject {
 
         lastShoppingGeofenceSignature = signature
         stopManagedShoppingRegions()
-
-        for candidate in candidates.prefix(maxMonitoredShoppingRegions) {
+        for candidate in candidates {
             startMonitoring(candidate: candidate)
         }
+        publishBetaDiagnostics()
 
         #if DEBUG
         logMonitoredRegions()
         #endif
     }
 
+    private func geofenceCandidates(
+        from stores: [MapStore],
+        items: [ShoppingItem],
+        shoppingListID: UUID?
+    ) -> [ShoppingGeofenceCandidate] {
+        stores.compactMap { store in
+            let taggedNames = Set(store.itemNames.map { $0.lowercased() })
+            let directlyMatchedItems = items.filter { taggedNames.contains($0.name.lowercased()) }
+            let matchingItems = directlyMatchedItems.isEmpty
+                ? intentMatcher.relevantItems(from: items, for: store)
+                : directlyMatchedItems
+            guard !matchingItems.isEmpty else { return nil }
+
+            return ShoppingGeofenceCandidate(
+                id: store.id,
+                locationID: store.locationID,
+                title: store.title,
+                coordinate: store.coordinate,
+                radius: notificationRadius(for: store.radius),
+                itemNames: notificationItemNames(from: matchingItems),
+                itemIDs: matchingItems.prefix(3).map(\.id),
+                shoppingListID: shoppingListID,
+                sourceType: store.sourceType.rawValue,
+                distanceMeters: distanceFromCurrentUser(to: store.coordinate),
+                notificationType: "shoppingGeofence"
+            )
+        }
+    }
+
     func checkSmartNearbyDetection(reason: String = "manual") {
         evaluateSmartNearbyDetection(reason: reason)
     }
 
-    private func relevantCandidates(for items: [ShoppingItem], savedLocations: [GeoLocation]) -> [ShoppingGeofenceCandidate] {
-        guard !items.isEmpty else {
-            return []
+    func publishBetaDiagnostics() {
+        guard BetaDiagnosticsCenter.shared.isEnabled else {
+            return
         }
 
-        let savedCandidates = savedLocationCandidates(for: items, savedLocations: savedLocations)
-
-        if !savedCandidates.isEmpty {
-            return deduplicated(savedCandidates).prefixArray(maxMonitoredShoppingRegions)
-        }
-
-        guard let currentCoordinate else {
-            return []
-        }
-
-        return deduplicated(nearbyFallbackCandidates(for: items, around: currentCoordinate)).prefixArray(maxMonitoredShoppingRegions)
-    }
-
-    private func savedLocationCandidates(for items: [ShoppingItem], savedLocations: [GeoLocation]) -> [ShoppingGeofenceCandidate] {
-        let activeItemIDs = Set(items.map(\.id))
-        let activeItemNames = Set(items.map { $0.name.lowercased() })
-
-        return savedLocations.compactMap { location in
-            let directlyMatchedItems = location.shoppingItems.filter { item in
-                !item.isCompleted && (activeItemIDs.contains(item.id) || activeItemNames.contains(item.name.lowercased()))
-            }
-            let categoryMatchedItems = items.filter { item in
-                guard let storeCategory = location.storeCategory else {
-                    return false
-                }
-
-                let itemCategories = intentMatcher.matchStoreCategories(for: item)
-                return itemCategories.contains { $0.matches(storeCategory) }
-            }
-            let matchingItems = directlyMatchedItems.isEmpty ? categoryMatchedItems : directlyMatchedItems
-
-            guard !matchingItems.isEmpty else {
+        let regions = locationManager.monitoredRegions.compactMap { region -> BetaGeofenceRegion? in
+            guard let circularRegion = region as? CLCircularRegion,
+                  let payload = ShoppingGeofencePayload(identifier: circularRegion.identifier) else {
                 return nil
             }
-
-            let distance = distanceFromCurrentUser(to: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude))
-            guard ShoppingStoreCategoryFilter.isEligible(
-                storeTitle: location.title,
-                storeCategories: location.storeCategory.map { [$0] } ?? [],
-                requestedCategories: matchedStoreCategories(for: matchingItems),
-                distanceMeters: distance
-            ) else {
-                return nil
-            }
-
-            return ShoppingGeofenceCandidate(
-                id: location.id,
-                locationID: location.id,
-                title: location.title,
-                coordinate: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude),
-                radius: notificationRadius(for: location.radius),
-                itemNames: notificationItemNames(from: matchingItems),
-                sourceType: location.sourceType.rawValue,
-                distanceMeters: distance
+            return BetaGeofenceRegion(
+                id: circularRegion.identifier,
+                title: payload.title,
+                coordinate: circularRegion.center,
+                radius: circularRegion.radius,
+                source: payload.sourceType
             )
         }
+        BetaDiagnosticsCenter.shared.updateMonitoredRegions(regions)
     }
 
     private func shouldIncludeLocationInGeofenceResults(_ location: GeoLocation) -> Bool {
@@ -196,43 +219,6 @@ final class LocationManager: NSObject, ObservableObject {
         #else
         return false
         #endif
-    }
-
-    private func nearbyFallbackCandidates(for items: [ShoppingItem], around coordinate: CLLocationCoordinate2D) -> [ShoppingGeofenceCandidate] {
-        let groups = intentMatcher.groupedIntents(for: items)
-        ShoppingDiscoveryDebugLogger.logGroups(
-            context: "Nearby geofence fallback",
-            groups: groups
-        )
-        let requests = groups.map { group in
-            (request: group.request, itemNames: group.itemNames)
-        }
-        ShoppingDiscoveryDebugLogger.logStoreSearchRequests(
-            context: "Nearby geofence fallback",
-            groups: groups,
-            requests: requests
-        )
-
-        let stores = groups.flatMap { group in
-            return storeSearchService.fallbackStores(
-                around: coordinate,
-                shoppingItems: group.itemNames,
-                storeCategories: group.request.storeCategories
-            )
-        }
-
-        return stores.prefix(6).map { store in
-            ShoppingGeofenceCandidate(
-                id: store.id,
-                locationID: store.locationID,
-                title: store.title,
-                coordinate: store.coordinate,
-                radius: notificationRadius(for: store.radius),
-                itemNames: store.itemNames.isEmpty ? notificationItemNames(from: items) : store.itemNames,
-                sourceType: store.isSavedLocation ? "saved" : "fallback",
-                distanceMeters: distanceFromCurrentUser(to: store.coordinate)
-            )
-        }
     }
 
     private func notificationItemNames(from items: [ShoppingItem]) -> [String] {
@@ -258,14 +244,9 @@ final class LocationManager: NSObject, ObservableObject {
         return names
     }
 
-    private func matchedStoreCategories(for items: [ShoppingItem]) -> [ShoppingStoreCategory] {
-        let categories = items.flatMap { intentMatcher.matchStoreCategories(for: $0) }
-        let uniqueCategories = Array(Set(categories))
-        return uniqueCategories.sorted { $0.displayName < $1.displayName }
-    }
-
     private func startMonitoring(candidate: ShoppingGeofenceCandidate) {
         guard CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else {
+            BetaDiagnosticsCenter.shared.geofenceSuppressed(reason: "Region monitoring is unavailable on this device")
             #if DEBUG
             print("[WayTask Geofence] Region monitoring is not available on this device.")
             #endif
@@ -276,6 +257,7 @@ final class LocationManager: NSObject, ObservableObject {
         stopMonitoringStore(withID: candidate.id)
 
         guard locationManager.monitoredRegions.count < maxTotalMonitoredRegions else {
+            BetaDiagnosticsCenter.shared.geofenceSuppressed(reason: "Core Location monitored-region limit reached for \(candidate.title)")
             #if DEBUG
             print("[WayTask Geofence] Region limit reached. Skipping \(candidate.title).")
             #endif
@@ -316,7 +298,7 @@ final class LocationManager: NSObject, ObservableObject {
     }
 
     private func distanceFromCurrentUser(to coordinate: CLLocationCoordinate2D) -> CLLocationDistance? {
-        guard let currentCoordinate else {
+        guard let currentCoordinate = rawCurrentCoordinate else {
             return nil
         }
 
@@ -377,19 +359,14 @@ final class LocationManager: NSObject, ObservableObject {
             return
         }
 
-        guard let currentCoordinate else {
+        guard let currentCoordinate = rawCurrentCoordinate else {
             #if DEBUG
             print("[WayTask Nearby] Skipped \(reason): user location unavailable.")
             #endif
             return
         }
 
-        let savedCandidates = savedLocationCandidates(
-            for: cachedActiveShoppingItems,
-            savedLocations: cachedSavedLocations
-        )
-
-        guard !savedCandidates.isEmpty else {
+        guard !cachedResolvedCandidates.isEmpty else {
             #if DEBUG
             print("[WayTask Nearby] Skipped \(reason): no relevant saved stores.")
             #endif
@@ -397,7 +374,7 @@ final class LocationManager: NSObject, ObservableObject {
         }
 
         let userLocation = CLLocation(latitude: currentCoordinate.latitude, longitude: currentCoordinate.longitude)
-        let nearestCandidate = savedCandidates
+        let nearestCandidate = cachedResolvedCandidates
             .map { candidate in
                 let storeLocation = CLLocation(
                     latitude: candidate.coordinate.latitude,
@@ -440,6 +417,38 @@ final class LocationManager: NSObject, ObservableObject {
 
     private func addNotificationRequest(_ request: UNNotificationRequest) {
         notificationCenter.add(request) { error in
+            let userInfo = request.content.userInfo
+            let store = (userInfo["storeTitle"] as? String) ?? "Unknown store"
+            let notificationType = (userInfo["notificationType"] as? String) ?? "shoppingGeofence"
+            let listID = (userInfo["shoppingListID"] as? String).flatMap(UUID.init(uuidString:))
+            let itemNames = ((userInfo["matchedItemNames"] as? String) ?? "")
+                .split(separator: ",")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            let latitude = (userInfo["latitude"] as? String).flatMap(Double.init)
+            let longitude = (userInfo["longitude"] as? String).flatMap(Double.init)
+            let coordinate = latitude.flatMap { latitude in
+                longitude.map { longitude in
+                    CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                }
+            }
+            Task { @MainActor in
+                BetaDiagnosticsCenter.shared.notificationDecision(
+                    fired: error == nil,
+                    type: notificationType,
+                    store: store,
+                    coordinate: coordinate,
+                    shoppingListID: listID,
+                    matchedProducts: itemNames,
+                    reason: error?.localizedDescription ?? "Notification request accepted by UNUserNotificationCenter"
+                )
+                if let error {
+                    BetaDiagnosticsCenter.shared.recordError(
+                        category: .notification,
+                        message: "Notification scheduling failed",
+                        detail: error.localizedDescription
+                    )
+                }
+            }
             #if DEBUG
             if let error {
                 print("[WayTask Geofence] Notification scheduling failed: \(error.localizedDescription)")
@@ -450,6 +459,32 @@ final class LocationManager: NSObject, ObservableObject {
         }
     }
 
+    private func publishCoordinateForUIIfNeeded(_ coordinate: CLLocationCoordinate2D, now: Date = Date()) {
+        guard let publishedCoordinate = currentCoordinate else {
+            currentCoordinate = coordinate
+            lastCoordinatePublication = now
+            return
+        }
+
+        guard publishedCoordinate.latitude != coordinate.latitude ||
+                publishedCoordinate.longitude != coordinate.longitude else {
+            return
+        }
+
+        let movement = CLLocation(
+            latitude: publishedCoordinate.latitude,
+            longitude: publishedCoordinate.longitude
+        ).distance(from: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude))
+        let interval = now.timeIntervalSince(lastCoordinatePublication)
+        guard movement >= coordinatePublicationMovementThreshold ||
+                interval >= coordinatePublicationMaximumInterval else {
+            return
+        }
+
+        currentCoordinate = coordinate
+        lastCoordinatePublication = now
+    }
+
     #if DEBUG
     private func logGeofenceRefresh(
         activeItems: [ShoppingItem],
@@ -457,7 +492,7 @@ final class LocationManager: NSObject, ObservableObject {
         candidates: [ShoppingGeofenceCandidate]
     ) {
         let coordinateText: String
-        if let currentCoordinate {
+        if let currentCoordinate = rawCurrentCoordinate {
             coordinateText = "\(currentCoordinate.latitude), \(currentCoordinate.longitude)"
         } else {
             coordinateText = "unavailable"
@@ -481,7 +516,7 @@ final class LocationManager: NSObject, ObservableObject {
     }
 
     private func distanceFromUserText(to coordinate: CLLocationCoordinate2D) -> String {
-        guard let currentCoordinate else {
+        guard let currentCoordinate = rawCurrentCoordinate else {
             return "unknown"
         }
 
@@ -502,12 +537,15 @@ extension LocationManager: CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        currentCoordinate = locations.last?.coordinate
+        guard let coordinate = locations.last?.coordinate else {
+            return
+        }
+
+        rawCurrentCoordinate = coordinate
+        publishCoordinateForUIIfNeeded(coordinate)
 
         #if DEBUG
-        if let currentCoordinate {
-            print("[WayTask Geofence] User location updated: \(currentCoordinate.latitude), \(currentCoordinate.longitude)")
-        }
+        print("[WayTask Geofence] User location updated: \(coordinate.latitude), \(coordinate.longitude)")
         #endif
 
         evaluateSmartNearbyDetection(reason: "location update")
@@ -522,16 +560,36 @@ extension LocationManager: CLLocationManagerDelegate {
             print("[WayTask Geofence] Did start monitoring non-circular region: \(region.identifier)")
         }
         #endif
+        publishBetaDiagnostics()
     }
 
     func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
         #if DEBUG
         print("[WayTask Geofence] didEnterRegion: \(region.identifier)")
         #endif
+        if let circularRegion = region as? CLCircularRegion {
+            let payload = ShoppingGeofencePayload(identifier: circularRegion.identifier)
+            BetaDiagnosticsCenter.shared.geofenceTriggered(
+                title: payload?.title ?? circularRegion.identifier,
+                entered: true,
+                distance: distanceFromCurrentUser(to: circularRegion.center)
+            )
+        }
         sendEntryNotification(for: region)
     }
 
+    func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
+        guard let circularRegion = region as? CLCircularRegion else { return }
+        let payload = ShoppingGeofencePayload(identifier: circularRegion.identifier)
+        BetaDiagnosticsCenter.shared.geofenceTriggered(
+            title: payload?.title ?? circularRegion.identifier,
+            entered: false,
+            distance: distanceFromCurrentUser(to: circularRegion.center)
+        )
+    }
+
     func locationManager(_ manager: CLLocationManager, monitoringDidFailFor region: CLRegion?, withError error: Error) {
+        BetaDiagnosticsCenter.shared.geofenceSuppressed(reason: "Monitoring failed: \(error.localizedDescription)")
         #if DEBUG
         print("Region monitoring failed: \(error.localizedDescription)")
         #endif

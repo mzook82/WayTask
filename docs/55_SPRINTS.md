@@ -1,3 +1,37 @@
+# Sprint 27B.5E – Post-Plan Performance Fix
+
+## Goal
+
+Remove the global UI slowdown that began when a shared ShoppingPlan became ready while preserving the working Planner, store resolution, coverage, notification, geofence, and Map behavior.
+
+## Completed
+
+- Added a stable store/product signature to native Map updates and skipped identical annotation/overlay replacement while preserving the user-location annotation.
+- Deferred ShoppingPlan application while the retained Map tab is hidden and applied the pending plan once on activation.
+- Batched each `MapViewModel.applyShoppingPlan` display transition into one coherent `objectWillChange` cycle and equality-guarded identical values.
+- Cached plan-aware filtered stores and products until plan/matching data, filters, stores, products, category, or search text changes.
+- Split raw Core Location coordinates from throttled UI publication using a 15-meter movement threshold and 10-second maximum interval.
+- Removed the duplicate ready transition after Shopping plan generation and equality-guarded plan-state setters.
+- Made the Shopping scroll hierarchy lazy, replaced transient visible identities with semantic IDs, and pre-indexed list entries/items for grouped presentation.
+- Replaced Home transient identities and disconnected its one-second publisher outside active plan generation.
+- Kept disabled Beta Diagnostics at near-zero overhead, including guarding monitored-region materialization before diagnostics mutation.
+- Added DEBUG-only counters for `updateUIView`, annotation rebuilds, identical-update skips, and `applyShoppingPlan` calls.
+
+## Preserved
+
+- Planner and store-ranking decisions.
+- Shared Store Resolution and transient-store materialization.
+- Coverage, notification scheduling, nearby decisions, and geofence monitoring semantics.
+- Camera, selection, circle, bottom-sheet, and retained-Map behavior.
+
+## Validation
+
+- Generic iOS Debug build with code signing disabled.
+- Focused P1/P2 review.
+- Final generic iOS Debug build and `git diff --check`.
+
+Status: ✅ Completed
+
 # Sprint 4 – Discover Foundation
 
 ## Goal
@@ -912,6 +946,73 @@ Future Version 1.0 screens can be implemented consistently without rewriting exi
 Build completed successfully after implementation and after focused review.
 
 **Review:** Focused review found no P1/P2 business-logic changes. The only follow-up was documentation alignment for the new foundation boundary.
+
+**Status:** Completed
+
+## Sprint 27B.5B – WayTask Beta Diagnostics Center
+
+### Goal
+
+Give the development team an optional internal view of why critical Beta runtime decisions occurred without changing planner, recognition, ranking, store-resolution, or compatibility behavior.
+
+### Completed
+
+- Added hidden Developer Mode activation through seven taps on the Settings placeholder or version row.
+- Added Settings -> Developer -> Beta Diagnostics only while Developer Mode is enabled.
+- Added live Planner, Store Discovery, Notification, Geofence, Map, Gemini/Recognition, Performance, Recent Error, and Recent Decision sections.
+- Added planner state, stage, timing, coverage, matched/missing products, cache status, selected store, ranking score, and ranking reasons.
+- Added per-resolution store cache state, query acceptance/rejection reasons, resolved source labels, duration, and concurrent diagnostic-session isolation.
+- Added notification fired/suppressed reasons, payload context, tap/deep-link state, and bottom-sheet completion.
+- Added actual Core Location monitored-region state, entry/exit trigger state, current distance, and monitoring suppression reasons.
+- Added Map camera, region, zoom, focused/selected store, visible stores, and visible circle counts.
+- Added local usage counters for Gemini, fallback, barcode, OpenFoodFacts, manual products, recognition timing, and recognition cache outcomes.
+- Added an actual-local-usage monthly Gemini projection beginning with the first recorded diagnostic request.
+- Added bounded Beta Snapshot capture containing runtime report state plus an in-memory-only screenshot.
+- Added readable Markdown and optional JSON reports with Share, Copy, and Save actions.
+- Added explicit privacy exclusions for images, screenshots, email, authentication, API keys, route history, and private account data.
+- Kept diagnostics no-op while Developer Mode is disabled and bounded in memory to 200 events and 40 rejection reasons.
+
+### Preserved
+
+- Product Knowledge, Gemini recognition behavior, barcode behavior, planner behavior, `ShoppingTripService`, `BuyingOptionsService`, `ShoppingIntentMatcher`, Store Search decisions, Store Ranking, Store Reality Score, Store Aggregation, and compatibility paths.
+
+### Result
+
+Generic iOS Debug build completed successfully with code signing disabled.
+
+**Status:** Completed
+
+## Sprint 27B.5A – Unified Store Resolution Engine
+
+### Goal
+
+Make Planner, Map, Nearby, Notifications, and Geofence resolve the same real stores without adding a server or long-term store database.
+
+### Completed
+
+- Added `RuntimeStore` as the shared runtime representation while retaining the `MapStore` compatibility alias.
+- Preserved persisted `GeoLocation.id` and added deterministic transient identity for MapKit/fallback stores.
+- Added shared `StoreResolutionEngine` ownership for saved-store conversion, grouped discovery, merge, deduplication, retagging, cache, throttle, and in-flight reuse.
+- Changed Shopping Generate Plan to await saved + MapKit resolution before failure, buying options, coverage, and `ShoppingPlan` publication.
+- Replaced ProductListView, Map, Nearby, and Geofence discovery implementations with shared resolver calls.
+- Allowed Map to discover nearby stores without a `ShoppingPlan` and without auto-generating one.
+- Expanded grouped MapKit query coverage and suppressed synthetic local/demo stores from runtime results.
+- Added notification payload context and Map materialization for transient stores.
+- Preserved valid Shopping plans during notification navigation.
+- Kept monitored-region limits, plan `contentSignature`, stale-plan behavior, generation guards, location bucketing, and Map user-follow behavior.
+- Restored proximity overlays from resolved Map stores.
+
+### Deferred
+
+- Persistent first-party Store Database.
+- Server-backed store identity and branch reconciliation.
+- Offline persistence for transient stores and Shopping plans.
+- Native `ShoppingListEntry` planner/session migration.
+- Field telemetry beyond existing debug audit logs.
+
+### Result
+
+Generic iOS Debug build completed successfully with code signing disabled.
 
 **Status:** Completed
 

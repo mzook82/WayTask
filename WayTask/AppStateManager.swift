@@ -91,6 +91,31 @@ struct NearbyShoppingOpportunity: Identifiable, Equatable {
     }
 }
 
+struct StoreNavigationContext: Equatable {
+    let storeID: UUID
+    let locationID: UUID?
+    let title: String
+    let coordinate: CLLocationCoordinate2D?
+    let sourceType: DataSourceType
+    let matchedShoppingItemIDs: [UUID]
+    let matchedItemNames: [String]
+    let shoppingListID: UUID?
+    let notificationType: String
+
+    static func == (lhs: StoreNavigationContext, rhs: StoreNavigationContext) -> Bool {
+        lhs.storeID == rhs.storeID &&
+            lhs.locationID == rhs.locationID &&
+            lhs.title == rhs.title &&
+            lhs.coordinate?.latitude == rhs.coordinate?.latitude &&
+            lhs.coordinate?.longitude == rhs.coordinate?.longitude &&
+            lhs.sourceType == rhs.sourceType &&
+            lhs.matchedShoppingItemIDs == rhs.matchedShoppingItemIDs &&
+            lhs.matchedItemNames == rhs.matchedItemNames &&
+            lhs.shoppingListID == rhs.shoppingListID &&
+            lhs.notificationType == rhs.notificationType
+    }
+}
+
 struct ShoppingPlan: Identifiable {
     let id: UUID
     let request: ShoppingStoreSuggestionRequest
@@ -319,8 +344,9 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     @Published private(set) var currentProductLibraryIDs: [UUID] = []
     @Published var isTripMapMode = false
     @Published private(set) var nearbyOpportunities: [NearbyShoppingOpportunity] = []
+    @Published private(set) var storeNavigationContext: StoreNavigationContext?
 
-    private let nearbyStoreSearchService = MapKitStoreSearchService()
+    private let storeResolutionEngine = StoreResolutionEngine.shared
     private let nearbyIntentMatcher = ShoppingIntentMatcher()
     private let storeRankingService = StoreRankingService()
     private let nearbyRadius: CLLocationDistance = 350
@@ -366,7 +392,9 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     }
 
     func setCurrentShoppingList(_ listID: UUID?) {
-        currentShoppingListID = listID
+        if currentShoppingListID != listID {
+            currentShoppingListID = listID
+        }
 
         if selectedShoppingListID == nil {
             selectedShoppingListID = listID
@@ -374,9 +402,12 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     }
 
     func setCurrentProductLibrary(_ products: [Product]) {
-        currentProductLibraryIDs = products
+        let productIDs = products
             .map(\.id)
             .sorted { $0.uuidString < $1.uuidString }
+        if currentProductLibraryIDs != productIDs {
+            currentProductLibraryIDs = productIDs
+        }
     }
 
     func suggestStores(
@@ -433,48 +464,84 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         )
 
         if shoppingPlan?.contentSignature == nextPlan.contentSignature {
+            if let shoppingPlan {
+                BetaDiagnosticsCenter.shared.plannerSucceeded(plan: shoppingPlan, cacheHit: true)
+            }
             markShoppingPlanReady(generatedAt: shoppingPlan?.generatedAt ?? Date())
             return
         }
 
         shoppingPlan = nextPlan
+        BetaDiagnosticsCenter.shared.plannerSucceeded(plan: nextPlan, cacheHit: false)
         markShoppingPlanReady(generatedAt: nextPlan.generatedAt)
     }
 
     func clearShoppingPlan() {
-        shoppingPlan = nil
-        shoppingPlanState = .idle
+        if shoppingPlan != nil {
+            shoppingPlan = nil
+        }
+        setShoppingPlanState(.idle)
     }
 
     func beginShoppingPlanGeneration(stage: ShoppingPlanGenerationStage = .preparingList) {
-        shoppingPlanState = .generating(stage: stage, startedAt: Date())
+        setShoppingPlanState(.generating(stage: stage, startedAt: Date()))
+        BetaDiagnosticsCenter.shared.plannerStarted(stage: stage.title)
     }
 
     func updateShoppingPlanGeneration(stage: ShoppingPlanGenerationStage) {
         let startedAt = shoppingPlanState.startedAt ?? Date()
-        shoppingPlanState = .generating(stage: stage, startedAt: startedAt)
+        setShoppingPlanState(.generating(stage: stage, startedAt: startedAt))
+        BetaDiagnosticsCenter.shared.plannerStageChanged(stage.title)
     }
 
     func markShoppingPlanReady(generatedAt: Date = Date()) {
-        shoppingPlanState = .ready(generatedAt: generatedAt)
+        setShoppingPlanState(.ready(generatedAt: generatedAt))
     }
 
     func markShoppingPlanFailed(message: String, actionTitle: String? = "Try Again") {
-        shoppingPlan = nil
-        shoppingPlanState = .failed(message: message, actionTitle: actionTitle)
+        if shoppingPlan != nil {
+            shoppingPlan = nil
+        }
+        setShoppingPlanState(.failed(message: message, actionTitle: actionTitle))
+        BetaDiagnosticsCenter.shared.plannerFailed(reason: message)
     }
 
     func markShoppingPlanStale(reason: String) {
-        shoppingPlan = nil
-        shoppingPlanState = .stale(reason: reason)
+        if shoppingPlan != nil {
+            shoppingPlan = nil
+        }
+        setShoppingPlanState(.stale(reason: reason))
+        BetaDiagnosticsCenter.shared.plannerMarkedStale(reason: reason)
     }
 
-    func openShoppingNotificationOnMap(storeID: UUID?, locationID: UUID?) {
+    private func setShoppingPlanState(_ state: ShoppingPlanGenerationState) {
+        guard shoppingPlanState != state else {
+            return
+        }
+
+        shoppingPlanState = state
+    }
+
+    func openShoppingNotificationOnMap(_ context: StoreNavigationContext) {
         navigationPath = NavigationPath()
-        clearShoppingPlan()
-        isTripMapMode = true
-        focusedLocationID = locationID ?? storeID
+        if let shoppingListID = context.shoppingListID {
+            let activeListID = selectedShoppingListID ?? currentShoppingListID
+            if let activeListID, activeListID != shoppingListID {
+                clearShoppingPlan()
+            }
+            selectedShoppingListID = shoppingListID
+        }
+        isTripMapMode = false
+        focusedLocationID = context.locationID ?? context.storeID
+        storeNavigationContext = context
         selectedTab = .map
+    }
+
+    func consumeStoreNavigationContext(storeID: UUID) {
+        guard storeNavigationContext?.storeID == storeID else {
+            return
+        }
+        storeNavigationContext = nil
     }
 
     func dismissNearbyOpportunity(_ opportunity: NearbyShoppingOpportunity) {
@@ -484,13 +551,23 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     }
 
     func openNearbyOpportunityOnMap(_ opportunity: NearbyShoppingOpportunity) {
-        guard let locationID = opportunity.locationID else {
-            focusedLocationID = nil
-            selectedTab = .map
-            return
-        }
-
-        focusMap(on: locationID)
+        let sourceType = DataSourceType(rawValue: opportunity.sourceType) ?? .appleMaps
+        let storeID = opportunity.storeID ?? StoreRuntimeIdentity.transientID(
+            title: opportunity.title,
+            coordinate: opportunity.coordinate,
+            sourceType: sourceType
+        )
+        openShoppingNotificationOnMap(StoreNavigationContext(
+            storeID: storeID,
+            locationID: opportunity.locationID,
+            title: opportunity.title,
+            coordinate: opportunity.coordinate,
+            sourceType: sourceType,
+            matchedShoppingItemIDs: [],
+            matchedItemNames: opportunity.itemNames,
+            shoppingListID: selectedShoppingListID ?? currentShoppingListID,
+            notificationType: "nearbyOpportunity"
+        ))
     }
 
     func refreshNearbyOpportunities(
@@ -517,15 +594,10 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
             context: "Nearby",
             groups: activeGroups
         )
-        let visibleSavedLocations = savedLocations.filter(shouldIncludeLocationInNearbyResults)
-        let savedOpportunities = nearbySavedOpportunities(
-            for: activeItems,
-            savedLocations: visibleSavedLocations,
-            currentCoordinate: currentCoordinate
-        )
-        let mapStores = await nearbyStoresByGroup(
-            activeGroups,
-            around: currentCoordinate,
+        let resolvedStores = await storeResolutionEngine.resolve(
+            savedLocations: savedLocations,
+            items: activeItems,
+            around: currentCoordinate
         )
 
         guard refreshGeneration == nearbyRefreshGeneration else {
@@ -533,12 +605,12 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         }
 
         let mapOpportunities = nearbyMapOpportunities(
-            from: mapStores,
+            from: resolvedStores,
             activeItems: activeItems,
             currentCoordinate: currentCoordinate
         )
 
-        nearbyOpportunities = deduplicatedNearbyOpportunities(savedOpportunities + mapOpportunities)
+        nearbyOpportunities = deduplicatedNearbyOpportunities(mapOpportunities)
             .sorted { lhs, rhs in
                 if lhs.realityScore == rhs.realityScore {
                     return lhs.distanceMeters < rhs.distanceMeters
@@ -558,8 +630,50 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         await MainActor.run {
             let storeID = (userInfo["storeID"] as? String).flatMap(UUID.init(uuidString:))
             let locationID = (userInfo["geoLocationID"] as? String).flatMap(UUID.init(uuidString:))
+            let title = (userInfo["storeTitle"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let latitude = (userInfo["latitude"] as? String).flatMap(Double.init)
+            let longitude = (userInfo["longitude"] as? String).flatMap(Double.init)
+            let coordinate: CLLocationCoordinate2D?
+            if let latitude, let longitude {
+                coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+            } else {
+                coordinate = nil
+            }
+            let sourceRawValue = (userInfo["sourceType"] as? String) ?? (userInfo["storeSourceType"] as? String)
+            let sourceType = sourceRawValue.flatMap(DataSourceType.init(rawValue:)) ?? .appleMaps
+            let itemIDs = ((userInfo["matchedShoppingItemIDs"] as? String) ?? "")
+                .split(separator: ",")
+                .compactMap { UUID(uuidString: String($0)) }
+            let itemNames = ((userInfo["matchedItemNames"] as? String) ?? "")
+                .split(separator: ",")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            let listID = (userInfo["shoppingListID"] as? String).flatMap(UUID.init(uuidString:))
+            let notificationType = (userInfo["notificationType"] as? String) ?? "shoppingGeofence"
 
-            openShoppingNotificationOnMap(storeID: storeID, locationID: locationID)
+            guard let storeID else {
+                BetaDiagnosticsCenter.shared.recordError(
+                    category: .notification,
+                    message: "Notification deep link rejected",
+                    detail: "Missing storeID"
+                )
+                return
+            }
+            BetaDiagnosticsCenter.shared.notificationTapped(
+                store: title ?? storeID.uuidString,
+                deepLinkStatus: coordinate != nil || locationID != nil ? "Payload accepted" : "Missing coordinate and saved location"
+            )
+            openShoppingNotificationOnMap(StoreNavigationContext(
+                storeID: storeID,
+                locationID: locationID,
+                title: title ?? "",
+                coordinate: coordinate,
+                sourceType: sourceType,
+                matchedShoppingItemIDs: itemIDs,
+                matchedItemNames: itemNames,
+                shoppingListID: listID,
+                notificationType: notificationType
+            ))
         }
     }
 
@@ -568,155 +682,6 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         [.banner, .sound]
-    }
-
-    private func nearbySavedOpportunities(
-        for activeItems: [ShoppingItem],
-        savedLocations: [GeoLocation],
-        currentCoordinate: CLLocationCoordinate2D
-    ) -> [NearbyShoppingOpportunity] {
-        let userLocation = CLLocation(latitude: currentCoordinate.latitude, longitude: currentCoordinate.longitude)
-        let activeItemIDs = Set(activeItems.map(\.id))
-        let activeItemNames = Set(activeItems.map { $0.name.lowercased() })
-
-        return savedLocations.compactMap { location in
-            let directlyMatchedItems = location.shoppingItems.filter { item in
-                !item.isCompleted && (activeItemIDs.contains(item.id) || activeItemNames.contains(item.name.lowercased()))
-            }
-            let categoryMatchedItems = activeItems.filter { item in
-                guard let storeCategory = location.storeCategory else {
-                    return false
-                }
-
-                let itemCategories = nearbyIntentMatcher.matchStoreCategories(for: item)
-                return itemCategories.contains { $0.matches(storeCategory) }
-            }
-            let matchingItems = directlyMatchedItems.isEmpty ? categoryMatchedItems : directlyMatchedItems
-
-            guard !matchingItems.isEmpty else {
-                return nil
-            }
-
-            let coordinate = CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude)
-            let storeLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-            let distance = userLocation.distance(from: storeLocation)
-
-            let store = MapStore(
-                id: location.id,
-                locationID: location.id,
-                title: location.title,
-                coordinate: coordinate,
-                radius: location.radius,
-                itemNames: notificationItemNames(from: matchingItems),
-                completedItemNames: [],
-                isOpen: true,
-                rating: nil,
-                storeCategories: location.storeCategory.map { [$0] } ?? [],
-                queryEvidenceCategories: [],
-                websiteURL: nil,
-                sourceType: location.sourceType
-            )
-            let groupMatchedItems = nearbyIntentMatcher.relevantItems(from: activeItems, for: store)
-            guard !groupMatchedItems.isEmpty else {
-                return nil
-            }
-            let groupItemNames = notificationItemNames(from: groupMatchedItems)
-            let groupCategories = matchedStoreCategories(for: groupMatchedItems)
-            let groupRequest = nearbyRealityRequest(
-                itemNames: groupItemNames,
-                categories: groupCategories,
-                fallbackID: location.id
-            )
-            let groupedStore = MapStore(
-                id: store.id,
-                locationID: store.locationID,
-                title: store.title,
-                coordinate: store.coordinate,
-                radius: store.radius,
-                itemNames: groupItemNames,
-                completedItemNames: store.completedItemNames,
-                isOpen: store.isOpen,
-                rating: store.rating,
-                storeCategories: store.storeCategories,
-                queryEvidenceCategories: store.queryEvidenceCategories,
-                websiteURL: store.websiteURL,
-                sourceType: store.sourceType
-            )
-            guard storeRankingService.isRelevant(
-                store: groupedStore,
-                request: groupRequest,
-                userCoordinate: currentCoordinate
-            ) else {
-                return nil
-            }
-
-            guard distance <= nearbyRadius else {
-                return nil
-            }
-
-            let ranking = storeRankingService.score(
-                store: groupedStore,
-                request: groupRequest,
-                userCoordinate: currentCoordinate,
-                coverage: StoreRealityCoverage(
-                    matchedItemCount: groupMatchedItems.count,
-                    totalItemCount: groupMatchedItems.count
-                )
-            )
-
-            return NearbyShoppingOpportunity(
-                id: "saved-\(location.id.uuidString)",
-                storeID: location.id,
-                locationID: location.id,
-                title: location.title,
-                itemNames: groupedStore.itemNames,
-                sourceType: location.sourceType.rawValue,
-                distanceMeters: distance,
-                realityScore: ranking.score,
-                latitude: coordinate.latitude,
-                longitude: coordinate.longitude,
-                detectedAt: Date()
-            )
-        }
-    }
-
-    private func nearbyStoresByGroup(
-        _ groups: [ShoppingIntentGroupResult],
-        around coordinate: CLLocationCoordinate2D
-    ) async -> [MapStore] {
-        var stores: [MapStore] = []
-
-        let requests = groups.map { group in
-            (request: group.request, itemNames: group.itemNames)
-        }
-        ShoppingDiscoveryDebugLogger.logStoreSearchRequests(
-            context: "Nearby",
-            groups: groups,
-            requests: requests
-        )
-
-        for group in groups {
-            let groupStores = await nearbyStoreSearchService.stores(
-                around: coordinate,
-                shoppingItems: group.itemNames,
-                storeCategories: group.request.storeCategories
-            )
-            stores.append(contentsOf: groupStores)
-        }
-
-        return deduplicatedStores(stores)
-    }
-
-    private func shouldIncludeLocationInNearbyResults(_ location: GeoLocation) -> Bool {
-        guard location.sourceType == .debugSeed else {
-            return true
-        }
-
-        #if DEBUG
-        return DebugSeedStoreService.isEnabled
-        #else
-        return false
-        #endif
     }
 
     private func nearbyMapOpportunities(
@@ -862,23 +827,6 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
 
             if !isDuplicate {
                 result.append(opportunity)
-            }
-        }
-
-        return result
-    }
-
-    private func deduplicatedStores(_ stores: [MapStore]) -> [MapStore] {
-        var result: [MapStore] = []
-
-        for store in stores {
-            let isDuplicate = result.contains { existing in
-                existing.title.localizedCaseInsensitiveCompare(store.title) == .orderedSame ||
-                distance(from: existing.coordinate, to: store.coordinate) < 35
-            }
-
-            if !isDuplicate {
-                result.append(store)
             }
         }
 

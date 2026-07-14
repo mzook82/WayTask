@@ -4,7 +4,7 @@
 **Version:** 0.1  
 **Status:** Draft  
 **Owner:** Mordechai Zukerman  
-**Last Updated:** June 30, 2026
+**Last Updated:** July 13, 2026
 
 ---
 
@@ -205,6 +205,29 @@ AppStateManager.shoppingPlanState
 
 Shopping owns explicit generation actions. Home observes the same state and does not generate an independent plan. Map receives the existing shared plan only after the plan is ready and contains usable stores.
 
+### Plan-to-Map Performance Flow
+
+`MainMapView` and its `MapViewModel` remain retained by the root `TabView`; tab changes do not recreate either object. A ready `ShoppingPlan` follows this visibility-aware path:
+
+```text
+AppStateManager.shoppingPlan
+        │
+        ├── Map active ──► apply once to MapViewModel
+        │                         │
+        │                         ├── one batched display publication
+        │                         └── cached filtered stores/products
+        │
+        └── Map inactive ─► retain pending plan ID
+                                  │
+                                  └── apply once when Map becomes active
+```
+
+Map visibility gates only native presentation work. Shared store resolution, notification scheduling, nearby opportunity evaluation, and geofence monitoring remain independent of the selected tab.
+
+`WayTaskMapView` derives a stable native-content signature from store identity, coordinate, raw radius, title, source, matched item names, and product marker identity. `updateUIView` continues to process legitimate camera changes, but it skips annotation and circle replacement when that signature is unchanged. User-location annotations are never included in removal.
+
+Core Location has two coordinate paths. `LocationManager` retains every raw valid coordinate for nearby, notification, and geofence decisions. Its `@Published` UI coordinate emits for the first fix, movement of at least 15 meters, or a maximum interval of 10 seconds. `MapViewModel` applies the same guard to MapKit user-location callbacks so unchanged display coordinates cannot repeatedly invalidate the retained map.
+
 Example: Product Library and Shopping Lists
 
 ```text
@@ -232,6 +255,49 @@ Shopping reads `ShoppingListEntry` records only. Each entry still adapts to a te
 Sprint 27B.3 removed the runtime UI override where an active Shopping Session replaced the Products tab. Sprint 27B.4 formalized Shopping plan state and gated Map/Shopping Mode entry behind a ready shared plan. Shopping Mode remains on the legacy `ShoppingSession` path, but it no longer owns Product Library presentation.
 
 This architecture keeps presentation logic separated from reusable services.
+
+## Unified Runtime Store Resolution
+
+All runtime store consumers enter `StoreResolutionEngine.shared`:
+
+```text
+Saved GeoLocation stores
+        +
+Grouped shopping intents
+        +
+Current coordinate
+        │
+        ▼
+StoreResolutionEngine
+        │
+        ├── coordinate-bucket + intent cache
+        ├── in-flight request reuse and refresh throttle
+        ├── grouped MapKitStoreSearchService searches
+        ├── synthetic local-store suppression
+        ├── saved-store-priority merge
+        └── stable identity deduplication
+        │
+        ▼
+RuntimeStore (MapStore compatibility alias)
+        │
+        ├── Planner / Buying Options / Coverage
+        ├── Map suggestions and proximity overlays
+        ├── Nearby opportunities
+        ├── Notification validation and navigation
+        └── Geofence candidates
+```
+
+Persisted stores retain `GeoLocation.id`. Transient MapKit/fallback stores derive a deterministic UUID from source type, normalized title, and a tight coordinate bucket. Transient stores remain runtime-only and are materialized in Map state when a notification or nearby opportunity references one.
+
+Planner ordering is strict: saved stores, awaited discovery, merge, deduplicate, buying options, coverage, then `ShoppingPlan`. A missing saved store set is not a failure while discovery can still run.
+
+Map discovery is independent of `ShoppingPlan`. Opening Map without a ready plan performs cached nearby discovery but does not publish or generate a plan. Applying a ready plan still uses that plan's stores and preserves existing user-follow behavior.
+
+Notification payloads carry store identity, coordinate, title, source type, matched `ShoppingItem` IDs/names, Shopping list ID, and notification type when available. `StoreNavigationContext` reconstructs and selects transient stores. Opening a notification preserves a valid `ShoppingPlan` unless the payload switches to a different Shopping list.
+
+Geofence monitored-region limits and Core Location behavior remain unchanged. Candidate selection now uses the shared resolved stores, and Map circles are drawn from the same stable runtime store set.
+
+See `docs/140_STORE_RESOLUTION_ENGINE.md` for invariants, safeguards, limitations, and field validation.
 
 ---
 

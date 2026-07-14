@@ -7,7 +7,7 @@ Current Milestone:
 Milestone 3 – Products & Shopping Separation
 
 Current Sprint:
-Sprint 27B.4.2 – First Shopping Experience & Shopping Workflow Completion
+Sprint 27B.5E – Post-Plan Performance Fix
 
 Completed:
 
@@ -25,10 +25,21 @@ Completed:
 - Shopping UX plan-state completion
 - Explicit initial Shopping list selection
 - First-shopping onboarding and legacy Shopping review
+- Unified saved-store and MapKit resolution across Planner, Map, Nearby, Notifications, and Geofence
+- Stable runtime identity for persisted and transient stores
+- Notification-to-store Map deep links with matching products
+- Hidden Beta Diagnostics Center with runtime decision telemetry
+- In-memory Beta Snapshot with non-exported screen capture
+- Privacy-reviewed Markdown and optional JSON diagnostics export
+- Stable-signature Map annotation and overlay update guard
+- Hidden-Map deferred ShoppingPlan application
+- Batched Map display publication and plan-aware filter caching
+- Throttled UI location publication with raw geofence accuracy preserved
+- Stable Shopping/Home row identities and lazy Shopping presentation
 
 Next Sprint:
 
-Native ShoppingListEntry planner/session migration and Shopping Mode ownership
+Sprint 27B.5F – On-Device Post-Plan Performance Validation
 
 Blockers:
 
@@ -64,7 +75,7 @@ Products & Shopping Separation
 
 In progress
 
-Sprint 27B.4.2 completes the first shopping experience. New users see a lightweight one-time explanation that Products are permanent, Shopping is temporary, and Generate Plan finds stores for the selected list. Legacy users with existing Weekly Shopping entries see a one-time review before those entries are treated as intentional. Shopping now makes `Choose Products` a primary action, hides Generate Plan when no products are selected, and keeps Home synchronized with the shared planning stage and elapsed time.
+Sprint 27B.5E removes the post-plan global performance cliff without changing Planner, store ranking, notification, geofence, coverage, or Map results. The retained Map defers plan application until its tab is active, Map state publishes as one coherent update, native annotations/overlays rebuild only when their stable content signature changes, and map filters reuse one cached result per relevant input set. UI-facing location updates are movement/time guarded while raw Core Location data continues to drive nearby, notification, and geofence decisions. Shopping uses lazy presentation and semantic row identities; Home disconnects its one-second publisher outside active plan generation.
 
 `ShoppingItem` remains as a temporary compatibility adapter for Product Knowledge, Shopping Memory, planner inputs, saved-store item links, and Shopping Mode until native `ShoppingListEntry` planner/session migration is complete.
 

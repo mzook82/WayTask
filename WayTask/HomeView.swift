@@ -61,10 +61,8 @@ struct HomeView: View {
             .onAppear {
                 refreshHomePresentationCache()
             }
-            .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { now in
-                if appStateManager.shoppingPlanState.isGenerating {
-                    homeNow = now
-                }
+            .onReceive(planningTickPublisher) { now in
+                homeNow = now
             }
             .onChange(of: appStateManager.shoppingPlan?.id) {
                 refreshPlanRowsCache()
@@ -79,6 +77,16 @@ struct HomeView: View {
                 refreshRecentProductCardsCache()
             }
         }
+    }
+
+    private var planningTickPublisher: AnyPublisher<Date, Never> {
+        guard appStateManager.shoppingPlanState.isGenerating else {
+            return Empty<Date, Never>(completeImmediately: false).eraseToAnyPublisher()
+        }
+
+        return Timer.publish(every: 1, on: .main, in: .common)
+            .autoconnect()
+            .eraseToAnyPublisher()
     }
 
     private var header: some View {
@@ -436,6 +444,7 @@ struct HomeView: View {
                 let completedCount = entries.filter(\.isChecked).count
 
                 return HomeShoppingListSummary(
+                    id: list.id.uuidString,
                     title: list.title,
                     itemCount: neededCount,
                     completedCount: completedCount,
@@ -452,6 +461,7 @@ struct HomeView: View {
 
         return [
             HomeShoppingListSummary(
+                id: "weekly-shopping",
                 title: "Weekly Shopping",
                 itemCount: activeItemCount,
                 completedCount: collectedCount,
@@ -459,6 +469,7 @@ struct HomeView: View {
                 isActive: true
             ),
             HomeShoppingListSummary(
+                id: "completed",
                 title: "Completed",
                 itemCount: completed.count,
                 completedCount: completed.count,
@@ -466,6 +477,7 @@ struct HomeView: View {
                 isActive: false
             ),
             HomeShoppingListSummary(
+                id: "recent",
                 title: "Recent",
                 itemCount: recent.count,
                 completedCount: recent.filter(\.isCompleted).count,
@@ -598,6 +610,7 @@ struct HomeView: View {
 
         cachedPlanRows = (appStateManager.shoppingPlan?.shoppingTripCoverages ?? []).prefix(3).enumerated().map { index, coverage in
             HomePlanRow(
+                id: coverage.id,
                 storeName: coverage.store.title,
                 subtitle: "\(coverage.matchedItemCount)/\(coverage.matchedItemCount + coverage.missingItemCount) items - \(coverage.group.displayName)",
                 distanceText: coverage.distance.map(distanceText(for:)),
@@ -615,6 +628,7 @@ struct HomeView: View {
                 .prefix(8)
                 .map {
                     HomeProductCardData(
+                        id: $0.id,
                         title: $0.name,
                         subtitle: $0.brand ?? $0.category ?? "Product",
                         imageData: $0.imageData,
@@ -629,6 +643,7 @@ struct HomeView: View {
             .prefix(8)
             .map {
                 HomeProductCardData(
+                    id: $0.id,
                     title: $0.name,
                     subtitle: $0.brand ?? $0.category ?? "Product",
                     imageData: $0.imageData,
@@ -750,7 +765,7 @@ struct HomeView: View {
 }
 
 private struct HomeShoppingListSummary: Identifiable {
-    let id = UUID()
+    let id: String
     let title: String
     let itemCount: Int
     let completedCount: Int
@@ -759,7 +774,7 @@ private struct HomeShoppingListSummary: Identifiable {
 }
 
 private struct HomePlanRow: Identifiable {
-    let id = UUID()
+    let id: String
     let storeName: String
     let subtitle: String
     let distanceText: String?
@@ -769,7 +784,7 @@ private struct HomePlanRow: Identifiable {
 }
 
 private struct HomeProductCardData: Identifiable {
-    let id = UUID()
+    let id: UUID
     let title: String
     let subtitle: String
     var imageData: Data?

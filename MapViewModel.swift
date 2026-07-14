@@ -3,7 +3,7 @@ import CoreLocation
 import Foundation
 import MapKit
 
-struct MapStore: Identifiable {
+struct RuntimeStore: Identifiable, Equatable {
     let id: UUID
     let locationID: UUID?
     let title: String
@@ -17,6 +17,23 @@ struct MapStore: Identifiable {
     let queryEvidenceCategories: [ShoppingStoreCategory]
     let websiteURL: URL?
     let sourceType: DataSourceType
+
+    static func == (lhs: RuntimeStore, rhs: RuntimeStore) -> Bool {
+        lhs.id == rhs.id &&
+            lhs.locationID == rhs.locationID &&
+            lhs.title == rhs.title &&
+            lhs.coordinate.latitude == rhs.coordinate.latitude &&
+            lhs.coordinate.longitude == rhs.coordinate.longitude &&
+            lhs.radius == rhs.radius &&
+            lhs.itemNames == rhs.itemNames &&
+            lhs.completedItemNames == rhs.completedItemNames &&
+            lhs.isOpen == rhs.isOpen &&
+            lhs.rating == rhs.rating &&
+            lhs.storeCategories == rhs.storeCategories &&
+            lhs.queryEvidenceCategories == rhs.queryEvidenceCategories &&
+            lhs.websiteURL == rhs.websiteURL &&
+            lhs.sourceType == rhs.sourceType
+    }
 
     var openItemCount: Int {
         itemNames.count
@@ -33,6 +50,72 @@ struct MapStore: Identifiable {
 
         return itemNames.joined(separator: ", ")
     }
+
+    var proximityRadius: CLLocationDistance {
+        min(max(radius, 150), 250)
+    }
+
+    func materializedWithStableIdentity() -> RuntimeStore {
+        guard locationID == nil else {
+            return self
+        }
+
+        return RuntimeStore(
+            id: StoreRuntimeIdentity.transientID(
+                title: title,
+                coordinate: coordinate,
+                sourceType: sourceType
+            ),
+            locationID: nil,
+            title: title,
+            coordinate: coordinate,
+            radius: radius,
+            itemNames: itemNames,
+            completedItemNames: completedItemNames,
+            isOpen: isOpen,
+            rating: rating,
+            storeCategories: storeCategories,
+            queryEvidenceCategories: queryEvidenceCategories,
+            websiteURL: websiteURL,
+            sourceType: sourceType
+        )
+    }
+}
+
+typealias MapStore = RuntimeStore
+
+enum StoreRuntimeIdentity {
+    static func transientID(
+        title: String,
+        coordinate: CLLocationCoordinate2D,
+        sourceType: DataSourceType
+    ) -> UUID {
+        let latitudeBucket = Int((coordinate.latitude * 100_000).rounded())
+        let longitudeBucket = Int((coordinate.longitude * 100_000).rounded())
+        let normalizedTitle = title
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "-")
+        let identity = "\(sourceType.rawValue)|\(normalizedTitle)|\(latitudeBucket)|\(longitudeBucket)"
+        let first = stableHash(identity, seed: 14_695_981_039_346_656_037)
+        let second = stableHash(identity, seed: 10_995_116_282_110_995_483)
+        let bytes = withUnsafeBytes(of: first.bigEndian, Array.init)
+            + withUnsafeBytes(of: second.bigEndian, Array.init)
+
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
+
+    private static func stableHash(_ value: String, seed: UInt64) -> UInt64 {
+        value.utf8.reduce(seed) { hash, byte in
+            (hash ^ UInt64(byte)) &* 1_099_511_628_211
+        }
+    }
 }
 
 private extension Array where Element == String {
@@ -45,11 +128,19 @@ private extension Array where Element == String {
     }
 }
 
-struct MapProduct: Identifiable {
+struct MapProduct: Identifiable, Equatable {
     let id: UUID
     let storeID: UUID
     let name: String
     let coordinate: CLLocationCoordinate2D
+
+    static func == (lhs: MapProduct, rhs: MapProduct) -> Bool {
+        lhs.id == rhs.id &&
+            lhs.storeID == rhs.storeID &&
+            lhs.name == rhs.name &&
+            lhs.coordinate.latitude == rhs.coordinate.latitude &&
+            lhs.coordinate.longitude == rhs.coordinate.longitude
+    }
 }
 
 enum MapCategory: String, CaseIterable, Identifiable {
@@ -64,16 +155,41 @@ enum MapCategory: String, CaseIterable, Identifiable {
 
 @MainActor
 final class MapViewModel: ObservableObject {
-    @Published var searchText = ""
-    @Published var selectedCategory: MapCategory = .all
-    @Published var shoppingListOnly = false
-    @Published private(set) var stores: [MapStore] = []
-    @Published private(set) var products: [MapProduct] = []
-    @Published var selectedStoreID: UUID?
-    @Published var cameraTarget: MKCoordinateRegion?
-    @Published var userCoordinate: CLLocationCoordinate2D?
+    let objectWillChange = ObservableObjectPublisher()
 
-    private let storeSearchService: StoreSearchService
+    var searchText = "" {
+        didSet { mapInputDidChange(from: oldValue, to: searchText) }
+    }
+    var selectedCategory: MapCategory = .all {
+        didSet { mapInputDidChange(from: oldValue, to: selectedCategory) }
+    }
+    var shoppingListOnly = false {
+        didSet { mapInputDidChange(from: oldValue, to: shoppingListOnly) }
+    }
+    private(set) var stores: [MapStore] = [] {
+        didSet { mapInputDidChange(from: oldValue, to: stores) }
+    }
+    private(set) var products: [MapProduct] = [] {
+        didSet { mapInputDidChange(from: oldValue, to: products) }
+    }
+    var selectedStoreID: UUID? {
+        didSet { valueDidChange(from: oldValue, to: selectedStoreID) }
+    }
+    var cameraTarget: MKCoordinateRegion? {
+        didSet {
+            guard !regionsEqual(oldValue, cameraTarget) else { return }
+            registerObjectChange()
+        }
+    }
+    private(set) var userCoordinate: CLLocationCoordinate2D? {
+        didSet {
+            guard !coordinatesEqual(oldValue, userCoordinate) else { return }
+            filterCacheNeedsRefresh = true
+            registerObjectChange()
+        }
+    }
+
+    private let storeResolutionEngine: StoreResolutionEngine
     private let storeRankingService = StoreRankingService()
     private let intentMatcher = ShoppingIntentMatcher()
     private var savedStores: [MapStore] = []
@@ -82,15 +198,32 @@ final class MapViewModel: ObservableObject {
     private var activeShoppingItems: [ShoppingItem] = []
     private var activeSuggestionRequest: ShoppingStoreSuggestionRequest?
     private var isUsingSharedShoppingPlan = false
+    private var lastAppliedShoppingPlanContentSignature: String?
     private var hasCenteredOnUser = false
     private var storeSearchTask: Task<Void, Never>?
+    private var cachedFilteredStores: [MapStore] = []
+    private var cachedFilteredProducts: [MapProduct] = []
+    private var filterCacheNeedsRefresh = true
+    private var publicationBatchDepth = 0
+    private var batchHasObjectChange = false
+    private var lastUserCoordinatePublication = Date.distantPast
+    private let userCoordinateMovementThreshold: CLLocationDistance = 15
+    private let userCoordinateMaximumInterval: TimeInterval = 10
+
+    #if DEBUG
+    private var applyShoppingPlanCount = 0
+    #endif
 
     init() {
-        self.storeSearchService = MapKitStoreSearchService()
+        self.storeResolutionEngine = .shared
     }
 
     init(storeSearchService: StoreSearchService) {
-        self.storeSearchService = storeSearchService
+        if let mapKitSearchService = storeSearchService as? MapKitStoreSearchService {
+            self.storeResolutionEngine = StoreResolutionEngine(searchService: mapKitSearchService)
+        } else {
+            self.storeResolutionEngine = .shared
+        }
     }
 
     var selectedStore: MapStore? {
@@ -102,37 +235,19 @@ final class MapViewModel: ObservableObject {
     }
 
     var filteredStores: [MapStore] {
-        stores.filter { store in
-            matchesSearch(store) && matchesFilters(store)
-        }
+        refreshFilterCacheIfNeeded()
+        return cachedFilteredStores
     }
 
     var filteredProducts: [MapProduct] {
-        let visibleStores = filteredStores
-        let visibleStoreIDs = Set(visibleStores.map(\.id))
-        let visibleItemNamesByStoreID = Dictionary(
-            uniqueKeysWithValues: visibleStores.map { store in
-                (store.id, Set(store.itemNames.map { $0.lowercased() }))
-            }
-        )
-
-        return products.filter { product in
-            guard visibleStoreIDs.contains(product.storeID) else {
-                return false
-            }
-
-            guard !activeShoppingItems.isEmpty,
-                  let visibleItemNames = visibleItemNamesByStoreID[product.storeID] else {
-                return true
-            }
-
-            return visibleItemNames.contains(product.name.lowercased())
-        }
+        refreshFilterCacheIfNeeded()
+        return cachedFilteredProducts
     }
 
-    func update(locations: [GeoLocation]) {
+    func update(locations: [GeoLocation], shoppingItems: [ShoppingItem] = []) {
+        let previousStores = stores
         let visibleLocations = locations.filter(shouldIncludeLocationInResults)
-        savedStores = visibleLocations.map(makeStore)
+        savedStores = StoreResolutionEngine.savedStores(from: visibleLocations)
         savedProducts = visibleLocations.flatMap(makeProducts)
 
         if isUsingSharedShoppingPlan {
@@ -143,11 +258,16 @@ final class MapViewModel: ObservableObject {
             return
         }
 
-        activeShoppingItemNames = visibleLocations
-            .flatMap(\.shoppingItems)
-            .filter { !$0.isCompleted }
-            .map(\.name)
+        activeShoppingItems = shoppingItems.filter { !$0.isCompleted }
+        activeShoppingItemNames = activeShoppingItems.map(\.name)
+        filterCacheNeedsRefresh = true
         rebuildDisplayStores()
+        BetaDiagnosticsCenter.shared.recordStoreTransition(
+            previous: previousStores,
+            next: stores,
+            reason: "Saved stores or shopping items changed"
+        )
+        publishMapDiagnostics()
 
         if let selectedStoreID, !stores.contains(where: { $0.id == selectedStoreID }) {
             self.selectedStoreID = nil
@@ -162,6 +282,7 @@ final class MapViewModel: ObservableObject {
         }
 
         cameraTarget = region(centeredOn: store.coordinate, latitudeDelta: 0.008, longitudeDelta: 0.008)
+        publishMapDiagnostics()
     }
 
     func focusStore(id: UUID) {
@@ -172,6 +293,82 @@ final class MapViewModel: ObservableObject {
         }
 
         cameraTarget = region(centeredOn: store.coordinate, latitudeDelta: 0.008, longitudeDelta: 0.008)
+        publishMapDiagnostics(focusedStore: store.title)
+    }
+
+    func materializeAndFocusStore(
+        id: UUID,
+        locationID: UUID?,
+        title: String,
+        coordinate: CLLocationCoordinate2D,
+        sourceType: DataSourceType,
+        matchingItemNames: [String]
+    ) {
+        let previousStores = stores
+        if let index = stores.firstIndex(where: { $0.id == id || $0.locationID == locationID }) {
+            let existing = stores[index]
+            if !matchingItemNames.isEmpty {
+                stores[index] = MapStore(
+                    id: existing.id,
+                    locationID: existing.locationID,
+                    title: existing.title,
+                    coordinate: existing.coordinate,
+                    radius: existing.radius,
+                    itemNames: matchingItemNames,
+                    completedItemNames: existing.completedItemNames,
+                    isOpen: existing.isOpen,
+                    rating: existing.rating,
+                    storeCategories: existing.storeCategories,
+                    queryEvidenceCategories: existing.queryEvidenceCategories,
+                    websiteURL: existing.websiteURL,
+                    sourceType: existing.sourceType
+                )
+                products = savedProducts + stores.filter { !$0.isSavedLocation }.flatMap(makeProducts)
+            }
+            selectStore(id: stores[index].id)
+            BetaDiagnosticsCenter.shared.notificationBottomSheetOpened(store: stores[index].title)
+            return
+        }
+
+        let transientStore = MapStore(
+            id: id,
+            locationID: locationID,
+            title: title,
+            coordinate: coordinate,
+            radius: 180,
+            itemNames: matchingItemNames,
+            completedItemNames: [],
+            isOpen: nil,
+            rating: nil,
+            storeCategories: [],
+            queryEvidenceCategories: [],
+            websiteURL: nil,
+            sourceType: sourceType
+        ).materializedWithStableIdentity()
+        stores = storeResolutionEngine.deduplicated(stores + [transientStore])
+        products = savedProducts + stores.filter { !$0.isSavedLocation }.flatMap(makeProducts)
+        let selectedID = stores.first { store in
+            store.id == transientStore.id ||
+                (
+                    store.title.localizedCaseInsensitiveCompare(transientStore.title) == .orderedSame &&
+                    distance(from: store.coordinate, to: transientStore.coordinate) < 35
+                )
+        }?.id
+        if let selectedID {
+            selectStore(id: selectedID)
+            BetaDiagnosticsCenter.shared.recordStoreTransition(
+                previous: previousStores,
+                next: stores,
+                reason: "Notification materialized a transient store"
+            )
+            BetaDiagnosticsCenter.shared.notificationBottomSheetOpened(store: transientStore.title)
+        } else {
+            BetaDiagnosticsCenter.shared.recordError(
+                category: .map,
+                message: "Transient store selection failed",
+                detail: transientStore.title
+            )
+        }
     }
 
     func followUser() {
@@ -180,6 +377,7 @@ final class MapViewModel: ObservableObject {
         }
 
         cameraTarget = region(centeredOn: userCoordinate, latitudeDelta: 0.01, longitudeDelta: 0.01)
+        publishMapDiagnostics()
     }
 
     func selectTripStore(from coverage: StoreCoverage) {
@@ -202,71 +400,114 @@ final class MapViewModel: ObservableObject {
     }
 
     func applyStoreSuggestion(_ request: ShoppingStoreSuggestionRequest, shoppingItems: [String]) {
-        isUsingSharedShoppingPlan = false
-        activeSuggestionRequest = request
-        activeShoppingItemNames = shoppingItems.isEmpty ? [request.itemName] : shoppingItems
-        activeShoppingItems = []
-        searchText = ""
-        selectedCategory = .shoppingList
-        shoppingListOnly = true
-        rebuildDisplayStores()
-        selectSuggestedStoreIfAvailable()
-    }
-
-    func applyStoreSuggestion(_ request: ShoppingStoreSuggestionRequest, shoppingItems: [ShoppingItem]) {
-        isUsingSharedShoppingPlan = false
-        activeSuggestionRequest = request
-        activeShoppingItems = shoppingItems.filter { !$0.isCompleted }
-        activeShoppingItemNames = activeShoppingItems.map(\.name)
-        if activeShoppingItemNames.isEmpty {
-            activeShoppingItemNames = [request.itemName]
-        }
-        searchText = ""
-        selectedCategory = .shoppingList
-        shoppingListOnly = true
-        rebuildDisplayStores()
-        selectSuggestedStoreIfAvailable()
-    }
-
-    func applyShoppingPlan(_ plan: ShoppingPlan) {
-        isUsingSharedShoppingPlan = true
-        storeSearchTask?.cancel()
-        storeSearchTask = nil
-        activeSuggestionRequest = plan.request
-        activeShoppingItems = plan.items.filter { !$0.isCompleted }
-        activeShoppingItemNames = activeShoppingItems.map(\.name)
-        if activeShoppingItemNames.isEmpty {
-            activeShoppingItemNames = [plan.request.itemName]
-        }
-        searchText = ""
-        selectedCategory = .shoppingList
-        shoppingListOnly = true
-        stores = displayStores(from: plan.stores)
-        products = savedProducts + stores.filter { !$0.isSavedLocation }.flatMap(makeProducts)
-        selectSuggestedStoreIfAvailable()
-        focusPlanRegionIfPossible()
-    }
-
-    func setUserCoordinate(_ coordinate: CLLocationCoordinate2D) {
-        let shouldRefreshFallback = userCoordinate == nil || distance(from: userCoordinate, to: coordinate) > 50
-        userCoordinate = coordinate
-
-        if shouldRefreshFallback && isUsingSharedShoppingPlan {
-            focusPlanRegionIfPossible()
-        } else if shouldRefreshFallback && !isUsingSharedShoppingPlan {
+        performPublicationBatch {
+            isUsingSharedShoppingPlan = false
+            lastAppliedShoppingPlanContentSignature = nil
+            activeSuggestionRequest = request
+            activeShoppingItemNames = shoppingItems.isEmpty ? [request.itemName] : shoppingItems
+            activeShoppingItems = []
+            filterCacheNeedsRefresh = true
+            searchText = ""
+            selectedCategory = .shoppingList
+            shoppingListOnly = true
             rebuildDisplayStores()
             selectSuggestedStoreIfAvailable()
         }
+    }
 
-        if !hasCenteredOnUser {
-            hasCenteredOnUser = true
+    func applyStoreSuggestion(_ request: ShoppingStoreSuggestionRequest, shoppingItems: [ShoppingItem]) {
+        performPublicationBatch {
+            isUsingSharedShoppingPlan = false
+            lastAppliedShoppingPlanContentSignature = nil
+            activeSuggestionRequest = request
+            activeShoppingItems = shoppingItems.filter { !$0.isCompleted }
+            activeShoppingItemNames = activeShoppingItems.map(\.name)
+            if activeShoppingItemNames.isEmpty {
+                activeShoppingItemNames = [request.itemName]
+            }
+            filterCacheNeedsRefresh = true
+            searchText = ""
+            selectedCategory = .shoppingList
+            shoppingListOnly = true
+            rebuildDisplayStores()
+            selectSuggestedStoreIfAvailable()
+        }
+    }
 
-            if isUsingSharedShoppingPlan {
+    func applyShoppingPlan(_ plan: ShoppingPlan) {
+        guard lastAppliedShoppingPlanContentSignature != plan.contentSignature else {
+            return
+        }
+
+        let previousStores = stores
+        performPublicationBatch {
+            isUsingSharedShoppingPlan = true
+            lastAppliedShoppingPlanContentSignature = plan.contentSignature
+            storeSearchTask?.cancel()
+            storeSearchTask = nil
+            activeSuggestionRequest = plan.request
+            activeShoppingItems = plan.items.filter { !$0.isCompleted }
+            activeShoppingItemNames = activeShoppingItems.map(\.name)
+            if activeShoppingItemNames.isEmpty {
+                activeShoppingItemNames = [plan.request.itemName]
+            }
+            filterCacheNeedsRefresh = true
+            searchText = ""
+            selectedCategory = .shoppingList
+            shoppingListOnly = true
+            stores = displayStores(from: plan.stores)
+            products = savedProducts + stores.filter { !$0.isSavedLocation }.flatMap(makeProducts)
+            selectSuggestedStoreIfAvailable()
+            focusPlanRegionIfPossible()
+            registerObjectChange()
+        }
+
+        #if DEBUG
+        applyShoppingPlanCount += 1
+        print("[WayTask Map Performance] applyShoppingPlan=\(applyShoppingPlanCount) plan=\(plan.id.uuidString)")
+        #endif
+
+        BetaDiagnosticsCenter.shared.recordStoreTransition(
+            previous: previousStores,
+            next: stores,
+            reason: "Ready ShoppingPlan applied to Map"
+        )
+        publishMapDiagnostics()
+    }
+
+    func setUserCoordinate(_ coordinate: CLLocationCoordinate2D) {
+        let now = Date()
+        let movement = distance(from: userCoordinate, to: coordinate)
+        let shouldPublish = userCoordinate == nil ||
+            movement >= userCoordinateMovementThreshold ||
+            now.timeIntervalSince(lastUserCoordinatePublication) >= userCoordinateMaximumInterval
+        guard shouldPublish else {
+            return
+        }
+
+        let shouldRefreshFallback = userCoordinate == nil || movement > 50
+        lastUserCoordinatePublication = now
+        performPublicationBatch {
+            userCoordinate = coordinate
+
+            if shouldRefreshFallback && isUsingSharedShoppingPlan {
                 focusPlanRegionIfPossible()
-            } else if activeSuggestionRequest == nil {
-                followUser()
+            } else if shouldRefreshFallback && !isUsingSharedShoppingPlan {
+                rebuildDisplayStores()
+                selectSuggestedStoreIfAvailable()
+            }
+
+            if !hasCenteredOnUser {
+                hasCenteredOnUser = true
+
+                if isUsingSharedShoppingPlan {
+                    focusPlanRegionIfPossible()
+                } else if activeSuggestionRequest == nil {
+                    followUser()
+                }
             }
         }
+        publishMapDiagnostics()
     }
 
     func distanceText(for store: MapStore) -> String {
@@ -328,9 +569,14 @@ final class MapViewModel: ObservableObject {
         cameraTarget = region(containing: coordinates)
     }
 
-    private func storeMatchesSuggestion(_ store: MapStore, request: ShoppingStoreSuggestionRequest) -> Bool {
+    private func storeMatchesSuggestion(
+        _ store: MapStore,
+        request: ShoppingStoreSuggestionRequest,
+        groupedRequests cachedRequests: [ShoppingStoreSuggestionRequest]? = nil
+    ) -> Bool {
         if !activeShoppingItems.isEmpty {
-            return !store.itemNames.isEmpty && groupedRequests().contains { groupedRequest in
+            let requests = cachedRequests ?? groupedRequests()
+            return !store.itemNames.isEmpty && requests.contains { groupedRequest in
                 storeRankingService.isRelevant(
                     store: store,
                     request: groupedRequest,
@@ -371,50 +617,44 @@ final class MapViewModel: ObservableObject {
     }
 
     private func rebuildDisplayStores() {
-        let nextStores = savedStores
-        let nextProducts = savedProducts
+        performPublicationBatch {
+            let nextStores = savedStores
+            let nextProducts = savedProducts
 
-        stores = displayStores(from: nextStores)
-        products = nextProducts
+            stores = displayStores(from: nextStores)
+            products = nextProducts
 
-        guard let userCoordinate else {
+            guard let userCoordinate else {
+                storeSearchTask?.cancel()
+                storeSearchTask = nil
+                return
+            }
+
+            let intents = mapDiscoveryIntents()
             storeSearchTask?.cancel()
-            storeSearchTask = nil
-            return
-        }
+            storeSearchTask = Task { [weak self] in
+                guard let self else {
+                    return
+                }
 
-        let groups = intentMatcher.groupedIntents(for: activeShoppingItems)
-        let discoveryRequests = groupedStoreDiscoveryRequests()
-        ShoppingDiscoveryDebugLogger.logStoreSearchRequests(
-            context: "Map suggested discovery",
-            groups: groups,
-            requests: discoveryRequests
-        )
-        storeSearchTask?.cancel()
-        storeSearchTask = Task { [weak self] in
-            guard let self else {
-                return
+                let resolvedStores = await storeResolutionEngine.resolve(
+                    savedStores: savedStores,
+                    intents: intents,
+                    around: userCoordinate
+                )
+
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                applyDiscoveredStores(resolvedStores)
             }
-
-            let discoveredStores = await discoveredStoresByGroup(
-                around: userCoordinate,
-                discoveryRequests: discoveryRequests
-            )
-
-            guard !Task.isCancelled else {
-                return
-            }
-
-            applyDiscoveredStores(discoveredStores)
         }
     }
 
     private func applyDiscoveredStores(_ discoveredStores: [MapStore]) {
-        let appleMapStores = discoveredStores.filter { $0.sourceType == .appleMaps }
-        let filteredDiscoveredStores = discoveredStores.filter { store in
-            store.sourceType != .local || !hasAppleMapsMatch(for: store, in: appleMapStores)
-        }
-        let eligibleStores = (savedStores + filteredDiscoveredStores)
+        let previousStores = stores
+        let eligibleStores = discoveredStores
             .map(retagStoreForActiveIntentGroups)
             .filter { store in
             guard let activeSuggestionRequest else {
@@ -423,14 +663,44 @@ final class MapViewModel: ObservableObject {
 
             return storeMatchesSuggestion(store, request: activeSuggestionRequest)
         }
-        let mergedStores = displayStores(from: eligibleStores)
-        stores = mergedStores
-        products = savedProducts + eligibleStores.filter { !$0.isSavedLocation }.flatMap(makeProducts)
-        selectSuggestedStoreIfAvailable()
+        performPublicationBatch {
+            let mergedStores = displayStores(from: eligibleStores)
+            stores = mergedStores
+            products = savedProducts + eligibleStores.filter { !$0.isSavedLocation }.flatMap(makeProducts)
+            selectSuggestedStoreIfAvailable()
+        }
+        BetaDiagnosticsCenter.shared.recordStoreTransition(
+            previous: previousStores,
+            next: stores,
+            reason: "Shared store discovery completed"
+        )
+        publishMapDiagnostics()
+    }
+
+    func updateVisibleRegion(_ region: MKCoordinateRegion) {
+        guard BetaDiagnosticsCenter.shared.isEnabled else { return }
+        BetaDiagnosticsCenter.shared.updateMap(
+            userCoordinate: userCoordinate,
+            region: region,
+            focusedStore: nil,
+            selectedStore: selectedStore?.title,
+            stores: filteredStores
+        )
+    }
+
+    private func publishMapDiagnostics(focusedStore: String? = nil) {
+        guard BetaDiagnosticsCenter.shared.isEnabled else { return }
+        BetaDiagnosticsCenter.shared.updateMap(
+            userCoordinate: userCoordinate,
+            region: cameraTarget,
+            focusedStore: focusedStore,
+            selectedStore: selectedStore?.title,
+            stores: filteredStores
+        )
     }
 
     private func displayStores(from stores: [MapStore]) -> [MapStore] {
-        let deduplicatedStores = savedStorePrioritized(stores)
+        let deduplicatedStores = storeResolutionEngine.deduplicated(stores)
             .map(retagStoreForActiveIntentGroups)
 
         guard let activeSuggestionRequest else {
@@ -498,50 +768,19 @@ final class MapViewModel: ObservableObject {
         intentMatcher.groupedIntents(for: activeShoppingItems).map(\.request)
     }
 
-    private func groupedStoreDiscoveryRequests() -> [(request: ShoppingStoreSuggestionRequest, itemNames: [String])] {
-        let groups = intentMatcher.groupedIntents(for: activeShoppingItems)
-        if !groups.isEmpty {
-            return groups.map { group in
-                (request: group.request, itemNames: group.itemNames)
-            }
+    private func mapDiscoveryIntents() -> [StoreResolutionIntent] {
+        let intents = storeResolutionEngine.intents(
+            for: activeShoppingItems,
+            fallback: activeSuggestionRequest
+        )
+        if !intents.isEmpty {
+            return intents
         }
 
-        guard let activeSuggestionRequest else {
-            return []
-        }
-
-        let suggestionItems = activeShoppingItemNames.isEmpty
-            ? [activeSuggestionRequest.itemName]
-            : activeShoppingItemNames
-        return [(request: activeSuggestionRequest, itemNames: suggestionItems)]
-    }
-
-    private func discoveredStoresByGroup(
-        around coordinate: CLLocationCoordinate2D,
-        discoveryRequests: [(request: ShoppingStoreSuggestionRequest, itemNames: [String])]
-    ) async -> [MapStore] {
-        var discoveredStores: [MapStore] = []
-
-        for discoveryRequest in discoveryRequests {
-            let groupStores = await storeSearchService.stores(
-                around: coordinate,
-                shoppingItems: discoveryRequest.itemNames,
-                storeCategories: discoveryRequest.request.storeCategories
-            )
-            discoveredStores.append(contentsOf: groupStores)
-        }
-
-        return savedStorePrioritized(discoveredStores)
-    }
-
-    private func hasAppleMapsMatch(for store: MapStore, in appleMapStores: [MapStore]) -> Bool {
-        appleMapStores.contains { appleStore in
-            appleStore.storeCategories.contains { appleCategory in
-                store.storeCategories.contains { storeCategory in
-                    appleCategory.matches(storeCategory) || storeCategory.matches(appleCategory)
-                }
-            }
-        }
+        return [StoreResolutionIntent(
+            itemNames: [],
+            storeCategories: [.grocery, .supermarket, .convenienceStore, .pharmacy, .petStore, .electronicsStore, .homeImprovement]
+        )]
     }
 
     private func bestGroupedScore(for store: MapStore, requests: [ShoppingStoreSuggestionRequest]) -> Double {
@@ -590,45 +829,6 @@ final class MapViewModel: ObservableObject {
         return distance(from: userCoordinate, to: coordinate)
     }
 
-    private func savedStorePrioritized(_ stores: [MapStore]) -> [MapStore] {
-        stores.reduce(into: [MapStore]()) { result, store in
-            let duplicatesExistingStore = result.contains { existingStore in
-                existingStore.title.localizedCaseInsensitiveCompare(store.title) == .orderedSame
-                    || distance(from: existingStore.coordinate, to: store.coordinate) < 25
-            }
-
-            if !duplicatesExistingStore {
-                result.append(store)
-            }
-        }
-    }
-
-    private func makeStore(from location: GeoLocation) -> MapStore {
-        let openItems = location.shoppingItems
-            .filter { !$0.isCompleted }
-            .map(\.name)
-        let completedItems = location.shoppingItems
-            .filter(\.isCompleted)
-            .map(\.name)
-        let coordinate = CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude)
-
-        return MapStore(
-            id: location.id,
-            locationID: location.id,
-            title: location.title,
-            coordinate: coordinate,
-            radius: location.radius,
-            itemNames: openItems,
-            completedItemNames: completedItems,
-            isOpen: true,
-            rating: rating(for: location),
-            storeCategories: location.storeCategory.map { [$0] } ?? [],
-            queryEvidenceCategories: [],
-            websiteURL: nil,
-            sourceType: location.sourceType
-        )
-    }
-
     private func makeProducts(from location: GeoLocation) -> [MapProduct] {
         let baseCoordinate = CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude)
         let activeItems = location.shoppingItems.filter { !$0.isCompleted }
@@ -646,17 +846,16 @@ final class MapViewModel: ObservableObject {
     private func makeProducts(from store: MapStore) -> [MapProduct] {
         store.itemNames.enumerated().map { index, itemName in
             MapProduct(
-                id: UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", abs(store.id.hashValue + index)))") ?? UUID(),
+                id: StoreRuntimeIdentity.transientID(
+                    title: "\(store.title)|\(itemName)|\(index)",
+                    coordinate: store.coordinate,
+                    sourceType: store.sourceType
+                ),
                 storeID: store.id,
                 name: itemName,
                 coordinate: productCoordinate(around: store.coordinate, index: index)
             )
         }
-    }
-
-    private func rating(for location: GeoLocation) -> Double {
-        let itemCount = min(location.shoppingItems.count, 4)
-        return 4.4 + (Double(itemCount) * 0.1)
     }
 
     private func productCoordinate(around coordinate: CLLocationCoordinate2D, index: Int) -> CLLocationCoordinate2D {
@@ -680,9 +879,16 @@ final class MapViewModel: ObservableObject {
             || store.itemNames.contains { $0.localizedCaseInsensitiveContains(query) }
     }
 
-    private func matchesFilters(_ store: MapStore) -> Bool {
+    private func matchesFilters(
+        _ store: MapStore,
+        groupedRequests cachedRequests: [ShoppingStoreSuggestionRequest]
+    ) -> Bool {
         if let activeSuggestionRequest {
-            guard storeMatchesSuggestion(store, request: activeSuggestionRequest) else {
+            guard storeMatchesSuggestion(
+                store,
+                request: activeSuggestionRequest,
+                groupedRequests: cachedRequests
+            ) else {
                 return false
             }
         }
@@ -693,7 +899,11 @@ final class MapViewModel: ObservableObject {
             }
 
             guard let activeSuggestionRequest,
-                  storeMatchesSuggestion(store, request: activeSuggestionRequest) else {
+                  storeMatchesSuggestion(
+                      store,
+                      request: activeSuggestionRequest,
+                      groupedRequests: cachedRequests
+                  ) else {
                 return false
             }
         }
@@ -716,7 +926,115 @@ final class MapViewModel: ObservableObject {
                 return false
             }
 
-            return storeMatchesSuggestion(store, request: activeSuggestionRequest)
+            return storeMatchesSuggestion(
+                store,
+                request: activeSuggestionRequest,
+                groupedRequests: cachedRequests
+            )
+        }
+    }
+
+    private func refreshFilterCacheIfNeeded() {
+        guard filterCacheNeedsRefresh else {
+            return
+        }
+
+        let requests = activeShoppingItems.isEmpty ? [] : groupedRequests()
+        let visibleStores = stores.filter { store in
+            matchesSearch(store) && matchesFilters(store, groupedRequests: requests)
+        }
+        let visibleStoreIDs = Set(visibleStores.map(\.id))
+        let visibleItemNamesByStoreID = Dictionary(
+            uniqueKeysWithValues: visibleStores.map { store in
+                (store.id, Set(store.itemNames.map { $0.lowercased() }))
+            }
+        )
+        let visibleProducts = products.filter { product in
+            guard visibleStoreIDs.contains(product.storeID) else {
+                return false
+            }
+
+            guard !activeShoppingItems.isEmpty,
+                  let visibleItemNames = visibleItemNamesByStoreID[product.storeID] else {
+                return true
+            }
+
+            return visibleItemNames.contains(product.name.lowercased())
+        }
+
+        cachedFilteredStores = visibleStores
+        cachedFilteredProducts = visibleProducts
+        filterCacheNeedsRefresh = false
+    }
+
+    private func mapInputDidChange<Value: Equatable>(from oldValue: Value, to newValue: Value) {
+        guard oldValue != newValue else {
+            return
+        }
+
+        filterCacheNeedsRefresh = true
+        registerObjectChange()
+    }
+
+    private func valueDidChange<Value: Equatable>(from oldValue: Value, to newValue: Value) {
+        guard oldValue != newValue else {
+            return
+        }
+
+        registerObjectChange()
+    }
+
+    private func registerObjectChange() {
+        if publicationBatchDepth > 0 {
+            batchHasObjectChange = true
+            return
+        }
+
+        refreshFilterCacheIfNeeded()
+        objectWillChange.send()
+    }
+
+    private func performPublicationBatch(_ updates: () -> Void) {
+        publicationBatchDepth += 1
+        updates()
+        publicationBatchDepth -= 1
+
+        guard publicationBatchDepth == 0 else {
+            return
+        }
+
+        refreshFilterCacheIfNeeded()
+        if batchHasObjectChange {
+            batchHasObjectChange = false
+            objectWillChange.send()
+        }
+    }
+
+    private func coordinatesEqual(
+        _ lhs: CLLocationCoordinate2D?,
+        _ rhs: CLLocationCoordinate2D?
+    ) -> Bool {
+        switch (lhs, rhs) {
+        case (nil, nil):
+            return true
+        case let (lhs?, rhs?):
+            return lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude
+        default:
+            return false
+        }
+    }
+
+    private func regionsEqual(_ lhs: MKCoordinateRegion?, _ rhs: MKCoordinateRegion?) -> Bool {
+        switch (lhs, rhs) {
+        case (nil, nil):
+            return true
+        case let (lhs?, rhs?):
+            return lhs.center.latitude == rhs.center.latitude &&
+                lhs.center.longitude == rhs.center.longitude &&
+                lhs.span.latitudeDelta == rhs.span.latitudeDelta &&
+                lhs.span.longitudeDelta == rhs.span.longitudeDelta
+        default:
+            return false
         }
     }
 

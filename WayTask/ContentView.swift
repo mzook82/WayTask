@@ -54,11 +54,7 @@ struct ContentView: View {
                 }
                 .tag(AppTab.map)
 
-            WayTaskFoundationPlaceholderView(
-                title: "Settings",
-                subtitle: "Settings tab foundation is ready. Existing settings logic remains unchanged.",
-                systemImage: "gearshape.fill"
-            )
+            BetaSettingsEntryView()
             .tabItem {
                 Label(AppTab.settings.title, systemImage: AppTab.settings.systemImageName)
             }
@@ -325,7 +321,11 @@ struct ContentView: View {
     }
 
     private func refreshShoppingGeofences() {
-        locationManager.refreshShoppingGeofences(items: items, savedLocations: locations)
+        locationManager.refreshShoppingGeofences(
+            items: items,
+            savedLocations: locations,
+            shoppingListID: appStateManager.selectedShoppingListID ?? appStateManager.currentShoppingListID
+        )
     }
 
     private func refreshNearbyOpportunities() {
@@ -358,7 +358,7 @@ struct ContentView: View {
         .environmentObject(LocationManager())
 }
 
-private struct WayTaskFoundationPlaceholderView: View {
+struct WayTaskFoundationPlaceholderView: View {
     let title: String
     let subtitle: String
     let systemImage: String

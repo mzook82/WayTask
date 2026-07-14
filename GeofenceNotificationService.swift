@@ -9,8 +9,11 @@ struct ShoppingGeofenceCandidate: Identifiable, Equatable {
     let coordinate: CLLocationCoordinate2D
     let radius: CLLocationDistance
     let itemNames: [String]
+    let itemIDs: [UUID]
+    let shoppingListID: UUID?
     let sourceType: String
     let distanceMeters: CLLocationDistance?
+    let notificationType: String
 
     static func == (lhs: ShoppingGeofenceCandidate, rhs: ShoppingGeofenceCandidate) -> Bool {
         lhs.id == rhs.id &&
@@ -20,8 +23,11 @@ struct ShoppingGeofenceCandidate: Identifiable, Equatable {
         lhs.coordinate.longitude == rhs.coordinate.longitude &&
         lhs.radius == rhs.radius &&
         lhs.itemNames == rhs.itemNames &&
+        lhs.itemIDs == rhs.itemIDs &&
+        lhs.shoppingListID == rhs.shoppingListID &&
         lhs.sourceType == rhs.sourceType &&
-        lhs.distanceMeters == rhs.distanceMeters
+        lhs.distanceMeters == rhs.distanceMeters &&
+        lhs.notificationType == rhs.notificationType
     }
 }
 
@@ -34,16 +40,24 @@ struct ShoppingGeofencePayload {
     let locationID: UUID?
     let title: String
     let itemNames: [String]
+    let itemIDs: [UUID]
+    let shoppingListID: UUID?
     let sourceType: String
     let distanceMeters: CLLocationDistance?
+    let coordinate: CLLocationCoordinate2D?
+    let notificationType: String
 
     init(candidate: ShoppingGeofenceCandidate) {
         self.storeID = candidate.id
         self.locationID = candidate.locationID
         self.title = candidate.title
         self.itemNames = candidate.itemNames
+        self.itemIDs = candidate.itemIDs
+        self.shoppingListID = candidate.shoppingListID
         self.sourceType = candidate.sourceType
         self.distanceMeters = candidate.distanceMeters
+        self.coordinate = candidate.coordinate
+        self.notificationType = candidate.notificationType
     }
 
     init?(identifier: String) {
@@ -73,6 +87,21 @@ struct ShoppingGeofencePayload {
         } else {
             self.distanceMeters = nil
         }
+
+        if components.count > 8,
+           let latitude = Double(components[7]),
+           let longitude = Double(components[8]) {
+            self.coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        } else {
+            self.coordinate = nil
+        }
+        if components.count > 9, !components[9].isEmpty {
+            self.itemIDs = components[9].split(separator: ",").compactMap { UUID(uuidString: String($0)) }
+        } else {
+            self.itemIDs = []
+        }
+        self.shoppingListID = components.count > 10 ? UUID(uuidString: String(components[10])) : nil
+        self.notificationType = components.count > 11 ? Self.restore(String(components[11])) : "shoppingGeofence"
     }
 
     var identifier: String {
@@ -83,7 +112,12 @@ struct ShoppingGeofencePayload {
             Self.sanitize(title),
             Self.sanitize(sourceType),
             itemNames.map(Self.sanitize).joined(separator: Self.itemSeparator),
-            distanceMeters.map { String(Int($0.rounded())) } ?? ""
+            distanceMeters.map { String(Int($0.rounded())) } ?? "",
+            coordinate.map { String($0.latitude) } ?? "",
+            coordinate.map { String($0.longitude) } ?? "",
+            itemIDs.map(\.uuidString).joined(separator: ","),
+            shoppingListID?.uuidString ?? "",
+            Self.sanitize(notificationType)
         ]
         .joined(separator: Self.separator)
     }
@@ -94,13 +128,23 @@ struct ShoppingGeofencePayload {
             "storeTitle": title,
             "matchedItemCount": "\(itemNames.count)",
             "matchedItemNames": itemNames.joined(separator: ", "),
+            "matchedShoppingItemIDs": itemIDs.map(\.uuidString).joined(separator: ","),
             "storeSourceType": sourceType,
-            "opensTripMode": "true",
+            "sourceType": sourceType,
+            "notificationType": notificationType,
+            "opensTripMode": "false",
             "distanceMeters": distanceMeters.map { String(Int($0.rounded())) } ?? ""
         ]
 
         if let locationID {
             userInfo["geoLocationID"] = locationID.uuidString
+        }
+        if let shoppingListID {
+            userInfo["shoppingListID"] = shoppingListID.uuidString
+        }
+        if let coordinate {
+            userInfo["latitude"] = String(coordinate.latitude)
+            userInfo["longitude"] = String(coordinate.longitude)
         }
 
         return userInfo
@@ -142,6 +186,11 @@ struct GeofenceNotificationService {
 
     func requestAuthorizationIfNeeded() {
         notificationCenter.getNotificationSettings { settings in
+            Task { @MainActor in
+                BetaDiagnosticsCenter.shared.notificationAuthorization(
+                    status: authorizationStatusText(settings.authorizationStatus)
+                )
+            }
             #if DEBUG
             print("[WayTask Geofence] Notification authorization status: \(settings.authorizationStatus.rawValue)")
             #endif
@@ -151,6 +200,18 @@ struct GeofenceNotificationService {
             }
 
             notificationCenter.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                Task { @MainActor in
+                    BetaDiagnosticsCenter.shared.notificationAuthorization(
+                        status: error.map { "Error: \($0.localizedDescription)" } ?? (granted ? "Authorized" : "Denied")
+                    )
+                    if let error {
+                        BetaDiagnosticsCenter.shared.recordError(
+                            category: .notification,
+                            message: "Notification authorization failed",
+                            detail: error.localizedDescription
+                        )
+                    }
+                }
                 #if DEBUG
                 if let error {
                     print("[WayTask Geofence] Notification authorization request failed: \(error.localizedDescription)")
@@ -162,8 +223,33 @@ struct GeofenceNotificationService {
         }
     }
 
+    private func authorizationStatusText(_ status: UNAuthorizationStatus) -> String {
+        switch status {
+        case .notDetermined: "Not determined"
+        case .denied: "Denied"
+        case .authorized: "Authorized"
+        case .provisional: "Provisional"
+        case .ephemeral: "Ephemeral"
+        @unknown default: "Unknown"
+        }
+    }
+
     func notificationRequest(for regionIdentifier: String, now: Date = Date()) -> UNNotificationRequest? {
         guard let payload = ShoppingGeofencePayload(identifier: regionIdentifier) else {
+            BetaDiagnosticsCenter.shared.recordError(
+                category: .notification,
+                message: "Notification payload rejected",
+                detail: "Region identifier was not a WayTask shopping payload"
+            )
+            BetaDiagnosticsCenter.shared.notificationDecision(
+                fired: false,
+                type: "unknown",
+                store: "Unknown region",
+                coordinate: nil,
+                shoppingListID: nil,
+                matchedProducts: [],
+                reason: "Region identifier was not a WayTask shopping payload"
+            )
             #if DEBUG
             print("[WayTask Geofence] Ignoring non-shopping region: \(regionIdentifier)")
             #endif
@@ -171,6 +257,15 @@ struct GeofenceNotificationService {
         }
 
         guard !payload.itemNames.isEmpty else {
+            BetaDiagnosticsCenter.shared.notificationDecision(
+                fired: false,
+                type: payload.notificationType,
+                store: payload.title,
+                coordinate: payload.coordinate,
+                shoppingListID: payload.shoppingListID,
+                matchedProducts: [],
+                reason: "No matched shopping products"
+            )
             #if DEBUG
             print("[WayTask Geofence] Skipping notification with no matched items for store: \(payload.title)")
             #endif
@@ -178,6 +273,15 @@ struct GeofenceNotificationService {
         }
 
         guard shouldNotify(payload, now: now) else {
+            BetaDiagnosticsCenter.shared.notificationDecision(
+                fired: false,
+                type: payload.notificationType,
+                store: payload.title,
+                coordinate: payload.coordinate,
+                shoppingListID: payload.shoppingListID,
+                matchedProducts: payload.itemNames,
+                reason: "Notification cooldown active"
+            )
             #if DEBUG
             print("[WayTask Geofence] Cooldown blocked notification for store: \(payload.title)")
             #endif
@@ -191,7 +295,6 @@ struct GeofenceNotificationService {
         content.userInfo = payload.notificationUserInfo
 
         recordNotificationSent(for: payload, now: now)
-
         #if DEBUG
         print("[WayTask Geofence] Scheduling notification for \(payload.title), source: \(payload.sourceType), matched items: \(payload.itemNames.joined(separator: ", "))")
         #endif

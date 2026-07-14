@@ -1,3 +1,109 @@
+# Version 1.18.0 Beta
+
+**Date:** July 13, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 27B.5E – Post-Plan Performance Fix
+
+## Fixed
+
+- Prevented retained Map updates from removing and recreating unchanged native annotations and circle overlays.
+- Deferred hidden-Map ShoppingPlan application until the Map tab becomes active.
+- Reduced one plan application to one coherent Map display publication and cached filtered Map data.
+- Throttled UI-facing location publications without reducing raw-coordinate geofence or notification accuracy.
+- Removed duplicate ready-state publication after Shopping plan generation.
+- Reduced Shopping presentation rebuilding with lazy layout, semantic identities, and indexed entry/item lookup.
+- Removed transient Home row identities and disconnected the one-second planning timer after generation.
+- Prevented disabled diagnostics from materializing monitored-region rows.
+
+## Diagnostics
+
+- Added DEBUG-only console counters for Map `updateUIView`, native annotation rebuilds, skipped identical updates, and ShoppingPlan applications.
+- No counters or event arrays are exposed to normal users or mutated through the disabled Beta Diagnostics Center.
+
+## Validation
+
+- Generic iOS Debug build completed with code signing disabled.
+- Focused P1/P2 review completed.
+- Final generic iOS Debug build and whitespace validation completed.
+
+# Version 1.17.0 Beta
+
+**Date:** July 12, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 27B.5B – WayTask Beta Diagnostics Center
+
+## Added
+
+- Hidden seven-tap Developer Mode activation and Settings Developer section.
+- Internal Beta Diagnostics Center covering Planner, Store Discovery, Notifications, Geofence, Map, Recognition, and Performance.
+- Bounded recent decision and recent error history.
+- In-memory Beta Snapshot with current diagnostics screen, runtime state, build, timestamp, and device.
+- Markdown and optional JSON Beta Diagnostics reports.
+- Share Sheet, Copy, and Save actions.
+
+## Diagnostics
+
+- Planner timing, stage, failures, coverage, matched/missing products, cache result, best store, scores, and selection reasons.
+- Store source/count/cache/search/rejection/deduplication/duration state with isolated concurrent resolution sessions.
+- Notification fired/suppressed reason, payload context, tap/deep-link result, and bottom-sheet status.
+- Actual monitored geofence regions, trigger state, current distance, and suppression reasons.
+- Map coordinate, camera, focused/selected store, visible stores/circles, zoom, and region.
+- Locally observed Gemini, fallback, barcode, OpenFoodFacts, manual, timing, and cache counters.
+
+## Privacy
+
+- Reports never include product photos, screenshots, email, authentication data, API keys, precise route history, or private account data.
+- Snapshot screenshots are retained in memory only and are not included in Share, Copy, Save, Markdown, or JSON output.
+
+## Performance
+
+- Telemetry calls return immediately while Developer Mode is disabled.
+- Runtime event history is capped at 200 and store rejection details at 40.
+- Only aggregate timing and recognition usage counters persist locally.
+
+# Version 1.16.0 Beta
+
+**Date:** July 12, 2026
+
+**Status:** Completed
+
+## Sprint
+
+Sprint 27B.5A – Unified Store Resolution Engine
+
+## Changed
+
+- Added one shared `StoreResolutionEngine` for Planner, Product buying options, Map, Nearby opportunities, notification navigation, and geofence candidates.
+- Added stable runtime identities for persisted and transient stores.
+- Shopping Generate Plan now awaits saved + grouped MapKit discovery before deciding that no stores are available.
+- Map now discovers and displays nearby stores without requiring or generating a `ShoppingPlan`.
+- Notification payloads now include coordinate, title, source, matched item IDs/names, Shopping list ID, and notification type when available.
+- Notification navigation now focuses, materializes, selects, and opens a transient or saved store with matching products.
+- Valid Shopping plans are preserved during notification navigation unless the payload switches Shopping-list context.
+- Geofence candidates now use shared resolved stores; monitored-region limits remain unchanged.
+- Expanded category-specific MapKit queries, merged grouped results, and suppressed synthetic local/demo stores.
+- Added coordinate+intent cache keys, in-flight reuse, refresh throttling, generation guards, and stable transient reuse.
+
+## Validation
+
+- Generic iOS Debug `xcodebuild` succeeded with code signing disabled.
+- Focused P1/P2 review completed; the saved-only Map monitoring overwrite and resolver isolation warning were corrected before final build.
+
+## Known Limitations
+
+- MapKit results require location permission, connectivity, and regional Apple Maps coverage.
+- Transient stores and Shopping plans remain runtime-only.
+- Core Location continues to enforce the existing monitored-region cap.
+- Native `ShoppingListEntry` planner/session migration remains deferred.
+
 # Version 0.4
 
 **Date:** July 1, 2026

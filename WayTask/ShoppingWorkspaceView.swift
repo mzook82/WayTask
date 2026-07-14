@@ -28,6 +28,7 @@ struct ShoppingWorkspaceView: View {
     private let shoppingTripPlanningService = ShoppingTripService()
     private let shoppingSessionService = ShoppingSessionService()
     private let shoppingListService = ShoppingListService()
+    private let storeResolutionEngine = StoreResolutionEngine.shared
     private let planningTimeoutSeconds: TimeInterval = 30
 
     var body: some View {
@@ -37,7 +38,7 @@ struct ShoppingWorkspaceView: View {
                     .ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xl) {
+                    LazyVStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xl) {
                         header
                         listSelector
                         chooseProductsPanel
@@ -82,11 +83,11 @@ struct ShoppingWorkspaceView: View {
                 refreshShoppingPresentationCache()
             }
             .onChange(of: appStateManager.shoppingPlan?.id) {
-                refreshShoppingPresentationCache()
+                refreshRecommendedStoreRowsCache()
             }
             .onChange(of: appStateManager.shoppingPlanState) { _, state in
                 handlePlanStateChange(state)
-                refreshShoppingPresentationCache()
+                refreshRecommendedStoreRowsCache()
             }
             .onChange(of: shoppingWorkspaceItemPresentationSignature) {
                 refreshGroupedProductRowsCache()
@@ -623,6 +624,7 @@ struct ShoppingWorkspaceView: View {
             .enumerated()
             .map { index, option in
                 ShoppingWorkspaceStoreRow(
+                    id: "option-\(option.source.rawValue)-\(option.optionType.rawValue)-\(option.storeName.lowercased())-\(index)",
                     storeName: option.storeName,
                     subtitle: option.subtitle,
                     distanceText: option.distanceText,
@@ -735,6 +737,7 @@ struct ShoppingWorkspaceView: View {
 
         let coverageRows = appStateManager.shoppingTripCoverages.prefix(4).enumerated().map { index, coverage in
             ShoppingWorkspaceStoreRow(
+                id: "coverage-\(coverage.id)",
                 storeName: coverage.store.title,
                 subtitle: "\(coverage.matchedItemCount)/\(coverage.matchedItemCount + coverage.missingItemCount) items - \(coverage.group.displayName)",
                 distanceText: coverage.distance.map(distanceText(for:)),
@@ -764,6 +767,11 @@ struct ShoppingWorkspaceView: View {
         let groupedItems = Dictionary(grouping: filteredActiveItems) { item in
             intentMatcher.intentGroup(for: item)
         }
+        let entriesByLegacyItemID = selectedShoppingEntries.reduce(into: [UUID: ShoppingListEntry]()) { result, entry in
+            if let legacyShoppingItemID = entry.legacyShoppingItemID {
+                result[legacyShoppingItemID] = entry
+            }
+        }
 
         cachedGroupedProductRows = ShoppingIntentGroup.allCases.compactMap { group in
             guard let items = groupedItems[group] else {
@@ -771,9 +779,14 @@ struct ShoppingWorkspaceView: View {
             }
 
             return ShoppingWorkspaceGroup(
+                id: group,
                 title: groupTitle(for: group),
                 subtitle: groupSubtitle(for: group),
-                items: items.compactMap { row(for: $0) }
+                items: items.compactMap { item in
+                    entriesByLegacyItemID[item.id].map { entry in
+                        ShoppingWorkspaceItemRow(item: item, entry: entry)
+                    }
+                }
             )
         }
         .filter { !$0.items.isEmpty }
@@ -803,6 +816,10 @@ struct ShoppingWorkspaceView: View {
             return []
         }
 
+        let itemsByID = items.reduce(into: [UUID: ShoppingItem]()) { result, item in
+            result[item.id] = item
+        }
+
         return shoppingListEntries
             .filter { $0.shoppingListID == selectedShoppingListID && (includeChecked || !$0.isChecked) }
             .sorted { lhs, rhs in
@@ -817,7 +834,7 @@ struct ShoppingWorkspaceView: View {
                     return nil
                 }
 
-                return items.first { $0.id == legacyShoppingItemID }
+                return itemsByID[legacyShoppingItemID]
             }
     }
 
@@ -924,7 +941,14 @@ struct ShoppingWorkspaceView: View {
             guard !failIfPlanningTimedOut(since: startedAt) else { return }
 
             appStateManager.updateShoppingPlanGeneration(stage: .findingStores)
-            let stores = savedStoresForPlanning()
+            let request = intentMatcher.request(for: planningItems, in: .grocery)
+            let userCoordinate = locationManager.currentCoordinate
+            let stores = await storeResolutionEngine.resolve(
+                savedLocations: locations,
+                items: planningItems,
+                around: userCoordinate,
+                fallback: request
+            )
             guard !stores.isEmpty else {
                 let hasLocation = locationManager.currentCoordinate != nil
                 failShoppingPlan(
@@ -936,8 +960,6 @@ struct ShoppingWorkspaceView: View {
             guard !failIfPlanningTimedOut(since: startedAt) else { return }
 
             appStateManager.updateShoppingPlanGeneration(stage: .matchingProducts)
-            let request = intentMatcher.request(for: planningItems, in: .grocery)
-            let userCoordinate = locationManager.currentCoordinate
             await Task.yield()
             guard !failIfPlanningTimedOut(since: startedAt) else { return }
 
@@ -973,8 +995,7 @@ struct ShoppingWorkspaceView: View {
                 buyingOptions: buyingOptions,
                 shoppingTripCoverages: shoppingTripCoverages
             )
-            appStateManager.markShoppingPlanReady(generatedAt: appStateManager.shoppingPlan?.generatedAt ?? Date())
-            refreshShoppingPresentationCache()
+            refreshRecommendedStoreRowsCache()
             isShowingPlanSheet = true
         }
     }
@@ -1055,18 +1076,6 @@ struct ShoppingWorkspaceView: View {
         } catch {
             assertionFailure("Failed to start shopping session: \(error.localizedDescription)")
         }
-    }
-
-    private func row(for item: ShoppingItem) -> ShoppingWorkspaceItemRow? {
-        guard let entry = entry(for: item) else {
-            return nil
-        }
-
-        return ShoppingWorkspaceItemRow(item: item, entry: entry)
-    }
-
-    private func entry(for item: ShoppingItem) -> ShoppingListEntry? {
-        selectedShoppingEntries.first { $0.legacyShoppingItemID == item.id }
     }
 
     private var selectedShoppingEntries: [ShoppingListEntry] {
@@ -1162,26 +1171,6 @@ struct ShoppingWorkspaceView: View {
         }
     }
 
-    private func savedStoresForPlanning() -> [MapStore] {
-        locations.filter { $0.sourceType != .debugSeed }.map { location in
-            MapStore(
-                id: location.id,
-                locationID: location.id,
-                title: location.title,
-                coordinate: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude),
-                radius: location.radius,
-                itemNames: location.shoppingItems.filter { !$0.isCompleted }.map(\.name),
-                completedItemNames: location.shoppingItems.filter(\.isCompleted).map(\.name),
-                isOpen: true,
-                rating: nil,
-                storeCategories: location.storeCategory.map { [$0] } ?? [],
-                queryEvidenceCategories: [],
-                websiteURL: nil,
-                sourceType: location.sourceType
-            )
-        }
-    }
-
     private func distanceText(for distance: Double) -> String {
         if distance >= 1000 {
             return String(format: "%.1f km", distance / 1000)
@@ -1216,7 +1205,7 @@ private struct ShoppingWorkspaceListChip: Identifiable {
 }
 
 private struct ShoppingWorkspaceStoreRow: Identifiable {
-    let id = UUID()
+    let id: String
     let storeName: String
     let subtitle: String
     let distanceText: String?
@@ -1226,7 +1215,7 @@ private struct ShoppingWorkspaceStoreRow: Identifiable {
 }
 
 private struct ShoppingWorkspaceGroup: Identifiable {
-    let id = UUID()
+    let id: ShoppingIntentGroup
     let title: String
     let subtitle: String
     let items: [ShoppingWorkspaceItemRow]
@@ -1244,9 +1233,9 @@ private struct ShoppingWorkspaceItemRow: Identifiable {
     var quantity: Double
 
     init(
-        id: UUID = UUID(),
-        entryID: UUID = UUID(),
-        productID: UUID = UUID(),
+        id: UUID,
+        entryID: UUID,
+        productID: UUID,
         name: String,
         subtitle: String,
         imageData: Data? = nil,

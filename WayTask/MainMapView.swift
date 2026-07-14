@@ -9,11 +9,13 @@ struct MainMapView: View {
     @EnvironmentObject private var locationManager: LocationManager
 
     @Query private var locations: [GeoLocation]
+    @Query private var items: [ShoppingItem]
     @StateObject private var mapViewModel = MapViewModel()
     private let shoppingIntentMatcher = ShoppingIntentMatcher()
 
     @State private var mapCenter = CLLocationCoordinate2D(latitude: 32.0853, longitude: 34.7818)
     @State private var appliedShoppingPlanID: UUID?
+    @State private var pendingShoppingPlanID: UUID?
     @State private var showingAddLocationSheet = false
     @State private var newLocationTitle = ""
     @State private var selectedStoreCategory: ShoppingStoreCategory = .generalStore
@@ -60,27 +62,39 @@ struct MainMapView: View {
             }
             .onAppear {
                 locationManager.requestWhenInUseAuthorization()
-                startMonitoringSavedLocations()
-                mapViewModel.update(locations: locations)
+                applyPendingShoppingPlanIfNeeded()
+                mapViewModel.update(locations: locations, shoppingItems: items)
                 focusSelectedLocation()
-                applyStoreSuggestion()
+                applyStoreNavigationContext()
                 focusUserIfNoReadyPlan()
             }
             .onChange(of: mapSignatures) {
-                startMonitoringSavedLocations()
-                mapViewModel.update(locations: locations)
+                if appStateManager.selectedTab == .map {
+                    mapViewModel.update(locations: locations, shoppingItems: items)
+                }
             }
             .onChange(of: appStateManager.focusedLocationID) {
-                focusSelectedLocation()
+                if appStateManager.selectedTab == .map {
+                    focusSelectedLocation()
+                }
             }
             .onChange(of: appStateManager.shoppingPlan?.id) {
-                applyStoreSuggestion()
+                handleShoppingPlanChange()
+            }
+            .onChange(of: appStateManager.storeNavigationContext) {
+                if appStateManager.selectedTab == .map {
+                    applyStoreNavigationContext()
+                }
             }
             .onChange(of: appStateManager.isTripMapMode) {
                 activateTripMapIfNeeded()
             }
             .onChange(of: appStateManager.selectedTab) {
                 if appStateManager.selectedTab == .map {
+                    applyPendingShoppingPlanIfNeeded()
+                    mapViewModel.update(locations: locations, shoppingItems: items)
+                    focusSelectedLocation()
+                    applyStoreNavigationContext()
                     activateTripMapIfNeeded()
                     focusUserIfNoReadyPlan()
                 }
@@ -103,8 +117,9 @@ struct MainMapView: View {
             selectedStoreID: mapViewModel.selectedStoreID,
             cameraTarget: mapViewModel.cameraTarget,
             onSelectStore: selectStore,
-            onMapCenterChanged: { center in
-                mapCenter = center
+            onMapRegionChanged: { region in
+                mapCenter = region.center
+                mapViewModel.updateVisibleRegion(region)
             },
             onUserLocationChanged: { coordinate in
                 handleUserLocationChanged(coordinate)
@@ -116,9 +131,18 @@ struct MainMapView: View {
     private var filterLayer: some View {
         VStack(spacing: 0) {
             MapFilterBar(
-                searchText: $mapViewModel.searchText,
-                selectedCategory: $mapViewModel.selectedCategory,
-                shoppingListOnly: $mapViewModel.shoppingListOnly
+                searchText: Binding(
+                    get: { mapViewModel.searchText },
+                    set: { mapViewModel.searchText = $0 }
+                ),
+                selectedCategory: Binding(
+                    get: { mapViewModel.selectedCategory },
+                    set: { mapViewModel.selectedCategory = $0 }
+                ),
+                shoppingListOnly: Binding(
+                    get: { mapViewModel.shoppingListOnly },
+                    set: { mapViewModel.shoppingListOnly = $0 }
+                )
             )
             .padding(.horizontal, 16)
             .padding(.top, 12)
@@ -302,8 +326,12 @@ struct MainMapView: View {
             try verifySavedStore(id: location.id)
 
             let savedLocations = try fetchSavedStores()
-            locationManager.startMonitoring(locations: savedLocations)
-            mapViewModel.update(locations: savedLocations)
+            locationManager.refreshShoppingGeofences(
+                items: items,
+                savedLocations: savedLocations,
+                shoppingListID: appStateManager.selectedShoppingListID ?? appStateManager.currentShoppingListID
+            )
+            mapViewModel.update(locations: savedLocations, shoppingItems: items)
             mapViewModel.selectStore(id: location.id)
 
             resetForm()
@@ -342,26 +370,112 @@ struct MainMapView: View {
         selectedRadius = 200.0
     }
 
-    private func startMonitoringSavedLocations() {
-        locationManager.startMonitoring(locations: locations)
-    }
-
     private func focusSelectedLocation() {
+        guard appStateManager.selectedTab == .map else {
+            return
+        }
+
         guard let focusedLocationID = appStateManager.focusedLocationID else {
             return
         }
 
-        mapViewModel.update(locations: locations)
+        mapViewModel.update(locations: locations, shoppingItems: items)
         mapViewModel.focusStore(id: focusedLocationID)
+    }
+
+    private func applyStoreNavigationContext() {
+        guard appStateManager.selectedTab == .map else {
+            return
+        }
+
+        guard let context = appStateManager.storeNavigationContext else {
+            return
+        }
+
+        let matchingItems = items.filter { context.matchedShoppingItemIDs.contains($0.id) }
+        let matchingItemNames = matchingItems.isEmpty
+            ? context.matchedItemNames
+            : matchingItems.map(\.name)
+
+        if let location = locations.first(where: { $0.id == context.locationID || $0.id == context.storeID }) {
+            mapViewModel.materializeAndFocusStore(
+                id: location.id,
+                locationID: location.id,
+                title: location.title,
+                coordinate: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude),
+                sourceType: location.sourceType,
+                matchingItemNames: matchingItemNames
+            )
+            appStateManager.consumeStoreNavigationContext(storeID: context.storeID)
+            return
+        }
+
+        guard let coordinate = context.coordinate,
+              !context.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            BetaDiagnosticsCenter.shared.notificationTapped(
+                store: context.title.isEmpty ? context.storeID.uuidString : context.title,
+                deepLinkStatus: "Failed: missing transient store coordinate or title"
+            )
+            BetaDiagnosticsCenter.shared.recordError(
+                category: .map,
+                message: "Notification store could not be materialized",
+                detail: context.storeID.uuidString
+            )
+            return
+        }
+        mapViewModel.materializeAndFocusStore(
+            id: context.storeID,
+            locationID: nil,
+            title: context.title,
+            coordinate: coordinate,
+            sourceType: context.sourceType,
+            matchingItemNames: matchingItemNames
+        )
+        appStateManager.consumeStoreNavigationContext(storeID: context.storeID)
+    }
+
+    private func handleShoppingPlanChange() {
+        guard let plan = appStateManager.shoppingPlan else {
+            appliedShoppingPlanID = nil
+            pendingShoppingPlanID = nil
+            return
+        }
+
+        guard appStateManager.selectedTab == .map else {
+            pendingShoppingPlanID = plan.id
+            return
+        }
+
+        applyStoreSuggestion()
+    }
+
+    private func applyPendingShoppingPlanIfNeeded() {
+        guard appStateManager.selectedTab == .map,
+              let plan = appStateManager.shoppingPlan else {
+            return
+        }
+
+        guard pendingShoppingPlanID == plan.id || appliedShoppingPlanID != plan.id else {
+            return
+        }
+
+        applyStoreSuggestion()
     }
 
     private func applyStoreSuggestion() {
         guard let plan = appStateManager.shoppingPlan else {
             appliedShoppingPlanID = nil
+            pendingShoppingPlanID = nil
+            return
+        }
+
+        guard appStateManager.selectedTab == .map else {
+            pendingShoppingPlanID = plan.id
             return
         }
 
         if appliedShoppingPlanID == plan.id {
+            pendingShoppingPlanID = nil
             activateTripMapSelectionIfNeeded()
             return
         }
@@ -372,6 +486,7 @@ struct MainMapView: View {
         )
         mapViewModel.applyShoppingPlan(plan)
         appliedShoppingPlanID = plan.id
+        pendingShoppingPlanID = nil
         activateTripMapSelectionIfNeeded()
     }
 

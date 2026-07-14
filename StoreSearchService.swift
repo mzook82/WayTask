@@ -16,6 +16,323 @@ protocol StoreSearchService {
     ) -> [MapStore]
 }
 
+struct StoreResolutionIntent: Hashable {
+    let itemNames: [String]
+    let storeCategories: [ShoppingStoreCategory]
+
+    init(itemNames: [String], storeCategories: [ShoppingStoreCategory]) {
+        self.itemNames = itemNames.deduplicatedCaseInsensitive()
+        self.storeCategories = storeCategories.deduplicated()
+    }
+}
+
+@MainActor
+final class StoreResolutionEngine {
+    static let shared = StoreResolutionEngine()
+
+    private struct CacheEntry {
+        let stores: [MapStore]
+        let timestamp: Date
+    }
+
+    private let searchService: MapKitStoreSearchService
+    private let intentMatcher = ShoppingIntentMatcher()
+    private let cacheDuration: TimeInterval
+    private let minimumRefreshInterval: TimeInterval
+    private var discoveryCache: [String: CacheEntry] = [:]
+    private var inFlightSearches: [String: Task<[MapStore], Never>] = [:]
+    private var lastSearchStartedAt: [String: Date] = [:]
+
+    init(
+        searchService: MapKitStoreSearchService,
+        cacheDuration: TimeInterval = 120,
+        minimumRefreshInterval: TimeInterval = 1.5
+    ) {
+        self.searchService = searchService
+        self.cacheDuration = cacheDuration
+        self.minimumRefreshInterval = minimumRefreshInterval
+    }
+
+    convenience init(
+        cacheDuration: TimeInterval = 120,
+        minimumRefreshInterval: TimeInterval = 1.5
+    ) {
+        self.init(
+            searchService: MapKitStoreSearchService(),
+            cacheDuration: cacheDuration,
+            minimumRefreshInterval: minimumRefreshInterval
+        )
+    }
+
+    func intents(
+        for items: [ShoppingItem],
+        fallback request: ShoppingStoreSuggestionRequest? = nil
+    ) -> [StoreResolutionIntent] {
+        let groups = intentMatcher.groupedIntents(for: items.filter { !$0.isCompleted })
+        if !groups.isEmpty {
+            return groups.map { group in
+                StoreResolutionIntent(
+                    itemNames: group.itemNames,
+                    storeCategories: group.request.storeCategories
+                )
+            }
+        }
+
+        guard let request else {
+            return []
+        }
+
+        return [StoreResolutionIntent(
+            itemNames: request.searchTerms.isEmpty ? [request.itemName] : request.searchTerms,
+            storeCategories: request.storeCategories
+        )]
+    }
+
+    func resolve(
+        savedLocations: [GeoLocation],
+        items: [ShoppingItem],
+        around coordinate: CLLocationCoordinate2D?,
+        fallback request: ShoppingStoreSuggestionRequest? = nil,
+        forceRefresh: Bool = false
+    ) async -> [MapStore] {
+        await resolve(
+            savedStores: Self.savedStores(from: savedLocations),
+            intents: intents(for: items, fallback: request),
+            around: coordinate,
+            forceRefresh: forceRefresh
+        )
+    }
+
+    func resolve(
+        savedStores: [MapStore],
+        intents: [StoreResolutionIntent],
+        around coordinate: CLLocationCoordinate2D?,
+        forceRefresh: Bool = false
+    ) async -> [MapStore] {
+        let startedAt = Date()
+        let diagnosticID = BetaDiagnosticsCenter.shared.beginStoreDiscovery(
+            savedCount: savedStores.count,
+            coordinate: coordinate
+        )
+        let stableSavedStores = savedStores.map { $0.materializedWithStableIdentity() }
+        guard let coordinate, !intents.isEmpty else {
+            let stores = deduplicated(stableSavedStores)
+            BetaDiagnosticsCenter.shared.finishStoreDiscovery(
+                id: diagnosticID,
+                stores: stores,
+                savedCount: stableSavedStores.count,
+                duration: Date().timeIntervalSince(startedAt)
+            )
+            return stores
+        }
+
+        let key = cacheKey(coordinate: coordinate, intents: intents)
+        let discoveredStores = await discoveredStores(
+            around: coordinate,
+            intents: intents,
+            key: key,
+            diagnosticID: diagnosticID,
+            forceRefresh: forceRefresh
+        )
+        let stores = deduplicated(stableSavedStores + discoveredStores)
+        BetaDiagnosticsCenter.shared.finishStoreDiscovery(
+            id: diagnosticID,
+            stores: stores,
+            savedCount: stableSavedStores.count,
+            duration: Date().timeIntervalSince(startedAt)
+        )
+        return stores
+    }
+
+    func deduplicated(_ stores: [MapStore]) -> [MapStore] {
+        var result: [MapStore] = []
+
+        for candidate in stores.map({ $0.materializedWithStableIdentity() }) {
+            guard let duplicateIndex = result.firstIndex(where: { existing in
+                existing.id == candidate.id ||
+                    (
+                        existing.title.localizedCaseInsensitiveCompare(candidate.title) == .orderedSame &&
+                        distance(from: existing.coordinate, to: candidate.coordinate) < 80
+                    ) || distance(from: existing.coordinate, to: candidate.coordinate) < 35
+            }) else {
+                result.append(candidate)
+                continue
+            }
+
+            result[duplicateIndex] = merged(result[duplicateIndex], candidate)
+        }
+
+        return result
+    }
+
+    static func savedStores(from locations: [GeoLocation]) -> [MapStore] {
+        locations
+            .filter(shouldIncludeSavedLocation)
+            .map { location in
+                MapStore(
+                    id: location.id,
+                    locationID: location.id,
+                    title: location.title,
+                    coordinate: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude),
+                    radius: location.radius,
+                    itemNames: location.shoppingItems.filter { !$0.isCompleted }.map(\.name),
+                    completedItemNames: location.shoppingItems.filter(\.isCompleted).map(\.name),
+                    isOpen: true,
+                    rating: nil,
+                    storeCategories: location.storeCategory.map { [$0] } ?? [],
+                    queryEvidenceCategories: [],
+                    websiteURL: nil,
+                    sourceType: location.sourceType
+                )
+            }
+    }
+
+    private func discoveredStores(
+        around coordinate: CLLocationCoordinate2D,
+        intents: [StoreResolutionIntent],
+        key: String,
+        diagnosticID: UUID?,
+        forceRefresh: Bool
+    ) async -> [MapStore] {
+        let now = Date()
+        if let cached = discoveryCache[key],
+           !forceRefresh || now.timeIntervalSince(cached.timestamp) < minimumRefreshInterval,
+           now.timeIntervalSince(cached.timestamp) < cacheDuration {
+            BetaDiagnosticsCenter.shared.storeCacheResult(id: diagnosticID, hit: true, reason: "Coordinate and shopping intent cache")
+            return retag(cached.stores, intents: intents)
+        }
+
+        if let inFlight = inFlightSearches[key] {
+            BetaDiagnosticsCenter.shared.storeCacheResult(id: diagnosticID, hit: true, reason: "Identical in-flight discovery reused")
+            return retag(await inFlight.value, intents: intents)
+        }
+
+        if forceRefresh,
+           let lastSearch = lastSearchStartedAt[key],
+           now.timeIntervalSince(lastSearch) < minimumRefreshInterval,
+           let cached = discoveryCache[key] {
+            BetaDiagnosticsCenter.shared.storeCacheResult(id: diagnosticID, hit: true, reason: "Forced refresh throttled")
+            return retag(cached.stores, intents: intents)
+        }
+
+        BetaDiagnosticsCenter.shared.storeCacheResult(id: diagnosticID, hit: false, reason: "No current coordinate and shopping intent entry")
+        lastSearchStartedAt[key] = now
+        let task = Task { [searchService] in
+            await BetaDiagnosticsCenter.$discoveryContextID.withValue(diagnosticID) {
+                var stores: [MapStore] = []
+                for intent in intents {
+                    let groupStores: [MapStore]
+                    if forceRefresh {
+                        groupStores = await searchService.refreshedStores(
+                            around: coordinate,
+                            shoppingItems: intent.itemNames,
+                            storeCategories: intent.storeCategories
+                        )
+                    } else {
+                        groupStores = await searchService.stores(
+                            around: coordinate,
+                            shoppingItems: intent.itemNames,
+                            storeCategories: intent.storeCategories
+                        )
+                    }
+                    stores.append(contentsOf: groupStores.filter { $0.sourceType != .local })
+                }
+                return stores.map { $0.materializedWithStableIdentity() }
+            }
+        }
+        inFlightSearches[key] = task
+        let stores = deduplicated(await task.value)
+        inFlightSearches[key] = nil
+        discoveryCache[key] = CacheEntry(stores: stores, timestamp: Date())
+        return retag(stores, intents: intents)
+    }
+
+    private func retag(_ stores: [MapStore], intents: [StoreResolutionIntent]) -> [MapStore] {
+        stores.map { store in
+            let matchedNames = intents
+                .filter { intent in
+                    intent.storeCategories.isEmpty || store.storeCategories.contains { storeCategory in
+                        intent.storeCategories.contains { $0.matches(storeCategory) }
+                    }
+                }
+                .flatMap(\.itemNames)
+                .deduplicatedCaseInsensitive()
+
+            return MapStore(
+                id: store.id,
+                locationID: store.locationID,
+                title: store.title,
+                coordinate: store.coordinate,
+                radius: store.radius,
+                itemNames: matchedNames.isEmpty ? store.itemNames : matchedNames,
+                completedItemNames: store.completedItemNames,
+                isOpen: store.isOpen,
+                rating: store.rating,
+                storeCategories: store.storeCategories,
+                queryEvidenceCategories: store.queryEvidenceCategories,
+                websiteURL: store.websiteURL,
+                sourceType: store.sourceType
+            )
+        }
+    }
+
+    private func merged(_ primary: MapStore, _ duplicate: MapStore) -> MapStore {
+        let saved = primary.isSavedLocation ? primary : (duplicate.isSavedLocation ? duplicate : primary)
+        let other = saved.id == primary.id ? duplicate : primary
+        return MapStore(
+            id: saved.id,
+            locationID: saved.locationID,
+            title: saved.title,
+            coordinate: saved.coordinate,
+            radius: saved.radius,
+            itemNames: (saved.itemNames + other.itemNames).deduplicatedCaseInsensitive(),
+            completedItemNames: (saved.completedItemNames + other.completedItemNames).deduplicatedCaseInsensitive(),
+            isOpen: saved.isOpen ?? other.isOpen,
+            rating: saved.rating ?? other.rating,
+            storeCategories: (saved.storeCategories + other.storeCategories).deduplicated(),
+            queryEvidenceCategories: (saved.queryEvidenceCategories + other.queryEvidenceCategories).deduplicated(),
+            websiteURL: saved.websiteURL ?? other.websiteURL,
+            sourceType: saved.sourceType
+        )
+    }
+
+    private func cacheKey(
+        coordinate: CLLocationCoordinate2D,
+        intents: [StoreResolutionIntent]
+    ) -> String {
+        let latitudeBucket = Int((coordinate.latitude * 500).rounded())
+        let longitudeBucket = Int((coordinate.longitude * 500).rounded())
+        let intentKey = intents.map { intent in
+            let names = intent.itemNames.map { $0.lowercased() }.sorted().joined(separator: ",")
+            let categories = intent.storeCategories.map(\.rawValue).sorted().joined(separator: ",")
+            return "\(categories):\(names)"
+        }
+        .sorted()
+        .joined(separator: "|")
+        return "\(latitudeBucket),\(longitudeBucket)#\(intentKey)"
+    }
+
+    private func distance(
+        from start: CLLocationCoordinate2D,
+        to end: CLLocationCoordinate2D
+    ) -> CLLocationDistance {
+        CLLocation(latitude: start.latitude, longitude: start.longitude)
+            .distance(from: CLLocation(latitude: end.latitude, longitude: end.longitude))
+    }
+
+    private static func shouldIncludeSavedLocation(_ location: GeoLocation) -> Bool {
+        guard location.sourceType == .debugSeed else {
+            return true
+        }
+
+        #if DEBUG
+        return DebugSeedStoreService.isEnabled
+        #else
+        return false
+        #endif
+    }
+}
+
 struct LocalStoreSearchService: StoreSearchService {
     private let provider = LocalStoreDataProvider()
 
@@ -100,7 +417,6 @@ final class MapKitStoreSearchService: StoreSearchService {
         }
     }
 
-    private let fallbackProvider = LocalStoreSearchService()
     private let cacheDuration: TimeInterval
     private var cache: [String: CacheEntry] = [:]
 
@@ -149,9 +465,7 @@ final class MapKitStoreSearchService: StoreSearchService {
         )
         let fallbackUsed = mapKitStores.isEmpty
 
-        let stores = fallbackUsed
-            ? fallbackStores(around: coordinate, shoppingItems: shoppingItems, storeCategories: storeCategories)
-            : retagStores(mapKitStores, shoppingItems: shoppingItems)
+        let stores = retagStores(mapKitStores, shoppingItems: shoppingItems)
 
         auditFallbackUsed(
             fallbackUsed,
@@ -206,19 +520,14 @@ final class MapKitStoreSearchService: StoreSearchService {
         }
 
         cache.removeValue(forKey: cacheKey)
-        let fallbackStores = fallbackStores(
-            around: coordinate,
-            shoppingItems: shoppingItems,
-            storeCategories: storeCategories
-        )
         auditFallbackUsed(
             true,
-            reason: "MapKit refresh returned zero usable stores",
+            reason: "MapKit refresh returned zero usable stores; synthetic stores suppressed",
             coordinate: coordinate,
             requestedCategories: storeCategories,
-            storeCount: fallbackStores.count
+            storeCount: 0
         )
-        return fallbackStores
+        return []
     }
 
     func fallbackStores(
@@ -226,15 +535,7 @@ final class MapKitStoreSearchService: StoreSearchService {
         shoppingItems: [String],
         storeCategories: [ShoppingStoreCategory] = []
     ) -> [MapStore] {
-        guard shoppingItems.isEmpty || !storeCategories.isEmpty else {
-            return []
-        }
-
-        return fallbackProvider.fallbackStores(
-            around: coordinate,
-            shoppingItems: shoppingItems,
-            storeCategories: storeCategories
-        )
+        []
     }
 
     private func searchMapKitStores(
@@ -318,8 +619,27 @@ final class MapKitStoreSearchService: StoreSearchService {
                 rejectedStores: rejectedStores,
                 coordinate: coordinate
             )
+            if BetaDiagnosticsCenter.shared.isEnabled {
+                BetaDiagnosticsCenter.shared.recordMapKitQuery(
+                    query: query,
+                    accepted: acceptedStores.count,
+                    rejected: rejectedStores.map { ($0.name, $0.reason) }
+                )
+            }
             return acceptedStores
         } catch {
+            BetaDiagnosticsCenter.shared.recordError(
+                category: .storeDiscovery,
+                message: "MapKit search failed",
+                detail: "\(query): \(error.localizedDescription)"
+            )
+            if BetaDiagnosticsCenter.shared.isEnabled {
+                BetaDiagnosticsCenter.shared.recordMapKitQuery(
+                    query: query,
+                    accepted: 0,
+                    rejected: [(query, "MapKit error: \(error.localizedDescription)")]
+                )
+            }
             #if DEBUG
             print("[WayTask Store Search] MapKit search failed for \(query): \(error.localizedDescription)")
             #endif
@@ -554,21 +874,21 @@ final class MapKitStoreSearchService: StoreSearchService {
     private func searchQueries(for category: ShoppingStoreCategory) -> [String] {
         switch category {
         case .grocery:
-            return ["grocery store", "food market"]
+            return ["grocery store", "food market", "grocery", "hypermarket"]
         case .supermarket:
-            return ["supermarket"]
+            return ["supermarket", "hypermarket"]
         case .convenienceStore:
-            return ["convenience store", "mini market"]
+            return ["convenience store", "mini market", "neighborhood market"]
         case .coffeeShop:
-            return ["coffee shop"]
+            return ["coffee shop", "cafe"]
         case .petStore:
-            return ["pet store"]
+            return ["pet store", "pet supplies"]
         case .electronicsStore:
-            return ["electronics store"]
+            return ["electronics store", "computer store", "mobile phone store"]
         case .homeImprovement:
-            return ["hardware store", "home improvement store"]
+            return ["hardware store", "home improvement store", "building supplies"]
         case .pharmacy:
-            return ["pharmacy"]
+            return ["pharmacy", "chemist", "drugstore"]
         case .generalStore:
             return ["store", "market"]
         }
@@ -577,15 +897,15 @@ final class MapKitStoreSearchService: StoreSearchService {
     private func category(for query: String) -> ShoppingStoreCategory {
         let lowercasedQuery = query.lowercased()
 
-        if lowercasedQuery.contains("supermarket") {
+        if lowercasedQuery.contains("supermarket") || lowercasedQuery.contains("hypermarket") {
             return .supermarket
         }
 
-        if lowercasedQuery.contains("convenience") || lowercasedQuery.contains("mini market") {
+        if lowercasedQuery.contains("convenience") || lowercasedQuery.contains("mini market") || lowercasedQuery.contains("neighborhood market") {
             return .convenienceStore
         }
 
-        if lowercasedQuery.contains("coffee") {
+        if lowercasedQuery.contains("coffee") || lowercasedQuery.contains("cafe") {
             return .coffeeShop
         }
 
@@ -593,15 +913,15 @@ final class MapKitStoreSearchService: StoreSearchService {
             return .petStore
         }
 
-        if lowercasedQuery.contains("electronics") {
+        if lowercasedQuery.contains("electronics") || lowercasedQuery.contains("computer") || lowercasedQuery.contains("mobile phone") {
             return .electronicsStore
         }
 
-        if lowercasedQuery.contains("hardware") || lowercasedQuery.contains("home improvement") {
+        if lowercasedQuery.contains("hardware") || lowercasedQuery.contains("home improvement") || lowercasedQuery.contains("building supplies") {
             return .homeImprovement
         }
 
-        if lowercasedQuery.contains("pharmacy") {
+        if lowercasedQuery.contains("pharmacy") || lowercasedQuery.contains("chemist") || lowercasedQuery.contains("drugstore") {
             return .pharmacy
         }
 

@@ -7,7 +7,7 @@ struct WayTaskMapView: UIViewRepresentable {
     let selectedStoreID: UUID?
     let cameraTarget: MKCoordinateRegion?
     let onSelectStore: (UUID) -> Void
-    let onMapCenterChanged: (CLLocationCoordinate2D) -> Void
+    let onMapRegionChanged: (MKCoordinateRegion) -> Void
     let onUserLocationChanged: (CLLocationCoordinate2D) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -37,7 +37,7 @@ struct WayTaskMapView: UIViewRepresentable {
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
         context.coordinator.parent = self
-        context.coordinator.applyAnnotations(to: mapView)
+        context.coordinator.updateAnnotationsIfNeeded(on: mapView)
 
         if let cameraTarget,
            !context.coordinator.isSameRegion(cameraTarget, as: context.coordinator.lastCameraTarget) {
@@ -52,13 +52,39 @@ struct WayTaskMapView: UIViewRepresentable {
 
         var parent: WayTaskMapView
         var lastCameraTarget: MKCoordinateRegion?
+        private var lastAnnotationSignature: AnnotationSignature?
+
+        #if DEBUG
+        private var updateUIViewCount = 0
+        private var annotationRebuildCount = 0
+        private var skippedIdenticalUpdateCount = 0
+        #endif
 
         init(_ parent: WayTaskMapView) {
             self.parent = parent
         }
 
         @MainActor
-        func applyAnnotations(to mapView: MKMapView) {
+        func updateAnnotationsIfNeeded(on mapView: MKMapView) {
+            #if DEBUG
+            updateUIViewCount += 1
+            #endif
+
+            let signature = AnnotationSignature(stores: parent.stores, products: parent.products)
+            guard signature != lastAnnotationSignature else {
+                #if DEBUG
+                skippedIdenticalUpdateCount += 1
+                logCountersIfNeeded()
+                #endif
+                return
+            }
+
+            lastAnnotationSignature = signature
+            #if DEBUG
+            annotationRebuildCount += 1
+            logCountersIfNeeded()
+            #endif
+
             let existingAnnotations = mapView.annotations.filter { !($0 is MKUserLocation) }
             mapView.removeAnnotations(existingAnnotations)
             mapView.removeOverlays(mapView.overlays)
@@ -68,13 +94,23 @@ struct WayTaskMapView: UIViewRepresentable {
             mapView.addAnnotations(storeAnnotations + productAnnotations)
 
             for store in parent.stores {
-                let circle = MKCircle(center: store.coordinate, radius: store.radius)
+                let circle = MKCircle(center: store.coordinate, radius: store.proximityRadius)
                 mapView.addOverlay(circle)
             }
         }
 
+        #if DEBUG
+        private func logCountersIfNeeded() {
+            guard updateUIViewCount == 1 || updateUIViewCount.isMultiple(of: 25) else {
+                return
+            }
+
+            print("[WayTask Map Performance] updateUIView=\(updateUIViewCount) annotationRebuilds=\(annotationRebuildCount) skippedIdentical=\(skippedIdenticalUpdateCount)")
+        }
+        #endif
+
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-            parent.onMapCenterChanged(mapView.region.center)
+            parent.onMapRegionChanged(mapView.region)
         }
 
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
@@ -176,5 +212,52 @@ struct WayTaskMapView: UIViewRepresentable {
                 && abs(lhs.span.latitudeDelta - rhs.span.latitudeDelta) < 0.000001
                 && abs(lhs.span.longitudeDelta - rhs.span.longitudeDelta) < 0.000001
         }
+    }
+}
+
+private struct AnnotationSignature: Equatable {
+    let stores: [StoreAnnotationSignature]
+    let products: [ProductAnnotationSignature]
+
+    @MainActor
+    init(stores: [MapStore], products: [MapProduct]) {
+        self.stores = stores.map(StoreAnnotationSignature.init)
+        self.products = products.map(ProductAnnotationSignature.init)
+    }
+}
+
+private struct StoreAnnotationSignature: Equatable {
+    let id: UUID
+    let latitude: CLLocationDegrees
+    let longitude: CLLocationDegrees
+    let radius: CLLocationDistance
+    let title: String
+    let source: String
+    let itemNames: [String]
+
+    init(_ store: MapStore) {
+        id = store.id
+        latitude = store.coordinate.latitude
+        longitude = store.coordinate.longitude
+        radius = store.radius
+        title = store.title
+        source = store.sourceType.rawValue
+        itemNames = store.itemNames
+    }
+}
+
+private struct ProductAnnotationSignature: Equatable {
+    let id: UUID
+    let storeID: UUID
+    let latitude: CLLocationDegrees
+    let longitude: CLLocationDegrees
+    let name: String
+
+    init(_ product: MapProduct) {
+        id = product.id
+        storeID = product.storeID
+        latitude = product.coordinate.latitude
+        longitude = product.coordinate.longitude
+        name = product.name
     }
 }

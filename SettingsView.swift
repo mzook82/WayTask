@@ -13,9 +13,16 @@ struct SettingsView: View {
     @Query private var productKnowledge: [ProductKnowledge]
     @State private var isShowingStoreEditor = false
     @State private var editingStore: GeoLocation?
+    @State private var versionTapCount = 0
+    @AppStorage(BetaDiagnosticsCenter.developerModeKey) private var developerModeEnabled = false
+    let showsDoneButton: Bool
     #if DEBUG
     @AppStorage(DebugSeedStoreService.enabledUserDefaultsKey) private var isDebugStoreEnabled = false
     #endif
+
+    init(showsDoneButton: Bool = true) {
+        self.showsDoneButton = showsDoneButton
+    }
 
     private var customStores: [GeoLocation] {
         locations
@@ -35,17 +42,22 @@ struct SettingsView: View {
                     customStoresSection
                     notificationsSection
                     aboutSection
+                    if developerModeEnabled {
+                        developerSection
+                    }
                 }
                 .scrollContentBackground(.hidden)
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
-                        dismiss()
+                if showsDoneButton {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") {
+                            dismiss()
+                        }
+                        .tint(WayTaskDesign.accent)
                     }
-                    .tint(WayTaskDesign.accent)
                 }
             }
             .sheet(isPresented: $isShowingStoreEditor) {
@@ -101,7 +113,15 @@ struct SettingsView: View {
     private var aboutSection: some View {
         Section {
             LabeledContent("App name", value: "WayTask")
-            LabeledContent("Version", value: "1.8 Beta")
+            LabeledContent("Version", value: BetaDiagnosticsCenter.shared.appVersion)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    versionTapCount += 1
+                    if versionTapCount >= 7 {
+                        developerModeEnabled = true
+                        versionTapCount = 0
+                    }
+                }
             LabeledContent("AI", value: "Gemini Vision")
             LabeledContent("Product Knowledge", value: "Enabled")
             LabeledContent("Learned products", value: "\(productKnowledge.count)")
@@ -118,6 +138,16 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("WayTask remembers confirmed products on this device to make future scans faster.")
                 Text("Product Knowledge is stored locally on this device.")
+            }
+        }
+    }
+
+    private var developerSection: some View {
+        Section("Developer") {
+            NavigationLink {
+                BetaDiagnosticsView()
+            } label: {
+                Label("Beta Diagnostics", systemImage: "waveform.path.ecg.rectangle")
             }
         }
     }
