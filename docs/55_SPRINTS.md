@@ -1,3 +1,35 @@
+# Sprint RC-1 – Privacy-Safe Sentry Integration for TestFlight
+
+## Goal
+
+Add replaceable crash and sanitized non-fatal diagnostics for the first external TestFlight beta without changing product behavior or adding analytics.
+
+## Completed
+
+- Added the official Sentry Cocoa 9.21.0 Swift package and linked only `Sentry`.
+- Reused ignored `Secrets.xcconfig` for DSN input with a credential-free committed template and Info.plist substitution; kept dSYM authentication in local CLI config or a masked CI secret.
+- Added early conditional initialization, strict `beforeSend` filtering, zero tracing/profiling/replay, no PII/screenshots/view hierarchy/network capture, and bounded generic breadcrumbs.
+- Added centralized sanitized reporting for planner timeout, store discovery, notification/deep-link, geofence, recognition, and existing persistence failures while excluding expected user states.
+- Added DEBUG-only non-fatal and explicitly confirmed crash validation inside Beta Diagnostics.
+- Preserved Release dSYM generation and added a Release-archive-only, token-gated, non-blocking `sentry-cli` upload phase.
+- Documented SDK privacy-manifest behavior, App Store review inputs, on-device verification, disablement, and rollback.
+
+## Preserved
+
+- Planner, store resolution/ranking, Map, notification, geofence, Gemini/OpenFoodFacts, barcode, SwiftData, Product, and Shopping control flow/results.
+- Disabled Beta Diagnostics performance characteristics outside explicit developer use.
+
+## Validation
+
+- Unsigned generic iOS Debug build with missing DSN.
+- Unsigned generic iOS Release build with missing DSN; DEBUG test strings absent and arm64 dSYM generated.
+- Focused P1/P2 privacy and behavior review.
+- Final build and `git diff --check`.
+- The processed Debug app contains an empty `SENTRY_DSN`, and the resolved SDK privacy manifest is embedded in `Sentry.framework`.
+- Real Sentry receipt, configured-DSN launch, physical-device crash delivery, dSYM server receipt, and TestFlight comparison remain owner/on-device checks because no local credentials were available to this build.
+
+Status: 🚧 Implementation complete; external Sentry/on-device validation required before TestFlight sign-off
+
 # Sprint 27B.5E – Post-Plan Performance Fix
 
 ## Goal

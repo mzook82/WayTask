@@ -1,4 +1,3 @@
-cat > .gitignore <<'EOF'
 # macOS
 .DS_Store
 
@@ -15,6 +14,6 @@ xcuserdata/
 
 # Logs
 *.log
-EOF
 Secrets.xcconfig
 Secrets.plist
+.sentryclirc

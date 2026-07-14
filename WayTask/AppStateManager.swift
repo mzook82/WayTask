@@ -466,6 +466,15 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         if shoppingPlan?.contentSignature == nextPlan.contentSignature {
             if let shoppingPlan {
                 BetaDiagnosticsCenter.shared.plannerSucceeded(plan: shoppingPlan, cacheHit: true)
+                SentryReportingService.shared.breadcrumb(
+                    .planReady,
+                    area: .shopping,
+                    operation: .planner,
+                    numericContext: [
+                        .itemCount: shoppingPlan.items.count,
+                        .storeCount: shoppingPlan.stores.count
+                    ]
+                )
             }
             markShoppingPlanReady(generatedAt: shoppingPlan?.generatedAt ?? Date())
             return
@@ -473,6 +482,15 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
 
         shoppingPlan = nextPlan
         BetaDiagnosticsCenter.shared.plannerSucceeded(plan: nextPlan, cacheHit: false)
+        SentryReportingService.shared.breadcrumb(
+            .planReady,
+            area: .shopping,
+            operation: .planner,
+            numericContext: [
+                .itemCount: nextPlan.items.count,
+                .storeCount: nextPlan.stores.count
+            ]
+        )
         markShoppingPlanReady(generatedAt: nextPlan.generatedAt)
     }
 
@@ -486,6 +504,11 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     func beginShoppingPlanGeneration(stage: ShoppingPlanGenerationStage = .preparingList) {
         setShoppingPlanState(.generating(stage: stage, startedAt: Date()))
         BetaDiagnosticsCenter.shared.plannerStarted(stage: stage.title)
+        SentryReportingService.shared.breadcrumb(
+            .planGenerationStarted,
+            area: .shopping,
+            operation: .planner
+        )
     }
 
     func updateShoppingPlanGeneration(stage: ShoppingPlanGenerationStage) {
@@ -504,6 +527,11 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         }
         setShoppingPlanState(.failed(message: message, actionTitle: actionTitle))
         BetaDiagnosticsCenter.shared.plannerFailed(reason: message)
+        SentryReportingService.shared.breadcrumb(
+            .planFailed,
+            area: .shopping,
+            operation: .planner
+        )
     }
 
     func markShoppingPlanStale(reason: String) {
@@ -657,6 +685,17 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
                     message: "Notification deep link rejected",
                     detail: "Missing storeID"
                 )
+                SentryReportingService.shared.capture(
+                    message: .notificationDeepLinkFailed,
+                    operation: .notification,
+                    category: .integration,
+                    area: .map
+                )
+                SentryReportingService.shared.breadcrumb(
+                    .notificationDeepLinkFailed,
+                    area: .map,
+                    operation: .notification
+                )
                 return
             }
             BetaDiagnosticsCenter.shared.notificationTapped(
@@ -674,6 +713,11 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
                 shoppingListID: listID,
                 notificationType: notificationType
             ))
+            SentryReportingService.shared.breadcrumb(
+                .notificationDeepLinkHandled,
+                area: .map,
+                operation: .notification
+            )
         }
     }
 

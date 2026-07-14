@@ -336,6 +336,15 @@ final class CameraViewModel: ObservableObject {
     }
 
     func productAddFailed(_ error: Error? = nil) {
+        if let error {
+            SentryReportingService.shared.capture(
+                error: error,
+                message: .persistenceFailed,
+                operation: .persistence,
+                category: .persistence,
+                area: .camera
+            )
+        }
         recognitionPhase = .failed
         statusMessage = "Could not add this product. Please try again."
     }
@@ -419,6 +428,13 @@ final class CameraViewModel: ObservableObject {
                 isSavingPhoto = false
                 statusMessage = "Photo saved to Photos."
             } catch {
+                SentryReportingService.shared.capture(
+                    error: error,
+                    message: .persistenceFailed,
+                    operation: .persistence,
+                    category: .persistence,
+                    area: .camera
+                )
                 isSavingPhoto = false
                 statusMessage = "Could not save photo. Please try again."
             }
@@ -468,6 +484,11 @@ final class CameraViewModel: ObservableObject {
         isRecognizing = true
         isWaitingForBarcodePackagePhoto = false
         statusMessage = "Searching product database..."
+        SentryReportingService.shared.breadcrumb(
+            .recognitionStarted,
+            area: .camera,
+            operation: .recognition
+        )
 
         let diagnosticsStartedAt = BetaDiagnosticsCenter.shared.recognitionStarted(kind: "Barcode", fallback: false)
         BetaDiagnosticsCenter.shared.recognitionCache(hit: false, source: "OpenFoodFacts")
@@ -487,6 +508,12 @@ final class CameraViewModel: ObservableObject {
                 isRecognizing = false
 
                 guard let candidate = candidates.first else {
+                    SentryReportingService.shared.breadcrumb(
+                        .recognitionCompleted,
+                        area: .camera,
+                        operation: .recognition,
+                        numericContext: [.discoveryResultCount: 0]
+                    )
                     BetaDiagnosticsCenter.shared.recognitionFinished(
                         kind: "Barcode",
                         success: false,
@@ -518,6 +545,12 @@ final class CameraViewModel: ObservableObject {
                     startedAt: diagnosticsStartedAt,
                     reason: "OpenFoodFacts returned \(candidates.count) candidate(s)"
                 )
+                SentryReportingService.shared.breadcrumb(
+                    .recognitionCompleted,
+                    area: .camera,
+                    operation: .recognition,
+                    numericContext: [.discoveryResultCount: candidates.count]
+                )
             } catch is CancellationError {
                 return
             } catch {
@@ -530,6 +563,18 @@ final class CameraViewModel: ObservableObject {
                     success: false,
                     startedAt: diagnosticsStartedAt,
                     reason: error.localizedDescription
+                )
+                SentryReportingService.shared.capture(
+                    error: error,
+                    message: .recognitionProviderFailed,
+                    operation: .recognition,
+                    category: .integration,
+                    area: .camera
+                )
+                SentryReportingService.shared.breadcrumb(
+                    .recognitionFailed,
+                    area: .camera,
+                    operation: .recognition
                 )
 
                 showBarcodeManualFallback(
@@ -562,6 +607,11 @@ final class CameraViewModel: ObservableObject {
         recognitionPhase = .analyzing
         isRecognizing = true
         statusMessage = "Analyzing product..."
+        SentryReportingService.shared.breadcrumb(
+            .recognitionStarted,
+            area: .camera,
+            operation: .recognition
+        )
 
         let diagnosticsStartedAt = BetaDiagnosticsCenter.shared.recognitionStarted(kind: "Gemini", fallback: false)
         recognitionTask?.cancel()
@@ -577,6 +627,12 @@ final class CameraViewModel: ObservableObject {
                 startedAt: diagnosticsStartedAt,
                 reason: result.message
             )
+            SentryReportingService.shared.breadcrumb(
+                result.bestCandidate != nil ? .recognitionCompleted : .recognitionFailed,
+                area: .camera,
+                operation: .recognition,
+                numericContext: [.discoveryResultCount: result.bestCandidate == nil ? 0 : 1]
+            )
             await applyAIRecognitionResult(result)
         }
     }
@@ -585,6 +641,11 @@ final class CameraViewModel: ObservableObject {
         recognitionPhase = .analyzing
         isRecognizing = true
         statusMessage = "Analyzing product..."
+        SentryReportingService.shared.breadcrumb(
+            .recognitionStarted,
+            area: .camera,
+            operation: .recognition
+        )
 
         let diagnosticsStartedAt = BetaDiagnosticsCenter.shared.recognitionStarted(kind: "Gemini", fallback: true)
         recognitionTask?.cancel()
@@ -603,6 +664,12 @@ final class CameraViewModel: ObservableObject {
                 success: result.bestCandidate != nil && (result.bestCandidate?.confidence ?? 0) >= 0.55,
                 startedAt: diagnosticsStartedAt,
                 reason: result.message
+            )
+            SentryReportingService.shared.breadcrumb(
+                result.bestCandidate != nil ? .recognitionCompleted : .recognitionFailed,
+                area: .camera,
+                operation: .recognition,
+                numericContext: [.discoveryResultCount: result.bestCandidate == nil ? 0 : 1]
             )
 
             await applyAIRecognitionResult(result)
@@ -758,6 +825,11 @@ final class CameraViewModel: ObservableObject {
         recognitionPhase = .analyzing
         isRecognizing = true
         statusMessage = "Analyzing photo..."
+        SentryReportingService.shared.breadcrumb(
+            .recognitionStarted,
+            area: .camera,
+            operation: .recognition
+        )
         let diagnosticsStartedAt = BetaDiagnosticsCenter.shared.recognitionStarted(kind: "Camera", fallback: false)
 
         Task {
@@ -767,6 +839,12 @@ final class CameraViewModel: ObservableObject {
                 success: result.status == .recognized,
                 startedAt: diagnosticsStartedAt,
                 reason: result.message
+            )
+            SentryReportingService.shared.breadcrumb(
+                result.status == .recognized ? .recognitionCompleted : .recognitionFailed,
+                area: .camera,
+                operation: .recognition,
+                numericContext: [.discoveryResultCount: result.candidates.count]
             )
             playRecognitionCompletedHaptic()
             recognitionResult = result

@@ -59,6 +59,12 @@ struct GeminiProductRecognitionService: AIProductRecognitionServicing {
 
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
+                SentryReportingService.shared.capture(
+                    message: .recognitionProviderFailed,
+                    operation: .recognition,
+                    category: .integration,
+                    area: .camera
+                )
                 #if DEBUG
                 print("[WayTask Gemini] Provider unavailable. Response time: \(String(format: "%.2f", elapsed))s")
                 #endif
@@ -141,14 +147,35 @@ struct GeminiProductRecognitionService: AIProductRecognitionServicing {
             case .invalidImage:
                 return unavailableResult(message: "Try a clearer front photo.")
             case .invalidRequest:
+                SentryReportingService.shared.capture(
+                    error: error,
+                    message: .recognitionProviderFailed,
+                    operation: .recognition,
+                    category: .integration,
+                    area: .camera
+                )
                 return unavailableResult(message: "AI recognition is unavailable right now. Add the details manually.")
             }
         } catch let error as URLError {
+            SentryReportingService.shared.capture(
+                error: error,
+                message: .recognitionProviderFailed,
+                operation: .recognition,
+                category: .integration,
+                area: .camera
+            )
             #if DEBUG
             print("[WayTask Gemini] Gemini call failed | fallback reason: \(error.localizedDescription)")
             #endif
             return unavailableResult(message: "AI recognition is unavailable right now. Add the details manually.")
         } catch {
+            SentryReportingService.shared.capture(
+                error: error,
+                message: .recognitionProviderFailed,
+                operation: .recognition,
+                category: .integration,
+                area: .camera
+            )
             #if DEBUG
             print("[WayTask Gemini] Gemini call failed | fallback reason: \(error.localizedDescription)")
             #endif

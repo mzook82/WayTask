@@ -19,6 +19,15 @@ Developer Mode is disabled by default. The normal Settings placeholder remains u
 
 Developer Mode can be disabled from the bottom of Beta Diagnostics. The Developer section is absent during normal consumer use.
 
+## DEBUG-Only Sentry Test
+
+RC-1 adds `Sentry Test (DEBUG Only)` inside Beta Diagnostics. The section and intentional crash method are excluded from Release/TestFlight builds.
+
+- `Send Non-Fatal Test Event` queues one enum-backed sanitized event and requests a short background flush. It reports Disabled when the local DSN is absent.
+- `Trigger Intentional Crash…` is disabled unless Sentry initialized and always presents an explicit destructive confirmation dialog.
+- After a confirmed crash, relaunch the app without a debugger so Sentry can transmit the previous-run crash envelope.
+- Neither action displays or logs the DSN. See `docs/180_SENTRY_INTEGRATION.md` for server-side field and symbolication checks.
+
 ## Runtime Coverage
 
 ### Planner
@@ -113,7 +122,7 @@ The counters are compile-time DEBUG state owned by the Map coordinator/view mode
 - MapKit rejection totals describe accepted/rejected query results and may exceed unique merged branch counts.
 - A screenshot captures the Beta Diagnostics screen because the capture action is located there; screenshots are intentionally excluded from export.
 - Device model is the local hardware identifier, not a marketing-name lookup.
-- No server upload or remote telemetry exists.
+- Beta Diagnostics exports remain local. Separately, Sentry uploads only the RC-1 allowlisted crash/non-fatal diagnostics when a valid DSN is configured.
 
 ## Field-Test Checklist
 

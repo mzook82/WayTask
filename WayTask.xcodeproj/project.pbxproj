@@ -58,6 +58,7 @@
 		D1954E422FF9010700E946DA /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E412FF9010700E946DA /* SettingsView.swift */; };
 		D1954E442FF91D5B00E946DA /* ProductKnowledge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E432FF91D5B00E946DA /* ProductKnowledge.swift */; };
 		D1954E462FF91D5B00E946DA /* ProductKnowledgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E452FF91D5B00E946DA /* ProductKnowledgeService.swift */; };
+		D1A000012FFF000100000001 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D1A000052FFF000100000005 /* Sentry */; };
 		D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B8519A2FF18FF50083B34C /* ProductListView.swift */; };
 /* End PBXBuildFile section */
 
@@ -145,6 +146,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D1A000012FFF000100000001 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -231,6 +233,7 @@
 				D1B8517A2FEFF2F40083B34C /* Sources */,
 				D1B8517B2FEFF2F40083B34C /* Frameworks */,
 				D1B8517C2FEFF2F40083B34C /* Resources */,
+				D1A000022FFF000100000002 /* Upload Sentry Debug Symbols */,
 			);
 			buildRules = (
 			);
@@ -241,6 +244,7 @@
 			);
 			name = WayTask;
 			packageProductDependencies = (
+				D1A000052FFF000100000005 /* Sentry */,
 			);
 			productName = WayTask;
 			productReference = D1B8517E2FEFF2F40083B34C /* WayTask.app */;
@@ -270,6 +274,9 @@
 			);
 			mainGroup = D1B851752FEFF2F40083B34C;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D1A000042FFF000100000004 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D1B8517F2FEFF2F40083B34C /* Products */;
 			projectDirPath = "";
@@ -290,6 +297,30 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		D1A000022FFF000100000002 /* Upload Sentry Debug Symbols */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${EXECUTABLE_NAME}",
+			);
+			name = "Upload Sentry Debug Symbols";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			showEnvVarsInLog = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"${CONFIGURATION:-}\" != \"Release\" ] || [ \"${ACTION:-}\" != \"install\" ]; then\n    exit 0\nfi\n\nif ! command -v sentry-cli >/dev/null 2>&1; then\n    echo \"warning: Sentry dSYM upload skipped because sentry-cli is not installed.\"\n    exit 0\nfi\n\nif [ -z \"${SENTRY_AUTH_TOKEN:-}\" ] && [ ! -f \"${HOME}/.sentryclirc\" ] && [ ! -f \"${SRCROOT}/.sentryclirc\" ]; then\n    echo \"warning: Sentry dSYM upload skipped because local or CI authentication is not configured.\"\n    exit 0\nfi\n\nexport SENTRY_ORG=waytask\nexport SENTRY_PROJECT=waytask-ios\n\ncd \"${SRCROOT}\" || exit 0\nif ! sentry-cli debug-files upload \"${DWARF_DSYM_FOLDER_PATH}\" >/dev/null 2>&1; then\n    echo \"warning: Sentry dSYM upload failed. Verify authentication, organization, project, and archive dSYM.\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		D1B8517A2FEFF2F40083B34C /* Sources */ = {
@@ -525,6 +556,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 635X95KVUL;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WayTask/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
@@ -578,6 +610,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D1A000042FFF000100000004 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = exactVersion;
+				version = 9.21.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D1A000052FFF000100000005 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D1A000042FFF000100000004 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D1B851762FEFF2F40083B34C /* Project object */;
 }

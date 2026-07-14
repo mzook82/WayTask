@@ -4,7 +4,7 @@
 **Version:** 0.1  
 **Status:** Draft  
 **Owner:** Mordechai Zukerman  
-**Last Updated:** July 13, 2026
+**Last Updated:** July 14, 2026
 
 ---
 
@@ -67,6 +67,21 @@ Models
         ▼
 Apple Frameworks
 ```
+
+Sentry is an optional boundary service, not a business-logic layer. `SentryReportingService` is the only source file that imports the SDK. Planner, store resolution, Map, notification, geofence, recognition, persistence, and Shopping code can report only enum-backed operations/messages/areas and aggregate integers through that abstraction. With no valid build-supplied DSN, the boundary is never initialized and all calls no-op.
+
+```text
+Existing failure/workflow path
+        │
+        ▼
+SentryReportingService
+        │
+        ├── missing/invalid DSN ──► no-op
+        │
+        └── configured ──► beforeSend privacy allowlist ──► Sentry
+```
+
+Tracing, profiling, Session Replay, screenshots, view hierarchy, network capture, automatic breadcrumbs/sessions, app-hang tracking, and product analytics are outside this boundary. See `docs/180_SENTRY_INTEGRATION.md`.
 
 ### Layer Responsibilities
 

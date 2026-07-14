@@ -14,15 +14,25 @@ protocol ShoppingSessionServicing {
 struct ShoppingSessionService: ShoppingSessionServicing {
     @discardableResult
     func startShopping(with items: [ShoppingItem], in modelContext: ModelContext) throws -> ShoppingSession {
-        try finishExistingActiveSessions(in: modelContext)
+        do {
+            try finishExistingActiveSessions(in: modelContext)
 
-        let activeItemIDs = items
-            .filter { !$0.isCompleted }
-            .map(\.id)
-        let session = ShoppingSession(itemIDs: activeItemIDs)
-        modelContext.insert(session)
-        try modelContext.save()
-        return session
+            let activeItemIDs = items
+                .filter { !$0.isCompleted }
+                .map(\.id)
+            let session = ShoppingSession(itemIDs: activeItemIDs)
+            modelContext.insert(session)
+            try modelContext.save()
+            SentryReportingService.shared.breadcrumb(
+                .shoppingSessionStarted,
+                area: .shopping,
+                numericContext: [.itemCount: activeItemIDs.count]
+            )
+            return session
+        } catch {
+            reportPersistenceError(error, itemCount: items.count)
+            throw error
+        }
     }
 
     func activeSession(in modelContext: ModelContext) throws -> ShoppingSession? {
@@ -33,7 +43,12 @@ struct ShoppingSessionService: ShoppingSessionServicing {
             sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
         )
         descriptor.fetchLimit = 1
-        return try modelContext.fetch(descriptor).first
+        do {
+            return try modelContext.fetch(descriptor).first
+        } catch {
+            reportPersistenceError(error)
+            throw error
+        }
     }
 
     func markItemCollected(_ item: ShoppingItem, in session: ShoppingSession, modelContext: ModelContext) throws {
@@ -49,12 +64,22 @@ struct ShoppingSessionService: ShoppingSessionServicing {
             session.collectedItemIDs = collectedItemIDs
         }
 
-        try modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            reportPersistenceError(error, itemCount: session.itemIDs.count)
+            throw error
+        }
     }
 
     func markItemRemaining(_ item: ShoppingItem, in session: ShoppingSession, modelContext: ModelContext) throws {
         session.collectedItemIDs = session.collectedItemIDs.filter { $0 != item.id }
-        try modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            reportPersistenceError(error, itemCount: session.itemIDs.count)
+            throw error
+        }
     }
 
     func remainingItemCount(for session: ShoppingSession) -> Int {
@@ -64,7 +89,17 @@ struct ShoppingSessionService: ShoppingSessionServicing {
     func finishShopping(_ session: ShoppingSession, in modelContext: ModelContext) throws {
         session.isActive = false
         session.finishedAt = Date()
-        try modelContext.save()
+        do {
+            try modelContext.save()
+            SentryReportingService.shared.breadcrumb(
+                .shoppingSessionCompleted,
+                area: .shopping,
+                numericContext: [.itemCount: session.itemIDs.count]
+            )
+        } catch {
+            reportPersistenceError(error, itemCount: session.itemIDs.count)
+            throw error
+        }
     }
 
     private func finishExistingActiveSessions(in modelContext: ModelContext) throws {
@@ -83,5 +118,17 @@ struct ShoppingSessionService: ShoppingSessionServicing {
         if !activeSessions.isEmpty {
             try modelContext.save()
         }
+    }
+
+    private func reportPersistenceError(_ error: Error, itemCount: Int? = nil) {
+        let context = itemCount.map { [SentryNumericContext.itemCount: $0] } ?? [:]
+        SentryReportingService.shared.capture(
+            error: error,
+            message: .persistenceFailed,
+            operation: .persistence,
+            category: .persistence,
+            area: .shopping,
+            numericContext: context
+        )
     }
 }

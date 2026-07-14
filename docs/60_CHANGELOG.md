@@ -1,3 +1,35 @@
+# Version 1.19.0 Beta RC-1
+
+**Date:** July 14, 2026
+
+**Status:** Implementation complete; external validation pending
+
+## Sprint
+
+RC-1 – Privacy-Safe Sentry Integration for TestFlight
+
+## Added
+
+- Official Sentry Cocoa 9.21.0 through Swift Package Manager, linking only the iOS `Sentry` product.
+- Ignored xcconfig DSN flow, safe committed template, Info.plist substitution, missing-DSN no-op startup, and separate local/CI dSYM authentication.
+- Centralized enum-constrained reporting service with strict `beforeSend` privacy filtering.
+- Sanitized operational issue coverage and bounded workflow breadcrumbs.
+- DEBUG-only non-fatal test and explicitly confirmed intentional crash action in Beta Diagnostics.
+- Release-archive-only dSYM upload preparation for `waytask/waytask-ios`.
+- Full setup, privacy, validation, App Store, disablement, and rollback guide in `docs/180_SENTRY_INTEGRATION.md`.
+
+## Privacy And Performance
+
+- Disabled PII, exact-location/product context, screenshots, view hierarchy, Session Replay, network capture, automatic breadcrumbs/sessions, tracing, profiling, app-hang tracking, MetricKit, and logs.
+- No SDK initialization or recurring Sentry work occurs when the DSN is missing.
+- No product analytics were added.
+
+## Validation
+
+- Package version and privacy manifest inspected from the resolved 9.21.0 source; the manifest is embedded in the built `Sentry.framework`.
+- Unsigned Debug and Release builds, Release dSYM generation, focused P1/P2 review, final build, and whitespace validation recorded at sprint completion.
+- Private-token/real-project receipt and physical-device/TestFlight validation remain manual owner steps.
+
 # Version 1.18.0 Beta
 
 **Date:** July 13, 2026

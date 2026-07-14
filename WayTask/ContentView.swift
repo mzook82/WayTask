@@ -63,6 +63,7 @@ struct ContentView: View {
         .tint(WayTaskDesign.accent)
         .preferredColorScheme(.dark)
         .onAppear {
+            updateSentryArea(appStateManager.selectedTab)
             ensureShoppingListArchitecture()
             syncShoppingArchitectureState()
             presentShoppingStartupSheetIfNeeded()
@@ -77,6 +78,9 @@ struct ContentView: View {
         .onChange(of: shoppingArchitectureSignature) {
             syncShoppingArchitectureState()
             presentShoppingStartupSheetIfNeeded()
+        }
+        .onChange(of: appStateManager.selectedTab) { _, tab in
+            updateSentryArea(tab)
         }
         .sheet(item: $startupSheet) { sheet in
             startupSheetContent(sheet)
@@ -154,8 +158,32 @@ struct ContentView: View {
             let result = try shoppingListBackfillService.ensureDefaultListsAndBackfill(in: modelContext)
             appStateManager.setCurrentShoppingList(result.weeklyListID)
         } catch {
+            SentryReportingService.shared.capture(
+                error: error,
+                message: .persistenceFailed,
+                operation: .persistence,
+                category: .persistence,
+                area: .shopping
+            )
             assertionFailure("Failed to prepare shopping list architecture: \(error.localizedDescription)")
         }
+    }
+
+    private func updateSentryArea(_ tab: AppTab) {
+        let area: SentryAppArea
+        switch tab {
+        case .home:
+            area = .home
+        case .products:
+            area = .products
+        case .shopping:
+            area = .shopping
+        case .map:
+            area = .map
+        case .settings:
+            area = .settings
+        }
+        SentryReportingService.shared.setCurrentArea(area)
     }
 
     private func syncShoppingArchitectureState() {

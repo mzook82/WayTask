@@ -1,3 +1,4 @@
 // Debug build settings for WayTask.
 // Secrets.xcconfig is local-only and must not be committed.
+SENTRY_DSN =
 #include? "Secrets.xcconfig"

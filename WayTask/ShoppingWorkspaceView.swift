@@ -1007,10 +1007,21 @@ struct ShoppingWorkspaceView: View {
     }
 
     private func failIfPlanningTimedOut(since startedAt: Date) -> Bool {
-        guard Date().timeIntervalSince(startedAt) > planningTimeoutSeconds else {
+        let elapsed = Date().timeIntervalSince(startedAt)
+        guard elapsed > planningTimeoutSeconds else {
             return false
         }
 
+        SentryReportingService.shared.capture(
+            message: .plannerTimedOut,
+            operation: .planner,
+            category: .operational,
+            area: .shopping,
+            numericContext: [
+                .itemCount: activeItems.count,
+                .planningDurationBucket: Int(elapsed / 5) * 5
+            ]
+        )
         failShoppingPlan(
             message: "Planning timed out before a usable store plan was created.",
             actionTitle: "Try Again"

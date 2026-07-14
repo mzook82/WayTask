@@ -10,10 +10,13 @@ import SwiftData
 
 @main
 struct WayTaskApp: App {
-    @StateObject private var appStateManager = AppStateManager()
-    @StateObject private var locationManager = LocationManager()
+    @StateObject private var appStateManager: AppStateManager
+    @StateObject private var locationManager: LocationManager
 
     init() {
+        SentryReportingService.shared.startIfConfigured()
+        _appStateManager = StateObject(wrappedValue: AppStateManager())
+        _locationManager = StateObject(wrappedValue: LocationManager())
         #if DEBUG
         print(SecretsManager.isGeminiConfigured ? "Gemini configured ✔" : "Gemini unavailable")
         #endif

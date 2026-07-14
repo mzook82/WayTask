@@ -447,6 +447,14 @@ final class LocationManager: NSObject, ObservableObject {
                         message: "Notification scheduling failed",
                         detail: error.localizedDescription
                     )
+                    SentryReportingService.shared.capture(
+                        error: error,
+                        message: .notificationSchedulingFailed,
+                        operation: .notification,
+                        category: .integration,
+                        area: .shopping,
+                        numericContext: [.itemCount: itemNames.count]
+                    )
                 }
             }
             #if DEBUG
@@ -590,6 +598,15 @@ extension LocationManager: CLLocationManagerDelegate {
 
     func locationManager(_ manager: CLLocationManager, monitoringDidFailFor region: CLRegion?, withError error: Error) {
         BetaDiagnosticsCenter.shared.geofenceSuppressed(reason: "Monitoring failed: \(error.localizedDescription)")
+        if !isExpectedLocationAuthorizationError(error) {
+            SentryReportingService.shared.capture(
+                error: error,
+                message: .geofenceMonitoringFailed,
+                operation: .geofence,
+                category: .integration,
+                area: .map
+            )
+        }
         #if DEBUG
         print("Region monitoring failed: \(error.localizedDescription)")
         #endif
@@ -599,6 +616,16 @@ extension LocationManager: CLLocationManagerDelegate {
         #if DEBUG
         print("Location manager failed: \(error.localizedDescription)")
         #endif
+    }
+
+    private func isExpectedLocationAuthorizationError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        guard nsError.domain == kCLErrorDomain,
+              let code = CLError.Code(rawValue: nsError.code) else {
+            return false
+        }
+
+        return code == .denied || code == .regionMonitoringDenied
     }
 }
 

@@ -45,6 +45,10 @@ struct BetaDiagnosticsView: View {
     @State private var exportDocument = BetaDiagnosticsTextDocument(text: "")
     @State private var isShowingExporter = false
     @State private var copyConfirmation = false
+    #if DEBUG
+    @State private var sentryTestStatus: String?
+    @State private var isShowingSentryCrashConfirmation = false
+    #endif
 
     var body: some View {
         List {
@@ -59,6 +63,9 @@ struct BetaDiagnosticsView: View {
             recentErrorsSection
             recentDecisionsSection
             exportSection
+            #if DEBUG
+            sentryTestSection
+            #endif
             privacySection
             developerModeSection
         }
@@ -79,6 +86,20 @@ struct BetaDiagnosticsView: View {
         .alert("Report copied", isPresented: $copyConfirmation) {
             Button("OK", role: .cancel) { }
         }
+        #if DEBUG
+        .confirmationDialog(
+            "Crash WayTask for Sentry validation?",
+            isPresented: $isShowingSentryCrashConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Crash Now", role: .destructive) {
+                SentryReportingService.shared.crashForDebugValidation()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("The app will terminate immediately. Reopen it to allow Sentry to send the crash event.")
+        }
+        #endif
     }
 
     private var snapshotSection: some View {
@@ -317,6 +338,42 @@ struct BetaDiagnosticsView: View {
             Label("No route history or private account data", systemImage: "location.slash")
         }
     }
+
+    #if DEBUG
+    private var sentryTestSection: some View {
+        Section {
+            LabeledContent(
+                "Status",
+                value: SentryReportingService.shared.isEnabled ? "Enabled" : "Disabled — DSN missing"
+            )
+
+            Button {
+                sentryTestStatus = SentryReportingService.shared.captureDebugTestEvent()
+                    ? "One sanitized non-fatal test event was queued and a short flush was requested."
+                    : "Sentry is disabled. Configure a local DSN and relaunch this Debug build."
+            } label: {
+                Label("Send Non-Fatal Test Event", systemImage: "exclamationmark.bubble")
+            }
+
+            Button(role: .destructive) {
+                isShowingSentryCrashConfirmation = true
+            } label: {
+                Label("Trigger Intentional Crash…", systemImage: "bolt.trianglebadge.exclamationmark")
+            }
+            .disabled(!SentryReportingService.shared.isEnabled)
+
+            if let sentryTestStatus {
+                Text(sentryTestStatus)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Sentry Test (DEBUG Only)")
+        } footer: {
+            Text("Crash validation is compiled only in DEBUG and always requires confirmation.")
+        }
+    }
+    #endif
 
     private var developerModeSection: some View {
         Section("Developer Mode") {

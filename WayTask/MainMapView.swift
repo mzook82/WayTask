@@ -61,6 +61,10 @@ struct MainMapView: View {
                 }
             }
             .onAppear {
+                SentryReportingService.shared.breadcrumb(
+                    .mapOpened,
+                    area: .map
+                )
                 locationManager.requestWhenInUseAuthorization()
                 applyPendingShoppingPlanIfNeeded()
                 mapViewModel.update(locations: locations, shoppingItems: items)
@@ -337,6 +341,13 @@ struct MainMapView: View {
             resetForm()
             showingAddLocationSheet = false
         } catch {
+            SentryReportingService.shared.capture(
+                error: error,
+                message: .persistenceFailed,
+                operation: .persistence,
+                category: .persistence,
+                area: .map
+            )
             modelContext.delete(location)
             storeSaveErrorMessage = "WayTask could not save this store. Please try again."
             #if DEBUG
@@ -420,6 +431,17 @@ struct MainMapView: View {
                 category: .map,
                 message: "Notification store could not be materialized",
                 detail: context.storeID.uuidString
+            )
+            SentryReportingService.shared.capture(
+                message: .notificationDeepLinkFailed,
+                operation: .notification,
+                category: .integration,
+                area: .map
+            )
+            SentryReportingService.shared.breadcrumb(
+                .notificationDeepLinkFailed,
+                area: .map,
+                operation: .notification
             )
             return
         }

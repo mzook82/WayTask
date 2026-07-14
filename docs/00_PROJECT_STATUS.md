@@ -7,7 +7,7 @@ Current Milestone:
 Milestone 3 – Products & Shopping Separation
 
 Current Sprint:
-Sprint 27B.5E – Post-Plan Performance Fix
+Sprint RC-1 – Privacy-Safe Sentry Integration for TestFlight
 
 Completed:
 
@@ -36,10 +36,12 @@ Completed:
 - Batched Map display publication and plan-aware filter caching
 - Throttled UI location publication with raw geofence accuracy preserved
 - Stable Shopping/Home row identities and lazy Shopping presentation
+- Privacy-safe Sentry crash/non-fatal reporting with no product analytics
+- DEBUG-only Sentry validation and archive-only dSYM upload preparation
 
 Next Sprint:
 
-Sprint 27B.5F – On-Device Post-Plan Performance Validation
+RC-2 – On-Device Sentry/TestFlight Validation and Privacy Disclosure Review
 
 Blockers:
 
@@ -75,7 +77,7 @@ Products & Shopping Separation
 
 In progress
 
-Sprint 27B.5E removes the post-plan global performance cliff without changing Planner, store ranking, notification, geofence, coverage, or Map results. The retained Map defers plan application until its tab is active, Map state publishes as one coherent update, native annotations/overlays rebuild only when their stable content signature changes, and map filters reuse one cached result per relevant input set. UI-facing location updates are movement/time guarded while raw Core Location data continues to drive nearby, notification, and geofence decisions. Shopping uses lazy presentation and semantic row identities; Home disconnects its one-second publisher outside active plan generation.
+RC-1 adds Sentry Cocoa through Swift Package Manager without changing product decisions. Sentry starts only with a valid locally supplied DSN; events pass through a strict privacy filter, automatic tracing/replay/screenshots/view hierarchy/network capture/PII are disabled, and only enum-backed generic workflow context plus aggregate counts are permitted. Release archives retain dSYMs and use a credential-gated, non-blocking symbol-upload phase.
 
 `ShoppingItem` remains as a temporary compatibility adapter for Product Knowledge, Shopping Memory, planner inputs, saved-store item links, and Shopping Mode until native `ShoppingListEntry` planner/session migration is complete.
 

@@ -210,6 +210,13 @@ struct GeofenceNotificationService {
                             message: "Notification authorization failed",
                             detail: error.localizedDescription
                         )
+                        SentryReportingService.shared.capture(
+                            error: error,
+                            message: .notificationAuthorizationFailed,
+                            operation: .notification,
+                            category: .integration,
+                            area: .settings
+                        )
                     }
                 }
                 #if DEBUG

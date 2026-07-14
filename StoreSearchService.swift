@@ -628,6 +628,14 @@ final class MapKitStoreSearchService: StoreSearchService {
             }
             return acceptedStores
         } catch {
+            SentryReportingService.shared.capture(
+                error: error,
+                message: .storeDiscoveryFailed,
+                operation: .storeDiscovery,
+                category: .integration,
+                area: .map,
+                numericContext: [.discoveryResultCount: 0]
+            )
             BetaDiagnosticsCenter.shared.recordError(
                 category: .storeDiscovery,
                 message: "MapKit search failed",
