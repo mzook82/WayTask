@@ -78,16 +78,16 @@ struct NearbyShoppingOpportunity: Identifiable, Equatable {
 
     var itemSummary: String {
         if itemNames.isEmpty {
-            return "Your shopping list may have a match here."
+            return "Recommended Store. Availability is estimated."
         }
 
         if itemNames.count == 1 {
-            return "\(itemNames[0]) may be available here."
+            return "\(itemNames[0]) is likely here. Availability is estimated."
         }
 
         let visibleNames = itemNames.prefix(2).joined(separator: ", ")
         let suffix = itemNames.count > 2 ? ", and more" : ""
-        return "\(itemNames.count) items may be available here: \(visibleNames)\(suffix)."
+        return "\(itemNames.count) items are likely here: \(visibleNames)\(suffix). Availability is estimated. Some items may require another store."
     }
 }
 
@@ -282,11 +282,11 @@ enum ShoppingPlanGenerationStage: String, CaseIterable, Equatable {
         case .findingStores:
             return "Finding nearby stores"
         case .matchingProducts:
-            return "Matching products to stores"
+            return "Estimating products by store"
         case .calculatingCoverage:
             return "Calculating coverage"
         case .rankingOptions:
-            return "Ranking the best options"
+            return "Ranking recommended stores"
         }
     }
 }

@@ -8,6 +8,7 @@
 import CoreLocation
 import SwiftData
 import SwiftUI
+import UserNotifications
 
 struct ContentView: View {
     @EnvironmentObject private var appStateManager: AppStateManager
@@ -26,6 +27,8 @@ struct ContentView: View {
     @AppStorage("waytask.shoppingWorkflowOnboardingCompleted.v1") private var shoppingWorkflowOnboardingCompleted = false
     @AppStorage("waytask.legacyShoppingReviewCompleted.v1") private var legacyShoppingReviewCompleted = false
     @State private var startupSheet: ShoppingStartupSheet?
+    @State private var hasCompletedActiveSessionLaunchRecovery = false
+    @State private var isCheckingActiveSessionLaunchRecovery = false
     private let shoppingListBackfillService = ShoppingListBackfillService()
 
     var body: some View {
@@ -67,6 +70,7 @@ struct ContentView: View {
             ensureShoppingListArchitecture()
             syncShoppingArchitectureState()
             presentShoppingStartupSheetIfNeeded()
+            recoverActiveShoppingSessionIfNeeded()
             seedDebugStoreIfNeeded()
             refreshShoppingGeofences()
             refreshNearbyOpportunities()
@@ -85,6 +89,13 @@ struct ContentView: View {
         .sheet(item: $startupSheet) { sheet in
             startupSheetContent(sheet)
         }
+        .onChange(of: startupSheet?.id) { _, sheetID in
+            guard sheetID == nil else {
+                return
+            }
+
+            recoverActiveShoppingSessionIfNeeded()
+        }
         .onChange(of: geofenceRefreshSignature) {
             refreshShoppingGeofences()
             refreshNearbyOpportunities()
@@ -100,6 +111,38 @@ struct ContentView: View {
             refreshShoppingGeofences()
             refreshNearbyOpportunities()
             locationManager.checkSmartNearbyDetection(reason: "app active")
+            recoverActiveShoppingSessionIfNeeded()
+        }
+    }
+
+    private func recoverActiveShoppingSessionIfNeeded() {
+        guard !hasCompletedActiveSessionLaunchRecovery,
+              !isCheckingActiveSessionLaunchRecovery,
+              startupSheet == nil,
+              scenePhase == .active else {
+            return
+        }
+
+        isCheckingActiveSessionLaunchRecovery = true
+
+        Task { @MainActor in
+            let settings = await UNUserNotificationCenter.current().notificationSettings()
+            isCheckingActiveSessionLaunchRecovery = false
+
+            guard !hasCompletedActiveSessionLaunchRecovery,
+                  startupSheet == nil,
+                  scenePhase == .active,
+                  settings.authorizationStatus != .notDetermined else {
+                return
+            }
+
+            hasCompletedActiveSessionLaunchRecovery = true
+
+            guard shoppingSessions.contains(where: \.isActive) else {
+                return
+            }
+
+            appStateManager.selectedTab = .shopping
         }
     }
 

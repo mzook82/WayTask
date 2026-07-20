@@ -318,16 +318,16 @@ struct GeofenceNotificationService {
         let distanceSuffix = payload.distanceMeters.map { " \(distanceText(for: $0))" } ?? ""
 
         if itemCount == 1 {
-            return "\(payload.itemNames[0]) may be available here.\(distanceSuffix)"
+            return "\(payload.itemNames[0]) is likely here. Availability is estimated.\(distanceSuffix)"
         }
 
         if itemCount > 1 {
             let visibleNames = payload.itemNames.prefix(2).joined(separator: ", ")
             let listSuffix = itemCount > 2 ? ", and more." : "."
-            return "\(itemCount) items may be available here: \(visibleNames)\(listSuffix)\(distanceSuffix)"
+            return "\(itemCount) items are likely here: \(visibleNames)\(listSuffix) Availability is estimated. Some items may require another store.\(distanceSuffix)"
         }
 
-        return "Your shopping list may have a match here.\(distanceSuffix)"
+        return "Recommended Store. Availability is estimated.\(distanceSuffix)"
     }
 
     private func distanceText(for distance: CLLocationDistance) -> String {

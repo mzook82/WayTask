@@ -9,6 +9,11 @@ final class ShoppingSession {
     var isActive: Bool
     var itemIDListRawValue: String
     var collectedItemIDListRawValue: String
+    var shoppingListID: UUID?
+    var selectedStoreID: UUID?
+    var selectedStoreName: String?
+    var selectedStoreLatitude: Double?
+    var selectedStoreLongitude: Double?
 
     init(
         id: UUID = UUID(),
@@ -16,7 +21,12 @@ final class ShoppingSession {
         finishedAt: Date? = nil,
         isActive: Bool = true,
         itemIDs: [UUID] = [],
-        collectedItemIDs: [UUID] = []
+        collectedItemIDs: [UUID] = [],
+        shoppingListID: UUID? = nil,
+        selectedStoreID: UUID? = nil,
+        selectedStoreName: String? = nil,
+        selectedStoreLatitude: Double? = nil,
+        selectedStoreLongitude: Double? = nil
     ) {
         self.id = id
         self.startedAt = startedAt
@@ -24,6 +34,11 @@ final class ShoppingSession {
         self.isActive = isActive
         self.itemIDListRawValue = Self.encode(itemIDs)
         self.collectedItemIDListRawValue = Self.encode(collectedItemIDs)
+        self.shoppingListID = shoppingListID
+        self.selectedStoreID = selectedStoreID
+        self.selectedStoreName = selectedStoreName
+        self.selectedStoreLatitude = selectedStoreLatitude
+        self.selectedStoreLongitude = selectedStoreLongitude
     }
 
     var itemIDs: [UUID] {

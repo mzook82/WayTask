@@ -178,6 +178,8 @@ struct MainMapView: View {
                     MapBottomSheet(
                         store: mapViewModel.selectedStore,
                         distanceText: selectedStoreDistanceText,
+                        likelyItemNames: selectedStoreCoverage?.matchedItems.map(\.name) ?? [],
+                        otherItemNames: selectedStoreOtherItemNames,
                         canOpenItems: mapViewModel.selectedStore?.isSavedLocation == true,
                         onNavigate: navigateToSelectedStore,
                         onWebsite: openSelectedStoreWebsite,
@@ -288,11 +290,44 @@ struct MainMapView: View {
         }
 
         guard let coverage = appStateManager.shoppingTripCoverages.first else {
-            return "Trip mode active - finding the best match for your list."
+            return "Trip mode active - finding a recommended store for your list."
         }
 
-        let totalItemCount = max(coverage.matchedItemCount + coverage.missingItemCount, 1)
-        return "Best match for your trip • Covers \(coverage.matchedItemCount)/\(totalItemCount) \(coverage.group.displayName.lowercased()) items"
+        let totalItemCount = appStateManager.shoppingPlan?.items.count ?? coverage.matchedItemCount
+        return "\(recommendationTitle(for: coverage.group)) • \(coverage.matchedItemCount) of \(totalItemCount) shopping list \(totalItemCount == 1 ? "item is" : "items are") likely here • Availability is estimated. Some items may require another store."
+    }
+
+    private var selectedStoreCoverage: StoreCoverage? {
+        guard let selectedStoreID = mapViewModel.selectedStoreID else {
+            return nil
+        }
+
+        return appStateManager.shoppingTripCoverages.first { $0.store.id == selectedStoreID }
+    }
+
+    private var selectedStoreOtherItemNames: [String] {
+        guard let coverage = selectedStoreCoverage,
+              let planItems = appStateManager.shoppingPlan?.items else {
+            return []
+        }
+
+        let likelyItemIDs = Set(coverage.matchedItems.map(\.id))
+        return planItems.filter { !likelyItemIDs.contains($0.id) }.map(\.name)
+    }
+
+    private func recommendationTitle(for group: ShoppingIntentGroup) -> String {
+        switch group {
+        case .grocery:
+            return "Recommended Grocery Store"
+        case .electronics:
+            return "Recommended Electronics Store"
+        case .pet:
+            return "Recommended Pet Store"
+        case .pharmacy:
+            return "Recommended Pharmacy"
+        case .other:
+            return "Recommended Store"
+        }
     }
 
     private var mapSignatures: [String] {

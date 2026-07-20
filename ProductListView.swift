@@ -72,7 +72,7 @@ struct ProductListView: View {
                 BuyingOptionsSheet(
                     options: appStateManager.buyingOptions,
                     tripCoverages: appStateManager.shoppingTripCoverages,
-                    activeTripItemCount: activeShoppingItems.count,
+                    activeTripItems: activeShoppingItems,
                     isRefreshing: isRefreshingBuyingOptions,
                     onRefresh: refreshCurrentBuyingOptions,
                     onViewOnMap: { _ in
@@ -205,7 +205,7 @@ struct ProductListView: View {
                         ContentUnavailableView(
                             "No nearby opportunities",
                             systemImage: "bell",
-                            description: Text("WayTask will surface nearby shopping matches here when they are relevant.")
+                            description: Text("WayTask will surface nearby recommended stores here when they are relevant.")
                         )
                         .foregroundStyle(WayTaskDesign.primaryText)
                         .listRowBackground(Color.clear)

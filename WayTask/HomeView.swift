@@ -4,7 +4,6 @@ import SwiftData
 import SwiftUI
 
 struct HomeView: View {
-    @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var appStateManager: AppStateManager
     @EnvironmentObject private var locationManager: LocationManager
 
@@ -23,7 +22,6 @@ struct HomeView: View {
     private let buyingOptionsService = BuyingOptionsService()
     private let intentMatcher = ShoppingIntentMatcher()
     private let shoppingTripPlanningService = ShoppingTripService()
-    private let shoppingSessionService = ShoppingSessionService()
 
     var body: some View {
         NavigationStack {
@@ -137,34 +135,24 @@ struct HomeView: View {
                 }
             }
 
-            Text("\(activeItemCount) \(activeItemCount == 1 ? "item" : "items") to buy")
+            Text("\(homeShoppingItemCount) \(homeShoppingItemCount == 1 ? "item" : "items") to buy")
                 .font(WayTaskDesign.Typography.title)
                 .foregroundStyle(WayTaskDesign.primaryText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.82)
 
             if let bestCoverage {
-                HStack(alignment: .center, spacing: WayTaskDesign.Spacing.md) {
-                    WayTaskCoverageRing(progress: bestCoverage.coverageScore, size: 70, lineWidth: 7)
-
-                    VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.sm) {
-                        Text("\(bestCoverage.store.title) - best store")
-                            .font(WayTaskDesign.Typography.headline)
-                            .foregroundStyle(WayTaskDesign.primaryText)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.78)
-
-                        WayTaskBadge(title: bestCoverageItemsText, systemImage: "basket.fill", tone: .neutral)
-
-                        if let distance = bestCoverage.distance {
-                            WayTaskBadge(title: distanceText(for: distance), systemImage: "location", tone: .neutral)
-                        }
-
-                        WayTaskBadge(title: "ETA unavailable", systemImage: "clock", tone: .neutral)
-                    }
-
-                    Spacer(minLength: 0)
-                }
+                WayTaskRecommendationCard(
+                    recommendationTitle: recommendationTitle(for: bestCoverage.group),
+                    storeName: bestCoverage.store.title,
+                    likelyItemNames: bestCoverage.matchedItems.map(\.name),
+                    otherItemNames: [],
+                    totalItemCount: homePlanItems.count,
+                    distanceText: bestCoverage.distance.map(distanceText(for:)),
+                    isHighlighted: true,
+                    isEmbedded: true,
+                    showsItemDetails: false
+                )
             } else {
                 homePlanStatusBlock
             }
@@ -173,7 +161,7 @@ struct HomeView: View {
                 HStack {
                     Text("Trip progress")
                     Spacer()
-                    Text("\(collectedCount) of \(max(activeItemCount, collectedCount)) collected")
+                    Text("\(collectedCount) of \(homeShoppingTotalCount) collected")
                 }
                 .font(WayTaskDesign.Typography.caption.weight(.semibold))
                 .foregroundStyle(WayTaskDesign.secondaryText)
@@ -229,7 +217,7 @@ struct HomeView: View {
 
     private var bestShoppingPlanSection: some View {
         VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.sm) {
-            WayTaskSectionHeader(title: "Best shopping plan", actionTitle: "See all") {
+            WayTaskSectionHeader(title: "Recommended stores", actionTitle: "See all") {
                 appStateManager.selectedTab = .shopping
             }
 
@@ -238,13 +226,15 @@ struct HomeView: View {
             } else {
                 VStack(spacing: WayTaskDesign.Spacing.sm) {
                     ForEach(planRows) { row in
-                        WayTaskStoreCard(
-                            title: row.storeName,
-                            subtitle: row.subtitle,
+                        WayTaskRecommendationCard(
+                            recommendationTitle: row.recommendationTitle,
+                            storeName: row.storeName,
+                            likelyItemNames: row.likelyItemNames,
+                            otherItemNames: [],
+                            totalItemCount: row.totalItemCount,
                             distanceText: row.distanceText,
-                            coverage: row.coverage,
-                            confidenceText: row.confidenceText,
-                            isBestMatch: row.isBestMatch
+                            isHighlighted: row.isHighlighted,
+                            showsItemDetails: false
                         ) {
                             appStateManager.selectedTab = .shopping
                         }
@@ -396,6 +386,14 @@ struct HomeView: View {
         activeItems.count
     }
 
+    private var homeShoppingItemCount: Int {
+        activeSession?.remainingItemCount ?? activeItemCount
+    }
+
+    private var homeShoppingTotalCount: Int {
+        activeSession?.itemIDs.count ?? activeItemCount
+    }
+
     private var activeSession: ShoppingSession? {
         shoppingSessions
             .filter(\.isActive)
@@ -419,13 +417,23 @@ struct HomeView: View {
         appStateManager.shoppingPlanState.isReady ? appStateManager.shoppingPlan?.bestCoverage : nil
     }
 
-    private var bestCoverageItemsText: String {
-        guard let bestCoverage else {
-            return "0/0 items"
-        }
+    private var homePlanItems: [ShoppingItem] {
+        appStateManager.shoppingPlan?.items ?? activeItems
+    }
 
-        let totalItemCount = bestCoverage.matchedItemCount + bestCoverage.missingItemCount
-        return "\(bestCoverage.matchedItemCount)/\(totalItemCount) items"
+    private func recommendationTitle(for group: ShoppingIntentGroup) -> String {
+        switch group {
+        case .grocery:
+            return "Recommended Grocery Store"
+        case .electronics:
+            return "Recommended Electronics Store"
+        case .pet:
+            return "Recommended Pet Store"
+        case .pharmacy:
+            return "Recommended Pharmacy"
+        case .other:
+            return "Recommended Store"
+        }
     }
 
     private var shoppingListSummaries: [HomeShoppingListSummary] {
@@ -495,11 +503,11 @@ struct HomeView: View {
         cachedRecentProductCards
     }
 
-    private var homeCanStartShopping: Bool {
-        appStateManager.shoppingPlanState.isReady && bestCoverage != nil && activeItemCount > 0
-    }
-
     private var homePrimaryActionTitle: String {
+        if activeSession != nil {
+            return "Resume Shopping"
+        }
+
         switch appStateManager.shoppingPlanState {
         case .generating:
             return "Planning..."
@@ -513,6 +521,10 @@ struct HomeView: View {
     }
 
     private var homePrimaryActionImage: String? {
+        if activeSession != nil {
+            return "cart.fill"
+        }
+
         switch appStateManager.shoppingPlanState {
         case .generating:
             return "hourglass"
@@ -526,7 +538,7 @@ struct HomeView: View {
     }
 
     private var isHomePrimaryDisabled: Bool {
-        appStateManager.shoppingPlanState.isGenerating
+        activeSession == nil && appStateManager.shoppingPlanState.isGenerating
     }
 
     private var homePlanStatusTitle: String {
@@ -603,20 +615,21 @@ struct HomeView: View {
     }
 
     private func refreshPlanRowsCache() {
-        guard appStateManager.shoppingPlanState.isReady else {
+        guard appStateManager.shoppingPlanState.isReady,
+              let plan = appStateManager.shoppingPlan else {
             cachedPlanRows = []
             return
         }
 
-        cachedPlanRows = (appStateManager.shoppingPlan?.shoppingTripCoverages ?? []).prefix(3).enumerated().map { index, coverage in
-            HomePlanRow(
+        cachedPlanRows = plan.shoppingTripCoverages.prefix(3).enumerated().map { index, coverage in
+            return HomePlanRow(
                 id: coverage.id,
                 storeName: coverage.store.title,
-                subtitle: "\(coverage.matchedItemCount)/\(coverage.matchedItemCount + coverage.missingItemCount) items - \(coverage.group.displayName)",
+                recommendationTitle: recommendationTitle(for: coverage.group),
+                likelyItemNames: coverage.matchedItems.map(\.name),
+                totalItemCount: plan.items.count,
                 distanceText: coverage.distance.map(distanceText(for:)),
-                coverage: coverage.coverageScore,
-                confidenceText: coverage.ranking.confidenceLabel,
-                isBestMatch: index == 0
+                isHighlighted: index == 0
             )
         }
     }
@@ -717,22 +730,17 @@ struct HomeView: View {
     }
 
     private func handleHomePrimaryAction() {
+        if activeSession != nil {
+            appStateManager.selectedTab = .shopping
+            return
+        }
+
         if activeItemCount == 0 {
             appStateManager.selectedTab = .products
             return
         }
 
-        guard homeCanStartShopping else {
-            appStateManager.selectedTab = .shopping
-            return
-        }
-
-        do {
-            try shoppingSessionService.startShopping(with: activeItems, in: modelContext)
-            appStateManager.selectedTab = .shopping
-        } catch {
-            assertionFailure("Failed to start shopping session: \(error.localizedDescription)")
-        }
+        appStateManager.selectedTab = .shopping
     }
 
     private func savedStoresForPlanning() -> [MapStore] {
@@ -776,11 +784,11 @@ private struct HomeShoppingListSummary: Identifiable {
 private struct HomePlanRow: Identifiable {
     let id: String
     let storeName: String
-    let subtitle: String
+    let recommendationTitle: String
+    let likelyItemNames: [String]
+    let totalItemCount: Int
     let distanceText: String?
-    let coverage: Double
-    let confidenceText: String
-    let isBestMatch: Bool
+    let isHighlighted: Bool
 }
 
 private struct HomeProductCardData: Identifiable {

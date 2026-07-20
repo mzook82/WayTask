@@ -1,4 +1,5 @@
 import CoreLocation
+import MapKit
 import SwiftData
 import SwiftUI
 
@@ -18,6 +19,9 @@ struct ShoppingWorkspaceView: View {
     @State private var searchText = ""
     @State private var isShowingPlanSheet = false
     @State private var isShowingProductChooser = false
+    @State private var selectedStoreID: UUID?
+    @State private var shoppingFlowErrorMessage = ""
+    @State private var isShowingShoppingFlowError = false
     @State private var cachedRecommendedStoreRows: [ShoppingWorkspaceStoreRow] = []
     @State private var cachedGroupedProductRows: [ShoppingWorkspaceGroup] = []
     @State private var planningElapsedSeconds = 0
@@ -37,23 +41,30 @@ struct ShoppingWorkspaceView: View {
                 WayTaskDesign.background
                     .ignoresSafeArea()
 
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xl) {
-                        header
-                        listSelector
-                        chooseProductsPanel
-                        summaryCard
-                        recommendedStoresSection
-                        coverageCardsSection
-                        groupedProductsSection
+                if let activeSession {
+                    activeShoppingContent(for: activeSession)
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xl) {
+                            header
+                            listSelector
+                            chooseProductsPanel
+                            recommendedStoresSection
+                            coverageCardsSection
+                            groupedProductsSection
+                        }
+                        .padding(.horizontal, WayTaskDesign.Spacing.lg)
+                        .padding(.top, WayTaskDesign.Spacing.md)
+                        .padding(.bottom, 118)
                     }
-                    .padding(.horizontal, WayTaskDesign.Spacing.lg)
-                    .padding(.top, WayTaskDesign.Spacing.md)
-                    .padding(.bottom, 118)
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                startShoppingBar
+                if let activeSession {
+                    activeShoppingBar(for: activeSession)
+                } else {
+                    startShoppingBar
+                }
             }
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $isShowingPlanSheet) {
@@ -78,11 +89,17 @@ struct ShoppingWorkspaceView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
             }
+            .alert("Shopping", isPresented: $isShowingShoppingFlowError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(shoppingFlowErrorMessage)
+            }
             .onAppear {
                 syncSelectedListIfNeeded()
                 refreshShoppingPresentationCache()
             }
             .onChange(of: appStateManager.shoppingPlan?.id) {
+                selectedStoreID = nil
                 refreshRecommendedStoreRowsCache()
             }
             .onChange(of: appStateManager.shoppingPlanState) { _, state in
@@ -95,6 +112,9 @@ struct ShoppingWorkspaceView: View {
             .onChange(of: searchText) {
                 refreshGroupedProductRowsCache()
             }
+            .onChange(of: selectedListID) {
+                refreshShoppingPresentationCache()
+            }
             .onChange(of: shoppingListEntrySignature) {
                 syncSelectedListIfNeeded()
                 refreshShoppingPresentationCache()
@@ -106,6 +126,174 @@ struct ShoppingWorkspaceView: View {
         }
         .onDisappear {
             stopPlanningTimer()
+        }
+    }
+
+    private func activeShoppingContent(for session: ShoppingSession) -> some View {
+        let sessionItems = shoppingSessionItems(for: session)
+        let sessionItemIDs = Set(session.itemIDs)
+        let collectedCount = session.collectedItemIDs.filter { sessionItemIDs.contains($0) }.count
+        let totalCount = session.itemIDs.count
+        let remainingCount = max(totalCount - collectedCount, 0)
+        let progress = totalCount == 0 ? 0 : Double(collectedCount) / Double(totalCount)
+
+        return ScrollView(showsIndicators: false) {
+            LazyVStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xl) {
+                WayTaskScreenHeader(
+                    title: "Shopping Mode",
+                    subtitle: "\(remainingCount) remaining - \(collectedCount)/\(totalCount) collected",
+                    trailingIcons: ["cart.fill"]
+                )
+
+                VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.md) {
+                    HStack(alignment: .center, spacing: WayTaskDesign.Spacing.md) {
+                        WayTaskProgressRing(progress: progress, size: 62, lineWidth: 7)
+
+                        VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xxs) {
+                            Text("Active shopping session")
+                                .font(WayTaskDesign.Typography.headline)
+                                .foregroundStyle(WayTaskDesign.primaryText)
+
+                            Text(totalCount == 0 ? "No session products are available on this device." : "Collect products as you shop.")
+                                .font(WayTaskDesign.Typography.caption)
+                                .foregroundStyle(WayTaskDesign.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Spacer(minLength: WayTaskDesign.Spacing.xs)
+                    }
+
+                    HStack(spacing: WayTaskDesign.Spacing.sm) {
+                        WayTaskMetricCard(value: "\(collectedCount)", title: "Collected", systemImage: "checkmark.circle.fill")
+                        WayTaskMetricCard(value: "\(remainingCount)", title: "Remaining", systemImage: "list.bullet")
+                        WayTaskMetricCard(value: "\(totalCount)", title: "Total", systemImage: "basket.fill")
+                    }
+                }
+                .padding(WayTaskDesign.Spacing.md)
+                .wayTaskGlassCard(highlighted: true)
+
+                activeSessionStoreCard(for: session)
+                activeSessionItemsSection(for: session, items: sessionItems)
+            }
+            .padding(.horizontal, WayTaskDesign.Spacing.lg)
+            .padding(.top, WayTaskDesign.Spacing.md)
+            .padding(.bottom, 118)
+        }
+    }
+
+    private func activeSessionStoreCard(for session: ShoppingSession) -> some View {
+        VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.sm) {
+            WayTaskSectionHeader(title: "Selected store")
+
+            HStack(alignment: .top, spacing: WayTaskDesign.Spacing.md) {
+                Image(systemName: "storefront.fill")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.accent)
+                    .frame(width: 48, height: 48)
+                    .background(WayTaskDesign.accent.opacity(0.16))
+                    .clipShape(RoundedRectangle(cornerRadius: WayTaskDesign.Radius.sm, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(session.selectedStoreName ?? "Store unavailable")
+                        .font(WayTaskDesign.Typography.headline)
+                        .foregroundStyle(WayTaskDesign.primaryText)
+
+                    Text(canNavigate(to: session) ? "Ready to open turn-by-turn directions in Apple Maps." : "Navigation is unavailable for this session. You can still collect products and finish normally.")
+                        .font(WayTaskDesign.Typography.caption)
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: WayTaskDesign.Spacing.xs)
+            }
+            .padding(WayTaskDesign.Spacing.md)
+            .wayTaskGlassCard(cornerRadius: WayTaskDesign.Radius.lg)
+        }
+    }
+
+    private func activeSessionItemsSection(for session: ShoppingSession, items sessionItems: [ShoppingItem]) -> some View {
+        VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.sm) {
+            WayTaskSectionHeader(title: "Shopping list", subtitle: "Tap a product to collect or undo")
+
+            if sessionItems.isEmpty {
+                WayTaskEmptyState(
+                    title: "No session products available",
+                    message: "The saved session can still be finished, but its products are no longer available on this device.",
+                    systemImage: "basket"
+                )
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(sessionItems) { item in
+                        let isCollected = session.isCollected(item)
+
+                        Button {
+                            toggleCollected(item, in: session)
+                        } label: {
+                            HStack(spacing: WayTaskDesign.Spacing.sm) {
+                                Image(systemName: isCollected ? "checkmark.circle.fill" : "circle")
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(isCollected ? WayTaskDesign.accent : WayTaskDesign.tertiaryText)
+                                    .frame(width: 44, height: 44)
+
+                                WayTaskProductThumbnail(
+                                    data: item.imageData,
+                                    url: item.imageURL,
+                                    size: 42,
+                                    cornerRadius: WayTaskDesign.Radius.sm
+                                )
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.name)
+                                        .font(WayTaskDesign.Typography.subheadline.weight(.semibold))
+                                        .foregroundStyle(WayTaskDesign.primaryText)
+                                        .strikethrough(isCollected)
+                                        .lineLimit(1)
+
+                                    Text(isCollected ? "Collected" : (item.brand ?? item.category ?? "Ready to collect"))
+                                        .font(WayTaskDesign.Typography.caption)
+                                        .foregroundStyle(WayTaskDesign.tertiaryText)
+                                        .lineLimit(1)
+                                }
+
+                                Spacer(minLength: WayTaskDesign.Spacing.xs)
+                            }
+                            .contentShape(Rectangle())
+                            .padding(.vertical, WayTaskDesign.Spacing.xs)
+                            .opacity(isCollected ? 0.58 : 1)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(isCollected ? "Mark \(item.name) remaining" : "Mark \(item.name) collected")
+                        .accessibilityValue(isCollected ? "Collected" : "Remaining")
+
+                        if item.id != sessionItems.last?.id {
+                            Divider()
+                                .overlay(WayTaskDesign.surfaceBorder)
+                        }
+                    }
+                }
+                .padding(.horizontal, WayTaskDesign.Spacing.md)
+                .wayTaskGlassCard(cornerRadius: WayTaskDesign.Radius.xl)
+            }
+        }
+    }
+
+    private func activeShoppingBar(for session: ShoppingSession) -> some View {
+        HStack(spacing: WayTaskDesign.Spacing.sm) {
+            WayTaskSecondaryButton("Navigate", systemImage: "arrow.triangle.turn.up.right.diamond.fill", isDisabled: !canNavigate(to: session)) {
+                navigateToSelectedStore(for: session)
+            }
+
+            WayTaskPrimaryButton("Finish Shopping", systemImage: "checkmark.circle.fill") {
+                finishShopping(session)
+            }
+        }
+        .padding(.horizontal, WayTaskDesign.Spacing.lg)
+        .padding(.vertical, WayTaskDesign.Spacing.sm)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(WayTaskDesign.surfaceBorder)
+                .frame(height: 1)
         }
     }
 
@@ -213,17 +401,24 @@ struct ShoppingWorkspaceView: View {
                     action: actionTitle == nil ? nil : { handlePlanFailureAction(actionTitle) }
                 )
             case .ready where recommendedStoreRows.first != nil:
-                if let bestStore = recommendedStoreRows.first {
-                    WayTaskStoreCard(
-                        title: bestStore.storeName,
-                        subtitle: bestStore.subtitle,
-                        distanceText: bestStore.distanceText,
-                        coverage: bestStore.coverage,
-                        confidenceText: bestStore.confidenceText,
-                        isBestMatch: true,
-                        actionTitle: "View Plan"
+                if let recommendedStore = recommendedStoreRows.first {
+                    WayTaskRecommendationCard(
+                        recommendationTitle: recommendedStore.recommendationTitle,
+                        storeName: recommendedStore.storeName,
+                        likelyItemNames: recommendedStore.likelyItemNames,
+                        otherItemNames: recommendedStore.otherItemNames,
+                        totalItemCount: recommendedStore.totalItemCount,
+                        hasProductCoverageEstimate: recommendedStore.hasProductCoverageEstimate,
+                        distanceText: recommendedStore.distanceText,
+                        isHighlighted: recommendedStore.isPrimaryRecommendation,
+                        isSelected: isStoreSelected(recommendedStore),
+                        actionTitle: isStoreSelected(recommendedStore) ? "Selected Store" : "Select Store"
                     ) {
-                        isShowingPlanSheet = true
+                        selectStore(recommendedStore)
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: WayTaskDesign.Radius.xl, style: .continuous)
+                            .stroke(isStoreSelected(recommendedStore) ? WayTaskDesign.accent : Color.clear, lineWidth: 2)
                     }
                 }
             default:
@@ -304,19 +499,27 @@ struct ShoppingWorkspaceView: View {
 
         if !additionalRows.isEmpty {
             VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.sm) {
-                WayTaskSectionHeader(title: "Coverage cards")
+                WayTaskSectionHeader(title: "Other recommended stores")
 
                 VStack(spacing: WayTaskDesign.Spacing.sm) {
                     ForEach(additionalRows) { row in
-                        WayTaskStoreCard(
-                            title: row.storeName,
-                            subtitle: row.subtitle,
+                        WayTaskRecommendationCard(
+                            recommendationTitle: row.recommendationTitle,
+                            storeName: row.storeName,
+                            likelyItemNames: row.likelyItemNames,
+                            otherItemNames: row.otherItemNames,
+                            totalItemCount: row.totalItemCount,
+                            hasProductCoverageEstimate: row.hasProductCoverageEstimate,
                             distanceText: row.distanceText,
-                            coverage: row.coverage,
-                            confidenceText: row.confidenceText,
-                            isBestMatch: false
+                            isHighlighted: row.isPrimaryRecommendation,
+                            isSelected: isStoreSelected(row),
+                            actionTitle: isStoreSelected(row) ? "Selected Store" : "Select Store"
                         ) {
-                            isShowingPlanSheet = true
+                            selectStore(row)
+                        }
+                        .overlay {
+                            RoundedRectangle(cornerRadius: WayTaskDesign.Radius.xl, style: .continuous)
+                                .stroke(isStoreSelected(row) ? WayTaskDesign.accent : Color.clear, lineWidth: 2)
                         }
                     }
                 }
@@ -374,7 +577,7 @@ struct ShoppingWorkspaceView: View {
 
             VStack(spacing: 0) {
                 ForEach(group.items) { item in
-                    HStack(spacing: WayTaskDesign.Spacing.sm) {
+                    HStack(alignment: .top, spacing: WayTaskDesign.Spacing.sm) {
                         Button {
                             toggleEntryChecked(item)
                         } label: {
@@ -394,57 +597,60 @@ struct ShoppingWorkspaceView: View {
                             cornerRadius: WayTaskDesign.Radius.sm
                         )
 
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.name)
-                                .font(WayTaskDesign.Typography.subheadline.weight(.semibold))
-                                .foregroundStyle(WayTaskDesign.primaryText)
-                                .strikethrough(item.isChecked)
-                                .lineLimit(1)
+                        VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xs) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.name)
+                                    .font(WayTaskDesign.Typography.subheadline.weight(.semibold))
+                                    .foregroundStyle(WayTaskDesign.primaryText)
+                                    .strikethrough(item.isChecked)
+                                    .lineLimit(2)
 
-                            Text(item.subtitle)
-                                .font(WayTaskDesign.Typography.caption)
-                                .foregroundStyle(WayTaskDesign.tertiaryText)
-                                .lineLimit(1)
-                        }
-
-                        Spacer(minLength: WayTaskDesign.Spacing.xs)
-
-                        HStack(spacing: 4) {
-                            Button {
-                                adjustQuantity(for: item, delta: -1)
-                            } label: {
-                                Image(systemName: "minus.circle")
-                                    .frame(width: 44, height: 44)
+                                Text(item.subtitle)
+                                    .font(WayTaskDesign.Typography.caption)
+                                    .foregroundStyle(WayTaskDesign.tertiaryText)
+                                    .lineLimit(1)
                             }
-                            .buttonStyle(.plain)
-                            .disabled(item.quantity <= 1)
-                            .opacity(item.quantity <= 1 ? 0.35 : 1)
-                            .accessibilityLabel("Decrease \(item.name) quantity to \(quantityText(max(1, item.quantity - 1)))")
 
-                            Text(quantityText(item.quantity))
-                                .font(WayTaskDesign.Typography.captionStrong)
-                                .foregroundStyle(WayTaskDesign.secondaryText)
-                                .frame(minWidth: 24)
+                            HStack(spacing: 4) {
+                                Button {
+                                    adjustQuantity(for: item, delta: -1)
+                                } label: {
+                                    Image(systemName: "minus.circle")
+                                        .frame(width: 44, height: 44)
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(item.quantity <= 1)
+                                .opacity(item.quantity <= 1 ? 0.35 : 1)
+                                .accessibilityLabel("Decrease \(item.name) quantity to \(quantityText(max(1, item.quantity - 1)))")
 
-                            Button {
-                                adjustQuantity(for: item, delta: 1)
-                            } label: {
-                                Image(systemName: "plus.circle")
-                                    .frame(width: 44, height: 44)
+                                Text(quantityText(item.quantity))
+                                    .font(WayTaskDesign.Typography.captionStrong)
+                                    .foregroundStyle(WayTaskDesign.secondaryText)
+                                    .frame(minWidth: 24)
+
+                                Button {
+                                    adjustQuantity(for: item, delta: 1)
+                                } label: {
+                                    Image(systemName: "plus.circle")
+                                        .frame(width: 44, height: 44)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Increase \(item.name) quantity to \(quantityText(item.quantity + 1))")
+
+                                Spacer(minLength: WayTaskDesign.Spacing.xs)
+
+                                Button {
+                                    removeEntry(item)
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .foregroundStyle(WayTaskDesign.Colors.danger)
+                                        .frame(width: 44, height: 44)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Remove \(item.name) from Shopping")
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Increase \(item.name) quantity to \(quantityText(item.quantity + 1))")
                         }
-
-                        Button {
-                            removeEntry(item)
-                        } label: {
-                            Image(systemName: "trash")
-                                .foregroundStyle(WayTaskDesign.Colors.danger)
-                                .frame(width: 44, height: 44)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Remove \(item.name) from Shopping")
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .padding(.vertical, WayTaskDesign.Spacing.xs)
                     .opacity(item.isChecked ? 0.58 : 1)
@@ -500,29 +706,20 @@ struct ShoppingWorkspaceView: View {
                     )
                 case .ready where !recommendedStoreRows.isEmpty:
                     ForEach(recommendedStoreRows) { row in
-                        HStack(spacing: WayTaskDesign.Spacing.md) {
-                            if let coverage = row.coverage {
-                                WayTaskCoverageRing(progress: coverage, size: 52, lineWidth: 6)
-                            }
-
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(row.storeName)
-                                    .font(WayTaskDesign.Typography.headline)
-                                    .foregroundStyle(WayTaskDesign.primaryText)
-                                    .lineLimit(1)
-
-                                Text(row.subtitle)
-                                    .font(WayTaskDesign.Typography.caption)
-                                    .foregroundStyle(WayTaskDesign.secondaryText)
-                                    .lineLimit(2)
-                            }
-
-                            Spacer()
-
-                            WayTaskBadge(title: row.confidenceText, tone: row.isBestMatch ? .accent : .neutral)
+                        WayTaskRecommendationCard(
+                            recommendationTitle: row.recommendationTitle,
+                            storeName: row.storeName,
+                            likelyItemNames: row.likelyItemNames,
+                            otherItemNames: row.otherItemNames,
+                            totalItemCount: row.totalItemCount,
+                            hasProductCoverageEstimate: row.hasProductCoverageEstimate,
+                            distanceText: row.distanceText,
+                            isHighlighted: row.isPrimaryRecommendation,
+                            isSelected: isStoreSelected(row),
+                            actionTitle: isStoreSelected(row) ? "Selected Store" : "Select Store"
+                        ) {
+                            selectStore(row)
                         }
-                        .padding(WayTaskDesign.Spacing.sm)
-                        .wayTaskGlassCard(cornerRadius: WayTaskDesign.Radius.md, highlighted: row.isBestMatch)
                     }
 
                     HStack(spacing: WayTaskDesign.Spacing.sm) {
@@ -531,7 +728,7 @@ struct ShoppingWorkspaceView: View {
                             openPlanOnMap()
                         }
 
-                        WayTaskPrimaryButton("Start Shopping", systemImage: "play.fill", isDisabled: !canViewMapPlan) {
+                        WayTaskPrimaryButton("Start Shopping", systemImage: "play.fill", isDisabled: !canStartShopping) {
                             isShowingPlanSheet = false
                             startShopping()
                         }
@@ -618,19 +815,43 @@ struct ShoppingWorkspaceView: View {
     }
 
     private var realBuyingOptionRows: [ShoppingWorkspaceStoreRow] {
-        appStateManager.buyingOptions
+        guard let plan = appStateManager.shoppingPlan else {
+            return []
+        }
+
+        var seenStoreIDs = Set<UUID>()
+        let matchedOptions = appStateManager.buyingOptions
             .filter(\.isDisplayableRealStore)
+            .compactMap { option -> (option: BuyingOption, store: MapStore)? in
+                let store = plan.stores.first {
+                    $0.sourceType == option.source &&
+                        $0.title.localizedCaseInsensitiveCompare(option.storeName) == .orderedSame
+                } ?? plan.stores.first {
+                    $0.title.localizedCaseInsensitiveCompare(option.storeName) == .orderedSame
+                }
+
+                guard let store, seenStoreIDs.insert(store.id).inserted else {
+                    return nil
+                }
+
+                return (option, store)
+            }
             .prefix(4)
+
+        return matchedOptions
             .enumerated()
-            .map { index, option in
+            .map { index, match in
                 ShoppingWorkspaceStoreRow(
-                    id: "option-\(option.source.rawValue)-\(option.optionType.rawValue)-\(option.storeName.lowercased())-\(index)",
-                    storeName: option.storeName,
-                    subtitle: option.subtitle,
-                    distanceText: option.distanceText,
-                    coverage: option.ranking.map { min(max($0.score / 100, 0), 1) },
-                    confidenceText: option.confidenceLabel ?? option.source.displayName,
-                    isBestMatch: index == 0
+                    id: "option-\(match.option.source.rawValue)-\(match.option.optionType.rawValue)-\(match.store.id.uuidString)",
+                    storeID: match.store.id,
+                    storeName: match.option.storeName,
+                    recommendationTitle: "Recommended Store",
+                    likelyItemNames: [],
+                    otherItemNames: plan.items.map(\.name),
+                    totalItemCount: plan.items.count,
+                    hasProductCoverageEstimate: false,
+                    distanceText: match.option.distanceText,
+                    isPrimaryRecommendation: index == 0
                 )
             }
     }
@@ -648,7 +869,16 @@ struct ShoppingWorkspaceView: View {
     }
 
     private var canStartShopping: Bool {
-        selectedShoppingListID != nil && !activeItems.isEmpty && canViewMapPlan
+        selectedShoppingListID != nil && selectedStore != nil && !activeItems.isEmpty && canViewMapPlan
+    }
+
+    private var selectedStore: MapStore? {
+        guard let selectedStoreID,
+              let plan = appStateManager.shoppingPlan else {
+            return nil
+        }
+
+        return plan.stores.first { $0.id == selectedStoreID }
     }
 
     private var bottomPrimaryTitle: String {
@@ -731,28 +961,64 @@ struct ShoppingWorkspaceView: View {
 
     private func refreshRecommendedStoreRowsCache() {
         guard isCurrentShoppingPlanForActiveItems else {
-            cachedRecommendedStoreRows = []
+            updateRecommendedStoreRows([])
             return
         }
 
-        let coverageRows = appStateManager.shoppingTripCoverages.prefix(4).enumerated().map { index, coverage in
-            ShoppingWorkspaceStoreRow(
+        var seenStoreIDs = Set<UUID>()
+        let uniqueCoverages = appStateManager.shoppingTripCoverages.compactMap { coverage -> StoreCoverage? in
+            guard seenStoreIDs.insert(coverage.store.id).inserted else {
+                return nil
+            }
+
+            return coverage
+        }
+        .prefix(4)
+
+        let coverageRows = uniqueCoverages.enumerated().map { index, coverage in
+            let planItems = appStateManager.shoppingPlan?.items ?? activeItems
+            let likelyItemIDs = Set(coverage.matchedItems.map(\.id))
+
+            return ShoppingWorkspaceStoreRow(
                 id: "coverage-\(coverage.id)",
+                storeID: coverage.store.id,
                 storeName: coverage.store.title,
-                subtitle: "\(coverage.matchedItemCount)/\(coverage.matchedItemCount + coverage.missingItemCount) items - \(coverage.group.displayName)",
+                recommendationTitle: recommendationTitle(for: coverage.group),
+                likelyItemNames: coverage.matchedItems.map(\.name),
+                otherItemNames: planItems.filter { !likelyItemIDs.contains($0.id) }.map(\.name),
+                totalItemCount: planItems.count,
+                hasProductCoverageEstimate: true,
                 distanceText: coverage.distance.map(distanceText(for:)),
-                coverage: coverage.coverageScore,
-                confidenceText: coverage.ranking.confidenceLabel,
-                isBestMatch: index == 0
+                isPrimaryRecommendation: index == 0
             )
         }
 
         if !coverageRows.isEmpty {
-            cachedRecommendedStoreRows = coverageRows
+            updateRecommendedStoreRows(coverageRows)
             return
         }
 
-        cachedRecommendedStoreRows = realBuyingOptionRows
+        updateRecommendedStoreRows(realBuyingOptionRows)
+    }
+
+    private func updateRecommendedStoreRows(_ rows: [ShoppingWorkspaceStoreRow]) {
+        cachedRecommendedStoreRows = rows
+
+        if let selectedStoreID,
+           rows.contains(where: { $0.storeID == selectedStoreID }) {
+            return
+        }
+
+        selectedStoreID = rows.first?.storeID
+    }
+
+    private func isStoreSelected(_ row: ShoppingWorkspaceStoreRow) -> Bool {
+        row.storeID == selectedStoreID
+    }
+
+    private func selectStore(_ row: ShoppingWorkspaceStoreRow) {
+        selectedStoreID = row.storeID
+        WayTaskHaptics.selection()
     }
 
     private var isCurrentShoppingPlanForActiveItems: Bool {
@@ -982,7 +1248,7 @@ struct ShoppingWorkspaceView: View {
             appStateManager.updateShoppingPlanGeneration(stage: .rankingOptions)
             guard !buyingOptions.isEmpty || !shoppingTripCoverages.isEmpty else {
                 failShoppingPlan(
-                    message: "No eligible stores matched the products in this list.",
+                    message: "No recommended stores were found for the products in this list.",
                     actionTitle: "Review Products"
                 )
                 return
@@ -1078,15 +1344,104 @@ struct ShoppingWorkspaceView: View {
     }
 
     private func startShopping() {
+        guard let shoppingListID = selectedShoppingListID else {
+            showShoppingFlowError("Choose a shopping list before starting.")
+            return
+        }
+
+        guard let selectedStore else {
+            showShoppingFlowError("Choose a recommended store before starting.")
+            return
+        }
+
         guard canStartShopping else {
+            showShoppingFlowError("The shopping plan is no longer current. Generate the plan again before starting.")
             return
         }
 
         do {
-            try shoppingSessionService.startShopping(with: activeItems, in: modelContext)
+            try shoppingSessionService.startShopping(
+                with: activeItems,
+                shoppingListID: shoppingListID,
+                selectedStore: selectedStore,
+                in: modelContext
+            )
+            isShowingPlanSheet = false
         } catch {
-            assertionFailure("Failed to start shopping session: \(error.localizedDescription)")
+            showShoppingFlowError("WayTask could not start shopping. \(error.localizedDescription)")
         }
+    }
+
+    private func shoppingSessionItems(for session: ShoppingSession) -> [ShoppingItem] {
+        let itemsByID = items.reduce(into: [UUID: ShoppingItem]()) { result, item in
+            result[item.id] = item
+        }
+
+        return session.itemIDs.compactMap { itemsByID[$0] }
+    }
+
+    private func toggleCollected(_ item: ShoppingItem, in session: ShoppingSession) {
+        do {
+            if session.isCollected(item) {
+                try shoppingSessionService.markItemRemaining(item, in: session, modelContext: modelContext)
+            } else {
+                try shoppingSessionService.markItemCollected(item, in: session, modelContext: modelContext)
+            }
+        } catch {
+            showShoppingFlowError("WayTask could not update this product. \(error.localizedDescription)")
+        }
+    }
+
+    private func finishShopping(_ session: ShoppingSession) {
+        do {
+            try shoppingSessionService.finishShopping(session, in: modelContext)
+            isShowingPlanSheet = false
+            selectedStoreID = nil
+            appStateManager.clearShoppingPlan()
+            refreshShoppingPresentationCache()
+        } catch {
+            showShoppingFlowError("WayTask could not finish this shopping session. \(error.localizedDescription)")
+        }
+    }
+
+    private func canNavigate(to session: ShoppingSession) -> Bool {
+        guard session.selectedStoreID != nil,
+              let storeName = session.selectedStoreName,
+              !storeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let latitude = session.selectedStoreLatitude,
+              let longitude = session.selectedStoreLongitude else {
+            return false
+        }
+
+        return CLLocationCoordinate2DIsValid(
+            CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        )
+    }
+
+    private func navigateToSelectedStore(for session: ShoppingSession) {
+        guard canNavigate(to: session),
+              let storeName = session.selectedStoreName,
+              let latitude = session.selectedStoreLatitude,
+              let longitude = session.selectedStoreLongitude else {
+            showShoppingFlowError("Navigation is unavailable because this session does not include a selected store location.")
+            return
+        }
+
+        let location = CLLocation(latitude: latitude, longitude: longitude)
+        let mapItem = MKMapItem(location: location, address: nil)
+        mapItem.name = storeName
+
+        let didOpen = mapItem.openInMaps(
+            launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving]
+        )
+        if !didOpen {
+            showShoppingFlowError("Apple Maps could not open directions to \(storeName). Please try again.")
+        }
+    }
+
+    private func showShoppingFlowError(_ message: String) {
+        shoppingFlowErrorMessage = message
+        isShowingShoppingFlowError = true
     }
 
     private var selectedShoppingEntries: [ShoppingListEntry] {
@@ -1182,6 +1537,21 @@ struct ShoppingWorkspaceView: View {
         }
     }
 
+    private func recommendationTitle(for group: ShoppingIntentGroup) -> String {
+        switch group {
+        case .grocery:
+            return "Recommended Grocery Store"
+        case .electronics:
+            return "Recommended Electronics Store"
+        case .pet:
+            return "Recommended Pet Store"
+        case .pharmacy:
+            return "Recommended Pharmacy"
+        case .other:
+            return "Recommended Store"
+        }
+    }
+
     private func distanceText(for distance: Double) -> String {
         if distance >= 1000 {
             return String(format: "%.1f km", distance / 1000)
@@ -1217,12 +1587,15 @@ private struct ShoppingWorkspaceListChip: Identifiable {
 
 private struct ShoppingWorkspaceStoreRow: Identifiable {
     let id: String
+    let storeID: UUID
     let storeName: String
-    let subtitle: String
+    let recommendationTitle: String
+    let likelyItemNames: [String]
+    let otherItemNames: [String]
+    let totalItemCount: Int
+    let hasProductCoverageEstimate: Bool
     let distanceText: String?
-    let coverage: Double?
-    let confidenceText: String
-    let isBestMatch: Bool
+    let isPrimaryRecommendation: Bool
 }
 
 private struct ShoppingWorkspaceGroup: Identifiable {

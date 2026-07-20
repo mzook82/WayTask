@@ -97,19 +97,37 @@ final class DiscoverViewModel: ObservableObject {
     }
 
     private func makeListItem(from store: ShoppingContextStore) -> DiscoverItem {
-        DiscoverItem(
+        let likelyItemNames = store.matchingItemNames
+        let likelyNames = Set(likelyItemNames.map { $0.lowercased() })
+        let otherItemNames = context.activeShoppingListItems
+            .filter { !$0.isCompleted && !likelyNames.contains($0.name.lowercased()) }
+            .map(\.name)
+
+        return DiscoverItem(
             title: store.name,
-            subtitle: store.matchingItemNames.isEmpty
-                ? "Nearby store from shopping context."
-                : "Matches: \(store.matchingItemNames.joined(separator: ", "))",
+            subtitle: recommendationSubtitle(
+                likelyItemNames: likelyItemNames,
+                otherItemNames: otherItemNames
+            ),
             category: .basedOnYourList,
             distance: "Nearby",
             systemImageName: "storefront.fill",
-            relevanceReason: "Suggested from matching shopping list items.",
+            relevanceReason: "Recommended Store. Availability is estimated. Some items may require another store.",
             sourceType: .shoppingContext,
             relatedStoreID: store.id,
             canOpenMap: true
         )
+    }
+
+    private func recommendationSubtitle(likelyItemNames: [String], otherItemNames: [String]) -> String {
+        let likelyText = likelyItemNames.isEmpty
+            ? "Likely here: no product-level estimate"
+            : "Likely here: \(likelyItemNames.prefix(3).joined(separator: ", "))"
+        let otherText = otherItemNames.isEmpty
+            ? "Other items: none"
+            : "Other items: \(otherItemNames.prefix(3).joined(separator: ", "))"
+
+        return "\(likelyText). \(otherText)."
     }
 
     private func listSubtitle(from context: ShoppingContext) -> String {

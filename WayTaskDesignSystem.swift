@@ -577,74 +577,148 @@ struct WayTaskCompactProductCard: View {
     }
 }
 
-struct WayTaskStoreCard: View {
-    let title: String
-    var subtitle: String?
+struct WayTaskRecommendationCard: View {
+    let recommendationTitle: String
+    let storeName: String
+    let likelyItemNames: [String]
+    let otherItemNames: [String]
+    let totalItemCount: Int
+    var hasProductCoverageEstimate = true
     var distanceText: String?
-    var coverage: Double?
-    var confidenceText: String?
-    var isBestMatch = false
+    var isHighlighted = false
+    var isSelected = false
+    var isEmbedded = false
+    var showsItemDetails = true
     var actionTitle: String?
     var action: (() -> Void)?
 
+    @ViewBuilder
     var body: some View {
+        if isEmbedded {
+            content
+        } else {
+            content
+                .padding(WayTaskDesign.Spacing.md)
+                .wayTaskGlassCard(highlighted: isHighlighted)
+        }
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.md) {
             HStack(alignment: .top, spacing: WayTaskDesign.Spacing.sm) {
                 ZStack {
                     RoundedRectangle(cornerRadius: WayTaskDesign.Radius.md, style: .continuous)
-                        .fill(isBestMatch ? WayTaskDesign.accentGradient : LinearGradient(colors: [WayTaskDesign.surfaceElevated, WayTaskDesign.surfaceElevated], startPoint: .top, endPoint: .bottom))
+                        .fill(isHighlighted ? WayTaskDesign.accentGradient : LinearGradient(colors: [WayTaskDesign.surfaceElevated, WayTaskDesign.surfaceElevated], startPoint: .top, endPoint: .bottom))
 
                     Image(systemName: "storefront.fill")
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(isBestMatch ? .white : WayTaskDesign.accent)
+                        .foregroundStyle(isHighlighted ? .white : WayTaskDesign.accent)
                 }
                 .frame(width: 52, height: 52)
 
                 VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xxs) {
-                    HStack(spacing: WayTaskDesign.Spacing.xs) {
-                        Text(title)
-                            .font(WayTaskDesign.Typography.headline)
-                            .foregroundStyle(WayTaskDesign.primaryText)
-                            .lineLimit(1)
+                    Text(recommendationTitle)
+                        .font(WayTaskDesign.Typography.captionStrong)
+                        .foregroundStyle(WayTaskDesign.accent)
 
-                        if isBestMatch {
-                            WayTaskBadge(title: "Best", systemImage: "sparkle", tone: .accent)
-                        }
-                    }
+                    Text(storeName)
+                        .font(WayTaskDesign.Typography.headline)
+                        .foregroundStyle(WayTaskDesign.primaryText)
+                        .lineLimit(1)
 
-                    if let subtitle {
-                        Text(subtitle)
-                            .font(WayTaskDesign.Typography.caption)
+                    if let distanceText {
+                        Label(distanceText, systemImage: "location")
+                            .font(WayTaskDesign.Typography.caption.weight(.semibold))
                             .foregroundStyle(WayTaskDesign.secondaryText)
-                            .lineLimit(2)
                     }
-
-                    HStack(spacing: WayTaskDesign.Spacing.xs) {
-                        if let distanceText {
-                            Label(distanceText, systemImage: "location")
-                        }
-
-                        if let confidenceText {
-                            Label(confidenceText, systemImage: "checkmark.seal")
-                        }
-                    }
-                    .font(WayTaskDesign.Typography.caption.weight(.semibold))
-                    .foregroundStyle(WayTaskDesign.secondaryText)
                 }
 
                 Spacer(minLength: WayTaskDesign.Spacing.xs)
 
-                if let coverage {
-                    WayTaskCoverageRing(progress: coverage, size: 54, lineWidth: 6)
+                if isSelected {
+                    WayTaskBadge(title: "Selected", systemImage: "checkmark", tone: .accent)
                 }
+            }
+
+            Text(coverageSummary)
+                .font(WayTaskDesign.Typography.subheadline.weight(.semibold))
+                .foregroundStyle(WayTaskDesign.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if showsItemDetails {
+                itemSection(
+                    title: "Likely here",
+                    itemNames: likelyItemNames,
+                    systemImage: "checkmark",
+                    emptyMessage: "No product-level estimate."
+                )
+
+                itemSection(
+                    title: "Other items",
+                    itemNames: otherItemNames,
+                    systemImage: "circle.fill",
+                    emptyMessage: "No other shopping list items."
+                )
+            }
+
+            HStack(alignment: .top, spacing: WayTaskDesign.Spacing.xs) {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(WayTaskDesign.secondaryText)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Availability is estimated.")
+                    Text("Some items may require another store.")
+                }
+                .font(WayTaskDesign.Typography.caption)
+                .foregroundStyle(WayTaskDesign.secondaryText)
             }
 
             if let actionTitle, let action {
                 WayTaskPrimaryButton(actionTitle, systemImage: "arrow.right", action: action)
             }
         }
-        .padding(WayTaskDesign.Spacing.md)
-        .wayTaskGlassCard(highlighted: isBestMatch)
+    }
+
+    private var coverageSummary: String {
+        guard hasProductCoverageEstimate else {
+            return "WayTask could not estimate which of your \(totalItemCount) shopping list \(totalItemCount == 1 ? "item is" : "items are") likely here."
+        }
+
+        let likelyCount = likelyItemNames.count
+        return "\(likelyCount) of \(totalItemCount) shopping list \(totalItemCount == 1 ? "item is" : "items are") likely here"
+    }
+
+    private func itemSection(
+        title: String,
+        itemNames: [String],
+        systemImage: String,
+        emptyMessage: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xs) {
+            Text(title)
+                .font(WayTaskDesign.Typography.captionStrong)
+                .foregroundStyle(WayTaskDesign.secondaryText)
+
+            if itemNames.isEmpty {
+                Text(emptyMessage)
+                    .font(WayTaskDesign.Typography.caption)
+                    .foregroundStyle(WayTaskDesign.tertiaryText)
+            } else {
+                ForEach(Array(itemNames.prefix(3).enumerated()), id: \.offset) { _, itemName in
+                    Label(itemName, systemImage: systemImage)
+                        .font(WayTaskDesign.Typography.caption)
+                        .foregroundStyle(WayTaskDesign.primaryText)
+                        .lineLimit(1)
+                }
+
+                if itemNames.count > 3 {
+                    Text("+\(itemNames.count - 3) more")
+                        .font(WayTaskDesign.Typography.caption.weight(.semibold))
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -725,39 +799,6 @@ struct WayTaskMetricCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(WayTaskDesign.Spacing.md)
         .wayTaskGlassCard()
-    }
-}
-
-struct WayTaskCoverageRing: View {
-    let progress: Double
-    var size: CGFloat = 68
-    var lineWidth: CGFloat = 7
-    var showsLabel = true
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(WayTaskDesign.surfaceElevated, lineWidth: lineWidth)
-
-            Circle()
-                .trim(from: 0, to: clampedProgress)
-                .stroke(WayTaskDesign.accentGradient, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-                .animation(WayTaskDesign.Animation.spring, value: clampedProgress)
-
-            if showsLabel {
-                Text("\(Int((clampedProgress * 100).rounded()))%")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(WayTaskDesign.primaryText)
-                    .minimumScaleFactor(0.7)
-            }
-        }
-        .frame(width: size, height: size)
-        .accessibilityLabel("Coverage \(Int((clampedProgress * 100).rounded())) percent")
-    }
-
-    private var clampedProgress: Double {
-        min(max(progress, 0), 1)
     }
 }
 

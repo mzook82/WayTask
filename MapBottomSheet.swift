@@ -3,6 +3,8 @@ import SwiftUI
 struct MapBottomSheet: View {
     let store: MapStore?
     let distanceText: String
+    let likelyItemNames: [String]
+    let otherItemNames: [String]
     let canOpenItems: Bool
     let onNavigate: () -> Void
     let onWebsite: () -> Void
@@ -48,6 +50,10 @@ struct MapBottomSheet: View {
                 .frame(width: 54, height: 54)
 
                 VStack(alignment: .leading, spacing: 5) {
+                    Text("Recommended Store")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(WayTaskDesign.accent)
+
                     Text(store.title)
                         .font(.headline.weight(.bold))
                         .foregroundStyle(.primary)
@@ -78,19 +84,37 @@ struct MapBottomSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Matching items")
+                Text("Likely here")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
-                if store.itemNames.isEmpty {
-                    Text("No active shopping list items for this place.")
+                if displayedLikelyItemNames(for: store).isEmpty {
+                    Text("No product-level estimate.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else {
-                    FlowItems(items: Array(store.itemNames.prefix(5)))
+                    FlowItems(items: Array(displayedLikelyItemNames(for: store).prefix(5)))
                 }
             }
+
+            if !otherItemNames.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Other items")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+
+                    FlowItems(items: Array(otherItemNames.prefix(5)))
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Availability is estimated.")
+                Text("Some items may require another store.")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
 
             HStack(spacing: 10) {
                 Button(action: onNavigate) {
@@ -134,7 +158,7 @@ struct MapBottomSheet: View {
                     .font(.headline.weight(.bold))
                     .foregroundStyle(.primary)
 
-                Text("Stores with matching shopping items appear here.")
+                Text("Recommended stores with likely shopping items appear here.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
@@ -143,6 +167,10 @@ struct MapBottomSheet: View {
             Spacer()
         }
         .padding(.bottom, 4)
+    }
+
+    private func displayedLikelyItemNames(for store: MapStore) -> [String] {
+        likelyItemNames.isEmpty ? store.itemNames : likelyItemNames
     }
 
     private func statusPill(isOpen: Bool?) -> some View {

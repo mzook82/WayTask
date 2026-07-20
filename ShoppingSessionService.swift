@@ -1,9 +1,17 @@
+import CoreLocation
 import Foundation
 import SwiftData
 
 protocol ShoppingSessionServicing {
     @discardableResult
     func startShopping(with items: [ShoppingItem], in modelContext: ModelContext) throws -> ShoppingSession
+    @discardableResult
+    func startShopping(
+        with items: [ShoppingItem],
+        shoppingListID: UUID,
+        selectedStore: MapStore,
+        in modelContext: ModelContext
+    ) throws -> ShoppingSession
     func activeSession(in modelContext: ModelContext) throws -> ShoppingSession?
     func markItemCollected(_ item: ShoppingItem, in session: ShoppingSession, modelContext: ModelContext) throws
     func markItemRemaining(_ item: ShoppingItem, in session: ShoppingSession, modelContext: ModelContext) throws
@@ -14,13 +22,51 @@ protocol ShoppingSessionServicing {
 struct ShoppingSessionService: ShoppingSessionServicing {
     @discardableResult
     func startShopping(with items: [ShoppingItem], in modelContext: ModelContext) throws -> ShoppingSession {
+        try createOrResumeShoppingSession(
+            with: items,
+            shoppingListID: nil,
+            selectedStore: nil,
+            in: modelContext
+        )
+    }
+
+    @discardableResult
+    func startShopping(
+        with items: [ShoppingItem],
+        shoppingListID: UUID,
+        selectedStore: MapStore,
+        in modelContext: ModelContext
+    ) throws -> ShoppingSession {
+        try createOrResumeShoppingSession(
+            with: items,
+            shoppingListID: shoppingListID,
+            selectedStore: selectedStore,
+            in: modelContext
+        )
+    }
+
+    private func createOrResumeShoppingSession(
+        with items: [ShoppingItem],
+        shoppingListID: UUID?,
+        selectedStore: MapStore?,
+        in modelContext: ModelContext
+    ) throws -> ShoppingSession {
         do {
-            try finishExistingActiveSessions(in: modelContext)
+            if let activeSession = try activeSession(in: modelContext) {
+                return activeSession
+            }
 
             let activeItemIDs = items
                 .filter { !$0.isCompleted }
                 .map(\.id)
-            let session = ShoppingSession(itemIDs: activeItemIDs)
+            let session = ShoppingSession(
+                itemIDs: activeItemIDs,
+                shoppingListID: shoppingListID,
+                selectedStoreID: selectedStore?.id,
+                selectedStoreName: selectedStore?.title,
+                selectedStoreLatitude: selectedStore?.coordinate.latitude,
+                selectedStoreLongitude: selectedStore?.coordinate.longitude
+            )
             modelContext.insert(session)
             try modelContext.save()
             SentryReportingService.shared.breadcrumb(
@@ -99,24 +145,6 @@ struct ShoppingSessionService: ShoppingSessionServicing {
         } catch {
             reportPersistenceError(error, itemCount: session.itemIDs.count)
             throw error
-        }
-    }
-
-    private func finishExistingActiveSessions(in modelContext: ModelContext) throws {
-        let descriptor = FetchDescriptor<ShoppingSession>(
-            predicate: #Predicate { session in
-                session.isActive == true
-            }
-        )
-        let activeSessions = try modelContext.fetch(descriptor)
-
-        for session in activeSessions {
-            session.isActive = false
-            session.finishedAt = Date()
-        }
-
-        if !activeSessions.isEmpty {
-            try modelContext.save()
         }
     }
 
