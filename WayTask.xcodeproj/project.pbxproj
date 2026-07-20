@@ -316,9 +316,9 @@
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			showEnvVarsInLog = 0;
 			shellPath = /bin/sh;
 			shellScript = "if [ \"${CONFIGURATION:-}\" != \"Release\" ] || [ \"${ACTION:-}\" != \"install\" ]; then\n    exit 0\nfi\n\nif ! command -v sentry-cli >/dev/null 2>&1; then\n    echo \"warning: Sentry dSYM upload skipped because sentry-cli is not installed.\"\n    exit 0\nfi\n\nif [ -z \"${SENTRY_AUTH_TOKEN:-}\" ] && [ ! -f \"${HOME}/.sentryclirc\" ] && [ ! -f \"${SRCROOT}/.sentryclirc\" ]; then\n    echo \"warning: Sentry dSYM upload skipped because local or CI authentication is not configured.\"\n    exit 0\nfi\n\nexport SENTRY_ORG=waytask\nexport SENTRY_PROJECT=waytask-ios\n\ncd \"${SRCROOT}\" || exit 0\nif ! sentry-cli debug-files upload \"${DWARF_DSYM_FOLDER_PATH}\" >/dev/null 2>&1; then\n    echo \"warning: Sentry dSYM upload failed. Verify authentication, organization, project, and archive dSYM.\"\nfi\n";
+			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -512,7 +512,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 635X95KVUL;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -533,7 +533,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = h.WayTask;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -553,7 +553,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 635X95KVUL;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -575,7 +575,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = h.WayTask;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
