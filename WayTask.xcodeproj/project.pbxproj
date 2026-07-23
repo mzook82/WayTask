@@ -62,7 +62,18 @@
 		D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1B8519A2FF18FF50083B34C /* ProductListView.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		9438C9F3E7B0432EA5471ECA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D1B851762FEFF2F40083B34C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D1B8517D2FEFF2F40083B34C;
+			remoteInfo = WayTask;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		5150CB4832DA4643A5144038 /* WayTaskTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WayTaskTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D11995C42FF3999200C9EAF2 /* CameraService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraService.swift; sourceTree = "<group>"; };
 		D11995C62FF399AE00C9EAF2 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
 		D11995C82FF399B600C9EAF2 /* ProductRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductRecognitionService.swift; sourceTree = "<group>"; };
@@ -139,9 +150,21 @@
 			path = WayTask;
 			sourceTree = "<group>";
 		};
+		E5219B1F88E1445F97CA6F27 /* WayTaskTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WayTaskTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		B045F4BD43CB48489CDFBA9B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D1B8517B2FEFF2F40083B34C /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -157,6 +180,7 @@
 			isa = PBXGroup;
 			children = (
 				D1B851802FEFF2F40083B34C /* WayTask */,
+				E5219B1F88E1445F97CA6F27 /* WayTaskTests */,
 				D1B8517F2FEFF2F40083B34C /* Products */,
 				D1B8519A2FF18FF50083B34C /* ProductListView.swift */,
 				D12B90972FF2FCC800531ECE /* CameraView.swift */,
@@ -219,6 +243,7 @@
 			isa = PBXGroup;
 			children = (
 				D1B8517E2FEFF2F40083B34C /* WayTask.app */,
+				5150CB4832DA4643A5144038 /* WayTaskTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -226,6 +251,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		442C3500B1934359ACF81B90 /* WayTaskTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 29843A7A557C44E3BD20E193 /* Build configuration list for PBXNativeTarget "WayTaskTests" */;
+			buildPhases = (
+				7E0227DB9C5648A09E193E7C /* Sources */,
+				B045F4BD43CB48489CDFBA9B /* Frameworks */,
+				212D4DF10D5247548DCFAB1D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				51263B6086E345B689FBFB7B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				E5219B1F88E1445F97CA6F27 /* WayTaskTests */,
+			);
+			name = WayTaskTests;
+			packageProductDependencies = (
+			);
+			productName = WayTaskTests;
+			productReference = 5150CB4832DA4643A5144038 /* WayTaskTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		D1B8517D2FEFF2F40083B34C /* WayTask */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D1B851892FEFF2F50083B34C /* Build configuration list for PBXNativeTarget "WayTask" */;
@@ -260,6 +308,10 @@
 				LastSwiftUpdateCheck = 2650;
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
+					442C3500B1934359ACF81B90 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = D1B8517D2FEFF2F40083B34C;
+					};
 					D1B8517D2FEFF2F40083B34C = {
 						CreatedOnToolsVersion = 26.5;
 					};
@@ -283,11 +335,19 @@
 			projectRoot = "";
 			targets = (
 				D1B8517D2FEFF2F40083B34C /* WayTask */,
+				442C3500B1934359ACF81B90 /* WayTaskTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		212D4DF10D5247548DCFAB1D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D1B8517C2FEFF2F40083B34C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -323,6 +383,13 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		7E0227DB9C5648A09E193E7C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D1B8517A2FEFF2F40083B34C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -383,7 +450,65 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		51263B6086E345B689FBFB7B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D1B8517D2FEFF2F40083B34C /* WayTask */;
+			targetProxy = 9438C9F3E7B0432EA5471ECA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		1DEF2ACFE74C4F38B08DA621 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 635X95KVUL;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = h.WayTaskTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WayTask.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WayTask";
+			};
+			name = Debug;
+		};
+		AE8B8260538346FBA3E20621 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 635X95KVUL;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = h.WayTaskTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WayTask.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WayTask";
+			};
+			name = Release;
+		};
 		D1B851872FEFF2F50083B34C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D1954E372FF8488C00E946DA /* Debug.xcconfig */;
@@ -591,6 +716,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		29843A7A557C44E3BD20E193 /* Build configuration list for PBXNativeTarget "WayTaskTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1DEF2ACFE74C4F38B08DA621 /* Debug */,
+				AE8B8260538346FBA3E20621 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		D1B851792FEFF2F40083B34C /* Build configuration list for PBXProject "WayTask" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

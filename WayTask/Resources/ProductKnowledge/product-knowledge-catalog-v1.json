@@ -1,0 +1,712 @@
+{
+  "schemaVersion": 1,
+  "catalogRevision": 1,
+  "taxonomyVersion": "1.0",
+  "expectedProductCount": 15,
+  "supportedLocales": [
+    "en",
+    "he"
+  ],
+  "categories": [
+    {
+      "id": "dairy",
+      "names": {
+        "en": "Dairy & Alternatives",
+        "he": "מוצרי חלב ותחליפים"
+      },
+      "iconKey": "product.dairy",
+      "sortOrder": 0,
+      "status": "active"
+    },
+    {
+      "id": "bakery",
+      "names": {
+        "en": "Bakery",
+        "he": "מאפייה"
+      },
+      "iconKey": "product.bread",
+      "sortOrder": 1,
+      "status": "active"
+    },
+    {
+      "id": "fruits_vegetables",
+      "names": {
+        "en": "Fruits & Vegetables",
+        "he": "פירות וירקות"
+      },
+      "iconKey": "product.fruit",
+      "sortOrder": 2,
+      "status": "active"
+    },
+    {
+      "id": "meat_fish",
+      "names": {
+        "en": "Meat, Fish & Alternatives",
+        "he": "בשר, דגים ותחליפים"
+      },
+      "iconKey": "product.meat",
+      "sortOrder": 3,
+      "status": "active"
+    },
+    {
+      "id": "pantry",
+      "names": {
+        "en": "Pantry",
+        "he": "מזווה"
+      },
+      "iconKey": "product.pantry",
+      "sortOrder": 4,
+      "status": "active"
+    },
+    {
+      "id": "drinks",
+      "names": {
+        "en": "Drinks",
+        "he": "משקאות"
+      },
+      "iconKey": "product.drink",
+      "sortOrder": 5,
+      "status": "active"
+    },
+    {
+      "id": "frozen",
+      "names": {
+        "en": "Frozen",
+        "he": "קפואים"
+      },
+      "iconKey": "product.frozen",
+      "sortOrder": 6,
+      "status": "active"
+    },
+    {
+      "id": "snacks",
+      "names": {
+        "en": "Snacks & Sweets",
+        "he": "חטיפים ומתוקים"
+      },
+      "iconKey": "product.snack",
+      "sortOrder": 7,
+      "status": "active"
+    },
+    {
+      "id": "household",
+      "names": {
+        "en": "Household",
+        "he": "מוצרי בית"
+      },
+      "iconKey": "product.household",
+      "sortOrder": 8,
+      "status": "active"
+    },
+    {
+      "id": "cleaning",
+      "names": {
+        "en": "Cleaning",
+        "he": "ניקיון"
+      },
+      "iconKey": "product.cleaning",
+      "sortOrder": 9,
+      "status": "active"
+    },
+    {
+      "id": "personal_care",
+      "names": {
+        "en": "Personal Care",
+        "he": "טיפוח אישי"
+      },
+      "iconKey": "product.personalcare",
+      "sortOrder": 10,
+      "status": "active"
+    },
+    {
+      "id": "pharmacy",
+      "names": {
+        "en": "Pharmacy & Health",
+        "he": "פארם ובריאות"
+      },
+      "iconKey": "product.pharmacy",
+      "sortOrder": 11,
+      "status": "active"
+    },
+    {
+      "id": "baby",
+      "names": {
+        "en": "Baby",
+        "he": "תינוקות"
+      },
+      "iconKey": "product.baby",
+      "sortOrder": 12,
+      "status": "active"
+    },
+    {
+      "id": "pets",
+      "names": {
+        "en": "Pets",
+        "he": "בעלי חיים"
+      },
+      "iconKey": "product.pet",
+      "sortOrder": 13,
+      "status": "active"
+    },
+    {
+      "id": "uncategorized",
+      "names": {
+        "en": "Uncategorized",
+        "he": "ללא קטגוריה"
+      },
+      "iconKey": "product.generic",
+      "sortOrder": 14,
+      "status": "active"
+    }
+  ],
+  "products": [
+    {
+      "id": "prd_pilot_0001",
+      "defaultNameID": "name_prd_pilot_0001_en",
+      "primaryCategoryID": "dairy",
+      "status": "active"
+    },
+    {
+      "id": "prd_pilot_0002",
+      "defaultNameID": "name_prd_pilot_0002_en",
+      "primaryCategoryID": "bakery",
+      "status": "active"
+    },
+    {
+      "id": "prd_pilot_0003",
+      "defaultNameID": "name_prd_pilot_0003_en",
+      "primaryCategoryID": "dairy",
+      "status": "active"
+    },
+    {
+      "id": "prd_pilot_0004",
+      "defaultNameID": "name_prd_pilot_0004_en",
+      "primaryCategoryID": "pantry",
+      "status": "active"
+    },
+    {
+      "id": "prd_pilot_0005",
+      "defaultNameID": "name_prd_pilot_0005_en",
+      "primaryCategoryID": "fruits_vegetables",
+      "status": "active"
+    },
+    {
+      "id": "prd_pilot_0006",
+      "defaultNameID": "name_prd_pilot_0006_en",
+      "primaryCategoryID": "fruits_vegetables",
+      "status": "active"
+    },
+    {
+      "id": "prd_pilot_0007",
+      "defaultNameID": "name_prd_pilot_0007_en",
+      "primaryCategoryID": "drinks",
+      "status": "active"
+    },
+    {
+      "id": "prd_pilot_0008",
+      "defaultNameID": "name_prd_pilot_0008_en",
+      "primaryCategoryID": "drinks",
+      "status": "active"
+    },
+    {
+      "id": "prd_pilot_0009",
+      "defaultNameID": "name_prd_pilot_0009_en",
+      "primaryCategoryID": "personal_care",
+      "status": "active"
+    },
+    {
+      "id": "prd_pilot_0010",
+      "defaultNameID": "name_prd_pilot_0010_en",
+      "primaryCategoryID": "personal_care",
+      "status": "active"
+    },
+    {
+      "id": "prd_pilot_0011",
+      "defaultNameID": "name_prd_pilot_0011_en",
+      "primaryCategoryID": "pets",
+      "status": "active"
+    },
+    {
+      "id": "prd_pilot_0012",
+      "defaultNameID": "name_prd_pilot_0012_en",
+      "primaryCategoryID": "baby",
+      "status": "active"
+    },
+    {
+      "id": "prd_pilot_0013",
+      "defaultNameID": "name_prd_pilot_0013_en",
+      "primaryCategoryID": "cleaning",
+      "status": "active"
+    },
+    {
+      "id": "prd_pilot_0014",
+      "defaultNameID": "name_prd_pilot_0014_en",
+      "primaryCategoryID": "household",
+      "status": "active"
+    },
+    {
+      "id": "prd_pilot_0015",
+      "defaultNameID": "name_prd_pilot_0015_en",
+      "primaryCategoryID": "frozen",
+      "status": "active"
+    }
+  ],
+  "names": [
+    {
+      "id": "name_prd_pilot_0001_en",
+      "productID": "prd_pilot_0001",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Milk",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0001_he",
+      "productID": "prd_pilot_0001",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "חלב",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0001_alias_he_1",
+      "productID": "prd_pilot_0001",
+      "locale": "he",
+      "kind": "alias",
+      "value": "חלב פרה",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0001_alias_en_1",
+      "productID": "prd_pilot_0001",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Cow's Milk",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0002_en",
+      "productID": "prd_pilot_0002",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Bread",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0002_he",
+      "productID": "prd_pilot_0002",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "לחם",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0002_alias_he_1",
+      "productID": "prd_pilot_0002",
+      "locale": "he",
+      "kind": "alias",
+      "value": "כיכר לחם",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0002_alias_en_1",
+      "productID": "prd_pilot_0002",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Loaf of Bread",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0003_en",
+      "productID": "prd_pilot_0003",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Eggs",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0003_he",
+      "productID": "prd_pilot_0003",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "ביצים",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0003_alias_he_1",
+      "productID": "prd_pilot_0003",
+      "locale": "he",
+      "kind": "alias",
+      "value": "ביצי תרנגולת",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0003_alias_en_1",
+      "productID": "prd_pilot_0003",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Chicken Eggs",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0004_en",
+      "productID": "prd_pilot_0004",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Rice",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0004_he",
+      "productID": "prd_pilot_0004",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "אורז",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0005_en",
+      "productID": "prd_pilot_0005",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Apple",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0005_he",
+      "productID": "prd_pilot_0005",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "תפוח",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0005_alias_he_1",
+      "productID": "prd_pilot_0005",
+      "locale": "he",
+      "kind": "alias",
+      "value": "תפוח עץ",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0006_en",
+      "productID": "prd_pilot_0006",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Tomato",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0006_he",
+      "productID": "prd_pilot_0006",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "עגבנייה",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0006_alias_he_1",
+      "productID": "prd_pilot_0006",
+      "locale": "he",
+      "kind": "alias",
+      "value": "עגבניה",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0007_en",
+      "productID": "prd_pilot_0007",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Water",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0007_he",
+      "productID": "prd_pilot_0007",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "מים",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0007_alias_he_1",
+      "productID": "prd_pilot_0007",
+      "locale": "he",
+      "kind": "alias",
+      "value": "מי שתייה",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0007_alias_en_1",
+      "productID": "prd_pilot_0007",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Drinking Water",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0008_en",
+      "productID": "prd_pilot_0008",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Coffee",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0008_he",
+      "productID": "prd_pilot_0008",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "קפה",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0009_en",
+      "productID": "prd_pilot_0009",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Shampoo",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0009_he",
+      "productID": "prd_pilot_0009",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "שמפו",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0009_alias_he_1",
+      "productID": "prd_pilot_0009",
+      "locale": "he",
+      "kind": "alias",
+      "value": "שמפו לשיער",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0009_alias_en_1",
+      "productID": "prd_pilot_0009",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Hair Shampoo",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0010_en",
+      "productID": "prd_pilot_0010",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Toothpaste",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0010_he",
+      "productID": "prd_pilot_0010",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "משחת שיניים",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0010_alias_he_1",
+      "productID": "prd_pilot_0010",
+      "locale": "he",
+      "kind": "alias",
+      "value": "משחה לשיניים",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0010_alias_en_1",
+      "productID": "prd_pilot_0010",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Tooth Paste",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0011_en",
+      "productID": "prd_pilot_0011",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Dog Food",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0011_he",
+      "productID": "prd_pilot_0011",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "מזון לכלבים",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0011_alias_he_1",
+      "productID": "prd_pilot_0011",
+      "locale": "he",
+      "kind": "alias",
+      "value": "אוכל לכלבים",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0011_alias_en_1",
+      "productID": "prd_pilot_0011",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Canine Food",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0012_en",
+      "productID": "prd_pilot_0012",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Baby Wipes",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0012_he",
+      "productID": "prd_pilot_0012",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "מגבונים לתינוקות",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0012_alias_he_1",
+      "productID": "prd_pilot_0012",
+      "locale": "he",
+      "kind": "alias",
+      "value": "מגבונים לתינוק",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0012_alias_he_2",
+      "productID": "prd_pilot_0012",
+      "locale": "he",
+      "kind": "alias",
+      "value": "מגבוני תינוקות",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0012_alias_en_1",
+      "productID": "prd_pilot_0012",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Infant Wipes",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0013_en",
+      "productID": "prd_pilot_0013",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Dish Soap",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0013_he",
+      "productID": "prd_pilot_0013",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "נוזל כלים",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0013_alias_he_1",
+      "productID": "prd_pilot_0013",
+      "locale": "he",
+      "kind": "alias",
+      "value": "סבון כלים",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0013_alias_he_2",
+      "productID": "prd_pilot_0013",
+      "locale": "he",
+      "kind": "alias",
+      "value": "נוזל לשטיפת כלים",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0013_alias_en_1",
+      "productID": "prd_pilot_0013",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Dishwashing Liquid",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0013_alias_en_2",
+      "productID": "prd_pilot_0013",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Washing-Up Liquid",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0014_en",
+      "productID": "prd_pilot_0014",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Paper Towels",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0014_he",
+      "productID": "prd_pilot_0014",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "מגבות נייר",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0014_alias_he_1",
+      "productID": "prd_pilot_0014",
+      "locale": "he",
+      "kind": "alias",
+      "value": "נייר סופג",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0014_alias_en_1",
+      "productID": "prd_pilot_0014",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Kitchen Paper",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0015_en",
+      "productID": "prd_pilot_0015",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Frozen Vegetables",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0015_he",
+      "productID": "prd_pilot_0015",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "ירקות קפואים",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0015_alias_he_1",
+      "productID": "prd_pilot_0015",
+      "locale": "he",
+      "kind": "alias",
+      "value": "ירקות מוקפאים",
+      "isPreferred": false
+    },
+    {
+      "id": "name_prd_pilot_0015_alias_en_1",
+      "productID": "prd_pilot_0015",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Frozen Veg",
+      "isPreferred": false
+    }
+  ]
+}
