@@ -1,80 +1,96 @@
 # WT-020 Product Entity Data Model
 
-**Version:** 1.0  
-**Status:** Proposed conceptual model  
-**Scope:** Platform-neutral domain and persistence specification  
-**Implementation:** Deferred  
+**Version:** 1.1<br>
+**Status:** WT-022A Phase 1 foundation profile approved; later extensions proposed<br>
+**Scope:** Platform-neutral Product Concept and runtime-catalog contract<br>
+**Implementation:** WT-022A foundation only; integration and persistence changes deferred
 
 ---
 
 ## 1. Model Goals
 
-The data model provides:
+The WT-022A data model provides:
 
-- One stable Product ID used by all features.
-- Required product name, category, subcategory, aliases, keywords, and icon.
-- Generic products and barcode-level variants.
-- Multilingual names.
-- Controlled taxonomy.
-- Indexed search without loading whole entities.
-- Provenance and user confirmation.
-- Optional brands, identifiers, images, nutrition, stores, and AI metadata.
-- Safe merge, deletion, seed updates, and future synchronization.
+- One stable Product ID per generic catalog Product Concept.
+- Authoritative localized names and aliases.
+- Exactly one approved Phase 1 category per concept.
+- Category-derived semantic icons.
+- One versioned, validated, read-only runtime catalog.
+- A platform-neutral contract that can later support Search and Autocomplete.
 
-The conceptual model is shared across iOS and Android. Native persistence types may differ, but field meanings, identifiers, constraints, and serialized seed contracts must not.
+WT-022A intentionally excludes sellable variants, brands, sizes, prices, barcodes, search projections, writable persistence, user-library links, Shopping links, migration, provider observations, media, nutrition, and synchronization.
+
+The Phase 1 domain values and serialized catalog contract are shared conceptually across platforms. They must not depend on SwiftData, SwiftUI, UIKit, Android resources, or provider payloads.
 
 ---
 
-## 2. Aggregate Overview
+## 2. Phase 1 Product Identity
+
+### 2.1 Normative decision
+
+In WT-022A, `ProductEntity` represents only a generic **Product Concept**.
+
+Examples:
+
+- Milk is a Product Concept and may be a `ProductEntity`.
+- Tnuva Milk 3% 1 L is a Sellable Variant and is outside WT-022A.
+- Protein Vanilla Pudding may remain a Custom User Product created by the current manual flow if no catalog concept exists.
+
+There is no `entityKind`, `variantOfProductID`, brand, barcode, package, price, or provider field in the WT-022A Product Entity.
+
+### 2.2 Object meanings and relationships
+
+| Object | Owner | WT-022A relationship |
+|---|---|---|
+| `ProductEntity` | Read-only runtime catalog | Generic Product Concept only |
+| Sellable Variant | Deferred retail model | Not represented or loaded |
+| Brand | Deferred retail qualifier | Not a Product Entity and not stored in catalog v1 |
+| Current `Product` | Existing user Product Library | Unchanged; no catalog ID is added |
+| Current `ShoppingListEntry` | Existing user shopping-list membership | Unchanged; continues to reference current `Product.id` |
+| Legacy `ShoppingItem` | Existing compatibility shopping data | Unchanged; no catalog ID is added |
+| Custom User Product | Existing user-owned `Product` created manually | Remains valid, mutable, and independent of the read-only catalog |
+| `ProductName` alias | Catalog metadata | Belongs to one Product Entity and never creates another identity |
+
+The conceptual term “shopping item” means user-owned list state. In the current iOS codebase that state is implemented through `ShoppingListEntry` and a legacy compatibility `ShoppingItem`. WT-022A does not change either representation.
+
+### 2.3 Deferred integration contract
+
+WT-022A only loads the catalog. Search, Autocomplete, selection, saving, and catalog references are deferred.
+
+When a later approved feature links user-owned state to a catalog concept, it must preserve:
+
+- The stable catalog Product ID.
+- A user-visible display-name snapshot in user-owned persistence.
+
+The snapshot prevents data loss and preserves the user's visible item when a catalog resource is absent, renamed, deactivated, or upgraded. WT-022A does not add that field or perform any link, migration, backfill, or dual write.
+
+---
+
+## 3. Phase 1 Aggregate Overview
 
 ```text
 ProductEntity
   |-- ProductName (canonical, localized, alias)
-  |-- ProductSearchKeyword
-  |-- ProductIdentifier (barcode/provider IDs)
-  |-- ProductRelationship (variant/related/replacement)
-  |-- ProductBrandLink
-  |-- ProductMedia
-  |-- ProductNutrition
-  |-- ProductStoreAffinity
-  |-- ProductMetadataEnvelope
-  |-- KnowledgeContribution / provenance
   |
-  +-- Category -> optional parent Category
-  |
-  +-- UserProduct (user library state)
-  +-- ShoppingListEntry (shopping state)
-  +-- ProductUsage (learning/ranking state)
-  +-- ProductRedirect (merge state)
+  +-- ProductCategory (one approved top-level category)
+
+Existing user-owned models (not linked in WT-022A)
+  |-- Product
+  |-- ShoppingListEntry
+  +-- legacy ShoppingItem
 ```
 
----
-
-## 3. Canonical Domain Type
-
-The domain layer should expose an aggregate similar to:
+The domain layer exposes:
 
 ```text
 ProductEntity
   id: ProductID
-  entityKind: generic | variant
-  displayName: LocalizedText
-  normalizedName: String
-  categoryID: CategoryID
-  subcategoryID: CategoryID?
-  aliases: [ProductAlias]
-  searchKeywords: [ProductSearchKeyword]
-  icon: ProductIcon
-  variantOfProductID: ProductID?
-  status: active | deprecated | merged
-  provenance: ProvenanceSummary
-  createdAt: Instant
-  updatedAt: Instant
-  revision: Int
-  schemaVersion: Int
+  defaultNameID: ProductNameID
+  primaryCategoryID: ProductCategoryID
+  status: active | inactive
 ```
 
-Collections are relations in persistence, not delimiter-encoded strings.
+Names and categories are separate catalog records. `ProductEntity` does not duplicate display names, localized names, aliases, or category icon keys.
 
 ---
 
@@ -83,29 +99,19 @@ Collections are relations in persistence, not delimiter-encoded strings.
 | Field | Type | Required | Rules |
 |---|---|---:|---|
 | `id` | Opaque string ID | Yes | Stable, unique, never name-derived or reused |
-| `entityKind` | Enum | Yes | `generic` or `variant` in Phase 1 |
-| `canonicalName` | String | Yes | Trimmed display value; valid Unicode |
-| `canonicalLocale` | BCP-47 tag | Yes | Use `und` only when genuinely unknown |
-| `normalizedName` | String | Yes | Generated by versioned normalizer |
-| `categoryID` | Category ID | Yes | `uncategorized` is a valid fallback |
-| `subcategoryID` | Category ID | No | Must descend from `categoryID` |
-| `iconKey` | Semantic string | Yes | Product override; otherwise taxonomy-derived |
-| `variantOfProductID` | Product ID | No | Required for a variant when parent is known |
-| `status` | Enum | Yes | `active`, `deprecated`, or `merged` |
-| `verificationState` | Enum | Yes | `curated`, `userConfirmed`, `providerOnly`, `unverified` |
-| `origin` | Enum | Yes | `seed`, `user`, `barcode`, `camera`, `ai`, `community`, `import` |
-| `createdAt` | Instant | Yes | UTC |
-| `updatedAt` | Instant | Yes | UTC |
-| `revision` | Integer | Yes | Monotonic per entity |
-| `schemaVersion` | Integer | Yes | Payload/schema interpretation version |
+| `defaultNameID` | Opaque Product Name ID | Yes | References the preferred English name belonging to this product |
+| `primaryCategoryID` | Approved Category ID | Yes | Exactly one ID from taxonomy version 1.0 |
+| `status` | Enum | Yes | `active` or `inactive` |
 
 Constraints:
 
 - `id` is the primary key.
-- `normalizedName` is indexed but not globally unique.
-- `variantOfProductID` cannot point to the same ID.
-- Merged entities must have a `ProductRedirect`.
-- Provider-only data cannot silently overwrite user-confirmed or curated fields.
+- Released Product IDs never change, get reused, or get reassigned.
+- Every `defaultNameID` resolves to a name owned by the same Product Entity.
+- `primaryCategoryID` resolves to one of the 15 approved taxonomy IDs.
+- A released entity may be changed to `inactive` but must not be deleted.
+- All 15 initial pilot products are `active`.
+- No concept/variant discriminator is stored because every catalog entity is a Product Concept.
 
 ---
 
@@ -118,40 +124,25 @@ Constraints:
 | `id` | Opaque ID | Yes | Row identity |
 | `productID` | Product ID | Yes | Parent |
 | `value` | String | Yes | User-visible name/alias |
-| `normalizedValue` | String | Yes | Search form |
 | `locale` | BCP-47 tag | Yes | Language/script context |
-| `kind` | Enum | Yes | `canonical`, `localizedDisplay`, `alias`, `abbreviation`, `transliteration`, `formerName` |
+| `kind` | Enum | Yes | `canonical`, `localizedDisplay`, or `alias` |
 | `isPreferred` | Boolean | Yes | At most one preferred display name per product/locale |
-| `sourceContributionID` | Contribution ID | No | Provenance |
-| `createdAt` | Instant | Yes | UTC |
 
-Recommended uniqueness:
+Required uniqueness:
 
-- `(productID, normalizedValue, locale, kind)`.
+- `(productID, value, locale, kind)`.
 - One preferred canonical/localized display name per `(productID, locale)`.
 
-Aliases support:
+Alias rules:
 
-- “Milk” / a native-script equivalent.
-- “Lactose-free milk” / “lactose free milk”.
-- Common abbreviation.
-- User-entered spelling retained after selecting a canonical entity.
-- Former names retained after rename.
+- An alias is an alternate expression for the same Product Concept.
+- An alias is search metadata only and is never a separate Product Entity.
+- A brand, subtype, package size, or related product is not an alias.
+- A single unconfirmed typo is not an approved alias.
+- Catalog v1 uses only the aliases reviewed in `PilotProductCatalog.md`.
+- Normalized search values are future versioned projections and are not stored by WT-022A.
 
-Misspellings should be curated or learned through accepted proposals, not added automatically after a single typo.
-
-### 5.2 `ProductSearchKeyword`
-
-| Field | Type | Required | Notes |
-|---|---|---:|---|
-| `productID` | Product ID | Yes | Parent |
-| `value` | String | Yes | Display/original keyword |
-| `normalizedValue` | String | Yes | Indexed value |
-| `locale` | BCP-47 tag | Yes | May be `und` |
-| `weight` | Small integer | Yes | Bounded ranking hint |
-| `sourceContributionID` | Contribution ID | No | Provenance |
-
-Keywords are discovery aids, not aliases displayed as product names.
+Display fallback is exact requested locale, then language-only locale, then preferred English (`en`), then `defaultNameID`. The raw Product ID is not a normal user-visible fallback.
 
 ---
 
@@ -161,43 +152,34 @@ Keywords are discovery aids, not aliases displayed as product names.
 
 | Field | Type | Required | Notes |
 |---|---|---:|---|
-| `id` | Stable category ID | Yes | Example: `food.dairy` |
-| `parentID` | Category ID | No | Null for root |
-| `canonicalName` | String | Yes | Default display |
-| `normalizedName` | String | Yes | Mapping/search |
+| `id` | Stable category ID | Yes | Example: `dairy` |
+| `names` | Localized map | Yes | Exactly `en` and `he` in taxonomy v1.0 |
 | `iconKey` | Semantic icon key | Yes | Cross-platform |
 | `sortOrder` | Integer | Yes | Curated display order |
-| `status` | Enum | Yes | Active/deprecated |
-| `revision` | Integer | Yes | Seed/update revision |
-
-Localized category names and provider-category aliases use related rows rather than changing the stable ID.
+| `status` | Enum | Yes | `active` for all taxonomy v1.0 categories |
 
 ### 6.2 Taxonomy rules
 
-- A subcategory is another Category whose ancestry includes the entity’s top-level category.
-- Provider category strings must map through a `CategoryAlias`/mapping table.
-- Unknown mappings resolve to `uncategorized` while preserving the original provider text in its contribution.
-- Icons inherit from the most specific available category unless the Product Entity has an override.
+- The catalog contains exactly the 15 IDs in `ProductTaxonomy.md`.
+- Taxonomy version 1.0 contains no parent or subcategory field.
+- Applications must not invent local categories or subcategories.
+- Every Product Entity stores exactly one `primaryCategoryID`.
+- Category icon keys exactly match `ProductTaxonomy.md`.
+- `uncategorized` remains available, but no reviewed pilot product uses it.
 
 ---
 
 ## 7. Icon Model
 
-`ProductIcon` is a domain value:
+WT-022A stores semantic icon keys on Product Categories only. A Product Entity resolves its icon from `primaryCategoryID`; `product.generic` is the fallback for an unknown category key.
 
-```text
-ProductIcon
-  key: String              // e.g. food.dairy.milk
-  fallbackText: String?    // e.g. 🥛
-  source: product | subcategory | category | generic
-  version: Int
-```
-
-The database stores semantic values only. Platform mappings are resources owned by iOS and Android.
+Catalog schema version 1 has no product-specific icon override. Adding an override registry requires a later schema and governance decision. Platform visual mappings remain outside the catalog.
 
 ---
 
-## 8. External Identifiers
+## 8. Deferred Data Model Extensions
+
+Sections 8 through 18 describe possible later architecture only. They are not part of the WT-022A Product Entity, runtime JSON, repository, SwiftData schema, or implementation approval. In particular, WT-022A does not implement identifiers/barcodes, sellable variants, brands, relationships, media, nutrition, store affinity, provider metadata, provenance, library links, Shopping links, usage, redirects, or search projections.
 
 ### 8.1 `ProductIdentifier`
 
@@ -467,85 +449,150 @@ Usage recency/frequency may be joined or supplied as bounded ranking features. I
 
 ---
 
-## 19. Seed Serialization Example
+## 19. Runtime Catalog Contract
 
-Illustrative platform-neutral JSON:
+### 19.1 Authoritative resource
+
+The exact runtime filename is:
+
+```text
+product-knowledge-catalog-v1.json
+```
+
+The app reads this JSON resource only. `PilotProductCatalog.md` remains the human review record, and `ProductTaxonomy.md` remains authoritative for taxonomy meaning. The app does not parse either Markdown file.
+
+### 19.2 Exact top-level shape
+
+Catalog schema version 1 has exactly these top-level members:
 
 ```json
 {
   "schemaVersion": 1,
   "catalogRevision": 1,
-  "product": {
-    "id": "prd_milk_generic",
-    "entityKind": "generic",
-    "canonicalName": "Milk",
-    "canonicalLocale": "en",
-    "categoryID": "food.dairy",
-    "subcategoryID": "food.dairy.milk",
-    "iconKey": "food.dairy.milk",
-    "status": "active",
-    "verificationState": "curated",
-    "origin": "seed",
-    "revision": 1
-  },
-  "names": [
-    {
-      "value": "Milk",
-      "normalizedValue": "milk",
-      "locale": "en",
-      "kind": "canonical",
-      "isPreferred": true
-    }
-  ],
-  "keywords": [
-    {
-      "value": "dairy",
-      "normalizedValue": "dairy",
-      "locale": "en",
-      "weight": 40
-    }
-  ],
-  "icon": {
-    "key": "food.dairy.milk",
-    "fallbackText": "🥛",
-    "version": 1
-  }
+  "taxonomyVersion": "1.0",
+  "expectedProductCount": 15,
+  "supportedLocales": ["en", "he"],
+  "categories": [],
+  "products": [],
+  "names": []
 }
 ```
 
-Production seed validation must reject duplicate IDs, invalid taxonomy references, invalid redirect cycles, and normalization-version mismatches.
+Required record shapes:
+
+```json
+{
+  "categories": [
+    {
+      "id": "dairy",
+      "names": {
+        "en": "Dairy & Alternatives",
+        "he": "מוצרי חלב ותחליפים"
+      },
+      "iconKey": "product.dairy",
+      "sortOrder": 0,
+      "status": "active"
+    }
+  ],
+  "products": [
+    {
+      "id": "prd_pilot_0001",
+      "defaultNameID": "name_prd_pilot_0001_en",
+      "primaryCategoryID": "dairy",
+      "status": "active"
+    }
+  ],
+  "names": [
+    {
+      "id": "name_prd_pilot_0001_en",
+      "productID": "prd_pilot_0001",
+      "locale": "en",
+      "kind": "canonical",
+      "value": "Milk",
+      "isPreferred": true
+    },
+    {
+      "id": "name_prd_pilot_0001_he",
+      "productID": "prd_pilot_0001",
+      "locale": "he",
+      "kind": "localizedDisplay",
+      "value": "חלב",
+      "isPreferred": true
+    }
+  ]
+}
+```
+
+Aliases use the same name shape with `kind = alias` and `isPreferred = false`.
+
+The schema contains:
+
+- Exactly 15 categories.
+- Exactly 15 products for catalog revision 1.
+- The permanent Product IDs `prd_pilot_0001` through `prd_pilot_0015`.
+- Separate name rows for all approved English/Hebrew names and aliases.
+- No entity-kind, variant, subcategory, product icon, brand, barcode, package, price, keyword, normalized-value, provider, timestamp, or user-state field.
+
+### 19.3 Version rules
+
+- `schemaVersion` is `1` for the contract above.
+- `schemaVersion` changes only for an incompatible shape or field-semantics change.
+- `catalogRevision` increments for any product, name, alias, category assignment, status, or category-content change.
+- `taxonomyVersion` changes only with an approved taxonomy revision.
+- `expectedProductCount` must equal the number of product records.
+- Adding content without changing the JSON shape does not change `schemaVersion`.
+- Runtime revision 1 must remain at or below 100 KiB uncompressed.
+- Catalog v1 uses no separate manifest, checksum, or detached signature; automated validation checks the exact packaged JSON, and the signed app bundle provides distribution authenticity.
+
+### 19.4 Validation
+
+Before shipping, validation must reject:
+
+- Unknown or missing top-level members required by schema version 1.
+- Unsupported schema or taxonomy versions.
+- Any product count other than 15 in catalog revision 1.
+- Duplicate or missing Product, Product Name, or Category IDs.
+- Any Product ID outside the exact approved initial list.
+- Broken default-name, product-name, or category references.
+- Missing English/Hebrew preferred names.
+- Duplicate/canonical-repeating aliases.
+- Any category ID/name/icon mismatch with `ProductTaxonomy.md`.
+- Subcategory, product icon override, variant, brand, barcode, package, price, or other unsupported fields.
+- Deletion or reuse of a released Product ID.
+
+The first JSON may be authored manually. A Catalog Generator is not required for WT-022A.
 
 ---
 
-## 20. Mapping from Current Models
+## 20. Relationship to Current Models
 
-| Current field/model | Target |
+| Current field/model | WT-022A decision |
 |---|---|
-| `Product.id` | Initial Product Entity ID where preservation is required |
-| `Product.name` | Canonical/localized name plus normalized projection |
-| `Product.category` | Taxonomy mapping or Uncategorized plus preserved contribution |
-| `Product.barcode` | ProductIdentifier |
-| `Product.imageData` | ProductMedia/local asset |
-| `Product.searchKeywordsRawValue` | ProductSearchKeyword rows |
-| `Product.legacyShoppingItemID` | Temporary migration mapping only |
-| `ProductKnowledge` | Contribution/enrichment source; not a parallel entity |
-| `ProductHistory` | ProductUsage keyed by Product ID |
-| `ShoppingItem` product fields | Compatibility source during migration |
-| `ShoppingListEntry.productID` | Canonical Product ID after cutover |
-| `ProductCandidate` | Adapter DTO mapped to Observation/Draft |
+| `Product` | Unchanged user Product Library record; no catalog reference added |
+| `Product.name` | Continues to be the current user-visible snapshot |
+| `Product.brand`, barcode, image, package fields | Unchanged legacy/user data; not imported into catalog |
+| `ShoppingListEntry.productID` | Continues to reference current `Product.id` |
+| `ShoppingItem` | Unchanged compatibility record |
+| `ProductKnowledge` | Unchanged recognition/learning cache |
+| `ProductHistory` | Unchanged usage record |
+| `ProductCandidate` | Unchanged transient recognition DTO |
+
+WT-022A performs no mapping, migration, link, backfill, dual write, or persistence-schema change. The future mapping described by `ProductKnowledgeMigrationStrategy.md` is not approved or activated by this foundation.
 
 ---
 
-## 21. Required Invariants
+## 21. Required WT-022A Invariants
 
-- Every active UserProduct resolves to one active Product Entity.
-- Every ShoppingListEntry resolves through redirects to one Product Entity.
-- Every external identifier resolves to at most one active Product Entity within its uniqueness scope.
-- No active entity redirects to another entity.
-- Redirect chains contain no cycles.
-- Every subcategory belongs to the stored top-level category.
-- Search results reference resolvable active entities.
-- Search projection can be deleted and rebuilt without knowledge loss.
-- User-confirmed values are never overwritten silently by lower-authority observations.
-- Product images are not required for entity availability or search.
-
+- Every runtime `ProductEntity` is a generic Product Concept.
+- Exactly 15 active Product Entities ship in catalog revision 1.
+- Every Product ID is unique, stable, opaque, and never name-derived.
+- Every Product Entity has one valid default English name and one approved primary category.
+- Every initial entity has one preferred English and one preferred Hebrew name.
+- Every alias belongs to one Product Entity and is never an independent identity.
+- Every category and semantic icon key matches taxonomy version 1.0.
+- No Product Entity contains retail-variant or user-owned state.
+- The runtime catalog is read-only.
+- Existing Product Library and Shopping models have no catalog reference in WT-022A.
+- Existing custom products remain usable without a catalog match.
+- No existing user record is read, written, migrated, linked, or deleted by catalog loading.
+- Incompatible or invalid catalog data fails atomically and never produces a partial repository snapshot.

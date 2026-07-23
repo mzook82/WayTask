@@ -1,10 +1,20 @@
 # WT-020 Smart Product Creation UX Specification
 
-**Version:** 1.0  
+**Version:** 1.1<br>
 **Status:** Proposed  
 **Sprint:** WT-020  
 **Phase:** Architecture and product design only  
 **Related:** `docs/Audits/2026-07-23_WT-020_ProductAudit.md`
+
+---
+
+## WT-022A Applicability
+
+This document specifies later Search and Autocomplete integration; it is not implemented by WT-022A.
+
+WT-022A only loads a read-only catalog of generic Product Concepts. Existing manual/custom product creation, Product Library persistence, `ShoppingListEntry`, and legacy `ShoppingItem` behavior remain unchanged. No catalog reference, display-name snapshot field, search UI, alias capture, category autofill, or migration is added.
+
+When this UX is implemented later, selecting a catalog Product Concept must preserve its stable Product ID and a user-owned display-name snapshot. Unknown/custom products must continue to save without a catalog match. Sellable variants, brands, sizes, prices, and barcodes remain outside the WT-022A catalog identity.
 
 ---
 
@@ -320,7 +330,7 @@ Online enrichment status is intentionally absent from the Phase 1 creation-criti
 
 ## 9. Icon Behavior
 
-Icons use a semantic key resolved by each platform, for example `food.dairy.milk`.
+Icons use a semantic key resolved by each platform, for example `product.dairy`.
 
 Display precedence:
 

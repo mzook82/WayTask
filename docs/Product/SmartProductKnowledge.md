@@ -1,6 +1,6 @@
 # WT-020 Smart Product Knowledge Blueprint
 
-**Version:** 1.0  
+**Version:** 1.1<br>
 **Status:** Planning complete  
 **Sprint:** WT-020  
 **Theme:** Smart Product Creation  
@@ -57,7 +57,7 @@ The gap is not the complete absence of product entities. The gap is that no sing
 User types “Mil”
   -> local suggestions appear
   -> user selects “Milk”
-  -> WayTask resolves Product ID, Dairy category, Milk subcategory, and milk icon
+  -> WayTask resolves Product ID, Dairy category, and semantic category icon
   -> user saves
   -> Product Library references the canonical entity
 ```
@@ -104,15 +104,71 @@ WT-020 Phase 1 does not include:
 
 Existing integrations are documented only so the architecture can accept them through stable adapters.
 
+### 6.1 WT-022A Product Identity Decision
+
+For the WT-022A Product Knowledge Foundation, `ProductEntity` represents one generic **Product Concept** only.
+
+The Phase 1 meanings are:
+
+| Term | Phase 1 meaning |
+|---|---|
+| Product Concept | A reusable generic shopping need such as Milk, Bread, or Shampoo. This is the only thing represented by catalog `ProductEntity`. |
+| Sellable Variant | A brand/package-specific retail item such as Tnuva Milk 3% 1 L. Variants, sizes, prices, and barcodes are not modeled in WT-022A. |
+| Brand | A retail qualifier, not a product identity. Brand modeling is deferred. Existing free-text brand values remain untouched. |
+| Custom User Product | A user-owned product created by the existing manual flow when no catalog concept is used, such as Protein Vanilla Pudding. It remains valid and is not converted into catalog data. |
+| Shopping item | User-owned shopping state. The current app uses `ShoppingListEntry` plus a legacy compatibility `ShoppingItem`; both remain unchanged in WT-022A. |
+| Alias | An alternate localized search expression for one Product Concept. It is metadata attached to that concept, never a separate Product Entity. |
+
+WT-022A therefore:
+
+- Loads a read-only catalog of Product Concepts.
+- Does not add concept/variant discriminator fields.
+- Does not model sellable variants, brands, package sizes, prices, or barcodes.
+- Does not add a catalog reference to `Product`, `ShoppingListEntry`, or `ShoppingItem`.
+- Does not migrate, backfill, link, or dual-write any existing user data.
+- Does not connect the catalog to product creation; that integration is deferred to Search and Autocomplete work.
+- Leaves current custom/manual product creation fully usable and unchanged.
+
+When a later integration allows selection of a Product Concept, user-owned state must keep both the stable catalog Product ID and a display-name snapshot. The snapshot preserves what the user saw if the catalog is unavailable, renamed, or deactivated. No snapshot field or catalog link is added in WT-022A.
+
 ---
 
-## 7. Recommended Next Decision
+## 7. Official Phase 1 Product Taxonomy
 
-Before implementation planning, Product and Engineering should approve:
+The [Product Taxonomy](ProductTaxonomy.md) is the authoritative Phase 1 classification contract for Smart Product Knowledge. It defines 15 stable top-level category identifiers, one primary category per Product Concept, Hebrew and English display names, semantic category icons, deterministic boundary rules, and the assignment workflow.
 
-1. Canonical Product Entity versus user/shopping state separation.
-2. Generic-product and sellable-variant behavior.
-3. Taxonomy revision 1 and semantic icon contract.
-4. Search normalization and supported-language fixtures.
-5. iOS local search persistence spike.
-6. Migration release gates and rollback window.
+Phase 1 classifies Product Concepts rather than retail variants. No canonical subcategories are published in taxonomy version 1.0; the optional subcategory level remains reserved for evidence-based future expansion.
+
+---
+
+## 8. Pilot Product Catalog
+
+The [Pilot Product Catalog](PilotProductCatalog.md) validates the approved taxonomy with 15 generic Product Concepts selected for common Israeli shopping behavior and meaningful boundary coverage. The pilot spans 11 canonical categories and validates stable Product IDs, Hebrew and English names, localized aliases, deterministic category assignments, category-level semantic icon fallback, and search-ready name data.
+
+`PilotProductCatalog.md` remains the human-readable review record; the application never parses it. WT-022A.1 approves manual promotion of its exact 15 reviewed Product Concepts into the runtime resource `product-knowledge-catalog-v1.json`.
+
+The runtime JSON is authoritative for the app. The Markdown catalog and taxonomy remain authoritative for human review and meaning. A change is not shippable unless the JSON, the affected Markdown, and automated validation agree.
+
+The first runtime revision:
+
+- Uses schema version `1`.
+- Contains exactly 15 products.
+- Promotes `prd_pilot_0001` through `prd_pilot_0015` unchanged; these IDs become permanent when first shipped.
+- Contains all 15 taxonomy categories, while products cover the documented 11 categories.
+- Contains only category semantic icon keys; no product-specific override exists.
+- Is manually authored and reviewed because 15 products do not justify a Catalog Generator.
+
+The Catalog Generator is deferred. A manually created, validated pilot JSON resource is approved for WT-022A implementation.
+
+---
+
+## 9. Resolved Foundation Decisions
+
+WT-022A.1 resolves the implementation blockers as follows:
+
+1. `ProductEntity` is a read-only catalog Product Concept in WT-022A.
+2. Sellable variants and brands are deferred.
+3. Existing Product Library and Shopping persistence remain authoritative and unchanged.
+4. Runtime catalog promotion uses one manually authored, validated JSON file.
+5. Stable pilot IDs are retained and become immutable after release.
+6. Search, normalization, indexed persistence, catalog integration, and migration remain separate future approval gates.

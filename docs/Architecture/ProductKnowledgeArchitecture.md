@@ -1,6 +1,6 @@
 # WT-020 Product Knowledge Architecture Proposal
 
-**Version:** 1.0  
+**Version:** 1.1<br>
 **Status:** Proposed  
 **Decision scope:** Phase 1 architecture; no production implementation  
 **Related documents:**
@@ -9,6 +9,22 @@
 - `docs/Specifications/SmartProductCreation.md`
 - `docs/Architecture/ProductEntityDataModel.md`
 - `docs/Architecture/ProductKnowledgeMigrationStrategy.md`
+
+---
+
+## WT-022A Applicability
+
+WT-022A implements only a read-only bundle-backed catalog of generic Product Concepts. It does not implement the broader persistence, search, resolution, acquisition, migration, or integration architecture in this proposal.
+
+For WT-022A:
+
+- `ProductEntity` means Product Concept only.
+- Sellable variants, brands, sizes, prices, and barcodes are deferred.
+- Existing `Product`, `ShoppingListEntry`, legacy `ShoppingItem`, `ProductKnowledge`, and `ProductHistory` persistence remain unchanged and unlinked.
+- Catalog integration with product creation is deferred to Search and Autocomplete work.
+- Existing custom/manual products remain valid without a catalog entity.
+
+The broader architecture below remains future direction and must not be read as WT-022A implementation authorization where it conflicts with this narrower profile or `ProductEntityDataModel.md` version 1.1.
 
 ---
 
@@ -160,19 +176,14 @@ Requirements:
 - Stable across renames, category changes, and new aliases.
 - Platform-neutral string representation.
 - Assigned by the seed catalog for curated entities.
-- Generated locally for user-created entities using a collision-resistant UUID/ULID strategy.
 
-Barcodes and provider IDs are external identifiers, not primary keys.
+WT-022A catalog IDs are assigned only by catalog governance. User-created/custom products remain in the existing user-owned model and do not receive a catalog Product ID in this phase.
 
 ### 5.2 Generic products and sellable variants
 
-The same model supports:
+WT-022A models generic Product Concepts only, such as Milk, Oat Milk, and Bread. A sellable branded/package item such as Tnuva Milk 3% 1 L is not a Product Entity in this phase.
 
-- Generic concepts such as Milk.
-- Product types such as Oat Milk.
-- Sellable branded variants tied to barcodes.
-
-`entityKind` and `variantOfProductID` express this without creating a second entity family. A barcode normally resolves to a sellable variant, while a text query may prefer a generic entity based on ranking and user history.
+No `entityKind`, `variantOfProductID`, Brand, package-size, price, or barcode field is included in catalog schema version 1. A later retail-variant design may extend or separate the model, but that decision is not required to load the pilot catalog and is not made by WT-022A.
 
 ### 5.3 Merge and redirect
 
@@ -387,12 +398,11 @@ Ranking must use stable Product ID as a final deterministic tie-breaker.
 
 ### 9.1 Category model
 
-Categories are entities with stable IDs, localized names, parent relationships, and semantic icon keys.
+Taxonomy version 1.0 categories have stable IDs, localized names, and semantic icon keys. It publishes no subcategories or parent relationships.
 
 Product Entity stores:
 
-- Required top-level category ID, with `uncategorized` as a valid fallback.
-- Optional subcategory ID.
+- One required `primaryCategoryID`, with `uncategorized` as a valid fallback.
 
 Provider category strings are observations that pass through a mapping table. They do not directly become category IDs.
 
@@ -400,15 +410,15 @@ Provider category strings are observations that pass through a mapping table. Th
 
 Store `iconKey`, for example:
 
-- `food.dairy.milk`
-- `food.produce.apple`
-- `household.cleaning.laundry`
+- `product.dairy`
+- `product.fruit`
+- `product.cleaning`
 
 Each platform owns an `IconResolver`:
 
 | Semantic key | iOS example | Android example | Text fallback |
 |---|---|---|---|
-| `food.dairy.milk` | SF Symbol or bundled asset | Vector/Material/bundled asset | 🥛 |
+| `product.dairy` | SF Symbol or bundled asset | Vector/Material/bundled asset | Dairy & Alternatives |
 
 This prevents platform-specific asset names from entering Product Knowledge.
 

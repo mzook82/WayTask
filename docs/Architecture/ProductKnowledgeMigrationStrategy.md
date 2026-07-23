@@ -1,9 +1,25 @@
 # WT-020 Product Knowledge Migration Strategy
 
-**Version:** 1.0  
+**Version:** 1.1<br>
 **Status:** Proposed  
 **Scope:** Safe transition from current models to canonical Product Entity  
 **Implementation:** Out of scope for WT-020 Phase 1
+
+---
+
+## WT-022A Applicability
+
+This migration strategy is not part of WT-022A implementation.
+
+WT-022A:
+
+- Adds no catalog reference to current `Product`, `ShoppingListEntry`, or legacy `ShoppingItem`.
+- Does not map custom products to Product Entities.
+- Does not migrate, backfill, link, shadow-read, or dual-write existing user data.
+- Does not change the SwiftData schema or current source of truth.
+- Loads the read-only pilot Product Concept catalog in isolation.
+
+Every phase below remains deferred until Search and Autocomplete integration and a separate migration approval. The Product Identity decision in `ProductEntityDataModel.md` version 1.1 supersedes any implication below that WT-022A converts existing user records or models sellable variants.
 
 ---
 
@@ -517,4 +533,3 @@ This migration does not require:
 - Machine learning.
 - Automatic cross-device entity merging.
 - Deleting current compatibility models in Phase 1.
-
