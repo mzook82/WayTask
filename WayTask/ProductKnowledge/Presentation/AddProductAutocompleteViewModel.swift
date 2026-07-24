@@ -8,6 +8,7 @@ nonisolated enum ProductSuggestionPhase: Equatable, Sendable {
     case noMatch
     case unavailable
     case selectedCatalog
+    case selectedCustom
 }
 
 nonisolated struct AddProductCatalogSelection: Hashable, Sendable {
@@ -32,6 +33,11 @@ nonisolated struct AddProductCatalogSelection: Hashable, Sendable {
     }
 }
 
+nonisolated struct AddProductCustomSelection: Hashable, Sendable {
+    let name: String
+    let preselectionQuery: String
+}
+
 typealias ProductAutocompleteSuggestionProvider = @Sendable (
     _ query: String,
     _ localeIdentifier: String,
@@ -45,6 +51,8 @@ final class AddProductAutocompleteViewModel: ObservableObject {
     @Published private(set) var phase: ProductSuggestionPhase = .idle
     @Published private(set) var results: [ProductSearchResult] = []
     @Published private(set) var selectedCatalogProduct: AddProductCatalogSelection?
+    @Published private(set) var selectedCustomProduct: AddProductCustomSelection?
+    @Published private(set) var rawQuery = ""
 
     private let suggestionProvider: ProductAutocompleteSuggestionProvider?
     private let slowSearchDelay: ProductAutocompleteSlowSearchDelay
@@ -56,11 +64,23 @@ final class AddProductAutocompleteViewModel: ObservableObject {
     private var slowStatusTask: Task<Void, Never>?
 
     var canChangeSelection: Bool {
-        selectedCatalogProduct != nil
+        selectedCatalogProduct != nil || selectedCustomProduct != nil
     }
 
     var allowsManualProductSave: Bool {
-        selectedCatalogProduct == nil
+        selectedCustomProduct != nil
+    }
+
+    var customProductActionName: String? {
+        guard selectedCatalogProduct == nil,
+              selectedCustomProduct == nil else {
+            return nil
+        }
+
+        let trimmedName = rawQuery.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        return trimmedName.isEmpty ? nil : trimmedName
     }
 
     init(
@@ -95,10 +115,12 @@ final class AddProductAutocompleteViewModel: ObservableObject {
     }
 
     func updateQuery(_ rawQuery: String, localeIdentifier: String) {
-        guard selectedCatalogProduct == nil else {
+        guard selectedCatalogProduct == nil,
+              selectedCustomProduct == nil else {
             return
         }
 
+        self.rawQuery = rawQuery
         let normalizedQuery = ProductSearchNormalizer.normalize(rawQuery).value
         guard normalizedQuery != lastNormalizedQuery ||
                 localeIdentifier != lastLocaleIdentifier else {
@@ -167,6 +189,7 @@ final class AddProductAutocompleteViewModel: ObservableObject {
 
         invalidateCurrentSearch()
         results = []
+        selectedCustomProduct = nil
         selectedCatalogProduct = AddProductCatalogSelection(
             result: result,
             preselectionQuery: preselectionQuery
@@ -175,14 +198,53 @@ final class AddProductAutocompleteViewModel: ObservableObject {
         return true
     }
 
+    @discardableResult
+    func selectCustomProduct() -> AddProductCustomSelection? {
+        guard let name = customProductActionName else {
+            return nil
+        }
+
+        let selection = AddProductCustomSelection(
+            name: name,
+            preselectionQuery: rawQuery
+        )
+        invalidateCurrentSearch()
+        results = []
+        selectedCatalogProduct = nil
+        selectedCustomProduct = selection
+        phase = .selectedCustom
+        return selection
+    }
+
     func changeCatalogSelection(localeIdentifier: String) -> String? {
         guard let selectedCatalogProduct else {
             return nil
         }
 
-        let preselectionQuery = selectedCatalogProduct.preselectionQuery
+        return restoreEditing(
+            preselectionQuery: selectedCatalogProduct.preselectionQuery,
+            localeIdentifier: localeIdentifier
+        )
+    }
+
+    func changeCustomProductSelection(localeIdentifier: String) -> String? {
+        guard let selectedCustomProduct else {
+            return nil
+        }
+
+        return restoreEditing(
+            preselectionQuery: selectedCustomProduct.preselectionQuery,
+            localeIdentifier: localeIdentifier
+        )
+    }
+
+    private func restoreEditing(
+        preselectionQuery: String,
+        localeIdentifier: String
+    ) -> String {
         invalidateCurrentSearch()
-        self.selectedCatalogProduct = nil
+        selectedCatalogProduct = nil
+        selectedCustomProduct = nil
         lastNormalizedQuery = nil
         lastLocaleIdentifier = nil
         results = []
@@ -204,12 +266,26 @@ final class AddProductAutocompleteViewModel: ObservableObject {
         )
     }
 
+    func selectedCustomSummaryAccessibilityLabel(
+        localeIdentifier: String
+    ) -> String? {
+        guard let selectedCustomProduct else {
+            return nil
+        }
+        return ProductAutocompleteCopy.selectedCustomSummaryAccessibilityLabel(
+            selectedCustomProduct,
+            localeIdentifier: localeIdentifier
+        )
+    }
+
     func reset() {
         invalidateCurrentSearch()
         lastNormalizedQuery = nil
         lastLocaleIdentifier = nil
         results = []
         selectedCatalogProduct = nil
+        selectedCustomProduct = nil
+        rawQuery = ""
         phase = .idle
     }
 
@@ -285,6 +361,20 @@ nonisolated enum ProductAutocompleteCopy {
         isHebrew(localeIdentifier) ? "שינוי המוצר שנבחר" : "Change selected product"
     }
 
+    static func customProduct(localeIdentifier: String) -> String {
+        isHebrew(localeIdentifier) ? "מוצר מותאם אישית" : "Custom Product"
+    }
+
+    static func customProductAction(
+        name: String,
+        localeIdentifier: String
+    ) -> String {
+        if isHebrew(localeIdentifier) {
+            return "הוספת ״\(name)״ כמוצר מותאם אישית"
+        }
+        return "Add “\(name)” as a custom product"
+    }
+
     static func suggestionAccessibilityLabel(
         _ result: ProductSearchResult,
         localeIdentifier: String
@@ -307,6 +397,16 @@ nonisolated enum ProductAutocompleteCopy {
             return "\(selection.displayName) נבחר, \(selection.categoryDisplayName)"
         }
         return "\(selection.displayName) selected, \(selection.categoryDisplayName)"
+    }
+
+    static func selectedCustomSummaryAccessibilityLabel(
+        _ selection: AddProductCustomSelection,
+        localeIdentifier: String
+    ) -> String {
+        if isHebrew(localeIdentifier) {
+            return "\(selection.name) נבחר, מוצר מותאם אישית. יש ללחוץ על הוספת מוצר לאישור."
+        }
+        return "\(selection.name) selected, Custom Product. Add Product to confirm."
     }
 
     private static func isHebrew(_ localeIdentifier: String) -> Bool {

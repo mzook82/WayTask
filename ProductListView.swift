@@ -274,6 +274,8 @@ struct ProductListView: View {
         VStack(alignment: .leading, spacing: 12) {
             if let selectedCatalogProduct = productAutocompleteViewModel.selectedCatalogProduct {
                 selectedCatalogSummary(selectedCatalogProduct)
+            } else if let selectedCustomProduct = productAutocompleteViewModel.selectedCustomProduct {
+                selectedCustomSummary(selectedCustomProduct)
             } else {
                 HStack(spacing: 12) {
                     selectedPhotoPreview
@@ -379,6 +381,55 @@ struct ProductListView: View {
             )
         case .selectedCatalog:
             EmptyView()
+        case .selectedCustom:
+            EmptyView()
+        }
+
+        if let customProductName = productAutocompleteViewModel.customProductActionName {
+            Button {
+                selectCustomProduct()
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(WayTaskDesign.accent)
+                        .frame(width: 38, height: 38)
+                        .background(WayTaskDesign.accent.opacity(0.12))
+                        .clipShape(
+                            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        )
+                        .accessibilityHidden(true)
+
+                    Text(
+                        ProductAutocompleteCopy.customProductAction(
+                            name: customProductName,
+                            localeIdentifier: locale.identifier
+                        )
+                    )
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.primaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+            }
+            .buttonStyle(.plain)
+            .background(WayTaskDesign.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(WayTaskDesign.surfaceBorder, lineWidth: 1)
+            }
+            .accessibilityLabel(
+                ProductAutocompleteCopy.customProductAction(
+                    name: customProductName,
+                    localeIdentifier: locale.identifier
+                )
+            )
+            .accessibilityIdentifier("addProduct.customAction")
         }
     }
 
@@ -431,6 +482,83 @@ struct ProductListView: View {
 
             Button {
                 changeCatalogSelection()
+            } label: {
+                Label(
+                    ProductAutocompleteCopy.change(
+                        localeIdentifier: locale.identifier
+                    ),
+                    systemImage: "arrow.uturn.backward"
+                )
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 44))
+            .accessibilityLabel(
+                ProductAutocompleteCopy.changeAccessibilityLabel(
+                    localeIdentifier: locale.identifier
+                )
+            )
+            .accessibilityIdentifier("addProduct.change")
+        }
+        .padding(12)
+        .background(WayTaskDesign.accent.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(WayTaskDesign.accent.opacity(0.35), lineWidth: 1)
+        }
+    }
+
+    private func selectedCustomSummary(
+        _ selection: AddProductCustomSelection
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                WayTaskProductThumbnail(
+                    data: selectedImageData,
+                    size: 56,
+                    cornerRadius: 14,
+                    systemName: ProductKnowledgeIconResolver.fallbackSystemName
+                )
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Label(
+                        ProductAutocompleteCopy.selected(
+                            localeIdentifier: locale.identifier
+                        ),
+                        systemImage: "checkmark.circle.fill"
+                    )
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(WayTaskDesign.accent)
+
+                    Text(selection.name)
+                        .font(.headline)
+                        .foregroundStyle(WayTaskDesign.primaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(
+                        ProductAutocompleteCopy.customProduct(
+                            localeIdentifier: locale.identifier
+                        )
+                    )
+                    .font(.caption)
+                    .foregroundStyle(WayTaskDesign.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(
+                productAutocompleteViewModel.selectedCustomSummaryAccessibilityLabel(
+                    localeIdentifier: locale.identifier
+                ) ?? ""
+            )
+            .accessibilityAddTraits(.isSelected)
+            .accessibilityIdentifier("addProduct.selectedCustomSummary")
+
+            Button {
+                changeCustomProductSelection()
             } label: {
                 Label(
                     ProductAutocompleteCopy.change(
@@ -527,6 +655,35 @@ struct ProductListView: View {
 
     private func changeCatalogSelection() {
         guard let preselectionQuery = productAutocompleteViewModel.changeCatalogSelection(
+            localeIdentifier: locale.identifier
+        ) else {
+            return
+        }
+
+        newItemName = preselectionQuery
+        Task { @MainActor in
+            await Task.yield()
+            isProductNameFocused = true
+        }
+    }
+
+    private func selectCustomProduct() {
+        guard let selection = productAutocompleteViewModel.selectCustomProduct() else {
+            return
+        }
+
+        newItemName = selection.name
+        isProductNameFocused = false
+        UIAccessibility.post(
+            notification: .announcement,
+            argument: productAutocompleteViewModel.selectedCustomSummaryAccessibilityLabel(
+                localeIdentifier: locale.identifier
+            )
+        )
+    }
+
+    private func changeCustomProductSelection() {
+        guard let preselectionQuery = productAutocompleteViewModel.changeCustomProductSelection(
             localeIdentifier: locale.identifier
         ) else {
             return

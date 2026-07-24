@@ -14,6 +14,8 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.phase, .idle)
         XCTAssertTrue(viewModel.results.isEmpty)
+        XCTAssertNil(viewModel.customProductActionName)
+        XCTAssertFalse(viewModel.allowsManualProductSave)
         let requests = await recorder.requests
         XCTAssertTrue(requests.isEmpty)
     }
@@ -41,6 +43,7 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
             ]
         )
         XCTAssertEqual(viewModel.results.map(\.displayName), ["Milk"])
+        XCTAssertEqual(viewModel.customProductActionName, "M")
     }
 
     func testDifferentQueryReplacesDisplayedResults() async throws {
@@ -123,6 +126,7 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.phase, .unavailable)
         XCTAssertTrue(viewModel.results.isEmpty)
+        XCTAssertEqual(viewModel.customProductActionName, "m")
         XCTAssertEqual(
             ProductAutocompleteCopy.unavailable(localeIdentifier: "en"),
             "Product suggestions are unavailable. You can still add this product manually."
@@ -163,7 +167,7 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
         }
 
         XCTAssertNil(viewModel.selectedCatalogProduct)
-        XCTAssertTrue(viewModel.allowsManualProductSave)
+        XCTAssertFalse(viewModel.allowsManualProductSave)
         XCTAssertTrue(
             viewModel.selectCatalogProduct(
                 result,
@@ -313,7 +317,7 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
 
         XCTAssertNil(viewModel.selectedCatalogProduct)
         XCTAssertFalse(viewModel.canChangeSelection)
-        XCTAssertTrue(viewModel.allowsManualProductSave)
+        XCTAssertFalse(viewModel.allowsManualProductSave)
         XCTAssertEqual(viewModel.phase, .idle)
         XCTAssertTrue(viewModel.results.isEmpty)
 
@@ -365,6 +369,165 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
             ),
             "שינוי המוצר שנבחר"
         )
+    }
+
+    func testCustomActionUsesTrimmedRawTextWithoutRepeatingEquivalentSearch() async throws {
+        let result = makeResult(id: "milk", displayName: "Milk")
+        let recorder = ProductAutocompleteSearchRecorder(responses: ["mil": [result]])
+        let viewModel = makeViewModel(recorder: recorder)
+
+        viewModel.updateQuery("  MiL  ", localeIdentifier: "en")
+        try await waitUntil {
+            viewModel.phase == .results
+        }
+        XCTAssertEqual(viewModel.customProductActionName, "MiL")
+
+        viewModel.updateQuery("\nMIL\n", localeIdentifier: "en")
+
+        XCTAssertEqual(viewModel.customProductActionName, "MIL")
+        XCTAssertEqual(viewModel.results, [result])
+        let requests = await recorder.requests
+        XCTAssertEqual(requests.map(\.query), ["mil"])
+    }
+
+    func testCustomActionAppearsWithoutCatalogResultsAndSupportsNormalizationEmptyText() async throws {
+        let recorder = ProductAutocompleteSearchRecorder()
+        let viewModel = makeViewModel(recorder: recorder)
+
+        viewModel.updateQuery("Mystery Product", localeIdentifier: "en")
+        try await waitUntil {
+            viewModel.phase == .noMatch
+        }
+
+        XCTAssertEqual(viewModel.customProductActionName, "Mystery Product")
+        XCTAssertFalse(viewModel.allowsManualProductSave)
+
+        viewModel.updateQuery("  +++  ", localeIdentifier: "en")
+
+        XCTAssertEqual(viewModel.phase, .idle)
+        XCTAssertTrue(viewModel.results.isEmpty)
+        XCTAssertEqual(viewModel.customProductActionName, "+++")
+    }
+
+    func testCustomSelectionRetainsTrimmedNameAndRequiresLaterManualConfirmation() async throws {
+        let catalogResult = makeResult(id: "milk", displayName: "Milk")
+        let recorder = ProductAutocompleteSearchRecorder(
+            responses: ["vanilla pudding": [catalogResult]]
+        )
+        let viewModel = makeViewModel(recorder: recorder)
+        let rawQuery = "  Vanilla   Pudding  "
+
+        viewModel.updateQuery(rawQuery, localeIdentifier: "en")
+        try await waitUntil {
+            viewModel.phase == .results
+        }
+
+        let selection = try XCTUnwrap(viewModel.selectCustomProduct())
+
+        XCTAssertEqual(
+            selection,
+            AddProductCustomSelection(
+                name: "Vanilla   Pudding",
+                preselectionQuery: rawQuery
+            )
+        )
+        XCTAssertEqual(viewModel.selectedCustomProduct, selection)
+        XCTAssertNil(viewModel.selectedCatalogProduct)
+        XCTAssertEqual(viewModel.phase, .selectedCustom)
+        XCTAssertTrue(viewModel.results.isEmpty)
+        XCTAssertNil(viewModel.customProductActionName)
+        XCTAssertTrue(viewModel.canChangeSelection)
+        XCTAssertTrue(viewModel.allowsManualProductSave)
+        let requests = await recorder.requests
+        XCTAssertEqual(requests.count, 1)
+    }
+
+    func testCustomChangeRestoresOriginalQuerySuggestionsAndConfirmationGuard() async throws {
+        let result = makeResult(id: "milk", displayName: "Milk")
+        let recorder = ProductAutocompleteSearchRecorder(responses: ["mil": [result]])
+        let viewModel = makeViewModel(recorder: recorder)
+        let rawQuery = "  MiL  "
+
+        viewModel.updateQuery(rawQuery, localeIdentifier: "en")
+        try await waitUntil {
+            viewModel.phase == .results
+        }
+        XCTAssertNotNil(viewModel.selectCustomProduct())
+
+        let restoredQuery = viewModel.changeCustomProductSelection(
+            localeIdentifier: "en"
+        )
+
+        XCTAssertEqual(restoredQuery, rawQuery)
+        XCTAssertNil(viewModel.selectedCustomProduct)
+        XCTAssertFalse(viewModel.canChangeSelection)
+        XCTAssertFalse(viewModel.allowsManualProductSave)
+        XCTAssertEqual(viewModel.customProductActionName, "MiL")
+        try await waitUntil {
+            viewModel.phase == .results
+        }
+        XCTAssertEqual(viewModel.results, [result])
+        let requests = await recorder.requests
+        XCTAssertEqual(requests.map(\.query), ["mil", "mil"])
+    }
+
+    func testResetClearsCustomSelectionAndManualConfirmation() async throws {
+        let recorder = ProductAutocompleteSearchRecorder()
+        let viewModel = makeViewModel(recorder: recorder)
+
+        viewModel.updateQuery("  Custom Need  ", localeIdentifier: "en")
+        try await waitUntil {
+            viewModel.phase == .noMatch
+        }
+        XCTAssertNotNil(viewModel.selectCustomProduct())
+
+        viewModel.reset()
+
+        XCTAssertNil(viewModel.selectedCustomProduct)
+        XCTAssertNil(viewModel.selectedCatalogProduct)
+        XCTAssertNil(viewModel.customProductActionName)
+        XCTAssertEqual(viewModel.rawQuery, "")
+        XCTAssertEqual(viewModel.phase, .idle)
+        XCTAssertFalse(viewModel.canChangeSelection)
+        XCTAssertFalse(viewModel.allowsManualProductSave)
+    }
+
+    func testCustomActionAndSelectedSummaryExposeLocalizedAccessibilityCopy() {
+        let viewModel = AddProductAutocompleteViewModel(
+            searchAvailability: .unavailable,
+            slowSearchDelay: longSlowSearchDelay
+        )
+        viewModel.updateQuery("  Custom Need  ", localeIdentifier: "en")
+
+        XCTAssertEqual(
+            ProductAutocompleteCopy.customProductAction(
+                name: "Custom Need",
+                localeIdentifier: "en"
+            ),
+            "Add “Custom Need” as a custom product"
+        )
+        XCTAssertEqual(
+            ProductAutocompleteCopy.customProductAction(
+                name: "צורך מיוחד",
+                localeIdentifier: "he"
+            ),
+            "הוספת ״צורך מיוחד״ כמוצר מותאם אישית"
+        )
+
+        let selection = viewModel.selectCustomProduct()
+
+        XCTAssertNotNil(selection)
+        XCTAssertEqual(
+            viewModel.selectedCustomSummaryAccessibilityLabel(
+                localeIdentifier: "en"
+            ),
+            "Custom Need selected, Custom Product. Add Product to confirm."
+        )
+        XCTAssertEqual(
+            ProductAutocompleteCopy.customProduct(localeIdentifier: "he"),
+            "מוצר מותאם אישית"
+        )
+        XCTAssertTrue(viewModel.canChangeSelection)
     }
 
     private func makeViewModel(
