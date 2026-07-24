@@ -1119,6 +1119,7 @@ extension View {
             .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(WayTaskDesign.surfaceBorder, lineWidth: 1)
+                    .allowsHitTesting(false)
             }
     }
 

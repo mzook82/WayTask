@@ -27,6 +27,8 @@ struct ProductListView: View {
     @State private var isShowingBuyingOptions = false
     @State private var isShowingSettings = false
     @State private var isShowingScanner = false
+    @State private var isShowingAddProductSaveError = false
+    @FocusState private var isProductNameFocused: Bool
     private let shoppingListService = ShoppingListService()
     private let shoppingIntentMatcher = ShoppingIntentMatcher()
     private let buyingOptionsService = BuyingOptionsService()
@@ -180,6 +182,11 @@ struct ProductListView: View {
             }
             .navigationTitle("Add Product")
             .navigationBarTitleDisplayMode(.inline)
+            .alert("Product wasn’t saved", isPresented: $isShowingAddProductSaveError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Couldn’t save this product. Please try again.")
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") {
@@ -248,6 +255,13 @@ struct ProductListView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     TextField("Product name", text: $newItemName)
                         .textInputAutocapitalization(.words)
+                        .submitLabel(.done)
+                        .focused($isProductNameFocused)
+                        .onSubmit {
+                            if canAddProduct {
+                                addItem()
+                            }
+                        }
                         .font(.headline)
                         .foregroundStyle(WayTaskDesign.primaryText)
 
@@ -269,17 +283,20 @@ struct ProductListView: View {
 
                 Button {
                     addItem()
-                    isShowingAddProduct = false
                 } label: {
                     Label("Add Product", systemImage: "plus.circle.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(WayTaskPrimaryPillButtonStyle())
-                .disabled(newItemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(!canAddProduct)
+                .opacity(canAddProduct ? 1 : 0.42)
             }
         }
         .padding(16)
         .wayTaskCard()
+        .onAppear {
+            isProductNameFocused = true
+        }
     }
 
     private var bottomActionBar: some View {
@@ -803,9 +820,24 @@ struct ProductListView: View {
             appStateManager.shoppingListDidChange()
             appStateManager.markShoppingPlanStale(reason: "Shopping list changed. Generate a new plan before viewing stores.")
             resetForm()
+            isShowingAddProduct = false
         } catch {
-            assertionFailure("Failed to add manual shopping item: \(error.localizedDescription)")
+            SentryReportingService.shared.capture(
+                error: error,
+                message: .persistenceFailed,
+                operation: .persistence,
+                category: .persistence,
+                area: .products
+            )
+            isShowingAddProductSaveError = true
+            #if DEBUG
+            print("[WayTask Product Save] Failed to save manual product: \(error.localizedDescription)")
+            #endif
         }
+    }
+
+    private var canAddProduct: Bool {
+        !newItemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func loadSelectedPhoto() {
@@ -819,6 +851,8 @@ struct ProductListView: View {
         selectedLocationID = nil
         selectedPhotoItem = nil
         selectedImageData = nil
+        isProductNameFocused = false
+        isShowingAddProductSaveError = false
     }
 
     private func showAllProducts() {

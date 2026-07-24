@@ -415,6 +415,42 @@ Deferred to keep Beta 1.0.1 focused on Shopping Flow and User Trust.
 
 Move completed tasks here after they are released.
 
+## WT-011A — Improve Manual Product Creation Reliability
+
+**Status:** Completed
+
+**Priority:** Critical
+
+**Affected Screen:** Products / Add Product
+
+**Reported By:** Internal Testing
+
+**Description**
+
+Improve the manual Add Product flow by clarifying validation, preventing card overlays from interfering with controls, and handling persistence failures safely.
+
+**Acceptance Criteria**
+
+- Product name field receives focus when the Add Product sheet opens.
+- Empty or whitespace-only names cannot be submitted.
+- The disabled Add Product button is visually clear.
+- A valid name can be submitted from the keyboard.
+- Valid products save to the Product Library.
+- The sheet closes only after successful persistence.
+- Save failures are reported to Sentry.
+- Save failures preserve the entered data and show a user-facing error.
+- Card border overlays do not interfere with form controls.
+
+**Target Version:** 1.0.2
+
+**QA:** Passed
+
+**Notes**
+
+The manual flow continues to create user-owned Product records and does not create or modify Product Knowledge ProductEntity records.
+
+Duplicate manual product names remain supported.
+
 ---
 
 # 🚧 Deferred
@@ -442,3 +478,4 @@ Ideas that should not be implemented yet but should not be forgotten.
 | WT-005 | Simplify Product List | High | Planned | 1.0.1 |
 | WT-006 | Store Reporting | Medium | Planned | TBD |
 | WT-007 | Product Reporting | Medium | Planned | TBD |
+| WT-011A | Improve Manual Product Creation Reliability | Critical | Completed | 1.0.2 |
