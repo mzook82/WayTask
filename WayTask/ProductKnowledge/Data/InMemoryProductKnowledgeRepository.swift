@@ -1,6 +1,7 @@
 import Foundation
 
 actor InMemoryProductKnowledgeRepository: ProductKnowledgeRepository {
+    private let snapshot: ProductKnowledgeSnapshot
     private let snapshotMetadata: ProductKnowledgeSnapshotMetadata
     private let entitiesByID: [ProductID: ProductEntity]
     private let namesByProductID: [ProductID: [ProductName]]
@@ -8,6 +9,7 @@ actor InMemoryProductKnowledgeRepository: ProductKnowledgeRepository {
     private let categoriesByID: [ProductCategoryID: ProductCategory]
 
     init(snapshot: ProductKnowledgeSnapshot) {
+        self.snapshot = snapshot
         snapshotMetadata = snapshot.metadata
         entitiesByID = Dictionary(uniqueKeysWithValues: snapshot.products.map { ($0.id, $0) })
         namesByID = Dictionary(uniqueKeysWithValues: snapshot.names.map { ($0.id, $0) })
@@ -18,6 +20,10 @@ actor InMemoryProductKnowledgeRepository: ProductKnowledgeRepository {
             groupedNames[name.productID, default: []].append(name)
         }
         namesByProductID = groupedNames
+    }
+
+    func catalogSnapshot() -> ProductKnowledgeSnapshot {
+        snapshot
     }
 
     func metadata() -> ProductKnowledgeSnapshotMetadata {

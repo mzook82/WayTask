@@ -2,6 +2,45 @@ import XCTest
 @testable import WayTask
 
 final class InMemoryProductKnowledgeRepositoryTests: XCTestCase {
+    func testCatalogSnapshotReturnsCompleteStableValueCopy() async {
+        let snapshot = ProductKnowledgeFixtureFactory.makeSnapshot()
+        let repository = InMemoryProductKnowledgeRepository(snapshot: snapshot)
+
+        let firstRead = await repository.catalogSnapshot()
+        var callerProducts = firstRead.products
+        callerProducts.removeAll()
+        let secondRead = await repository.catalogSnapshot()
+
+        XCTAssertEqual(firstRead, snapshot)
+        XCTAssertTrue(callerProducts.isEmpty)
+        XCTAssertEqual(secondRead, snapshot)
+    }
+
+    func testConcurrentCatalogSnapshotReadsRemainEquivalent() async {
+        let snapshot = ProductKnowledgeFixtureFactory.makeSnapshot()
+        let repository = InMemoryProductKnowledgeRepository(snapshot: snapshot)
+
+        let snapshots = await withTaskGroup(
+            of: ProductKnowledgeSnapshot.self,
+            returning: [ProductKnowledgeSnapshot].self
+        ) { group in
+            for _ in 0..<64 {
+                group.addTask {
+                    await repository.catalogSnapshot()
+                }
+            }
+
+            var values: [ProductKnowledgeSnapshot] = []
+            for await value in group {
+                values.append(value)
+            }
+            return values
+        }
+
+        XCTAssertEqual(snapshots.count, 64)
+        XCTAssertTrue(snapshots.allSatisfy { $0 == snapshot })
+    }
+
     func testExactIDReadsAndUnknownIDs() async {
         let repository = InMemoryProductKnowledgeRepository(
             snapshot: ProductKnowledgeFixtureFactory.makeSnapshot()

@@ -16,6 +16,7 @@ nonisolated struct ProductKnowledgeSnapshot: Equatable, Sendable {
 }
 
 nonisolated protocol ProductKnowledgeRepository: Sendable {
+    func catalogSnapshot() async -> ProductKnowledgeSnapshot
     func metadata() async -> ProductKnowledgeSnapshotMetadata
     func entity(id: ProductID) async -> ProductEntity?
     func names(productID: ProductID) async -> [ProductName]
