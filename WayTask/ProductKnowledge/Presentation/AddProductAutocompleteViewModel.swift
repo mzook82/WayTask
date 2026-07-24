@@ -7,6 +7,29 @@ nonisolated enum ProductSuggestionPhase: Equatable, Sendable {
     case results
     case noMatch
     case unavailable
+    case selectedCatalog
+}
+
+nonisolated struct AddProductCatalogSelection: Hashable, Sendable {
+    let productID: ProductID
+    let displayName: String
+    let displayLocale: String
+    let secondaryName: String?
+    let categoryID: ProductCategoryID
+    let categoryDisplayName: String
+    let iconKey: String
+    let preselectionQuery: String
+
+    init(result: ProductSearchResult, preselectionQuery: String) {
+        productID = result.productID
+        displayName = result.displayName
+        displayLocale = result.displayLocale
+        secondaryName = result.secondaryName
+        categoryID = result.categoryID
+        categoryDisplayName = result.categoryDisplayName
+        iconKey = result.iconKey
+        self.preselectionQuery = preselectionQuery
+    }
 }
 
 typealias ProductAutocompleteSuggestionProvider = @Sendable (
@@ -21,6 +44,7 @@ typealias ProductAutocompleteSlowSearchDelay = @Sendable () async -> Void
 final class AddProductAutocompleteViewModel: ObservableObject {
     @Published private(set) var phase: ProductSuggestionPhase = .idle
     @Published private(set) var results: [ProductSearchResult] = []
+    @Published private(set) var selectedCatalogProduct: AddProductCatalogSelection?
 
     private let suggestionProvider: ProductAutocompleteSuggestionProvider?
     private let slowSearchDelay: ProductAutocompleteSlowSearchDelay
@@ -30,6 +54,14 @@ final class AddProductAutocompleteViewModel: ObservableObject {
     private var lastLocaleIdentifier: String?
     private var searchTask: Task<Void, Never>?
     private var slowStatusTask: Task<Void, Never>?
+
+    var canChangeSelection: Bool {
+        selectedCatalogProduct != nil
+    }
+
+    var allowsManualProductSave: Bool {
+        selectedCatalogProduct == nil
+    }
 
     init(
         searchAvailability: ProductKnowledgeSearchAvailability,
@@ -63,6 +95,10 @@ final class AddProductAutocompleteViewModel: ObservableObject {
     }
 
     func updateQuery(_ rawQuery: String, localeIdentifier: String) {
+        guard selectedCatalogProduct == nil else {
+            return
+        }
+
         let normalizedQuery = ProductSearchNormalizer.normalize(rawQuery).value
         guard normalizedQuery != lastNormalizedQuery ||
                 localeIdentifier != lastLocaleIdentifier else {
@@ -120,11 +156,60 @@ final class AddProductAutocompleteViewModel: ObservableObject {
         }
     }
 
+    @discardableResult
+    func selectCatalogProduct(
+        _ result: ProductSearchResult,
+        preselectionQuery: String
+    ) -> Bool {
+        guard phase == .results, results.contains(result) else {
+            return false
+        }
+
+        invalidateCurrentSearch()
+        results = []
+        selectedCatalogProduct = AddProductCatalogSelection(
+            result: result,
+            preselectionQuery: preselectionQuery
+        )
+        phase = .selectedCatalog
+        return true
+    }
+
+    func changeCatalogSelection(localeIdentifier: String) -> String? {
+        guard let selectedCatalogProduct else {
+            return nil
+        }
+
+        let preselectionQuery = selectedCatalogProduct.preselectionQuery
+        invalidateCurrentSearch()
+        self.selectedCatalogProduct = nil
+        lastNormalizedQuery = nil
+        lastLocaleIdentifier = nil
+        results = []
+        phase = .idle
+        updateQuery(
+            preselectionQuery,
+            localeIdentifier: localeIdentifier
+        )
+        return preselectionQuery
+    }
+
+    func selectedSummaryAccessibilityLabel(localeIdentifier: String) -> String? {
+        guard let selectedCatalogProduct else {
+            return nil
+        }
+        return ProductAutocompleteCopy.selectedSummaryAccessibilityLabel(
+            selectedCatalogProduct,
+            localeIdentifier: localeIdentifier
+        )
+    }
+
     func reset() {
         invalidateCurrentSearch()
         lastNormalizedQuery = nil
         lastLocaleIdentifier = nil
         results = []
+        selectedCatalogProduct = nil
         phase = .idle
     }
 
@@ -186,6 +271,42 @@ nonisolated enum ProductAutocompleteCopy {
             return "הצעות למוצרים אינן זמינות כרגע. עדיין אפשר להוסיף את המוצר ידנית."
         }
         return "Product suggestions are unavailable. You can still add this product manually."
+    }
+
+    static func selected(localeIdentifier: String) -> String {
+        isHebrew(localeIdentifier) ? "נבחר" : "Selected"
+    }
+
+    static func change(localeIdentifier: String) -> String {
+        isHebrew(localeIdentifier) ? "שינוי" : "Change"
+    }
+
+    static func changeAccessibilityLabel(localeIdentifier: String) -> String {
+        isHebrew(localeIdentifier) ? "שינוי המוצר שנבחר" : "Change selected product"
+    }
+
+    static func suggestionAccessibilityLabel(
+        _ result: ProductSearchResult,
+        localeIdentifier: String
+    ) -> String {
+        guard let secondaryName = result.secondaryName else {
+            return "\(result.displayName), \(result.categoryDisplayName)"
+        }
+
+        if isHebrew(localeIdentifier) {
+            return "\(result.displayName), \(result.categoryDisplayName), נמצא גם בשם \(secondaryName)"
+        }
+        return "\(result.displayName), \(result.categoryDisplayName), matched as \(secondaryName)"
+    }
+
+    static func selectedSummaryAccessibilityLabel(
+        _ selection: AddProductCatalogSelection,
+        localeIdentifier: String
+    ) -> String {
+        if isHebrew(localeIdentifier) {
+            return "\(selection.displayName) נבחר, \(selection.categoryDisplayName)"
+        }
+        return "\(selection.displayName) selected, \(selection.categoryDisplayName)"
     }
 
     private static func isHebrew(_ localeIdentifier: String) -> Bool {

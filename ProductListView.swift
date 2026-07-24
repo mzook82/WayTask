@@ -2,6 +2,7 @@ import MapKit
 import PhotosUI
 import SwiftData
 import SwiftUI
+import UIKit
 
 struct ProductListView: View {
     @Environment(\.modelContext) private var modelContext
@@ -271,26 +272,30 @@ struct ProductListView: View {
 
     private var addProductForm: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                selectedPhotoPreview
+            if let selectedCatalogProduct = productAutocompleteViewModel.selectedCatalogProduct {
+                selectedCatalogSummary(selectedCatalogProduct)
+            } else {
+                HStack(spacing: 12) {
+                    selectedPhotoPreview
 
-                VStack(alignment: .leading, spacing: 10) {
-                    TextField("Product name", text: $newItemName)
-                        .textInputAutocapitalization(.words)
-                        .submitLabel(.done)
-                        .focused($isProductNameFocused)
-                        .onSubmit {
-                            if canAddProduct {
-                                addItem()
+                    VStack(alignment: .leading, spacing: 10) {
+                        TextField("Product name", text: $newItemName)
+                            .textInputAutocapitalization(.words)
+                            .submitLabel(.done)
+                            .focused($isProductNameFocused)
+                            .onSubmit {
+                                if canAddProduct {
+                                    addItem()
+                                }
                             }
-                        }
-                        .font(.headline)
-                        .foregroundStyle(WayTaskDesign.primaryText)
+                            .font(.headline)
+                            .foregroundStyle(WayTaskDesign.primaryText)
 
-                    Text("Saved here first. Add products to Shopping only when you plan to buy them.")
-                        .font(.caption)
-                        .foregroundStyle(WayTaskDesign.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
+                        Text("Saved here first. Add products to Shopping only when you plan to buy them.")
+                            .font(.caption)
+                            .foregroundStyle(WayTaskDesign.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
 
@@ -340,8 +345,21 @@ struct ProductListView: View {
                             .overlay(WayTaskDesign.surfaceBorder)
                     }
 
-                    productAutocompleteRow(
-                        productAutocompleteViewModel.results[index]
+                    let result = productAutocompleteViewModel.results[index]
+                    Button {
+                        selectCatalogProduct(result)
+                    } label: {
+                        productAutocompleteRow(result)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(
+                        ProductAutocompleteCopy.suggestionAccessibilityLabel(
+                            result,
+                            localeIdentifier: locale.identifier
+                        )
+                    )
+                    .accessibilityIdentifier(
+                        "addProduct.suggestion.\(result.productID.rawValue)"
                     )
                 }
             }
@@ -359,6 +377,83 @@ struct ProductListView: View {
             productAutocompleteStatus(
                 ProductAutocompleteCopy.unavailable(localeIdentifier: locale.identifier)
             )
+        case .selectedCatalog:
+            EmptyView()
+        }
+    }
+
+    private func selectedCatalogSummary(
+        _ selection: AddProductCatalogSelection
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                WayTaskProductThumbnail(
+                    data: selectedImageData,
+                    size: 56,
+                    cornerRadius: 14,
+                    systemName: ProductKnowledgeIconResolver.systemName(
+                        for: selection.iconKey
+                    )
+                )
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Label(
+                        ProductAutocompleteCopy.selected(
+                            localeIdentifier: locale.identifier
+                        ),
+                        systemImage: "checkmark.circle.fill"
+                    )
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(WayTaskDesign.accent)
+
+                    Text(selection.displayName)
+                        .font(.headline)
+                        .foregroundStyle(WayTaskDesign.primaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(selection.categoryDisplayName)
+                        .font(.caption)
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(
+                productAutocompleteViewModel.selectedSummaryAccessibilityLabel(
+                    localeIdentifier: locale.identifier
+                ) ?? ""
+            )
+            .accessibilityAddTraits(.isSelected)
+            .accessibilityIdentifier("addProduct.selectedSummary")
+
+            Button {
+                changeCatalogSelection()
+            } label: {
+                Label(
+                    ProductAutocompleteCopy.change(
+                        localeIdentifier: locale.identifier
+                    ),
+                    systemImage: "arrow.uturn.backward"
+                )
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 44))
+            .accessibilityLabel(
+                ProductAutocompleteCopy.changeAccessibilityLabel(
+                    localeIdentifier: locale.identifier
+                )
+            )
+            .accessibilityIdentifier("addProduct.change")
+        }
+        .padding(12)
+        .background(WayTaskDesign.accent.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(WayTaskDesign.accent.opacity(0.35), lineWidth: 1)
         }
     }
 
@@ -409,6 +504,39 @@ struct ProductListView: View {
                 return value
             }
             .joined(separator: " · ")
+    }
+
+    private func selectCatalogProduct(_ result: ProductSearchResult) {
+        let preselectionQuery = newItemName
+        guard productAutocompleteViewModel.selectCatalogProduct(
+            result,
+            preselectionQuery: preselectionQuery
+        ) else {
+            return
+        }
+
+        newItemName = result.displayName
+        isProductNameFocused = false
+        UIAccessibility.post(
+            notification: .announcement,
+            argument: productAutocompleteViewModel.selectedSummaryAccessibilityLabel(
+                localeIdentifier: locale.identifier
+            )
+        )
+    }
+
+    private func changeCatalogSelection() {
+        guard let preselectionQuery = productAutocompleteViewModel.changeCatalogSelection(
+            localeIdentifier: locale.identifier
+        ) else {
+            return
+        }
+
+        newItemName = preselectionQuery
+        Task { @MainActor in
+            await Task.yield()
+            isProductNameFocused = true
+        }
     }
 
     private var bottomActionBar: some View {
@@ -916,6 +1044,10 @@ struct ProductListView: View {
     }
 
     private func addItem() {
+        guard productAutocompleteViewModel.allowsManualProductSave else {
+            return
+        }
+
         let name = newItemName.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !name.isEmpty else {
@@ -949,7 +1081,8 @@ struct ProductListView: View {
     }
 
     private var canAddProduct: Bool {
-        !newItemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        productAutocompleteViewModel.allowsManualProductSave &&
+            !newItemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func loadSelectedPhoto() {

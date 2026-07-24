@@ -144,6 +144,229 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.results.count, 8)
     }
 
+    func testSelectionRequiresExplicitCurrentResultAndRetainsApprovedMetadata() async throws {
+        let result = makeResult(
+            id: "milk",
+            displayName: "חלב",
+            displayLocale: "he",
+            secondaryName: "Milk",
+            categoryID: "dairy",
+            categoryDisplayName: "מוצרי חלב ותחליפים",
+            iconKey: "product.dairy"
+        )
+        let recorder = ProductAutocompleteSearchRecorder(responses: ["ח": [result]])
+        let viewModel = makeViewModel(recorder: recorder)
+
+        viewModel.updateQuery("ח", localeIdentifier: "he-IL")
+        try await waitUntil {
+            viewModel.phase == .results
+        }
+
+        XCTAssertNil(viewModel.selectedCatalogProduct)
+        XCTAssertTrue(viewModel.allowsManualProductSave)
+        XCTAssertTrue(
+            viewModel.selectCatalogProduct(
+                result,
+                preselectionQuery: "  ח  "
+            )
+        )
+
+        let selection = try XCTUnwrap(viewModel.selectedCatalogProduct)
+        XCTAssertEqual(viewModel.phase, .selectedCatalog)
+        XCTAssertTrue(viewModel.results.isEmpty)
+        XCTAssertEqual(selection.productID, ProductID("milk"))
+        XCTAssertEqual(selection.displayName, "חלב")
+        XCTAssertEqual(selection.displayLocale, "he")
+        XCTAssertEqual(selection.secondaryName, "Milk")
+        XCTAssertEqual(selection.categoryID, ProductCategoryID("dairy"))
+        XCTAssertEqual(selection.categoryDisplayName, "מוצרי חלב ותחליפים")
+        XCTAssertEqual(selection.iconKey, "product.dairy")
+        XCTAssertEqual(selection.preselectionQuery, "  ח  ")
+        XCTAssertTrue(viewModel.canChangeSelection)
+        XCTAssertFalse(viewModel.allowsManualProductSave)
+
+        let requests = await recorder.requests
+        XCTAssertEqual(requests.count, 1)
+    }
+
+    func testNoncurrentResultCannotBeSelectedAndNoResultIsSelectedAutomatically() async throws {
+        let current = makeResult(id: "milk", displayName: "Milk")
+        let other = makeResult(id: "bread", displayName: "Bread")
+        let recorder = ProductAutocompleteSearchRecorder(responses: ["m": [current]])
+        let viewModel = makeViewModel(recorder: recorder)
+
+        viewModel.updateQuery("m", localeIdentifier: "en")
+        try await waitUntil {
+            viewModel.phase == .results
+        }
+
+        XCTAssertNil(viewModel.selectedCatalogProduct)
+        XCTAssertFalse(
+            viewModel.selectCatalogProduct(
+                other,
+                preselectionQuery: "m"
+            )
+        )
+        XCTAssertNil(viewModel.selectedCatalogProduct)
+        XCTAssertEqual(viewModel.phase, .results)
+        XCTAssertEqual(viewModel.results, [current])
+    }
+
+    func testChangeRestoresExactPreselectionQueryAndRerunsSuggestions() async throws {
+        let result = makeResult(id: "milk", displayName: "Milk")
+        let recorder = ProductAutocompleteSearchRecorder(responses: ["mil": [result]])
+        let viewModel = makeViewModel(recorder: recorder)
+        let rawQuery = "  MiL  "
+
+        viewModel.updateQuery(rawQuery, localeIdentifier: "en")
+        try await waitUntil {
+            viewModel.phase == .results
+        }
+        XCTAssertTrue(
+            viewModel.selectCatalogProduct(
+                result,
+                preselectionQuery: rawQuery
+            )
+        )
+
+        let restoredQuery = viewModel.changeCatalogSelection(
+            localeIdentifier: "en"
+        )
+
+        XCTAssertEqual(restoredQuery, rawQuery)
+        XCTAssertNil(viewModel.selectedCatalogProduct)
+        XCTAssertFalse(viewModel.canChangeSelection)
+        try await waitUntil {
+            viewModel.phase == .results
+        }
+        XCTAssertEqual(viewModel.results, [result])
+        let requests = await recorder.requests
+        XCTAssertEqual(requests.map(\.query), ["mil", "mil"])
+    }
+
+    func testLateOldResultCannotOverrideRestoredChangeResults() async throws {
+        let gate = ProductAutocompleteSearchGate()
+        let viewModel = AddProductAutocompleteViewModel(
+            suggestionProvider: { query, _, _ in
+                await gate.suggestions(for: query)
+            },
+            slowSearchDelay: longSlowSearchDelay
+        )
+        let staleResult = makeResult(id: "milk", displayName: "Milk")
+        let selectedResult = makeResult(id: "bread", displayName: "Bread")
+        let restoredResult = makeResult(id: "bread", displayName: "Bread")
+
+        viewModel.updateQuery("m", localeIdentifier: "en")
+        try await gate.waitUntilRequested("m")
+        viewModel.updateQuery("b", localeIdentifier: "en")
+        try await gate.waitUntilRequested("b")
+        await gate.resolve("b", with: [selectedResult])
+        try await waitUntil {
+            viewModel.results == [selectedResult]
+        }
+        XCTAssertTrue(
+            viewModel.selectCatalogProduct(
+                selectedResult,
+                preselectionQuery: "b"
+            )
+        )
+
+        XCTAssertEqual(
+            viewModel.changeCatalogSelection(localeIdentifier: "en"),
+            "b"
+        )
+        try await gate.waitUntilRequested("b")
+        await gate.resolve("b", with: [restoredResult])
+        try await waitUntil {
+            viewModel.results == [restoredResult]
+        }
+
+        await gate.resolve("m", with: [staleResult])
+        await Task.yield()
+        await Task.yield()
+
+        XCTAssertNil(viewModel.selectedCatalogProduct)
+        XCTAssertEqual(viewModel.phase, .results)
+        XCTAssertEqual(viewModel.results, [restoredResult])
+    }
+
+    func testResetClearsSelectionAndNextFlowStartsWithoutStaleSelection() async throws {
+        let milk = makeResult(id: "milk", displayName: "Milk")
+        let bread = makeResult(id: "bread", displayName: "Bread")
+        let recorder = ProductAutocompleteSearchRecorder(
+            responses: ["m": [milk], "b": [bread]]
+        )
+        let viewModel = makeViewModel(recorder: recorder)
+
+        viewModel.updateQuery("m", localeIdentifier: "en")
+        try await waitUntil {
+            viewModel.phase == .results
+        }
+        XCTAssertTrue(
+            viewModel.selectCatalogProduct(
+                milk,
+                preselectionQuery: "m"
+            )
+        )
+
+        viewModel.reset()
+
+        XCTAssertNil(viewModel.selectedCatalogProduct)
+        XCTAssertFalse(viewModel.canChangeSelection)
+        XCTAssertTrue(viewModel.allowsManualProductSave)
+        XCTAssertEqual(viewModel.phase, .idle)
+        XCTAssertTrue(viewModel.results.isEmpty)
+
+        viewModel.updateQuery("b", localeIdentifier: "en")
+        try await waitUntil {
+            viewModel.results == [bread]
+        }
+        XCTAssertNil(viewModel.selectedCatalogProduct)
+    }
+
+    func testSelectedSummaryExposesLocalizedAccessibilityStateOnlyWhileSelected() async throws {
+        let result = makeResult(
+            id: "milk",
+            displayName: "Milk",
+            categoryID: "dairy",
+            categoryDisplayName: "Dairy"
+        )
+        let recorder = ProductAutocompleteSearchRecorder(responses: ["m": [result]])
+        let viewModel = makeViewModel(recorder: recorder)
+
+        XCTAssertNil(
+            viewModel.selectedSummaryAccessibilityLabel(
+                localeIdentifier: "en"
+            )
+        )
+        XCTAssertFalse(viewModel.canChangeSelection)
+
+        viewModel.updateQuery("m", localeIdentifier: "en")
+        try await waitUntil {
+            viewModel.phase == .results
+        }
+        XCTAssertTrue(
+            viewModel.selectCatalogProduct(
+                result,
+                preselectionQuery: "m"
+            )
+        )
+
+        XCTAssertEqual(
+            viewModel.selectedSummaryAccessibilityLabel(
+                localeIdentifier: "en"
+            ),
+            "Milk selected, Dairy"
+        )
+        XCTAssertTrue(viewModel.canChangeSelection)
+        XCTAssertEqual(
+            ProductAutocompleteCopy.changeAccessibilityLabel(
+                localeIdentifier: "he"
+            ),
+            "שינוי המוצר שנבחר"
+        )
+    }
+
     private func makeViewModel(
         recorder: ProductAutocompleteSearchRecorder
     ) -> AddProductAutocompleteViewModel {
@@ -180,16 +403,21 @@ private let longSlowSearchDelay: ProductAutocompleteSlowSearchDelay = {
 
 nonisolated private func makeResult(
     id: String,
-    displayName: String
+    displayName: String,
+    displayLocale: String = "en",
+    secondaryName: String? = nil,
+    categoryID: String = "test",
+    categoryDisplayName: String = "Test",
+    iconKey: String = "product.generic"
 ) -> ProductSearchResult {
     ProductSearchResult(
         productID: ProductID(id),
         displayName: displayName,
-        displayLocale: "en",
-        secondaryName: nil,
-        categoryID: ProductCategoryID("test"),
-        categoryDisplayName: "Test",
-        iconKey: "product.generic",
+        displayLocale: displayLocale,
+        secondaryName: secondaryName,
+        categoryID: ProductCategoryID(categoryID),
+        categoryDisplayName: categoryDisplayName,
+        iconKey: iconKey,
         matchedRecordAuthority: .primaryDisplayName,
         matchType: .fullNamePrefix,
         matchedLocale: "en"
