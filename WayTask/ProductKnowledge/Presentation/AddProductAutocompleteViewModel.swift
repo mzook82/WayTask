@@ -38,6 +38,11 @@ nonisolated struct AddProductCustomSelection: Hashable, Sendable {
     let preselectionQuery: String
 }
 
+nonisolated enum AddProductSelection: Hashable, Sendable {
+    case catalog(AddProductCatalogSelection)
+    case custom(AddProductCustomSelection)
+}
+
 typealias ProductAutocompleteSuggestionProvider = @Sendable (
     _ query: String,
     _ localeIdentifier: String,
@@ -53,6 +58,7 @@ final class AddProductAutocompleteViewModel: ObservableObject {
     @Published private(set) var selectedCatalogProduct: AddProductCatalogSelection?
     @Published private(set) var selectedCustomProduct: AddProductCustomSelection?
     @Published private(set) var rawQuery = ""
+    @Published private(set) var isSavingProduct = false
 
     private let suggestionProvider: ProductAutocompleteSuggestionProvider?
     private let slowSearchDelay: ProductAutocompleteSlowSearchDelay
@@ -64,11 +70,29 @@ final class AddProductAutocompleteViewModel: ObservableObject {
     private var slowStatusTask: Task<Void, Never>?
 
     var canChangeSelection: Bool {
-        selectedCatalogProduct != nil || selectedCustomProduct != nil
+        selection != nil && !isSavingProduct
     }
 
     var allowsManualProductSave: Bool {
-        selectedCustomProduct != nil
+        selectedCustomProduct != nil && !isSavingProduct
+    }
+
+    var allowsCatalogProductSave: Bool {
+        selectedCatalogProduct != nil && !isSavingProduct
+    }
+
+    var canConfirmProduct: Bool {
+        selection != nil && !isSavingProduct
+    }
+
+    var selection: AddProductSelection? {
+        if let selectedCatalogProduct {
+            return .catalog(selectedCatalogProduct)
+        }
+        if let selectedCustomProduct {
+            return .custom(selectedCustomProduct)
+        }
+        return nil
     }
 
     var customProductActionName: String? {
@@ -217,7 +241,8 @@ final class AddProductAutocompleteViewModel: ObservableObject {
     }
 
     func changeCatalogSelection(localeIdentifier: String) -> String? {
-        guard let selectedCatalogProduct else {
+        guard !isSavingProduct,
+              let selectedCatalogProduct else {
             return nil
         }
 
@@ -228,7 +253,8 @@ final class AddProductAutocompleteViewModel: ObservableObject {
     }
 
     func changeCustomProductSelection(localeIdentifier: String) -> String? {
-        guard let selectedCustomProduct else {
+        guard !isSavingProduct,
+              let selectedCustomProduct else {
             return nil
         }
 
@@ -278,6 +304,20 @@ final class AddProductAutocompleteViewModel: ObservableObject {
         )
     }
 
+    func beginSavingProduct() -> AddProductSelection? {
+        guard !isSavingProduct,
+              let selection else {
+            return nil
+        }
+
+        isSavingProduct = true
+        return selection
+    }
+
+    func finishSavingProductAfterFailure() {
+        isSavingProduct = false
+    }
+
     func reset() {
         invalidateCurrentSearch()
         lastNormalizedQuery = nil
@@ -286,6 +326,7 @@ final class AddProductAutocompleteViewModel: ObservableObject {
         selectedCatalogProduct = nil
         selectedCustomProduct = nil
         rawQuery = ""
+        isSavingProduct = false
         phase = .idle
     }
 

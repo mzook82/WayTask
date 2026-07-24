@@ -188,6 +188,8 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
         XCTAssertEqual(selection.preselectionQuery, "  ח  ")
         XCTAssertTrue(viewModel.canChangeSelection)
         XCTAssertFalse(viewModel.allowsManualProductSave)
+        XCTAssertTrue(viewModel.allowsCatalogProductSave)
+        XCTAssertTrue(viewModel.canConfirmProduct)
 
         let requests = await recorder.requests
         XCTAssertEqual(requests.count, 1)
@@ -438,6 +440,8 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.customProductActionName)
         XCTAssertTrue(viewModel.canChangeSelection)
         XCTAssertTrue(viewModel.allowsManualProductSave)
+        XCTAssertFalse(viewModel.allowsCatalogProductSave)
+        XCTAssertTrue(viewModel.canConfirmProduct)
         let requests = await recorder.requests
         XCTAssertEqual(requests.count, 1)
     }
@@ -528,6 +532,55 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
             "מוצר מותאם אישית"
         )
         XCTAssertTrue(viewModel.canChangeSelection)
+    }
+
+    func testCatalogSavingPreventsDuplicateConfirmationAndFailureAllowsRetry() async throws {
+        let result = makeResult(id: "milk", displayName: "Milk")
+        let recorder = ProductAutocompleteSearchRecorder(responses: ["m": [result]])
+        let viewModel = makeViewModel(recorder: recorder)
+
+        viewModel.updateQuery("m", localeIdentifier: "en")
+        try await waitUntil {
+            viewModel.phase == .results
+        }
+        XCTAssertTrue(
+            viewModel.selectCatalogProduct(
+                result,
+                preselectionQuery: "m"
+            )
+        )
+        let selectedCatalogProduct = try XCTUnwrap(
+            viewModel.selectedCatalogProduct
+        )
+
+        XCTAssertEqual(
+            viewModel.beginSavingProduct(),
+            .catalog(selectedCatalogProduct)
+        )
+        XCTAssertTrue(viewModel.isSavingProduct)
+        XCTAssertNil(viewModel.beginSavingProduct())
+        XCTAssertFalse(viewModel.canConfirmProduct)
+        XCTAssertFalse(viewModel.canChangeSelection)
+        XCTAssertFalse(viewModel.allowsCatalogProductSave)
+        XCTAssertEqual(
+            viewModel.selectedCatalogProduct,
+            selectedCatalogProduct
+        )
+
+        viewModel.finishSavingProductAfterFailure()
+
+        XCTAssertFalse(viewModel.isSavingProduct)
+        XCTAssertTrue(viewModel.canConfirmProduct)
+        XCTAssertTrue(viewModel.canChangeSelection)
+        XCTAssertTrue(viewModel.allowsCatalogProductSave)
+        XCTAssertEqual(
+            viewModel.selectedCatalogProduct,
+            selectedCatalogProduct
+        )
+        XCTAssertEqual(
+            viewModel.beginSavingProduct(),
+            .catalog(selectedCatalogProduct)
+        )
     }
 
     private func makeViewModel(

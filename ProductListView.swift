@@ -33,6 +33,7 @@ struct ProductListView: View {
     @StateObject private var productAutocompleteViewModel: AddProductAutocompleteViewModel
     @FocusState private var isProductNameFocused: Bool
     private let shoppingListService = ShoppingListService()
+    private let addProductSaveCoordinator = AddProductSaveCoordinator()
     private let shoppingIntentMatcher = ShoppingIntentMatcher()
     private let buyingOptionsService = BuyingOptionsService()
     private let shoppingMemoryService = ShoppingMemoryService()
@@ -216,6 +217,7 @@ struct ProductListView: View {
                         isShowingAddProduct = false
                     }
                     .tint(WayTaskDesign.accent)
+                    .disabled(productAutocompleteViewModel.isSavingProduct)
                 }
             }
         }
@@ -311,6 +313,7 @@ struct ProductListView: View {
                     Label("Photo", systemImage: "camera")
                 }
                 .buttonStyle(WayTaskSecondaryPillButtonStyle())
+                .disabled(productAutocompleteViewModel.isSavingProduct)
 
                 Button {
                     addItem()
@@ -492,6 +495,7 @@ struct ProductListView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 44))
+            .disabled(productAutocompleteViewModel.isSavingProduct)
             .accessibilityLabel(
                 ProductAutocompleteCopy.changeAccessibilityLabel(
                     localeIdentifier: locale.identifier
@@ -569,6 +573,7 @@ struct ProductListView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(WayTaskSecondaryPillButtonStyle(minHeight: 44))
+            .disabled(productAutocompleteViewModel.isSavingProduct)
             .accessibilityLabel(
                 ProductAutocompleteCopy.changeAccessibilityLabel(
                     localeIdentifier: locale.identifier
@@ -1201,28 +1206,19 @@ struct ProductListView: View {
     }
 
     private func addItem() {
-        guard productAutocompleteViewModel.allowsManualProductSave else {
-            return
-        }
-
-        let name = newItemName.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !name.isEmpty else {
+        guard let selection = productAutocompleteViewModel.beginSavingProduct() else {
             return
         }
 
         do {
-            try shoppingListService.addManualProduct(
-                name: name,
+            let outcome = try addProductSaveCoordinator.save(
+                selection: selection,
                 imageData: selectedImageData,
                 in: modelContext
             )
-            BetaDiagnosticsCenter.shared.manualProductAdded()
-            appStateManager.shoppingListDidChange()
-            appStateManager.markShoppingPlanStale(reason: "Shopping list changed. Generate a new plan before viewing stores.")
-            resetForm()
-            isShowingAddProduct = false
+            completeProductSave(outcome)
         } catch {
+            productAutocompleteViewModel.finishSavingProductAfterFailure()
             SentryReportingService.shared.capture(
                 error: error,
                 message: .persistenceFailed,
@@ -1232,14 +1228,35 @@ struct ProductListView: View {
             )
             isShowingAddProductSaveError = true
             #if DEBUG
-            print("[WayTask Product Save] Failed to save manual product: \(error.localizedDescription)")
+            print("[WayTask Product Save] Failed to save product: \(error.localizedDescription)")
             #endif
         }
     }
 
+    private func completeProductSave(_ outcome: AddProductSaveOutcome) {
+        switch outcome {
+        case .manualInserted:
+            BetaDiagnosticsCenter.shared.manualProductAdded()
+            productLibraryDidChange()
+        case .catalogInserted:
+            productLibraryDidChange()
+        case .catalogAlreadyPresent:
+            break
+        }
+
+        resetForm()
+        isShowingAddProduct = false
+    }
+
+    private func productLibraryDidChange() {
+        appStateManager.shoppingListDidChange()
+        appStateManager.markShoppingPlanStale(
+            reason: "Shopping list changed. Generate a new plan before viewing stores."
+        )
+    }
+
     private var canAddProduct: Bool {
-        productAutocompleteViewModel.allowsManualProductSave &&
-            !newItemName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        productAutocompleteViewModel.canConfirmProduct
     }
 
     private func loadSelectedPhoto() {
