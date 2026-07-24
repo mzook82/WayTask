@@ -44,6 +44,7 @@ enum SentrySafeMessage: String, CaseIterable {
     case geofenceMonitoringFailed = "Geofence monitoring failed"
     case recognitionProviderFailed = "Product recognition provider failed"
     case persistenceFailed = "Local persistence failed"
+    case productKnowledgeUnavailable = "Product suggestions unavailable"
 }
 
 enum SentryWorkflowBreadcrumb: String {

@@ -30,6 +30,11 @@ struct ContentView: View {
     @State private var hasCompletedActiveSessionLaunchRecovery = false
     @State private var isCheckingActiveSessionLaunchRecovery = false
     private let shoppingListBackfillService = ShoppingListBackfillService()
+    private let productKnowledgeSearchAvailability: ProductKnowledgeSearchAvailability
+
+    init(productKnowledgeSearchAvailability: ProductKnowledgeSearchAvailability) {
+        self.productKnowledgeSearchAvailability = productKnowledgeSearchAvailability
+    }
 
     var body: some View {
         TabView(selection: $appStateManager.selectedTab) {
@@ -39,7 +44,9 @@ struct ContentView: View {
             }
             .tag(AppTab.home)
 
-            ProductListView()
+            ProductListView(
+                productKnowledgeSearchAvailability: productKnowledgeSearchAvailability
+            )
                 .tabItem {
                     Label(AppTab.products.title, systemImage: AppTab.products.systemImageName)
                 }
@@ -424,7 +431,7 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    ContentView(productKnowledgeSearchAvailability: .unavailable)
         .environmentObject(AppStateManager())
         .environmentObject(LocationManager())
 }

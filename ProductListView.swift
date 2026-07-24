@@ -5,6 +5,7 @@ import SwiftUI
 
 struct ProductListView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.locale) private var locale
     @EnvironmentObject private var appStateManager: AppStateManager
     @EnvironmentObject private var locationManager: LocationManager
 
@@ -28,6 +29,7 @@ struct ProductListView: View {
     @State private var isShowingSettings = false
     @State private var isShowingScanner = false
     @State private var isShowingAddProductSaveError = false
+    @StateObject private var productAutocompleteViewModel: AddProductAutocompleteViewModel
     @FocusState private var isProductNameFocused: Bool
     private let shoppingListService = ShoppingListService()
     private let shoppingIntentMatcher = ShoppingIntentMatcher()
@@ -43,6 +45,14 @@ struct ProductListView: View {
     @State private var suggestionRefreshGeneration = 0
     @State private var searchText = ""
     @State private var selectedFilter: ProductFilter = .all
+
+    init(productKnowledgeSearchAvailability: ProductKnowledgeSearchAvailability) {
+        _productAutocompleteViewModel = StateObject(
+            wrappedValue: AddProductAutocompleteViewModel(
+                searchAvailability: productKnowledgeSearchAvailability
+            )
+        )
+    }
 
     var body: some View {
         NavigationStack {
@@ -99,6 +109,18 @@ struct ProductListView: View {
             }
             .onChange(of: selectedPhotoItem) {
                 loadSelectedPhoto()
+            }
+            .onChange(of: newItemName) { _, query in
+                productAutocompleteViewModel.updateQuery(
+                    query,
+                    localeIdentifier: locale.identifier
+                )
+            }
+            .onChange(of: locale.identifier) { _, localeIdentifier in
+                productAutocompleteViewModel.updateQuery(
+                    newItemName,
+                    localeIdentifier: localeIdentifier
+                )
             }
             .onChange(of: isShowingAddProduct) {
                 if !isShowingAddProduct {
@@ -272,6 +294,8 @@ struct ProductListView: View {
                 }
             }
 
+            productAutocompleteSuggestions
+
             HStack(spacing: 10) {
                 PhotosPicker(
                     selection: $selectedPhotoItem,
@@ -297,6 +321,94 @@ struct ProductListView: View {
         .onAppear {
             isProductNameFocused = true
         }
+    }
+
+    @ViewBuilder
+    private var productAutocompleteSuggestions: some View {
+        switch productAutocompleteViewModel.phase {
+        case .idle:
+            EmptyView()
+        case .searchingSlow:
+            productAutocompleteStatus(
+                ProductAutocompleteCopy.searching(localeIdentifier: locale.identifier)
+            )
+        case .results:
+            VStack(spacing: 0) {
+                ForEach(Array(productAutocompleteViewModel.results.prefix(8)).indices, id: \.self) { index in
+                    if index > 0 {
+                        Divider()
+                            .overlay(WayTaskDesign.surfaceBorder)
+                    }
+
+                    productAutocompleteRow(
+                        productAutocompleteViewModel.results[index]
+                    )
+                }
+            }
+            .background(WayTaskDesign.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(WayTaskDesign.surfaceBorder, lineWidth: 1)
+            }
+        case .noMatch:
+            productAutocompleteStatus(
+                ProductAutocompleteCopy.noMatch(localeIdentifier: locale.identifier)
+            )
+        case .unavailable:
+            productAutocompleteStatus(
+                ProductAutocompleteCopy.unavailable(localeIdentifier: locale.identifier)
+            )
+        }
+    }
+
+    private func productAutocompleteRow(_ result: ProductSearchResult) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: ProductKnowledgeIconResolver.systemName(for: result.iconKey))
+                .font(.body.weight(.semibold))
+                .foregroundStyle(WayTaskDesign.accent)
+                .frame(width: 38, height: 38)
+                .background(WayTaskDesign.accent.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(result.displayName)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.primaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(productAutocompleteDetail(for: result))
+                    .font(.caption)
+                    .foregroundStyle(WayTaskDesign.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func productAutocompleteStatus(_ message: String) -> some View {
+        Text(message)
+            .font(.caption)
+            .foregroundStyle(WayTaskDesign.secondaryText)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("addProduct.searchStatus")
+    }
+
+    private func productAutocompleteDetail(for result: ProductSearchResult) -> String {
+        [result.secondaryName, result.categoryDisplayName]
+            .compactMap { value in
+                guard let value, !value.isEmpty else {
+                    return nil
+                }
+                return value
+            }
+            .joined(separator: " · ")
     }
 
     private var bottomActionBar: some View {
@@ -853,6 +965,7 @@ struct ProductListView: View {
         selectedImageData = nil
         isProductNameFocused = false
         isShowingAddProductSaveError = false
+        productAutocompleteViewModel.reset()
     }
 
     private func showAllProducts() {

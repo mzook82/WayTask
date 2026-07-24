@@ -13,6 +13,7 @@ struct WayTaskApp: App {
     @StateObject private var appStateManager: AppStateManager
     @StateObject private var locationManager: LocationManager
     private let modelContainer: ModelContainer
+    private let productKnowledgeSearchAvailability: ProductKnowledgeSearchAvailability
 
     init() {
         SentryReportingService.shared.startIfConfigured()
@@ -23,6 +24,25 @@ struct WayTaskApp: App {
         }
         _appStateManager = StateObject(wrappedValue: AppStateManager())
         _locationManager = StateObject(wrappedValue: LocationManager())
+        do {
+            let snapshot = try BundledProductKnowledgeLoader().load()
+            let repository = InMemoryProductKnowledgeRepository(snapshot: snapshot)
+            productKnowledgeSearchAvailability = .available(
+                ProductKnowledgeSearch(repository: repository)
+            )
+        } catch {
+            productKnowledgeSearchAvailability = .unavailable
+            SentryReportingService.shared.capture(
+                error: error,
+                message: .productKnowledgeUnavailable,
+                operation: .diagnostics,
+                category: .operational,
+                area: .products
+            )
+            #if DEBUG
+            print("[WayTask Product Knowledge] Suggestions unavailable.")
+            #endif
+        }
         #if DEBUG
         print(SecretsManager.isGeminiConfigured ? "Gemini configured ✔" : "Gemini unavailable")
         #endif
@@ -30,7 +50,9 @@ struct WayTaskApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(
+                productKnowledgeSearchAvailability: productKnowledgeSearchAvailability
+            )
                 .environmentObject(appStateManager)
                 .environmentObject(locationManager)
         }
