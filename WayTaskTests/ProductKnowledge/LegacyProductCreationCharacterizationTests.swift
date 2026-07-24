@@ -24,6 +24,13 @@ final class LegacyProductCreationCharacterizationTests: XCTestCase {
         XCTAssertNil(product.category)
         XCTAssertNil(product.barcode)
         XCTAssertNil(product.legacyShoppingItemID)
+        XCTAssertNil(product.catalogProductIDRawValue)
+        XCTAssertNil(product.catalogDisplayNameSnapshot)
+        XCTAssertNil(product.catalogDisplayLocaleSnapshot)
+        XCTAssertNil(product.catalogCategoryIDSnapshotRawValue)
+        XCTAssertNil(product.catalogCategoryDisplayNameSnapshot)
+        XCTAssertNil(product.catalogIconKeySnapshot)
+        XCTAssertNil(product.catalogSnapshotUpdatedAt)
         XCTAssertTrue(try modelContext.fetch(FetchDescriptor<ShoppingListEntry>()).isEmpty)
         XCTAssertTrue(try modelContext.fetch(FetchDescriptor<ShoppingItem>()).isEmpty)
         XCTAssertTrue(try modelContext.fetch(FetchDescriptor<ProductKnowledge>()).isEmpty)
@@ -51,6 +58,7 @@ final class LegacyProductCreationCharacterizationTests: XCTestCase {
             products.filter { $0.name == "Protein Vanilla Pudding" }.count,
             2
         )
+        XCTAssertTrue(products.allSatisfy { $0.catalogProductIDRawValue == nil })
     }
 
     func testManualProductServicePreservesCallerSuppliedWhitespace() throws {
@@ -94,24 +102,33 @@ final class LegacyProductCreationCharacterizationTests: XCTestCase {
         XCTAssertEqual(try modelContext.fetch(FetchDescriptor<ShoppingItem>()).count, 1)
     }
 
-    func testLegacyPersistenceModelsHaveNoProductEntityReferenceField() throws {
+    func testOnlyProductCarriesTheSevenCatalogPersistenceFields() throws {
         let schema = makeSchema()
-        let forbiddenPropertyNames: Set<String> = [
-            "productEntityID",
-            "productConceptID",
-            "catalogProductID"
+        let catalogPropertyNames: Set<String> = [
+            "catalogProductIDRawValue",
+            "catalogDisplayNameSnapshot",
+            "catalogDisplayLocaleSnapshot",
+            "catalogCategoryIDSnapshotRawValue",
+            "catalogCategoryDisplayNameSnapshot",
+            "catalogIconKeySnapshot",
+            "catalogSnapshotUpdatedAt"
         ]
-        let legacyEntities = [
-            try XCTUnwrap(schema.entity(for: Product.self)),
+        let productEntity = try XCTUnwrap(schema.entity(for: Product.self))
+        let compatibilityEntities = [
             try XCTUnwrap(schema.entity(for: ShoppingItem.self)),
             try XCTUnwrap(schema.entity(for: ShoppingListEntry.self))
         ]
 
-        for entity in legacyEntities {
+        XCTAssertTrue(
+            catalogPropertyNames.isSubset(
+                of: Set(productEntity.properties.map(\.name))
+            )
+        )
+        for entity in compatibilityEntities {
             let propertyNames = Set(entity.properties.map(\.name))
             XCTAssertTrue(
-                propertyNames.isDisjoint(with: forbiddenPropertyNames),
-                "\(entity.name) unexpectedly contains a ProductEntity reference"
+                propertyNames.isDisjoint(with: catalogPropertyNames),
+                "\(entity.name) unexpectedly contains catalog persistence fields"
             )
         }
     }
@@ -124,15 +141,6 @@ final class LegacyProductCreationCharacterizationTests: XCTestCase {
     }
 
     private func makeSchema() -> Schema {
-        Schema([
-            GeoLocation.self,
-            ShoppingItem.self,
-            Product.self,
-            ShoppingList.self,
-            ShoppingListEntry.self,
-            ProductHistory.self,
-            ProductKnowledge.self,
-            ShoppingSession.self
-        ])
+        WayTaskModelContainer.currentSchema
     }
 }

@@ -6,6 +6,7 @@ enum ProductSource: String, Codable, Sendable {
     case camera
     case ai
     case discover
+    case catalog
 
     var displayName: String {
         switch self {
@@ -19,6 +20,8 @@ enum ProductSource: String, Codable, Sendable {
             return "AI"
         case .discover:
             return "Discover"
+        case .catalog:
+            return "Catalog"
         }
     }
 }

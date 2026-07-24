@@ -16,8 +16,10 @@ nonisolated enum ProductSearchRecordAuthority: Hashable, Sendable {
 nonisolated struct ProductSearchResult: Identifiable, Hashable, Sendable {
     let productID: ProductID
     let displayName: String
+    let displayLocale: String
     let secondaryName: String?
     let categoryID: ProductCategoryID
+    let categoryDisplayName: String
     let iconKey: String
     let matchedRecordAuthority: ProductSearchRecordAuthority
     let matchType: ProductSearchMatchType

@@ -182,6 +182,13 @@ final class Product {
     var packageType: String?
     var visibleText: String?
     var searchKeywordsRawValue: String?
+    var catalogProductIDRawValue: String?
+    var catalogDisplayNameSnapshot: String?
+    var catalogDisplayLocaleSnapshot: String?
+    var catalogCategoryIDSnapshotRawValue: String?
+    var catalogCategoryDisplayNameSnapshot: String?
+    var catalogIconKeySnapshot: String?
+    var catalogSnapshotUpdatedAt: Date?
 
     init(
         id: UUID = UUID(),
@@ -200,7 +207,14 @@ final class Product {
         packageSize: String? = nil,
         packageType: String? = nil,
         visibleText: String? = nil,
-        searchKeywords: [String] = []
+        searchKeywords: [String] = [],
+        catalogProductIDRawValue: String? = nil,
+        catalogDisplayNameSnapshot: String? = nil,
+        catalogDisplayLocaleSnapshot: String? = nil,
+        catalogCategoryIDSnapshotRawValue: String? = nil,
+        catalogCategoryDisplayNameSnapshot: String? = nil,
+        catalogIconKeySnapshot: String? = nil,
+        catalogSnapshotUpdatedAt: Date? = nil
     ) {
         self.id = id
         self.legacyShoppingItemID = legacyShoppingItemID
@@ -219,6 +233,13 @@ final class Product {
         self.packageType = packageType
         self.visibleText = visibleText
         self.searchKeywordsRawValue = Self.encodeSearchKeywords(searchKeywords)
+        self.catalogProductIDRawValue = catalogProductIDRawValue
+        self.catalogDisplayNameSnapshot = catalogDisplayNameSnapshot
+        self.catalogDisplayLocaleSnapshot = catalogDisplayLocaleSnapshot
+        self.catalogCategoryIDSnapshotRawValue = catalogCategoryIDSnapshotRawValue
+        self.catalogCategoryDisplayNameSnapshot = catalogCategoryDisplayNameSnapshot
+        self.catalogIconKeySnapshot = catalogIconKeySnapshot
+        self.catalogSnapshotUpdatedAt = catalogSnapshotUpdatedAt
     }
 
     convenience init(legacyItem item: ShoppingItem) {
@@ -288,6 +309,23 @@ final class Product {
         ProductSource(rawValue: sourceRawValue) ?? .manual
     }
 
+    var catalogProductID: ProductID? {
+        guard let catalogProductIDRawValue else {
+            return nil
+        }
+
+        let trimmed = catalogProductIDRawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed == catalogProductIDRawValue else {
+            return nil
+        }
+
+        return ProductID(catalogProductIDRawValue)
+    }
+
+    var isCatalogLinked: Bool {
+        catalogProductIDRawValue != nil
+    }
+
     var searchKeywords: [String] {
         get {
             guard let searchKeywordsRawValue else {
@@ -305,6 +343,10 @@ final class Product {
     }
 
     func refresh(from item: ShoppingItem) {
+        guard !isCatalogLinked else {
+            return
+        }
+
         let nextImageURLString = item.imageURL?.absoluteString
         let nextSearchKeywordsRawValue = Self.encodeSearchKeywords(item.searchKeywords)
 
@@ -343,6 +385,10 @@ final class Product {
     }
 
     func refresh(from candidate: ProductCandidate, fallbackImageData: Data?) {
+        guard !isCatalogLinked else {
+            return
+        }
+
         let incomingImageData = Self.productImageData(for: candidate, fallbackImageData: fallbackImageData)
         let nextImageData = incomingImageData ?? imageData
         let nextImageURLString = candidate.imageURL?.absoluteString

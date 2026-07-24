@@ -114,13 +114,14 @@ struct ShoppingListService: ShoppingListServicing {
         in modelContext: ModelContext
     ) throws -> Product {
         let products = try modelContext.fetch(FetchDescriptor<Product>())
+        let unlinkedProducts = products.filter { $0.catalogProductIDRawValue == nil }
         let product: Product
 
         if let barcode = normalizedText(candidate.barcode),
-           let existing = products.first(where: { normalizedText($0.barcode) == barcode }) {
+           let existing = unlinkedProducts.first(where: { normalizedText($0.barcode) == barcode }) {
             existing.refresh(from: candidate, fallbackImageData: fallbackImageData)
             product = existing
-        } else if let existing = products.first(where: { productMatches($0, candidate: candidate) }) {
+        } else if let existing = unlinkedProducts.first(where: { productMatches($0, candidate: candidate) }) {
             existing.refresh(from: candidate, fallbackImageData: fallbackImageData)
             product = existing
         } else {
@@ -173,7 +174,9 @@ struct ShoppingListService: ShoppingListServicing {
         entries.append(entry)
         try modelContext.save()
         recordShoppingMemoryIfPossible(for: item, in: modelContext)
-        recordProductKnowledgeIfPossible(for: item, candidate: nil, fallbackImageData: nil, in: modelContext)
+        if product.catalogProductIDRawValue == nil {
+            recordProductKnowledgeIfPossible(for: item, candidate: nil, fallbackImageData: nil, in: modelContext)
+        }
         return entry
     }
 
@@ -410,7 +413,9 @@ struct ShoppingListBackfillService {
 
         for item in legacyItems {
             let product = product(for: item, products: &products, in: modelContext)
-            product.refresh(from: item)
+            if product.catalogProductIDRawValue == nil {
+                product.refresh(from: item)
+            }
             productIDs.append(product.id)
 
             if let existingEntry = entries.first(where: { entry in

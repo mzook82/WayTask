@@ -180,10 +180,15 @@ nonisolated private struct ProductKnowledgeSearchIndex: Sendable {
         let result = ProductSearchResult(
             productID: product.entity.id,
             displayName: displayName.record.value,
+            displayLocale: displayName.record.locale,
             secondaryName: bestMatch.name.record.value == displayName.record.value
                 ? nil
                 : bestMatch.name.record.value,
             categoryID: product.entity.primaryCategoryID,
+            categoryDisplayName: categoryDisplayName(
+                for: product.category,
+                requestedLocale: locale
+            ),
             iconKey: product.category?.iconKey ?? "product.generic",
             matchedRecordAuthority: bestMatch.authority,
             matchType: bestMatch.matchType,
@@ -195,6 +200,17 @@ nonisolated private struct ProductKnowledgeSearchIndex: Sendable {
             match: bestMatch,
             normalizedDisplayName: displayNormalized.value
         )
+    }
+
+    private func categoryDisplayName(
+        for category: ProductCategory?,
+        requestedLocale: String
+    ) -> String {
+        if primaryLanguage(normalizedLocale(requestedLocale)) == "he" {
+            return category?.names.he ?? "ללא קטגוריה"
+        }
+
+        return category?.names.en ?? "Uncategorized"
     }
 
     private func preferredDisplayName(

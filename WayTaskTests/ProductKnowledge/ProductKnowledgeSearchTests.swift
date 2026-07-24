@@ -94,16 +94,26 @@ final class ProductKnowledgeSearchTests: XCTestCase {
         let alias = await search.suggestions(matching: "dishw", locale: "en")
 
         XCTAssertEqual(hebrewUI.first?.displayName, "חלב")
+        XCTAssertEqual(hebrewUI.first?.displayLocale, "he")
         XCTAssertEqual(hebrewUI.first?.secondaryName, "Milk")
         XCTAssertEqual(hebrewUI.first?.matchedLocale, "en")
+        XCTAssertEqual(
+            hebrewUI.first?.categoryDisplayName,
+            "מוצרי חלב ותחליפים"
+        )
         XCTAssertEqual(
             hebrewUI.first?.matchedRecordAuthority,
             .preferredDisplayName
         )
 
         XCTAssertEqual(englishUI.first?.displayName, "Milk")
+        XCTAssertEqual(englishUI.first?.displayLocale, "en")
         XCTAssertEqual(englishUI.first?.secondaryName, "חלב")
         XCTAssertEqual(englishUI.first?.matchedLocale, "he")
+        XCTAssertEqual(
+            englishUI.first?.categoryDisplayName,
+            "Dairy & Alternatives"
+        )
         XCTAssertEqual(
             englishUI.first?.matchedRecordAuthority,
             .preferredDisplayName
@@ -111,7 +121,9 @@ final class ProductKnowledgeSearchTests: XCTestCase {
 
         XCTAssertEqual(alias.first?.displayName, "Dish Soap")
         XCTAssertEqual(alias.first?.secondaryName, "Dishwashing Liquid")
+        XCTAssertEqual(alias.first?.displayLocale, "en")
         XCTAssertEqual(alias.first?.categoryID, ProductCategoryID("cleaning"))
+        XCTAssertEqual(alias.first?.categoryDisplayName, "Cleaning")
         XCTAssertEqual(alias.first?.iconKey, "product.cleaning")
         XCTAssertEqual(alias.first?.matchedRecordAuthority, .alias)
     }

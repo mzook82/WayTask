@@ -12,9 +12,15 @@ import SwiftData
 struct WayTaskApp: App {
     @StateObject private var appStateManager: AppStateManager
     @StateObject private var locationManager: LocationManager
+    private let modelContainer: ModelContainer
 
     init() {
         SentryReportingService.shared.startIfConfigured()
+        do {
+            modelContainer = try WayTaskModelContainer.makeDefault()
+        } catch {
+            fatalError("Unable to open the WayTask data store: \(error.localizedDescription)")
+        }
         _appStateManager = StateObject(wrappedValue: AppStateManager())
         _locationManager = StateObject(wrappedValue: LocationManager())
         #if DEBUG
@@ -28,15 +34,6 @@ struct WayTaskApp: App {
                 .environmentObject(appStateManager)
                 .environmentObject(locationManager)
         }
-        .modelContainer(for: [
-            GeoLocation.self,
-            ShoppingItem.self,
-            Product.self,
-            ShoppingList.self,
-            ShoppingListEntry.self,
-            ProductHistory.self,
-            ProductKnowledge.self,
-            ShoppingSession.self
-        ])
+        .modelContainer(modelContainer)
     }
 }

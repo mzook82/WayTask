@@ -360,6 +360,8 @@ struct ProductKnowledgeService: ProductKnowledgeServicing {
             return .ai
         case .discover:
             return .unknown
+        case .catalog:
+            return .unknown
         }
     }
 
