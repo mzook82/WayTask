@@ -1,0 +1,30 @@
+{
+  "reviewVersion": 1,
+  "catalogVersion": 3,
+  "taxonomyVersion": 1,
+  "locale": "he-IL",
+  "productCount": 3,
+  "products": [
+    {
+      "productId": "trash_bags",
+      "previousLegacyCategoryId": "paper_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.waste_bags",
+      "reviewStatus": "alias_updated"
+    },
+    {
+      "productId": "toilet_paper",
+      "previousLegacyCategoryId": "paper_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.paper_products",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "legacy_waste_bags",
+      "previousLegacyCategoryId": "paper_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.waste_bags",
+      "reviewStatus": "reclassified"
+    }
+  ]
+}

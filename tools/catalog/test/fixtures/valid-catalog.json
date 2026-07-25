@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": 3,
+  "taxonomyVersion": 1,
+  "locale": "he-IL",
+  "products": [
+    {
+      "id": "trash_bags",
+      "canonicalName": "שקיות אשפה",
+      "categoryId": "household",
+      "subcategoryId": "household.waste_bags",
+      "aliases": [
+        "שקיות זבל"
+      ],
+      "keywords": [
+        "פח"
+      ],
+      "brandTerms": [],
+      "popularityScore": 92,
+      "isActive": true
+    },
+    {
+      "id": "toilet_paper",
+      "canonicalName": "נייר טואלט",
+      "categoryId": "household",
+      "subcategoryId": "household.paper_products",
+      "aliases": [
+        "נייר שירותים"
+      ],
+      "keywords": [
+        "אמבטיה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 96,
+      "isActive": true
+    },
+    {
+      "id": "legacy_waste_bags",
+      "canonicalName": "שקיות פסולת ישנות",
+      "categoryId": "household",
+      "subcategoryId": "household.waste_bags",
+      "aliases": [],
+      "keywords": [],
+      "brandTerms": [],
+      "popularityScore": 20,
+      "isActive": false,
+      "replacementProductId": "trash_bags",
+      "deprecatedSinceCatalogVersion": 2
+    }
+  ]
+}

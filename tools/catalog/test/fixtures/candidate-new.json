@@ -1,0 +1,15 @@
+{
+  "id": "toolkit_fixture_product",
+  "canonicalName": "מוצר בדיקת כלי קטלוג",
+  "categoryId": "office_school",
+  "subcategoryId": null,
+  "aliases": [
+    "פריט בדיקת קטלוג"
+  ],
+  "keywords": [
+    "בדיקת כלי פיתוח"
+  ],
+  "brandTerms": [],
+  "popularityScore": 10,
+  "isActive": true
+}

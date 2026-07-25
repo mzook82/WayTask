@@ -24,6 +24,26 @@ Platform-neutral contract resources are stored in:
 The files contain semantic IDs and text only. Platform icon mappings remain outside
 the shared registry.
 
+## Authoring toolkit
+
+WT-026C provides a dependency-free Node.js toolkit at
+[`tools/catalog/`](tools/catalog/README.md). Run it from the repository root before
+editing or releasing catalog content:
+
+```sh
+node tools/catalog/catalog-tool.js validate
+node tools/catalog/catalog-tool.js report
+node tools/catalog/catalog-tool.js find --query "שקיות זבל"
+node tools/catalog/catalog-tool.js inspect --id trash_bags
+node tools/catalog/catalog-tool.js check-candidate --input product.json
+```
+
+`add`, `update`, and `deactivate` are dry runs by default. `--write` is required to
+commit; a committed operation validates the complete proposal, increments
+`catalogVersion`, synchronizes the taxonomy review manifest, and appends an audit
+entry. The toolkit rejects stale concurrent writes. See its README for input shapes,
+path overrides, audit fields, tests, and the release workflow.
+
 ## Catalog location
 
 The Phase 1 catalog is stored at:
@@ -136,7 +156,7 @@ empty fallback remains available.
 
 ## Add a product
 
-1. Search the entire JSON file for the proposed ID and Hebrew name.
+1. Use `find` for the proposed name and every alias, then run `check-candidate`.
 2. Choose a stable semantic ID such as `bread_rye`; do not use a translated name,
    sequence number, package size, or current brand unless the product itself is
    brand-specific.
@@ -147,10 +167,11 @@ empty fallback remains available.
 6. Add a few meaningful use, aisle, or household terms as keywords.
 7. Add `brandTerms` only for genuine brand-led searches.
 8. Set popularity relative to comparable products in that category.
-9. Add a completed entry to the taxonomy review manifest.
-10. Increase `catalogVersion`.
+9. Review `add --input product.json`; commit only with `--write`. The toolkit creates
+   the review entry and increments `catalogVersion`.
+10. Review the generated audit entry.
 11. Add or update a ranking test when the product fixes search feedback.
-12. Run the catalog and search tests.
+12. Run the toolkit, catalog, and search tests.
 
 Example:
 
@@ -232,6 +253,12 @@ jq -e '.' WayTask/Resources/product_catalog_he.json
 jq -r '.products[].id' WayTask/Resources/product_catalog_he.json | sort | uniq -d
 ```
 
+The authoritative local check is:
+
+```sh
+node tools/catalog/catalog-tool.js validate
+```
+
 ## Run catalog and search tests
 
 From the repository root, choose an installed iOS Simulator destination and run:
@@ -255,6 +282,11 @@ The focused suites are:
 - `ProductCatalogAutocompleteTests`
 
 Also run the full `WayTask` scheme test action before releasing a catalog version.
+Run the toolkit suite first:
+
+```sh
+node --test tools/catalog/test/*.test.js
+```
 
 ## Next migration and expansion steps
 

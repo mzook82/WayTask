@@ -48,11 +48,14 @@ Kotlin decoder, normalizer, validator, and search implementation.
 
 ## Release workflow
 
-1. Update contract resources in one reviewed change.
-2. Increment the relevant schema, catalog, or taxonomy version.
-3. Validate all JSON and run shared fixtures.
-4. Run the full native test suites.
-5. Tag the shared contract release and record its checksum in each platform
+1. Use `tools/catalog/catalog-tool.js` to inspect, validate, and dry-run catalog
+   content changes; see `tools/catalog/README.md`.
+2. Commit catalog mutations only with the toolkit's explicit `--write` flag so the
+   catalog version, review manifest, validation, and audit entry stay synchronized.
+3. Increment the relevant schema, catalog, or taxonomy version.
+4. Validate all JSON and run shared fixtures and toolkit tests.
+5. Run the full native test suites.
+6. Tag the shared contract release and record its checksum in each platform
    repository.
 
 WT-026B migrated but did not expand the 147-product catalog. All future additions
