@@ -51,7 +51,7 @@ final class ProductCatalogServiceTests: XCTestCase {
             .loadDocument(data: bundledCatalogData())
 
         XCTAssertEqual(document.schemaVersion, 1)
-        XCTAssertEqual(document.catalogVersion, 333)
+        XCTAssertEqual(document.catalogVersion, 4)
         XCTAssertEqual(document.taxonomyVersion, 1)
         XCTAssertEqual(document.locale, "he-IL")
         XCTAssertEqual(document.sourceFormat, .canonicalV1)

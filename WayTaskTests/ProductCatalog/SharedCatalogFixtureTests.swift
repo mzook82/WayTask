@@ -99,7 +99,7 @@ final class SharedCatalogFixtureTests: XCTestCase {
 
         XCTAssertEqual(document.fixtureVersion, 1)
         XCTAssertEqual(document.locale, "he-IL")
-        XCTAssertEqual(document.catalogVersion, 333)
+        XCTAssertEqual(document.catalogVersion, 4)
         XCTAssertGreaterThanOrEqual(document.cases.count, 30)
 
         for fixture in document.cases {

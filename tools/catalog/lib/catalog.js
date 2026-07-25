@@ -2,7 +2,7 @@
 
 const path = require("node:path");
 const {
-  auditText,
+  auditEntriesText,
   fileSha256,
   jsonText,
   readJson,
@@ -376,35 +376,28 @@ function assertValidBaseline(context) {
   }
 }
 
-function planAdd(context, product) {
-  assertValidBaseline(context);
+function assertObject(value, message) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(message);
+  }
+}
+
+function applyAdd(catalog, product) {
   if (!product || typeof product !== "object" || Array.isArray(product)) {
     throw new Error("Add input must be one canonical product JSON object.");
   }
-  const catalog = clone(context.catalog);
   const after = clone(product);
-  catalog.catalogVersion += 1;
   catalog.products.push(after);
-  const review = updateReviewManifest({
-    review: context.review,
-    catalog,
-    operation: "add",
-    before: null,
-    after,
-  });
-  return finalizePlan({
-    context,
+  return {
     operation: "add",
     productId: after.id,
     before: null,
     after,
-    catalog,
-    review,
-  });
+    changedFields: ["product"],
+  };
 }
 
-function planUpdate(context, productId, patch) {
-  assertValidBaseline(context);
+function applyUpdate(catalog, productId, patch) {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
     throw new Error("Update input must be one JSON object containing fields to replace.");
   }
@@ -413,7 +406,6 @@ function planUpdate(context, productId, patch) {
       `Update cannot rename stable ID ${productId} to ${patch.id}.`,
     );
   }
-  const catalog = clone(context.catalog);
   const index = catalog.products.findIndex(
     (product) => product.id === productId,
   );
@@ -426,29 +418,17 @@ function planUpdate(context, productId, patch) {
   if (fields.length === 0) {
     throw new Error(`Update for ${productId} does not change any field.`);
   }
-  catalog.catalogVersion += 1;
   catalog.products[index] = after;
-  const review = updateReviewManifest({
-    review: context.review,
-    catalog,
-    operation: "update",
-    before,
-    after,
-  });
-  return finalizePlan({
-    context,
+  return {
     operation: "update",
     productId,
     before,
     after,
-    catalog,
-    review,
-  });
+    changedFields: fields,
+  };
 }
 
-function planDeactivate(context, productId) {
-  assertValidBaseline(context);
-  const catalog = clone(context.catalog);
+function applyDeactivate(catalog, productId) {
   const index = catalog.products.findIndex(
     (product) => product.id === productId,
   );
@@ -459,29 +439,163 @@ function planDeactivate(context, productId) {
   if (!before.isActive) {
     throw new Error(`Product ${productId} is already inactive.`);
   }
-  catalog.catalogVersion += 1;
   const after = {
     ...catalog.products[index],
     isActive: false,
     deprecatedSinceCatalogVersion: catalog.catalogVersion,
   };
   catalog.products[index] = after;
-  const review = updateReviewManifest({
-    review: context.review,
-    catalog,
-    operation: "deactivate",
-    before,
-    after,
-  });
-  return finalizePlan({
-    context,
+  return {
     operation: "deactivate",
     productId,
     before,
     after,
+    changedFields: changedFields(before, after),
+  };
+}
+
+function planSingleMutation(context, mutation) {
+  assertValidBaseline(context);
+  const catalog = clone(context.catalog);
+  catalog.catalogVersion += 1;
+  const applied = mutation(catalog);
+  const review = updateReviewManifest({
+    review: context.review,
+    catalog,
+    operation: applied.operation,
+    before: applied.before,
+    after: applied.after,
+  });
+  return finalizePlan({
+    context,
+    operation: applied.operation,
+    productId: applied.productId,
+    before: applied.before,
+    after: applied.after,
     catalog,
     review,
   });
+}
+
+function planAdd(context, product) {
+  return planSingleMutation(context, (catalog) => applyAdd(catalog, product));
+}
+
+function planUpdate(context, productId, patch) {
+  return planSingleMutation(context, (catalog) =>
+    applyUpdate(catalog, productId, patch),
+  );
+}
+
+function planDeactivate(context, productId) {
+  return planSingleMutation(context, (catalog) =>
+    applyDeactivate(catalog, productId),
+  );
+}
+
+function batchMutationTarget(operation, index) {
+  assertObject(
+    operation,
+    `Batch operation ${index + 1} must be a JSON object.`,
+  );
+  switch (operation.operation) {
+    case "add":
+      assertObject(
+        operation.product,
+        `Batch add operation ${index + 1} requires a product object.`,
+      );
+      return operation.product.id;
+    case "update":
+    case "deactivate":
+      return operation.id;
+    default:
+      throw new Error(
+        `Batch operation ${index + 1} has unsupported operation "${operation.operation}".`,
+      );
+  }
+}
+
+function planBatch(context, release) {
+  assertValidBaseline(context);
+  assertObject(
+    release,
+    "Batch input must be a JSON object containing releaseId and operations.",
+  );
+  if (
+    typeof release.releaseId !== "string" ||
+    !/^[a-z0-9][a-z0-9._-]*$/.test(release.releaseId)
+  ) {
+    throw new Error(
+      "Batch releaseId must use lowercase ASCII letters, digits, dots, underscores, or hyphens.",
+    );
+  }
+  if (!Array.isArray(release.operations) || release.operations.length === 0) {
+    throw new Error("Batch input requires at least one operation.");
+  }
+
+  const targets = release.operations.map(batchMutationTarget);
+  const invalidTargetIndex = targets.findIndex(
+    (target) => typeof target !== "string" || target.length === 0,
+  );
+  if (invalidTargetIndex >= 0) {
+    throw new Error(
+      `Batch operation ${invalidTargetIndex + 1} requires a product ID.`,
+    );
+  }
+  const duplicateTarget = targets.find(
+    (target, index) => targets.indexOf(target) !== index,
+  );
+  if (duplicateTarget) {
+    throw new Error(
+      `Batch release cannot mutate product ${duplicateTarget} more than once.`,
+    );
+  }
+
+  const catalog = clone(context.catalog);
+  catalog.catalogVersion += 1;
+  let review = clone(context.review);
+  const mutations = [];
+  for (const operation of release.operations) {
+    let mutation;
+    switch (operation.operation) {
+      case "add":
+        mutation = applyAdd(catalog, operation.product);
+        break;
+      case "update":
+        mutation = applyUpdate(catalog, operation.id, operation.patch);
+        break;
+      case "deactivate":
+        mutation = applyDeactivate(catalog, operation.id);
+        break;
+      default:
+        throw new Error(`Unsupported batch operation: ${operation.operation}`);
+    }
+    review = updateReviewManifest({
+      review,
+      catalog,
+      operation: mutation.operation,
+      before: mutation.before,
+      after: mutation.after,
+    });
+    mutations.push(mutation);
+  }
+
+  const proposedContext = { ...context, catalog, review };
+  const validation = validateContext(proposedContext);
+  return {
+    operation: "batch",
+    releaseId: release.releaseId,
+    productId: null,
+    mutations,
+    catalogVersionFrom: context.catalog.catalogVersion,
+    catalogVersionTo: catalog.catalogVersion,
+    changedFields: [
+      ...new Set(mutations.flatMap((mutation) => mutation.changedFields)),
+    ].sort(),
+    catalog,
+    review,
+    validation,
+  };
 }
 
 function checkCandidate(context, product) {
@@ -511,20 +625,42 @@ function commitPlan(context, plan) {
     );
   }
 
-  const catalogBeforeText = jsonText(context.catalog);
   const catalogAfterText = jsonText(plan.catalog);
-  const auditEntry = {
-    auditVersion: 1,
-    timestamp: new Date().toISOString(),
-    operation: plan.operation,
-    productId: plan.productId,
+  const timestamp = new Date().toISOString();
+  const catalogSha256After = sha256(catalogAfterText);
+  const mutations =
+    plan.operation === "batch"
+      ? plan.mutations
+      : [
+          {
+            operation: plan.operation,
+            productId: plan.productId,
+            changedFields: plan.changedFields,
+          },
+        ];
+  const auditEntries = mutations.map((mutation, index) => ({
+    auditVersion: 2,
+    timestamp,
+    operation: mutation.operation,
+    productId: mutation.productId,
+    releaseOperation: plan.operation === "batch" ? "batch" : "single",
+    ...(plan.releaseId ? { releaseId: plan.releaseId } : {}),
+    ...(plan.operation === "batch"
+      ? {
+          batchIndex: index + 1,
+          batchSize: mutations.length,
+        }
+      : {}),
     catalogVersionFrom: plan.catalogVersionFrom,
     catalogVersionTo: plan.catalogVersionTo,
-    changedFields: plan.changedFields,
+    changedFields: mutation.changedFields,
     catalogSha256Before: context.sourceHashes.catalog,
-    catalogSha256After: sha256(catalogAfterText),
-  };
-  const nextAuditText = auditText(context.paths.audit, auditEntry);
+    catalogSha256After,
+  }));
+  const nextAuditText = auditEntriesText(
+    context.paths.audit,
+    auditEntries,
+  );
 
   writeTransaction([
     { path: context.paths.catalog, content: catalogAfterText },
@@ -539,7 +675,11 @@ function commitPlan(context, plan) {
       `Post-write validation unexpectedly failed (${validation.errors.length} errors).`,
     );
   }
-  return { auditEntry, validation };
+  return {
+    auditEntry: auditEntries.length === 1 ? auditEntries[0] : null,
+    auditEntries,
+    validation,
+  };
 }
 
 function relativePath(repoRoot, targetPath) {
@@ -555,6 +695,7 @@ module.exports = {
   inspectProduct,
   loadContext,
   planAdd,
+  planBatch,
   planDeactivate,
   planUpdate,
   relativePath,

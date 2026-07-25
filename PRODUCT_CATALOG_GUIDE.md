@@ -42,11 +42,13 @@ node tools/catalog/catalog-tool.js inspect --id trash_bags
 node tools/catalog/catalog-tool.js check-candidate --input product.json
 ```
 
-`add`, `update`, and `deactivate` are dry runs by default. `--write` is required to
-commit; a committed operation validates the complete proposal, increments
-`catalogVersion`, synchronizes the taxonomy review manifest, and appends an audit
-entry. The toolkit rejects stale concurrent writes. See its README for input shapes,
-path overrides, audit fields, tests, and the release workflow.
+`add`, `update`, `deactivate`, and `batch` are dry runs by default. `--write` is
+required to commit. A committed single command or multi-mutation batch represents
+one released catalog revision: it validates the complete proposal, increments
+`catalogVersion` exactly once, synchronizes the taxonomy review manifest, and
+appends one audit entry per mutation. The toolkit rejects stale concurrent writes.
+See its README for batch shape, path overrides, audit fields, tests, and the release
+workflow.
 
 ## Catalog location
 
@@ -66,7 +68,7 @@ The file has this top-level structure:
 ```json
 {
   "schemaVersion": 1,
-  "catalogVersion": 333,
+  "catalogVersion": 4,
   "taxonomyVersion": 1,
   "locale": "he-IL",
   "products": []
@@ -74,17 +76,19 @@ The file has this top-level structure:
 ```
 
 - `schemaVersion`: Version of the canonical document shape. The shipped format is 1.
-- `catalogVersion`: Positive integer revision of catalog content. The shipped
-  Hebrew catalog is version 333 after 320 individually audited Wave 1 additions
-  and 10 audited semantic review updates.
+- `catalogVersion`: Positive released revision of catalog content. The shipped
+  Hebrew Wave 1 catalog is release 4.
 - `taxonomyVersion`: Version of `shared/catalog/taxonomy.json`. The shipped value is 1.
 - `locale`: Catalog language and regional terminology. Phase 1 requires `he-IL`.
 - `products`: The complete list of catalog product records.
 
-The toolkit increments `catalogVersion` by one for every committed write. A batch
-performed as individually reviewed writes therefore consumes one version per
-product. Commit the catalog, review manifest, audit log, fixtures, and tests
-together. Do not reuse or decrease a released version number.
+`catalogVersion` identifies a published content release, not the number of
+authoring mutations. Use one transactional `batch --write` for all mutations in a
+release; the version increments exactly once while each mutation receives its own
+audit line. An isolated `add`, `update`, or `deactivate --write` is a valid
+single-mutation release and also increments once. Commit the catalog, review
+manifest, audit log, fixtures, and tests together. Never reuse or decrease a
+released revision.
 
 ## Supported source formats
 
@@ -174,8 +178,9 @@ empty fallback remains available.
 6. Add a few meaningful use, aisle, or household terms as keywords.
 7. Add `brandTerms` only for genuine brand-led searches.
 8. Set popularity relative to comparable products in that category.
-9. Review `add --input product.json`; commit only with `--write`. The toolkit creates
-   the review entry and increments `catalogVersion`.
+9. Review the candidate and include it in the intended release batch. For an
+   isolated single-product release, `add --write` creates the review entry and
+   increments `catalogVersion` once.
 10. Review the generated audit entry.
 11. Add or update a ranking test when the product fixes search feedback.
 12. Run the toolkit, catalog, and search tests.
@@ -230,14 +235,20 @@ The exact collision cleanup was:
 
 WT-027A added 320 reviewed canonical concepts without changing or removing any of
 the original 147 records. The production resource now contains 467 active products
-at schema version 1, catalog version 333, taxonomy version 1.
+at schema version 1, catalog version 4, taxonomy version 1.
 
 Every addition was processed through `check-candidate`, a dry-run `add`, and an
 explicit `add --write`. Each committed transaction updated the taxonomy review
-manifest, ran whole-catalog validation, incremented the catalog version, and
-appended one entry to `shared/catalog/catalog-authoring-audit.jsonl`. Ten follow-up
-toolkit updates moved non-equivalent use phrases from aliases into keywords and
-brand-led expressions into `brandTerms`, yielding 330 audit entries in total.
+manifest, ran whole-catalog validation, and appended one entry to
+`shared/catalog/catalog-authoring-audit.jsonl`. Ten follow-up toolkit updates moved
+non-equivalent use phrases from aliases into keywords and brand-led expressions
+into `brandTerms`, yielding 330 historical mutation entries in total.
+
+WT-027A.1 established release-level versioning and normalized Wave 1 to released
+revision 4. The 330 historical audit lines and their former per-mutation counter
+fields remain byte-for-byte unchanged. One appended policy-migration record links
+the former authoring counter 333 to release 4. Future transactional batches append
+one audit record per mutation but increment the release revision only once.
 
 The shared `wave-1-search-fixtures.json` file covers representative canonical-name,
 alias, brand-term, and custom no-match behavior. Wave 1 does not change ranking,
@@ -259,9 +270,10 @@ category name to every record, or adding speculative spelling noise.
 
 ## Deactivate an obsolete product
 
-Change `isActive` to `false` and increase `catalogVersion`. Do not delete or rename
-the ID if it may already be referenced by a saved shopping item. The loader
-validates inactive records but excludes them from search results.
+Use `deactivate` in the intended batch release, or as an isolated one-product
+release. Do not delete or rename the ID if it may already be referenced by a saved
+shopping item. The loader validates inactive records but excludes them from search
+results.
 
 ## Avoid duplicate IDs
 
@@ -317,6 +329,6 @@ node --test tools/catalog/test/*.test.js
 **WT-027B — Canonical Catalog Coverage Review and Wave 2:** analyze real feedback
 and category coverage after the 467-product release, prioritize missing concepts in
 low-coverage requested areas, add only reviewed products through the toolkit, and
-extend the shared/native search fixtures. Before further expansion, consider a
-transactional batch command so one reviewed release can produce one catalog-version
-increment while retaining a per-product audit detail list.
+extend the shared/native search fixtures. Stage the approved Wave 2 mutations in one
+transactional batch so the release produces one catalog-version increment while
+retaining per-product audit records.

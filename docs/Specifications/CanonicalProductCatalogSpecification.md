@@ -654,9 +654,11 @@ versioned document, but local bundled loading remains a conforming provider.
 
 - `schemaVersion` increments when a reader must understand an incompatible shape or
   changed field semantics.
-- `catalogVersion` increments for every released product-content change, including a
-  product, canonical name, alias, keyword, brand term, popularity, category
-  assignment, active state, or redirect.
+- `catalogVersion` increments exactly once for each released product-content
+  revision. A release may contain one or many reviewed product mutations, including
+  product additions, canonical names, aliases, keywords, brand terms, popularity,
+  category assignments, active states, or redirects. Every mutation remains
+  auditable, but mutation count does not determine the released revision.
 - `taxonomyVersion` increments when category/subcategory definitions, boundaries,
   display metadata, or icon semantics change.
 
@@ -733,10 +735,10 @@ remain for compatibility testing. This status note records implementation progre
 and does not alter the normative model or its versioning rules.
 
 WT-027A later applies the same model to 467 active Hebrew canonical products. The
-resource remains schema version 1 and taxonomy version 1; the authoring toolkit's
-one-increment-per-write policy produced catalog version 333 after 320 audited
-additions and 10 audited semantic review updates. All original 147 IDs remain
-unchanged.
+resource remains schema version 1 and taxonomy version 1. WT-027A.1 identifies this
+Wave 1 content as released catalog revision 4. Its 320 audited additions and 10
+audited semantic review mutations remain intact, but the historical mutation count
+no longer determines `catalogVersion`. All original 147 IDs remain unchanged.
 
 ## 12. Validation
 

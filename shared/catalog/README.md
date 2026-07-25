@@ -24,7 +24,7 @@ metadata.
 The iOS compatibility layer accepts:
 
 1. Canonical `schemaVersion: 1`, decoded directly from the JSON Schema shape. The
-   production Hebrew resource is catalog version 333 and taxonomy version 1.
+   production Hebrew resource is catalog version 4 and taxonomy version 1.
 2. The retired legacy v2 shape, identified by the absence of `schemaVersion`. Its
    `name` maps to `canonicalName`, `subcategoryId` maps to `null`, and `brandTerms`
    maps to an empty array. It remains supported and covered by an archived fixture.
@@ -41,8 +41,9 @@ WT-027A added 320 individually reviewed canonical products, bringing production 
 467 active records without changing any original ID. The same review manifest now
 contains all 467 assignments. The 320 toolkit transactions are recorded in
 `catalog-authoring-audit.jsonl`; ten semantic-review updates bring the audit to 330
-transactions and the catalog to version 333. `wave-1-search-fixtures.json` provides
-shared regressions for the expanded coverage.
+historical mutation entries. WT-027A.1 preserves those entries, normalizes the Wave
+1 release to catalog version 4, and appends one explicit policy-migration record.
+`wave-1-search-fixtures.json` provides shared regressions for the expanded coverage.
 
 ## Validation and fixtures
 
@@ -60,9 +61,11 @@ Kotlin decoder, normalizer, validator, and search implementation.
 
 1. Use `tools/catalog/catalog-tool.js` to inspect, validate, and dry-run catalog
    content changes; see `tools/catalog/README.md`.
-2. Commit catalog mutations only with the toolkit's explicit `--write` flag so the
-   catalog version, review manifest, validation, and audit entry stay synchronized.
-3. Increment the relevant schema, catalog, or taxonomy version.
+2. Put all mutations for one release into one toolkit `batch`; dry-run it, then
+   commit only with the explicit `--write` flag.
+3. Increment the catalog revision once per committed release. Each mutation remains
+   a separate audit entry. Increment schema or taxonomy versions only under their
+   independent compatibility rules.
 4. Validate all JSON and run shared fixtures and toolkit tests.
 5. Run the full native test suites.
 6. Tag the shared contract release and record its checksum in each platform

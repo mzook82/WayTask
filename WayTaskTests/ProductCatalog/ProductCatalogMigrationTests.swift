@@ -23,7 +23,7 @@ final class ProductCatalogMigrationTests: XCTestCase {
         )
 
         XCTAssertEqual(document.schemaVersion, 1)
-        XCTAssertEqual(document.catalogVersion, 333)
+        XCTAssertEqual(document.catalogVersion, 4)
         XCTAssertEqual(document.taxonomyVersion, 1)
         XCTAssertEqual(document.locale, "he-IL")
         XCTAssertEqual(document.sourceFormat, .canonicalV1)
@@ -72,7 +72,7 @@ final class ProductCatalogMigrationTests: XCTestCase {
         )
 
         XCTAssertEqual(manifest.reviewVersion, 1)
-        XCTAssertEqual(manifest.catalogVersion, 333)
+        XCTAssertEqual(manifest.catalogVersion, 4)
         XCTAssertEqual(manifest.taxonomyVersion, taxonomy.taxonomyVersion)
         XCTAssertEqual(manifest.productCount, 467)
         XCTAssertEqual(manifest.products.count, 467)

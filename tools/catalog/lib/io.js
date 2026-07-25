@@ -98,7 +98,10 @@ function writeTransaction(files) {
   }
 }
 
-function auditText(auditPath, entry) {
+function auditEntriesText(auditPath, entries) {
+  if (!Array.isArray(entries) || entries.length === 0) {
+    throw new Error("Audit append requires at least one entry.");
+  }
   let existing = "";
   if (fs.existsSync(auditPath)) {
     existing = fs.readFileSync(auditPath, "utf8");
@@ -118,10 +121,15 @@ function auditText(auditPath, entry) {
       existing += "\n";
     }
   }
-  return `${existing}${JSON.stringify(entry)}\n`;
+  return `${existing}${entries.map((entry) => JSON.stringify(entry)).join("\n")}\n`;
+}
+
+function auditText(auditPath, entry) {
+  return auditEntriesText(auditPath, [entry]);
 }
 
 module.exports = {
+  auditEntriesText,
   auditText,
   fileSha256,
   jsonText,

@@ -159,23 +159,81 @@ Deactivation retains the product and stable ID, sets `isActive: false`, and reco
 the new catalog version in `deprecatedSinceCatalogVersion`. Redirects are added
 separately with `update` and must point to an existing active product.
 
+### Commit a batch release
+
+Use one batch when several reviewed mutations belong to one catalog release:
+
+```sh
+# Dry run the complete release
+node tools/catalog/catalog-tool.js batch --input path/to/release.json
+
+# Commit all mutations atomically as one catalog revision
+node tools/catalog/catalog-tool.js batch \
+  --input path/to/release.json \
+  --write
+```
+
+The batch input is:
+
+```json
+{
+  "releaseId": "wt-027b-wave-2",
+  "operations": [
+    {
+      "operation": "add",
+      "product": {
+        "id": "stable_ascii_id",
+        "canonicalName": "שם עברי",
+        "categoryId": "approved_category",
+        "subcategoryId": null,
+        "aliases": [],
+        "keywords": [],
+        "brandTerms": [],
+        "popularityScore": 50,
+        "isActive": true
+      }
+    },
+    {
+      "operation": "update",
+      "id": "trash_bags",
+      "patch": {
+        "keywords": ["פח", "פסולת"]
+      }
+    },
+    {
+      "operation": "deactivate",
+      "id": "obsolete_product"
+    }
+  ]
+}
+```
+
+Supported batch operations are `add`, `update`, and `deactivate`. A stable product
+ID may appear only once in a batch. `releaseId` is a stable lowercase ASCII release
+identifier. The full batch is validated and written as one transaction; any invalid
+operation prevents all catalog, review, and audit writes.
+
 ## Write safety
 
-`add`, `update`, and `deactivate` are dry runs unless `--write` is explicitly
-present. A committed operation:
+`add`, `update`, `deactivate`, and `batch` are dry runs unless `--write` is
+explicitly present. A committed command is one release operation:
 
 1. Validates the current catalog and refuses to mutate an invalid baseline.
 2. Constructs the complete proposed catalog and review manifest in memory.
-3. Increments `catalogVersion` exactly once.
+3. Increments `catalogVersion` exactly once for the release, regardless of the
+   number of mutations in a batch.
 4. Runs full validation before writing.
 5. Rejects the operation if the catalog or review file changed since loading.
 6. Transactionally replaces the catalog and review manifest and appends one audit
-   JSON line.
+   JSON line per mutation.
 7. Reloads and validates the committed files.
 
-The audit record contains the operation, product ID, old/new catalog versions,
-changed fields, timestamp, and catalog SHA-256 values. It does not contain user
-shopping data, analytics, or credentials.
+Each audit record contains the mutation, product ID, old/new release versions,
+changed fields, timestamp, and catalog SHA-256 values. Batch records additionally
+share the `releaseId`, release transition, before/after hashes, and contain
+`batchIndex` and `batchSize`. Audit-entry count never determines `catalogVersion`.
+Single-product write commands remain valid one-mutation releases and increment the
+version once. Audit data contains no user shopping data, analytics, or credentials.
 
 Always review the ordinary dry-run output or use `--json` before committing.
 Commit the catalog, review manifest, audit entry, feedback update, and regression
@@ -206,9 +264,10 @@ node --test tools/catalog/test/*.test.js
 ```
 
 Tests execute the shared Hebrew normalization and Wave 1 search fixtures, validate
-the 467-product production catalog and its 330-entry audit chain, exercise every
-required validator failure, and perform add/update/deactivate dry runs and
-committed writes only against temporary copies.
+the 467-product release-4 production catalog and its preserved 330-entry historical
+audit prefix plus policy-migration record, exercise every required validator
+failure, and perform single and transactional-batch dry runs and committed writes
+only against temporary copies.
 
 Before releasing catalog content, also run the complete iOS test suite, the unsigned
 generic iOS build, and:
@@ -223,11 +282,13 @@ Use `CATALOG_FEEDBACK.md` as the operational source for accepted work:
 
 1. Record and reproduce the missing product or content defect.
 2. Run `find`, `inspect`, and `check-candidate`.
-3. Review the dry-run mutation.
-4. Commit with `--write`.
+3. Group all mutations intended for one release in one batch input. An isolated
+   one-product release may use its single-product command.
+4. Review the complete dry run, then commit once with `--write`.
 5. Add the shared/native regression named in the feedback row.
 6. Run toolkit validation, toolkit tests, iOS tests, and the build.
-7. Review and commit the generated audit entry and incremented catalog version.
+7. Review the generated per-mutation audit entries and single release-version
+   increment.
 
 Do not hand-edit the audit log. Do not use this toolkit to bypass canonical identity,
 alias, brand, taxonomy, versioning, or feedback-review policy.

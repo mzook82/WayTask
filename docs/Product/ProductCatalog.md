@@ -121,7 +121,7 @@ The approved canonical model is now represented by platform-neutral resources in
 iOS supports the retired schema-less v2 resource and canonical schema version 1.
 Both decode to one `CatalogProduct` model; the search, ranking, personalization, UI,
 and catalog-aware persistence paths remain source-format independent. The bundled
-production catalog now uses schema version 1, catalog version 3, and taxonomy version
+production catalog now uses schema version 1, catalog version 4, and taxonomy version
 1.
 
 WT-026B reviewed all 147 products and assigned canonical category/subcategory IDs.
@@ -143,13 +143,14 @@ fixtures through native Kotlin loaders and search code.
 
 WT-027A expands the canonical Hebrew resource from 147 to 467 active products while
 preserving every original product object and stable ID. The resource remains schema
-version 1 and taxonomy version 1; 320 individually committed toolkit additions and
-10 follow-up alias/keyword/brand review updates move the catalog from version 3 to
-333.
+version 1 and taxonomy version 1. WT-027A.1 defines the result as released catalog
+revision 4 rather than deriving the revision from 320 additions and 10 follow-up
+alias/keyword/brand review mutations.
 
 Every new product has an explicit category and nullable subcategory review entry.
-The append-only `shared/catalog/catalog-authoring-audit.jsonl` contains 330
-contiguous transactions: 320 adds and 10 semantic review updates.
+The append-only `shared/catalog/catalog-authoring-audit.jsonl` preserves the 330
+historical mutation lines unchanged—320 adds and 10 semantic review updates—and
+adds a policy-migration line linking the former authoring counter 333 to release 4.
 `shared/catalog/wave-1-search-fixtures.json` adds shared
 Hebrew acceptance coverage for canonical names, aliases, one genuine brand term,
 and custom no-match behavior.
@@ -163,5 +164,5 @@ baseline and are verified as a subset of the 467 production IDs.
 **WT-027B — Canonical Catalog Coverage Review and Wave 2:** measure real missing
 queries through `CATALOG_FEEDBACK.md`, fill only evidenced gaps in low-coverage
 categories, and extend the shared Swift/Node/Kotlin-ready fixtures. Add a
-transactional toolkit batch mode before another large wave if release-level catalog
-versioning is preferred over one version per committed product.
+reviewed transactional batch for the release so every mutation remains audited and
+`catalogVersion` increments exactly once.

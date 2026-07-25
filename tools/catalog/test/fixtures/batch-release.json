@@ -1,0 +1,41 @@
+{
+  "releaseId": "fixture_release_4",
+  "operations": [
+    {
+      "operation": "add",
+      "product": {
+        "id": "toolkit_fixture_product",
+        "canonicalName": "מוצר בדיקת כלי קטלוג",
+        "categoryId": "office_school",
+        "subcategoryId": null,
+        "aliases": [
+          "פריט בדיקת קטלוג"
+        ],
+        "keywords": [
+          "בדיקת כלי פיתוח"
+        ],
+        "brandTerms": [],
+        "popularityScore": 10,
+        "isActive": true
+      }
+    },
+    {
+      "operation": "update",
+      "id": "trash_bags",
+      "patch": {
+        "aliases": [
+          "שקיות זבל",
+          "שקי אשפה"
+        ],
+        "keywords": [
+          "פח",
+          "פסולת"
+        ]
+      }
+    },
+    {
+      "operation": "deactivate",
+      "id": "toilet_paper"
+    }
+  ]
+}

@@ -15,8 +15,9 @@ const {
   inspectProduct,
   loadContext,
   planAdd,
+  planBatch,
 } = require("../lib/catalog");
-const { fileSha256, readJson } = require("../lib/io");
+const { fileSha256, readJson, sha256 } = require("../lib/io");
 const { normalizedValue } = require("../lib/normalization");
 const { validateCatalog } = require("../lib/validator");
 
@@ -147,6 +148,10 @@ test("Wave 1 production catalog, taxonomy, and all 467 reviews validate", () => 
     categories: 23,
     subcategories: 22,
   });
+  assert.equal(
+    buildReport(context).idFingerprint,
+    "87b0b24404119ccabf6fc56a596c0f5e8334d499bfeb05634f3ff1cc5247b325",
+  );
 });
 
 test("Wave 1 shared search fixtures resolve production canonical products", () => {
@@ -177,7 +182,7 @@ test("Wave 1 shared search fixtures resolve production canonical products", () =
   }
 });
 
-test("Wave 1 preserves legacy IDs and has a contiguous audited add history", () => {
+test("Wave 1 preserves all IDs and its immutable authoring audit history", () => {
   const context = productionContext();
   const legacy = readJson(
     path.join(
@@ -193,25 +198,33 @@ test("Wave 1 preserves legacy IDs and has a contiguous audited add history", () 
   assert.equal(legacyIDs.length, 147);
   assert.deepEqual(productionIDs.slice(0, 147), legacyIDs);
 
-  const auditEntries = fs
-    .readFileSync(path.join(SHARED, "catalog-authoring-audit.jsonl"), "utf8")
-    .trim()
-    .split("\n")
-    .map(JSON.parse);
-  assert.equal(auditEntries.length, 330);
+  const auditSource = fs.readFileSync(
+    path.join(SHARED, "catalog-authoring-audit.jsonl"),
+    "utf8",
+  );
+  const auditLines = auditSource.trim().split("\n");
+  const auditEntries = auditLines.map(JSON.parse);
+  const historicalEntries = auditEntries.slice(0, 330);
+  assert.equal(auditEntries.length, 331);
+  assert.equal(
+    sha256(`${auditLines.slice(0, 330).join("\n")}\n`),
+    "6fdf64be6980f848d1549b1ee9ebd8b247d32016b11bd0ef22df94842f87412f",
+  );
   assert.deepEqual(
-    auditEntries.slice(0, 320).map((entry) => entry.productId),
+    historicalEntries.slice(0, 320).map((entry) => entry.productId),
     productionIDs.slice(147),
   );
   assert.ok(
-    auditEntries.slice(0, 320).every((entry) => entry.operation === "add"),
+    historicalEntries
+      .slice(0, 320)
+      .every((entry) => entry.operation === "add"),
   );
   assert.deepEqual(
-    auditEntries.slice(320).map((entry) => entry.operation),
+    historicalEntries.slice(320).map((entry) => entry.operation),
     Array(10).fill("update"),
   );
   assert.deepEqual(
-    auditEntries.slice(320).map((entry) => entry.productId),
+    historicalEntries.slice(320).map((entry) => entry.productId),
     [
       "baby_body_wash",
       "candles",
@@ -225,18 +238,28 @@ test("Wave 1 preserves legacy IDs and has a contiguous audited add history", () 
       "tea_lights",
     ],
   );
-  for (const [index, entry] of auditEntries.entries()) {
+  for (const [index, entry] of historicalEntries.entries()) {
     assert.equal(entry.catalogVersionFrom, index + 3);
     assert.equal(entry.catalogVersionTo, index + 4);
     if (index > 0) {
       assert.equal(
-        auditEntries[index - 1].catalogSha256After,
+        historicalEntries[index - 1].catalogSha256After,
         entry.catalogSha256Before,
       );
     }
   }
+  const normalization = auditEntries.at(-1);
+  assert.equal(normalization.auditVersion, 2);
+  assert.equal(normalization.operation, "release_version_normalization");
+  assert.equal(normalization.releaseId, "wt-027a-wave-1");
+  assert.equal(normalization.catalogVersionFrom, 333);
+  assert.equal(normalization.catalogVersionTo, 4);
   assert.equal(
-    auditEntries.at(-1).catalogSha256After,
+    normalization.catalogSha256Before,
+    historicalEntries.at(-1).catalogSha256After,
+  );
+  assert.equal(
+    normalization.catalogSha256After,
     fileSha256(PRODUCTION_CATALOG),
   );
 });
@@ -364,7 +387,7 @@ test("read-only CLI commands return actionable machine-readable results", () => 
 
   const report = runCli(["report", "--json"]);
   assert.equal(report.status, 0, report.stderr);
-  assert.equal(parseStdout(report).metadata.catalogVersion, 333);
+  assert.equal(parseStdout(report).metadata.catalogVersion, 4);
 
   const find = runCli([
     "find",
@@ -504,6 +527,8 @@ test("add, update, and deactivate are dry-run by default and audited on write", 
   assert.ok(
     auditEntries.every(
       (entry) =>
+        entry.auditVersion === 2 &&
+        entry.releaseOperation === "single" &&
         entry.catalogSha256Before.length === 64 &&
         entry.catalogSha256After.length === 64,
     ),
@@ -516,6 +541,111 @@ test("add, update, and deactivate are dry-run by default and audited on write", 
   ]);
   assert.equal(finalValidation.status, 0, finalValidation.stderr);
   assert.equal(parseStdout(finalValidation).valid, true);
+});
+
+test("batch release is atomic, audited per mutation, and increments version once", () => {
+  const workspace = temporaryWorkspace();
+  const common = commonTemporaryArguments(workspace);
+  const input = path.join(FIXTURES, "batch-release.json");
+  const initialCatalogHash = fileSha256(workspace.catalog);
+  const initialReviewHash = fileSha256(workspace.review);
+
+  const dryRun = runCli([
+    "batch",
+    "--input",
+    input,
+    ...common,
+    "--json",
+  ]);
+  assert.equal(dryRun.status, 0, dryRun.stderr);
+  const dryRunSummary = parseStdout(dryRun);
+  assert.equal(dryRunSummary.operation, "batch");
+  assert.equal(dryRunSummary.releaseId, "fixture_release_4");
+  assert.equal(dryRunSummary.mutationCount, 3);
+  assert.equal(dryRunSummary.catalogVersionFrom, 3);
+  assert.equal(dryRunSummary.catalogVersionTo, 4);
+  assert.equal(fileSha256(workspace.catalog), initialCatalogHash);
+  assert.equal(fileSha256(workspace.review), initialReviewHash);
+  assert.equal(fs.existsSync(workspace.audit), false);
+
+  const write = runCli([
+    "batch",
+    "--input",
+    input,
+    ...common,
+    "--write",
+    "--json",
+  ]);
+  assert.equal(write.status, 0, write.stderr);
+  const summary = parseStdout(write);
+  assert.equal(summary.catalogVersionTo, 4);
+  assert.equal(summary.audits.length, 3);
+
+  const catalog = readJson(workspace.catalog);
+  const review = readJson(workspace.review);
+  assert.equal(catalog.catalogVersion, 4);
+  assert.equal(catalog.products.length, 4);
+  assert.equal(review.catalogVersion, 4);
+  assert.equal(review.productCount, 4);
+  assert.equal(
+    catalog.products.find((product) => product.id === "toilet_paper")
+      .deprecatedSinceCatalogVersion,
+    4,
+  );
+
+  const auditEntries = fs
+    .readFileSync(workspace.audit, "utf8")
+    .trim()
+    .split("\n")
+    .map(JSON.parse);
+  assert.deepEqual(
+    auditEntries.map((entry) => entry.operation),
+    ["add", "update", "deactivate"],
+  );
+  assert.ok(
+    auditEntries.every(
+      (entry, index) =>
+        entry.auditVersion === 2 &&
+        entry.releaseOperation === "batch" &&
+        entry.releaseId === "fixture_release_4" &&
+        entry.batchIndex === index + 1 &&
+        entry.batchSize === 3 &&
+        entry.catalogVersionFrom === 3 &&
+        entry.catalogVersionTo === 4 &&
+        entry.catalogSha256Before === auditEntries[0].catalogSha256Before &&
+        entry.catalogSha256After === auditEntries[0].catalogSha256After,
+    ),
+  );
+
+  const validation = runCli(["validate", ...common, "--json"]);
+  assert.equal(validation.status, 0, validation.stderr);
+  assert.equal(parseStdout(validation).valid, true);
+});
+
+test("invalid batch release writes no catalog, review, or audit files", () => {
+  const workspace = temporaryWorkspace();
+  const paths = {
+    catalog: workspace.catalog,
+    schema: path.join(SHARED, "product-catalog.schema.json"),
+    taxonomy: path.join(SHARED, "taxonomy.json"),
+    review: workspace.review,
+    audit: workspace.audit,
+  };
+  const context = loadContext(paths);
+  const release = readJson(
+    path.join(FIXTURES, "batch-release.json"),
+    "batch release fixture",
+  );
+  release.operations[0].product.canonicalName = "נייר טואלט";
+  const plan = planBatch(context, release);
+  assert.equal(plan.validation.valid, false);
+  const catalogHash = fileSha256(workspace.catalog);
+  const reviewHash = fileSha256(workspace.review);
+
+  assert.throws(() => commitPlan(context, plan), /invalid/);
+  assert.equal(fileSha256(workspace.catalog), catalogHash);
+  assert.equal(fileSha256(workspace.review), reviewHash);
+  assert.equal(fs.existsSync(workspace.audit), false);
 });
 
 test("write transaction rejects a stale catalog snapshot", () => {

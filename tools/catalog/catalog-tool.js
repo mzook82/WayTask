@@ -10,6 +10,7 @@ const {
   inspectProduct,
   loadContext,
   planAdd,
+  planBatch,
   planDeactivate,
   planUpdate,
   relativePath,
@@ -81,10 +82,13 @@ Usage:
   node tools/catalog/catalog-tool.js add --input product.json [--write] [--json]
   node tools/catalog/catalog-tool.js update --id trash_bags --input patch.json [--write] [--json]
   node tools/catalog/catalog-tool.js deactivate --id product_id [--write] [--json]
+  node tools/catalog/catalog-tool.js batch --input release.json [--write] [--json]
 
 Mutation commands are dry runs unless --write is present. A committed write
-increments catalogVersion, updates the taxonomy review manifest, validates the
-complete proposed catalog, and appends an audit JSON line.
+represents one catalog release operation: it increments catalogVersion exactly
+once, updates the taxonomy review manifest, validates the complete proposal, and
+appends audit JSON lines for its mutations. A batch is one atomic release even
+when it contains multiple product mutations.
 
 Common path overrides:
   --catalog PATH   --schema PATH   --taxonomy PATH
@@ -200,6 +204,17 @@ function planSummary(plan, written) {
   return {
     operation: plan.operation,
     productId: plan.productId,
+    ...(plan.releaseId ? { releaseId: plan.releaseId } : {}),
+    ...(plan.mutations
+      ? {
+          mutationCount: plan.mutations.length,
+          mutations: plan.mutations.map((mutation) => ({
+            operation: mutation.operation,
+            productId: mutation.productId,
+            changedFields: mutation.changedFields,
+          })),
+        }
+      : {}),
     dryRun: !written,
     written,
     catalogVersionFrom: plan.catalogVersionFrom,
@@ -228,8 +243,12 @@ function executeMutation(context, plan, options) {
     if (options.json) {
       printJson(summary);
     } else {
+      const target =
+        plan.operation === "batch"
+          ? `${plan.releaseId} (${plan.mutations.length} mutations)`
+          : plan.productId;
       console.log(
-        `DRY RUN: ${plan.operation} ${plan.productId}; catalogVersion ${plan.catalogVersionFrom} -> ${plan.catalogVersionTo}.`,
+        `DRY RUN: ${plan.operation} ${target}; catalogVersion ${plan.catalogVersionFrom} -> ${plan.catalogVersionTo}.`,
       );
       console.log(`Changed fields: ${plan.changedFields.join(", ")}`);
       console.log("VALID. Nothing was written; re-run with --write to commit.");
@@ -240,14 +259,20 @@ function executeMutation(context, plan, options) {
   const committed = commitPlan(context, plan);
   const summary = {
     ...planSummary(plan, true),
-    audit: committed.auditEntry,
+    ...(committed.auditEntry
+      ? { audit: committed.auditEntry }
+      : { audits: committed.auditEntries }),
     auditPath: relativePath(REPO_ROOT, context.paths.audit),
   };
   if (options.json) {
     printJson(summary);
   } else {
+    const target =
+      plan.operation === "batch"
+        ? `${plan.releaseId} (${plan.mutations.length} mutations)`
+        : plan.productId;
     console.log(
-      `WROTE: ${plan.operation} ${plan.productId}; catalogVersion ${plan.catalogVersionFrom} -> ${plan.catalogVersionTo}.`,
+      `WROTE: ${plan.operation} ${target}; catalogVersion ${plan.catalogVersionFrom} -> ${plan.catalogVersionTo}.`,
     );
     console.log(
       `Audit appended to ${relativePath(REPO_ROOT, context.paths.audit)}.`,
@@ -272,6 +297,7 @@ function main() {
     "add",
     "update",
     "deactivate",
+    "batch",
   ]);
   if (!supported.has(command)) {
     throw new Error(`Unknown command: ${command}\n\n${usage()}`);
@@ -353,6 +379,12 @@ function main() {
     case "deactivate": {
       const id = requireOption(options, "id", command);
       executeMutation(context, planDeactivate(context, id), options);
+      break;
+    }
+    case "batch": {
+      const input = requireOption(options, "input", command);
+      const release = readJson(resolvedPath(input), "batch release input");
+      executeMutation(context, planBatch(context, release), options);
       break;
     }
     default:

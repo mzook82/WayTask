@@ -1395,8 +1395,10 @@ IDs, new products use new stable IDs, and custom products remain unlinked.
 
 All additions use canonical schema version 1 and taxonomy version 1. Each was
 candidate-checked, dry-run, and committed by the authoring toolkit. The resulting
-catalog version is 333, the review manifest contains 467 assignments, and the
-append-only audit contains 320 contiguous add transactions followed by 10 semantic
-alias/keyword/brand review updates. Shared Wave 1 search fixtures are executed in
-Node and Swift without adding schema-version branches to search, personalization,
-UI, or persistence.
+catalog release version is 4, the review manifest contains 467 assignments, and the
+append-only audit preserves 320 add mutations followed by 10 semantic
+alias/keyword/brand review mutations. An appended WT-027A.1 policy record connects
+the former per-mutation authoring counter 333 to release 4. Future release batches
+increment once while retaining an audit line for every mutation. Shared Wave 1
+search fixtures are executed in Node and Swift without adding schema-version
+branches to search, personalization, UI, or persistence.
