@@ -1385,3 +1385,18 @@ The archived v2 fixture and representative before/after queries prove semantic
 equivalence. The validator and review-manifest tests reject unresolved taxonomy
 work, invalid parent relationships, identity/name/alias/brand collisions, and broken
 replacement metadata.
+
+## 16. WT-027A Controlled Catalog Expansion
+
+WT-027A adds 320 reviewed catalog concepts and brings the bundled Hebrew catalog to
+467 active products. It does not change the persistence boundary: existing
+`catalogProductIDRawValue` values still resolve through the same original stable
+IDs, new products use new stable IDs, and custom products remain unlinked.
+
+All additions use canonical schema version 1 and taxonomy version 1. Each was
+candidate-checked, dry-run, and committed by the authoring toolkit. The resulting
+catalog version is 333, the review manifest contains 467 assignments, and the
+append-only audit contains 320 contiguous add transactions followed by 10 semantic
+alias/keyword/brand review updates. Shared Wave 1 search fixtures are executed in
+Node and Swift without adding schema-version branches to search, personalization,
+UI, or persistence.

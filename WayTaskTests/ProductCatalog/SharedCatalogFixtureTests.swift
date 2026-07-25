@@ -88,6 +88,66 @@ final class SharedCatalogFixtureTests: XCTestCase {
         }
     }
 
+    func testWave1SearchFixturesResolveBundledCanonicalProducts()
+        async throws {
+        let document: Wave1SearchFixtureDocument = try loadFixture(
+            named: "wave-1-search-fixtures"
+        )
+        let products = try ProductCatalogService(bundle: .main)
+            .loadProducts()
+        let search = ProductCatalogSearch(products: products)
+
+        XCTAssertEqual(document.fixtureVersion, 1)
+        XCTAssertEqual(document.locale, "he-IL")
+        XCTAssertEqual(document.catalogVersion, 333)
+        XCTAssertGreaterThanOrEqual(document.cases.count, 30)
+
+        for fixture in document.cases {
+            let results = await search.suggestions(
+                matching: fixture.query
+            )
+            guard let expectedProductID = fixture.expectedProductId else {
+                XCTAssertTrue(
+                    results.isEmpty,
+                    "Expected no match for Wave 1 fixture \(fixture.id)"
+                )
+                continue
+            }
+
+            let result = try XCTUnwrap(
+                results.first,
+                "Expected a result for Wave 1 fixture \(fixture.id)"
+            )
+            XCTAssertEqual(
+                result.id,
+                expectedProductID,
+                "Wrong product for Wave 1 fixture \(fixture.id)"
+            )
+            XCTAssertEqual(
+                result.product.canonicalName,
+                fixture.expectedCanonicalName
+            )
+
+            switch fixture.matchSource {
+            case "canonical_name":
+                XCTAssertTrue(
+                    [
+                        CatalogProductMatchLevel.exactName,
+                        .namePrefix,
+                        .nameWordPrefix
+                    ].contains(result.matchLevel),
+                    "Unexpected name match level for \(fixture.id)"
+                )
+            case "alias", "brand_term":
+                XCTAssertEqual(result.matchLevel, .aliasPrefix)
+            default:
+                XCTFail(
+                    "Unsupported match source \(fixture.matchSource) in \(fixture.id)"
+                )
+            }
+        }
+    }
+
     func testSharedJSONSchemaDeclaresCanonicalRequiredFields() throws {
         let data = try fixtureData(named: "product-catalog.schema")
         let object = try XCTUnwrap(
@@ -171,6 +231,21 @@ private struct AcceptanceFixtureDocument: Decodable {
     let fixtureVersion: Int
     let locale: String
     let catalog: AcceptanceFixtureCatalog
+    let cases: [Fixture]
+}
+
+private struct Wave1SearchFixtureDocument: Decodable {
+    struct Fixture: Decodable {
+        let id: String
+        let query: String
+        let expectedProductId: String?
+        let expectedCanonicalName: String?
+        let matchSource: String
+    }
+
+    let fixtureVersion: Int
+    let locale: String
+    let catalogVersion: Int
     let cases: [Fixture]
 }
 

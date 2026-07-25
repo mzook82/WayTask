@@ -722,7 +722,7 @@ The convergence migration requirements were:
 
 No product expansion is required to perform this schema convergence.
 
-### 11.5 Non-normative implementation status (WT-026B)
+### 11.5 Non-normative implementation status (WT-026B and WT-027A)
 
 As of WT-026B, the bundled Hebrew catalog implements schema version 1, catalog
 version 3, and taxonomy version 1. All 147 existing stable IDs were preserved and
@@ -731,6 +731,12 @@ canonical-name migration (`cornflakes`: `קורנפלקס` to `דגני בוקר
 former term as both an alias and legacy name. The v2 decoder and archived fixture
 remain for compatibility testing. This status note records implementation progress
 and does not alter the normative model or its versioning rules.
+
+WT-027A later applies the same model to 467 active Hebrew canonical products. The
+resource remains schema version 1 and taxonomy version 1; the authoring toolkit's
+one-increment-per-write policy produced catalog version 333 after 320 audited
+additions and 10 audited semantic review updates. All original 147 IDs remain
+unchanged.
 
 ## 12. Validation
 

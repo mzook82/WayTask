@@ -13,15 +13,18 @@ metadata.
 - `normalization-fixtures.json` — Hebrew normalization inputs and expected outputs.
 - `acceptance-fixtures.json` — a small canonical fixture catalog plus shared
   resolution expectations.
+- `wave-1-search-fixtures.json` — production Wave 1 Hebrew search expectations,
+  reusable by Node, Swift, and future Kotlin tests.
 - `product-taxonomy-review.json` — non-runtime maintenance evidence containing the
   completed taxonomy decision for every production product.
+- `catalog-authoring-audit.jsonl` — append-only JSON Lines authoring history.
 
 ## Supported source formats
 
 The iOS compatibility layer accepts:
 
 1. Canonical `schemaVersion: 1`, decoded directly from the JSON Schema shape. The
-   production Hebrew resource is catalog version 3 and taxonomy version 1.
+   production Hebrew resource is catalog version 333 and taxonomy version 1.
 2. The retired legacy v2 shape, identified by the absence of `schemaVersion`. Its
    `name` maps to `canonicalName`, `subcategoryId` maps to `null`, and `brandTerms`
    maps to an empty array. It remains supported and covered by an archived fixture.
@@ -29,10 +32,17 @@ The iOS compatibility layer accepts:
 Both formats produce the same Swift `CatalogProduct` model. Search, ranking,
 personalization, UI, and persistence do not branch on source format.
 
-WT-026B assigned approved taxonomy IDs to every one of the 147 production products.
+WT-026B assigned approved taxonomy IDs to every one of the original 147 products.
 All 48 products in the eight `product_review_required` legacy groups were reviewed
 individually. `product-taxonomy-review.json` records those decisions and contains no
 runtime dependency. Legacy mappings remain solely for compatibility decoding.
+
+WT-027A added 320 individually reviewed canonical products, bringing production to
+467 active records without changing any original ID. The same review manifest now
+contains all 467 assignments. The 320 toolkit transactions are recorded in
+`catalog-authoring-audit.jsonl`; ten semantic-review updates bring the audit to 330
+transactions and the catalog to version 333. `wave-1-search-fixtures.json` provides
+shared regressions for the expanded coverage.
 
 ## Validation and fixtures
 
@@ -58,6 +68,7 @@ Kotlin decoder, normalizer, validator, and search implementation.
 6. Tag the shared contract release and record its checksum in each platform
    repository.
 
-WT-026B migrated but did not expand the 147-product catalog. All future additions
-must use canonical schema version 1, an approved taxonomy assignment, a review
-manifest entry, a catalog-version increment, and shared/native regression coverage.
+WT-026B migrated but did not expand the original 147-product catalog. WT-027A is the
+first controlled expansion. All future additions must use canonical schema version
+1, an approved taxonomy assignment, a review-manifest entry, a catalog-version
+increment, an audit record, and shared/native regression coverage.

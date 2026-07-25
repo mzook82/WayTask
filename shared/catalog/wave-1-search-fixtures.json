@@ -1,0 +1,238 @@
+{
+  "fixtureVersion": 1,
+  "locale": "he-IL",
+  "catalogVersion": 333,
+  "cases": [
+    {
+      "id": "fusilli_alias",
+      "query": "פסטה ספירלות",
+      "expectedProductId": "pasta_fusilli",
+      "expectedCanonicalName": "פסטה פוזילי",
+      "matchSource": "alias"
+    },
+    {
+      "id": "tomato_paste_name",
+      "query": "רסק עגבניות",
+      "expectedProductId": "tomato_paste",
+      "expectedCanonicalName": "רסק עגבניות",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "honey_name",
+      "query": "דבש",
+      "expectedProductId": "honey",
+      "expectedCanonicalName": "דבש",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "self_rising_flour_name",
+      "query": "קמח תופח",
+      "expectedProductId": "self_rising_flour",
+      "expectedCanonicalName": "קמח תופח",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "garlic_powder_name",
+      "query": "אבקת שום",
+      "expectedProductId": "garlic_powder",
+      "expectedCanonicalName": "אבקת שום",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "pear_singular_query",
+      "query": "אגס",
+      "expectedProductId": "pear",
+      "expectedCanonicalName": "אגסים",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "strawberry_alias",
+      "query": "תות שדה",
+      "expectedProductId": "strawberries",
+      "expectedCanonicalName": "תותים",
+      "matchSource": "alias"
+    },
+    {
+      "id": "red_pepper_israeli_alias",
+      "query": "גמבה",
+      "expectedProductId": "red_bell_pepper",
+      "expectedCanonicalName": "פלפל אדום",
+      "matchSource": "alias"
+    },
+    {
+      "id": "celery_israeli_alias",
+      "query": "כרפס",
+      "expectedProductId": "celery",
+      "expectedCanonicalName": "סלרי",
+      "matchSource": "alias"
+    },
+    {
+      "id": "white_cheese_name",
+      "query": "גבינה לבנה",
+      "expectedProductId": "white_cheese",
+      "expectedCanonicalName": "גבינה לבנה",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "feta_word_query",
+      "query": "פטה",
+      "expectedProductId": "feta_cheese",
+      "expectedCanonicalName": "גבינת פטה",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "lactose_free_milk_name",
+      "query": "חלב ללא לקטוז",
+      "expectedProductId": "lactose_free_milk",
+      "expectedCanonicalName": "חלב ללא לקטוז",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "rice_drink_alias",
+      "query": "חלב אורז",
+      "expectedProductId": "rice_drink",
+      "expectedCanonicalName": "משקה אורז",
+      "matchSource": "alias"
+    },
+    {
+      "id": "rye_bread_name",
+      "query": "לחם שיפון",
+      "expectedProductId": "rye_bread",
+      "expectedCanonicalName": "לחם שיפון",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "lavash_name",
+      "query": "לאפה",
+      "expectedProductId": "lavash",
+      "expectedCanonicalName": "לאפה",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "croissant_name",
+      "query": "קרואסון",
+      "expectedProductId": "croissant",
+      "expectedCanonicalName": "קרואסון",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "drumsticks_israeli_slang",
+      "query": "פולקע",
+      "expectedProductId": "chicken_drumsticks",
+      "expectedCanonicalName": "שוקי עוף",
+      "matchSource": "alias"
+    },
+    {
+      "id": "beef_ribs_israeli_alias",
+      "query": "אסאדו",
+      "expectedProductId": "beef_ribs",
+      "expectedCanonicalName": "צלעות בקר",
+      "matchSource": "alias"
+    },
+    {
+      "id": "sea_bass_alias",
+      "query": "דג לברק",
+      "expectedProductId": "sea_bass",
+      "expectedCanonicalName": "לברק",
+      "matchSource": "alias"
+    },
+    {
+      "id": "frozen_nuggets_name",
+      "query": "נאגטס עוף קפואים",
+      "expectedProductId": "frozen_chicken_nuggets",
+      "expectedCanonicalName": "נאגטס עוף קפואים",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "frozen_puff_pastry_prefix",
+      "query": "בצק עלים",
+      "expectedProductId": "frozen_puff_pastry",
+      "expectedCanonicalName": "בצק עלים קפוא",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "apple_juice_name",
+      "query": "מיץ תפוחים",
+      "expectedProductId": "apple_juice",
+      "expectedCanonicalName": "מיץ תפוחים",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "herbal_tea_alias",
+      "query": "תה צמחים",
+      "expectedProductId": "herbal_tea",
+      "expectedCanonicalName": "חליטת צמחים",
+      "matchSource": "alias"
+    },
+    {
+      "id": "pretzels_name",
+      "query": "בייגלה",
+      "expectedProductId": "pretzels",
+      "expectedCanonicalName": "בייגלה",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "limescale_remover_name",
+      "query": "מסיר אבנית",
+      "expectedProductId": "limescale_remover",
+      "expectedCanonicalName": "מסיר אבנית",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "toothbrush_name",
+      "query": "מברשת שיניים",
+      "expectedProductId": "toothbrush",
+      "expectedCanonicalName": "מברשת שיניים",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "shaving_foam_name",
+      "query": "קצף גילוח",
+      "expectedProductId": "shaving_foam",
+      "expectedCanonicalName": "קצף גילוח",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "feeding_bottle_alias",
+      "query": "בקבוק האכלה",
+      "expectedProductId": "baby_bottle",
+      "expectedCanonicalName": "בקבוק לתינוק",
+      "matchSource": "alias"
+    },
+    {
+      "id": "dry_dog_food_alias",
+      "query": "אוכל יבש לכלבים",
+      "expectedProductId": "dry_dog_food",
+      "expectedCanonicalName": "מזון יבש לכלבים",
+      "matchSource": "alias"
+    },
+    {
+      "id": "roasting_bag_brand_term",
+      "query": "קוקי",
+      "expectedProductId": "roasting_bags",
+      "expectedCanonicalName": "שקיות צלייה",
+      "matchSource": "brand_term"
+    },
+    {
+      "id": "floor_squeegee_name",
+      "query": "מגב רצפה",
+      "expectedProductId": "floor_squeegee",
+      "expectedCanonicalName": "מגב רצפה",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "thermometer_name",
+      "query": "מדחום",
+      "expectedProductId": "thermometer",
+      "expectedCanonicalName": "מדחום",
+      "matchSource": "canonical_name"
+    },
+    {
+      "id": "custom_product_no_match",
+      "query": "ממרח פיסטוק עם ורדים מהמאפייה השכונתית",
+      "expectedProductId": null,
+      "expectedCanonicalName": null,
+      "matchSource": "no_match"
+    }
+  ]
+}

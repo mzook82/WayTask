@@ -241,11 +241,14 @@ final class ProductCatalogSearchTests: XCTestCase {
         XCTAssertLessThan(results.count, 10)
         XCTAssertTrue(
             results.allSatisfy {
-                $0.matchLevel <= .nameWordPrefix
-                    && HebrewProductSearchNormalizer
-                        .normalize($0.product.canonicalName)
-                        .value
-                        .hasPrefix("פס")
+                let normalizedName = HebrewProductSearchNormalizer
+                    .normalize($0.product.canonicalName)
+                    .value
+                return $0.matchLevel <= .nameWordPrefix
+                    && (
+                        normalizedName.hasPrefix("פס")
+                        || normalizedName.contains(" פס")
+                    )
             }
         )
     }

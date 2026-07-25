@@ -3,7 +3,7 @@
 The [Canonical Product Catalog Specification](docs/Specifications/CanonicalProductCatalogSpecification.md)
 is the normative long-term identity, schema, taxonomy, resolution, parity, and
 migration contract. This guide describes maintenance of the canonical Hebrew
-resource shipped by WT-026B.
+resource shipped by WT-027A.
 
 ## Shared contract
 
@@ -17,8 +17,12 @@ Platform-neutral contract resources are stored in:
   and the complete v2 compatibility map.
 - `normalization-fixtures.json`: shared Hebrew normalization cases.
 - `acceptance-fixtures.json`: shared canonical identity and resolution cases.
+- `wave-1-search-fixtures.json`: representative Hebrew search regressions for
+  the WT-027A production expansion.
 - `product-taxonomy-review.json`: non-runtime evidence of the completed
-  product-by-product WT-026B taxonomy review.
+  product-by-product taxonomy review, including Wave 1 additions.
+- `catalog-authoring-audit.jsonl`: append-only authoring audit for toolkit
+  mutations.
 - `README.md`: release and future Android consumption workflow.
 
 The files contain semantic IDs and text only. Platform icon mappings remain outside
@@ -62,7 +66,7 @@ The file has this top-level structure:
 ```json
 {
   "schemaVersion": 1,
-  "catalogVersion": 3,
+  "catalogVersion": 333,
   "taxonomyVersion": 1,
   "locale": "he-IL",
   "products": []
@@ -71,14 +75,16 @@ The file has this top-level structure:
 
 - `schemaVersion`: Version of the canonical document shape. The shipped format is 1.
 - `catalogVersion`: Positive integer revision of catalog content. The shipped
-  Hebrew catalog is version 3.
+  Hebrew catalog is version 333 after 320 individually audited Wave 1 additions
+  and 10 audited semantic review updates.
 - `taxonomyVersion`: Version of `shared/catalog/taxonomy.json`. The shipped value is 1.
 - `locale`: Catalog language and regional terminology. Phase 1 requires `he-IL`.
 - `products`: The complete list of catalog product records.
 
-Increase `catalogVersion` by one whenever a reviewed catalog update is released.
-Commit the version change in the same change as the products and tests. Do not
-reuse or decrease a released version number.
+The toolkit increments `catalogVersion` by one for every committed write. A batch
+performed as individually reviewed writes therefore consumes one version per
+product. Commit the catalog, review manifest, audit log, fixtures, and tests
+together. Do not reuse or decrease a released version number.
 
 ## Supported source formats
 
@@ -130,9 +136,10 @@ records. Optional migration fields are defined by the shared schema.
 
 ## Taxonomy compatibility
 
-`shared/catalog/taxonomy.json` is the category source of truth. WT-026B reviewed all
-147 products individually and assigned an approved `categoryId` and nullable
-`subcategoryId`. The audit is recorded in
+`shared/catalog/taxonomy.json` is the category source of truth. WT-026B reviewed the
+original 147 products individually, and WT-027A reviewed 320 additions through the
+authoring toolkit. All 467 products have an approved `categoryId` and nullable
+`subcategoryId`. The review evidence is recorded in
 `shared/catalog/product-taxonomy-review.json`; it is maintenance evidence and is
 included only in the test bundle, not read at runtime.
 
@@ -157,7 +164,7 @@ empty fallback remains available.
 ## Add a product
 
 1. Use `find` for the proposed name and every alias, then run `check-candidate`.
-2. Choose a stable semantic ID such as `bread_rye`; do not use a translated name,
+2. Choose a stable semantic ID such as `buckwheat_flour`; do not use a translated name,
    sequence number, package size, or current brand unless the product itself is
    brand-specific.
 3. Add the complete record under `products`.
@@ -177,12 +184,12 @@ Example:
 
 ```json
 {
-  "id": "bread_rye",
-  "canonicalName": "לחם שיפון",
-  "categoryId": "bakery",
-  "subcategoryId": null,
-  "aliases": ["לחם מקמח שיפון"],
-  "keywords": ["מאפייה", "כריך", "דגנים"],
+  "id": "buckwheat_flour",
+  "canonicalName": "קמח כוסמת",
+  "categoryId": "pantry",
+  "subcategoryId": "pantry.baking",
+  "aliases": ["קמח מכוסמת"],
+  "keywords": ["אפייה", "כוסמת"],
   "brandTerms": [],
   "popularityScore": 78,
   "isActive": true
@@ -218,6 +225,23 @@ The exact collision cleanup was:
 | `hand_sanitizer` | Removed `ג'ל לחיטוי ידיים`, which normalizes to retained alias `ג׳ל לחיטוי ידיים`. |
 | `infant_formula` | Removed `תמל`, which normalizes to retained alias `תמ״ל`. |
 | `food_storage_bags` | Removed `שקיות סנדוויץ'`, which normalizes to retained alias `שקיות סנדוויץ׳`. |
+
+## WT-027A Wave 1 expansion record
+
+WT-027A added 320 reviewed canonical concepts without changing or removing any of
+the original 147 records. The production resource now contains 467 active products
+at schema version 1, catalog version 333, taxonomy version 1.
+
+Every addition was processed through `check-candidate`, a dry-run `add`, and an
+explicit `add --write`. Each committed transaction updated the taxonomy review
+manifest, ran whole-catalog validation, incremented the catalog version, and
+appended one entry to `shared/catalog/catalog-authoring-audit.jsonl`. Ten follow-up
+toolkit updates moved non-equivalent use phrases from aliases into keywords and
+brand-led expressions into `brandTerms`, yielding 330 audit entries in total.
+
+The shared `wave-1-search-fixtures.json` file covers representative canonical-name,
+alias, brand-term, and custom no-match behavior. Wave 1 does not change ranking,
+personalization, UI, persistence, schema, or taxonomy.
 
 ## Add an alias
 
@@ -290,9 +314,9 @@ node --test tools/catalog/test/*.test.js
 
 ## Next migration and expansion steps
 
-**WT-027A — Controlled Canonical Catalog Coverage Expansion:** admit only reviewed
-gaps from `CATALOG_FEEDBACK.md`, author every addition in canonical schema 1, assign
-taxonomy product by product, increment `catalogVersion`, and add shared acceptance
-plus native regression coverage. The released `shared/catalog/` contract and
-fixtures should be vendored into Android as an entry criterion for cross-platform
-parity; no backend is required.
+**WT-027B — Canonical Catalog Coverage Review and Wave 2:** analyze real feedback
+and category coverage after the 467-product release, prioritize missing concepts in
+low-coverage requested areas, add only reviewed products through the toolkit, and
+extend the shared/native search fixtures. Before further expansion, consider a
+transactional batch command so one reviewed release can produce one catalog-version
+increment while retaining a per-product audit detail list.

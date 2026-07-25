@@ -139,10 +139,29 @@ The future Android repository should vendor the same released `shared/catalog/`
 artifact, validate its checksum, and execute the same normalization and acceptance
 fixtures through native Kotlin loaders and search code.
 
-## 8. Exact Next Step
+## 8. WT-027A Controlled Coverage Expansion
 
-**WT-027A — Controlled Canonical Catalog Coverage Expansion:** add only reviewed
-`CATALOG_FEEDBACK.md` gaps in canonical schema version 1, increment the catalog
-version, complete taxonomy review entries, and add shared and native regressions.
-The Android repository should vendor and verify the same immutable shared contract
-release before product coverage diverges.
+WT-027A expands the canonical Hebrew resource from 147 to 467 active products while
+preserving every original product object and stable ID. The resource remains schema
+version 1 and taxonomy version 1; 320 individually committed toolkit additions and
+10 follow-up alias/keyword/brand review updates move the catalog from version 3 to
+333.
+
+Every new product has an explicit category and nullable subcategory review entry.
+The append-only `shared/catalog/catalog-authoring-audit.jsonl` contains 330
+contiguous transactions: 320 adds and 10 semantic review updates.
+`shared/catalog/wave-1-search-fixtures.json` adds shared
+Hebrew acceptance coverage for canonical names, aliases, one genuine brand term,
+and custom no-match behavior.
+
+Search weights, suggestion limits, personalization, UI, persistence, and saved
+identity behavior are unchanged. The original 147 IDs remain the compatibility
+baseline and are verified as a subset of the 467 production IDs.
+
+## 9. Exact Next Step
+
+**WT-027B — Canonical Catalog Coverage Review and Wave 2:** measure real missing
+queries through `CATALOG_FEEDBACK.md`, fill only evidenced gaps in low-coverage
+categories, and extend the shared Swift/Node/Kotlin-ready fixtures. Add a
+transactional toolkit batch mode before another large wave if release-level catalog
+versioning is preferred over one version per committed product.

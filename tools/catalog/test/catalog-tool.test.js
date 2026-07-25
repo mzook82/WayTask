@@ -136,17 +136,109 @@ test("shared Hebrew normalization fixtures execute in Node", () => {
   }
 });
 
-test("production catalog, taxonomy, and all 147 reviews validate", () => {
+test("Wave 1 production catalog, taxonomy, and all 467 reviews validate", () => {
   const context = productionContext();
   const result = validateCatalog(context);
   assert.equal(result.valid, true, JSON.stringify(result.errors, null, 2));
   assert.deepEqual(result.stats, {
-    products: 147,
-    active: 147,
+    products: 467,
+    active: 467,
     inactive: 0,
     categories: 23,
     subcategories: 22,
   });
+});
+
+test("Wave 1 shared search fixtures resolve production canonical products", () => {
+  const context = productionContext();
+  const fixtures = readJson(
+    path.join(SHARED, "wave-1-search-fixtures.json"),
+    "Wave 1 search fixtures",
+  );
+
+  assert.equal(fixtures.fixtureVersion, 1);
+  assert.equal(fixtures.locale, "he-IL");
+  assert.equal(fixtures.catalogVersion, context.catalog.catalogVersion);
+  assert.ok(fixtures.cases.length >= 30);
+
+  for (const fixture of fixtures.cases) {
+    const results = findProducts(context, fixture.query);
+    if (fixture.expectedProductId === null) {
+      assert.equal(results.length, 0, fixture.id);
+      continue;
+    }
+    assert.equal(results[0]?.id, fixture.expectedProductId, fixture.id);
+    assert.equal(
+      results[0]?.canonicalName,
+      fixture.expectedCanonicalName,
+      fixture.id,
+    );
+    assert.equal(results[0]?.matchSource, fixture.matchSource, fixture.id);
+  }
+});
+
+test("Wave 1 preserves legacy IDs and has a contiguous audited add history", () => {
+  const context = productionContext();
+  const legacy = readJson(
+    path.join(
+      REPO_ROOT,
+      "WayTaskTests",
+      "ProductCatalog",
+      "product_catalog_he_legacy_v2.json",
+    ),
+    "legacy v2 catalog fixture",
+  );
+  const productionIDs = context.catalog.products.map((product) => product.id);
+  const legacyIDs = legacy.products.map((product) => product.id);
+  assert.equal(legacyIDs.length, 147);
+  assert.deepEqual(productionIDs.slice(0, 147), legacyIDs);
+
+  const auditEntries = fs
+    .readFileSync(path.join(SHARED, "catalog-authoring-audit.jsonl"), "utf8")
+    .trim()
+    .split("\n")
+    .map(JSON.parse);
+  assert.equal(auditEntries.length, 330);
+  assert.deepEqual(
+    auditEntries.slice(0, 320).map((entry) => entry.productId),
+    productionIDs.slice(147),
+  );
+  assert.ok(
+    auditEntries.slice(0, 320).every((entry) => entry.operation === "add"),
+  );
+  assert.deepEqual(
+    auditEntries.slice(320).map((entry) => entry.operation),
+    Array(10).fill("update"),
+  );
+  assert.deepEqual(
+    auditEntries.slice(320).map((entry) => entry.productId),
+    [
+      "baby_body_wash",
+      "candles",
+      "cleaning_sponges",
+      "coconut_milk",
+      "gummy_candy",
+      "margarine",
+      "mop",
+      "pillow_cereal",
+      "sour_cream",
+      "tea_lights",
+    ],
+  );
+  for (const [index, entry] of auditEntries.entries()) {
+    assert.equal(entry.catalogVersionFrom, index + 3);
+    assert.equal(entry.catalogVersionTo, index + 4);
+    if (index > 0) {
+      assert.equal(
+        auditEntries[index - 1].catalogSha256After,
+        entry.catalogSha256Before,
+      );
+    }
+  }
+  assert.equal(
+    auditEntries.at(-1).catalogSha256After,
+    fileSha256(PRODUCTION_CATALOG),
+  );
 });
 
 test("validator detects every required hard-error class", async (t) => {
@@ -268,11 +360,11 @@ test("read-only CLI commands return actionable machine-readable results", () => 
 
   const validation = runCli(["validate", "--json"]);
   assert.equal(validation.status, 0, validation.stderr);
-  assert.equal(parseStdout(validation).stats.products, 147);
+  assert.equal(parseStdout(validation).stats.products, 467);
 
   const report = runCli(["report", "--json"]);
   assert.equal(report.status, 0, report.stderr);
-  assert.equal(parseStdout(report).metadata.catalogVersion, 3);
+  assert.equal(parseStdout(report).metadata.catalogVersion, 333);
 
   const find = runCli([
     "find",

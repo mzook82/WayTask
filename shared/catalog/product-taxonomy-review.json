@@ -1,9 +1,9 @@
 {
   "reviewVersion": 1,
-  "catalogVersion": 3,
+  "catalogVersion": 333,
   "taxonomyVersion": 1,
   "locale": "he-IL",
-  "productCount": 147,
+  "productCount": 467,
   "products": [
     {
       "productId": "bread_white",
@@ -1091,6 +1091,2566 @@
       "canonicalSubcategoryId": null,
       "reviewStatus": "reclassified",
       "note": "Individually reviewed from legacy household_products; assigned household / no approved subcategory."
+    },
+    {
+      "productId": "pasta_fusilli",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "lasagna_sheets",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "rice_noodles",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "egg_noodles",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "bulgur",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "quinoa",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "rice_brown",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "rice_jasmine",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "risotto_rice",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "polenta",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "gnocchi",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "soup_noodles",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "tomato_paste",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "canned_whole_tomatoes",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "canned_peas",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "canned_mushrooms",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "canned_artichoke_hearts",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "hearts_of_palm",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "green_olives",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "black_olives",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "canned_lentils",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baked_beans",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "canned_sardines",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "canned_salmon",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "canned_pineapple",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "coconut_milk",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "alias_updated",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "honey",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "date_syrup",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "chocolate_spread",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "halva",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "blueberry_jam",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "apricot_jam",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "maple_syrup",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "rice_cakes",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "muesli",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast_cereal",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "bran_cereal",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast_cereal",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pillow_cereal",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast_cereal",
+      "reviewStatus": "alias_updated",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "ring_cereal",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast_cereal",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "self_rising_flour",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "whole_wheat_flour",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "bread_flour",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "semolina",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "almond_flour",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "powdered_sugar",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "brown_sugar",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "vanilla_extract",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baking_soda",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "gelatin",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "chocolate_chips",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "shredded_coconut",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cake_sprinkles",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "instant_pudding",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "hot_paprika",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "white_pepper",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "garlic_powder",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "onion_powder",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "curry_powder",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baharat",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "hawayej_soup",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dried_oregano",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dried_basil",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dried_rosemary",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dried_thyme",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "bay_leaves",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "nutmeg",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cloves_spice",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dry_white_beans",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dry_red_beans",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dry_black_beans",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dry_split_peas",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pear",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "peach",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "nectarine",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "plum",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cherries",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "strawberries",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "blueberries",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "raspberries",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "mango",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pineapple",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "kiwi",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "avocado",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "grapefruit",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "mandarin",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pomegranate",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "melon",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "fresh_dates",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "garlic",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "white_cabbage",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "red_cabbage",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "red_bell_pepper",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "green_bell_pepper",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "zucchini",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "eggplant",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cauliflower",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "broccoli",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "sweet_potato",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pumpkin",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "beetroot",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "radish",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "fresh_mushrooms",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "celery",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "parsley",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cilantro",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dill",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "white_cheese",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cream_cheese",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "feta_cheese",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "bulgarian_cheese",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "labneh",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "ricotta",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "mozzarella",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "parmesan",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "goat_cheese",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "mascarpone",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "halloumi",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "sweet_cream",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "sour_cream",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "alias_updated",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cooking_cream",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "greek_yogurt",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "fruit_yogurt",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "probiotic_yogurt_drink",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "lactose_free_milk",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": "dairy.milk",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "chocolate_milk",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": "dairy.milk",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "goat_milk",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": "dairy.milk",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "rice_drink",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": "dairy.alternatives",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cashew_drink",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": "dairy.alternatives",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "margarine",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "alias_updated",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dairy_pudding",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "eshel",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baguette",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "rye_bread",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "spelt_bread",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "light_bread",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "gluten_free_bread",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "lavash",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "tortilla",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "bagel",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "ciabatta",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "focaccia",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cheese_bourekas",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "potato_bourekas",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "croissant",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "rugelach",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "yeast_cake",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "chicken_wings",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "chicken_drumsticks",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "chicken_liver",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "chicken_hearts",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "chicken_schnitzel",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "ground_chicken",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "turkey_breast",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "ground_turkey",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "beef_chuck",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "beef_ribs",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "beef_brisket",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "beef_cubes",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "beef_liver",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "lamb_chops",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "lamb_shoulder",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "ground_lamb",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "beef_sausages",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "chicken_sausages",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "hamburger_patties",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "kebab",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "sea_bass",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "trout",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "grey_mullet",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "carp",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "sole",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "fresh_sardines",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "mackerel",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "shrimp",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "calamari",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "grouper",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_corn",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_green_beans",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_broccoli",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_cauliflower",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_spinach",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_edamame",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_berries",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_strawberries",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_mango",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_fish_sticks",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_chicken_schnitzel",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_chicken_nuggets",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_kebab",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_meatballs",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_falafel",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_jachnun",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_malawach",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_puff_pastry",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "frozen_phyllo_dough",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "sorbet",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "apple_juice",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "grape_juice",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "lemonade",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "grapefruit_juice",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pomegranate_juice",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "iced_tea",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "energy_drink",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "malt_beer",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "tonic_water",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "ginger_ale",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "coffee_beans",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": "drinks.coffee",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "ground_coffee",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": "drinks.coffee",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "decaf_coffee",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": "drinks.coffee",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "green_tea",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "herbal_tea",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pretzels",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "popcorn",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "crackers",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "tortilla_chips",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "corn_puffs",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "mixed_nuts",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "sunflower_seeds",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "gummy_candy",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "alias_updated",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "hard_candy",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "chewing_gum",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "multi_surface_cleaner",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "glass_cleaner",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "bathroom_cleaner",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "toilet_cleaner",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "limescale_remover",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "oven_cleaner",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "kitchen_degreaser",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "disinfectant_spray",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cleaning_cream",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dishwasher_rinse_aid",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dishwasher_salt",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "laundry_capsules",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "stain_remover",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "color_catcher_sheets",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "delicate_laundry_detergent",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "drain_opener",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "furniture_polish",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "carpet_cleaner",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cleaning_sponges",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "alias_updated",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "rubber_gloves",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "toothbrush",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": "personal_care.oral_care",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dental_floss",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": "personal_care.oral_care",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "mouthwash",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": "personal_care.oral_care",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "interdental_brushes",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": "personal_care.oral_care",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "denture_cleaner",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": "personal_care.oral_care",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "kids_toothpaste",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": "personal_care.oral_care",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "kids_toothbrush",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": "personal_care.oral_care",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "liquid_hand_soap",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "hand_cream",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "body_lotion",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "face_wash",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "face_moisturizer",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "shaving_foam",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "razors",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "aftershave",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "hair_mask",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "hair_gel",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cotton_buds",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cotton_pads",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "sanitary_pads",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "swim_diapers",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "diaper_disposal_bags",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_oil",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_lotion",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_body_wash",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "alias_updated",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_sunscreen",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_bottle",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pacifier",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "bottle_nipple",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "nursing_pads",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "breast_milk_storage_bags",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_cereal",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "teething_biscuits",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_laundry_detergent",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_fabric_softener",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dry_dog_food",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "wet_dog_food",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dry_cat_food",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "wet_cat_food",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dog_waste_bags",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dog_shampoo",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "clumping_cat_litter",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "crystal_cat_litter",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dog_leash",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dog_collar",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cat_toy",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dog_toy",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cat_scratcher",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pet_carrier",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "puppy_training_pads",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "disposable_bowls",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "disposable_tablecloth",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "disposable_straws",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "wooden_skewers",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "toothpicks",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "freezer_bags",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.storage",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "zipper_bags",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.storage",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "ice_cube_bags",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.storage",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "roasting_bags",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.storage",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "food_storage_containers",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.storage",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "lunch_box",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.storage",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "microfiber_cloths",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dishcloths",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "broom",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "floor_squeegee",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "mop",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "alias_updated",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cleaning_bucket",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dustpan_brush",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "toilet_brush",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "clothes_pegs",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "laundry_basket",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "clothes_hangers",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "candles",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "alias_updated",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "tea_lights",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "alias_updated",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "lighter",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "thermometer",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cotton_wool",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "gauze_pads",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "saline_solution",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "vitamin_d",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
     }
   ]
 }

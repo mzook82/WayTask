@@ -205,9 +205,10 @@ Run:
 node --test tools/catalog/test/*.test.js
 ```
 
-Tests execute the shared Hebrew normalization fixtures, validate the production
-147-product catalog, exercise every required validator failure, and perform
-add/update/deactivate dry runs and committed writes only against temporary copies.
+Tests execute the shared Hebrew normalization and Wave 1 search fixtures, validate
+the 467-product production catalog and its 330-entry audit chain, exercise every
+required validator failure, and perform add/update/deactivate dry runs and
+committed writes only against temporary copies.
 
 Before releasing catalog content, also run the complete iOS test suite, the unsigned
 generic iOS build, and:

@@ -11,7 +11,7 @@ final class ProductCatalogMigrationTests: XCTestCase {
         timeIntervalSince1970: 2_000_000_000
     )
 
-    func testBundledCatalogIsCanonicalV3AndPassesFullValidator() throws {
+    func testBundledWave1CatalogIsCanonicalAndPassesFullValidator() throws {
         let data = try canonicalCatalogData()
         let document = try service.loadDocument(data: data)
         let object = try XCTUnwrap(
@@ -23,11 +23,11 @@ final class ProductCatalogMigrationTests: XCTestCase {
         )
 
         XCTAssertEqual(document.schemaVersion, 1)
-        XCTAssertEqual(document.catalogVersion, 3)
+        XCTAssertEqual(document.catalogVersion, 333)
         XCTAssertEqual(document.taxonomyVersion, 1)
         XCTAssertEqual(document.locale, "he-IL")
         XCTAssertEqual(document.sourceFormat, .canonicalV1)
-        XCTAssertEqual(document.products.count, 147)
+        XCTAssertEqual(document.products.count, 467)
         XCTAssertTrue(document.products.allSatisfy(\.isActive))
 
         for record in records {
@@ -72,29 +72,21 @@ final class ProductCatalogMigrationTests: XCTestCase {
         )
 
         XCTAssertEqual(manifest.reviewVersion, 1)
-        XCTAssertEqual(manifest.catalogVersion, 3)
+        XCTAssertEqual(manifest.catalogVersion, 333)
         XCTAssertEqual(manifest.taxonomyVersion, taxonomy.taxonomyVersion)
-        XCTAssertEqual(manifest.productCount, 147)
-        XCTAssertEqual(manifest.products.count, 147)
-        XCTAssertEqual(Set(manifest.products.map(\.productId)).count, 147)
+        XCTAssertEqual(manifest.productCount, 467)
+        XCTAssertEqual(manifest.products.count, 467)
+        XCTAssertEqual(Set(manifest.products.map(\.productId)).count, 467)
         XCTAssertEqual(reviewRequiredCategories.count, 8)
 
         var reviewedAmbiguousProducts = 0
         for review in manifest.products {
-            let legacyProduct = try XCTUnwrap(
-                legacyByID[review.productId],
-                "Manifest references unknown legacy ID \(review.productId)"
-            )
             let canonicalProduct = try XCTUnwrap(
                 canonicalByID[review.productId],
                 "Manifest references unknown canonical ID \(review.productId)"
             )
 
             XCTAssertTrue(allowedStatuses.contains(review.reviewStatus))
-            XCTAssertEqual(
-                review.previousLegacyCategoryId,
-                legacyProduct.categoryId
-            )
             XCTAssertEqual(
                 review.canonicalCategoryId,
                 canonicalProduct.categoryId
@@ -104,13 +96,28 @@ final class ProductCatalogMigrationTests: XCTestCase {
                 canonicalProduct.subcategoryId
             )
 
-            if reviewRequiredCategories.contains(
-                review.previousLegacyCategoryId
-            ) {
-                reviewedAmbiguousProducts += 1
+            if let legacyProduct = legacyByID[review.productId] {
+                XCTAssertEqual(
+                    review.previousLegacyCategoryId,
+                    legacyProduct.categoryId
+                )
+
+                if reviewRequiredCategories.contains(
+                    legacyProduct.categoryId
+                ) {
+                    reviewedAmbiguousProducts += 1
+                    XCTAssertTrue(
+                        review.note?.contains("Individually reviewed") == true,
+                        "Ambiguous assignment lacks review evidence: \(review.productId)"
+                    )
+                }
+            } else {
+                XCTAssertNil(review.previousLegacyCategoryId)
                 XCTAssertTrue(
-                    review.note?.contains("Individually reviewed") == true,
-                    "Ambiguous assignment lacks review evidence: \(review.productId)"
+                    review.note?.contains(
+                        "Canonical product added through the catalog authoring toolkit."
+                    ) == true,
+                    "Wave 1 assignment lacks toolkit review evidence: \(review.productId)"
                 )
             }
         }
@@ -130,11 +137,19 @@ final class ProductCatalogMigrationTests: XCTestCase {
             uniqueKeysWithValues: legacy.products.map { ($0.id, $0) }
         )
 
-        XCTAssertEqual(legacy.products.map(\.id), canonical.products.map(\.id))
-        XCTAssertEqual(Set(canonical.products.map(\.id)).count, 147)
+        XCTAssertEqual(legacy.products.count, 147)
+        XCTAssertEqual(canonical.products.count, 467)
+        XCTAssertEqual(Set(canonical.products.map(\.id)).count, 467)
+        XCTAssertTrue(
+            Set(legacy.products.map(\.id)).isSubset(
+                of: Set(canonical.products.map(\.id))
+            )
+        )
 
-        for product in canonical.products {
-            let previous = try XCTUnwrap(legacyByID[product.id])
+        for previous in legacy.products {
+            let product = try XCTUnwrap(
+                canonical.products.first { $0.id == previous.id }
+            )
             XCTAssertEqual(product.keywords, previous.keywords)
             XCTAssertEqual(
                 product.popularityScore,
@@ -194,11 +209,6 @@ final class ProductCatalogMigrationTests: XCTestCase {
                 canonical.first?.id,
                 expectation.expectedID,
                 "Unexpected canonical result for \(expectation.query)"
-            )
-            XCTAssertEqual(
-                canonical.map(\.id),
-                legacy.map(\.id),
-                "Ranking changed for \(expectation.query)"
             )
         }
     }
@@ -293,23 +303,34 @@ final class ProductCatalogMigrationTests: XCTestCase {
         try context.save()
         let linkedProductID = shoppingEntry.productID
 
+        let legacyIDs = Set(legacy.products.map(\.id))
         for product in canonical.products {
             let outcome = try persistence.save(
                 saveRequest(for: product),
                 in: context
             )
-            guard case .alreadyPresent(let existing) = outcome else {
-                return XCTFail("Expected ID match for \(product.id)")
+            if legacyIDs.contains(product.id) {
+                guard case .alreadyPresent(let existing) = outcome else {
+                    return XCTFail("Expected ID match for \(product.id)")
+                }
+                XCTAssertEqual(
+                    existing.catalogProductIDRawValue,
+                    product.id
+                )
+            } else {
+                guard case .inserted(let inserted) = outcome else {
+                    return XCTFail("Expected Wave 1 insert for \(product.id)")
+                }
+                XCTAssertEqual(
+                    inserted.catalogProductIDRawValue,
+                    product.id
+                )
             }
-            XCTAssertEqual(
-                existing.catalogProductIDRawValue,
-                product.id
-            )
         }
 
         XCTAssertEqual(
             try context.fetchCount(FetchDescriptor<Product>()),
-            147
+            467
         )
         XCTAssertEqual(shoppingEntry.productID, linkedProductID)
         XCTAssertEqual(
@@ -411,7 +432,7 @@ final class ProductCatalogMigrationTests: XCTestCase {
 private struct TaxonomyReviewManifest: Decodable {
     struct Review: Decodable {
         let productId: String
-        let previousLegacyCategoryId: String
+        let previousLegacyCategoryId: String?
         let canonicalCategoryId: String
         let canonicalSubcategoryId: String?
         let reviewStatus: String
