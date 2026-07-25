@@ -13,6 +13,7 @@ import UserNotifications
 struct ContentView: View {
     @EnvironmentObject private var appStateManager: AppStateManager
     @EnvironmentObject private var locationManager: LocationManager
+    @EnvironmentObject private var featureTourCoordinator: FeatureTourCoordinator
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
 
@@ -73,6 +74,7 @@ struct ContentView: View {
         .tint(WayTaskDesign.accent)
         .preferredColorScheme(.dark)
         .onAppear {
+            synchronizeFeatureTourNavigation()
             updateSentryArea(appStateManager.selectedTab)
             ensureShoppingListArchitecture()
             syncShoppingArchitectureState()
@@ -93,8 +95,27 @@ struct ContentView: View {
         .onChange(of: appStateManager.selectedTab) { _, tab in
             updateSentryArea(tab)
         }
+        .onChange(of: featureTourCoordinator.currentStep?.id) {
+            synchronizeFeatureTourNavigation()
+        }
+        .onChange(of: featureTourCoordinator.isPresented) { _, isPresented in
+            if isPresented {
+                synchronizeFeatureTourNavigation()
+                return
+            }
+
+            presentShoppingStartupSheetIfNeeded()
+            recoverActiveShoppingSessionIfNeeded()
+        }
         .sheet(item: $startupSheet) { sheet in
             startupSheetContent(sheet)
+        }
+        .fullScreenCover(
+            isPresented: featureTourCompletionPresentation
+        ) {
+            FeatureTourCompletionView(
+                onStart: featureTourCoordinator.complete
+            )
         }
         .onChange(of: startupSheet?.id) { _, sheetID in
             guard sheetID == nil else {
@@ -125,6 +146,7 @@ struct ContentView: View {
     private func recoverActiveShoppingSessionIfNeeded() {
         guard !hasCompletedActiveSessionLaunchRecovery,
               !isCheckingActiveSessionLaunchRecovery,
+              !featureTourCoordinator.isPresented,
               startupSheet == nil,
               scenePhase == .active else {
             return
@@ -244,6 +266,7 @@ struct ContentView: View {
 
     private func presentShoppingStartupSheetIfNeeded() {
         guard startupSheet == nil,
+              !featureTourCoordinator.isPresented,
               weeklyShoppingListID != nil,
               !products.isEmpty else {
             return
@@ -262,6 +285,25 @@ struct ContentView: View {
         if !initialShoppingSelectionCompleted, weeklyShoppingEntryCount == 0 {
             startupSheet = .initialSelection
         }
+    }
+
+    private func synchronizeFeatureTourNavigation() {
+        guard let destination =
+                featureTourCoordinator.navigationDestination,
+              appStateManager.selectedTab != destination else {
+            return
+        }
+
+        appStateManager.selectedTab = destination
+    }
+
+    private var featureTourCompletionPresentation: Binding<Bool> {
+        Binding(
+            get: {
+                featureTourCoordinator.isShowingCompletion
+            },
+            set: { _ in }
+        )
     }
 
     @ViewBuilder
@@ -434,6 +476,7 @@ struct ContentView: View {
     ContentView(productKnowledgeSearchAvailability: .unavailable)
         .environmentObject(AppStateManager())
         .environmentObject(LocationManager())
+        .environmentObject(FeatureTourCoordinator())
 }
 
 struct WayTaskFoundationPlaceholderView: View {

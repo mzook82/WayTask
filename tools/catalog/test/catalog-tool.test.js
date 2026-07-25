@@ -137,20 +137,20 @@ test("shared Hebrew normalization fixtures execute in Node", () => {
   }
 });
 
-test("Wave 1 production catalog, taxonomy, and all 467 reviews validate", () => {
+test("Wave 2 production catalog, taxonomy, and all 647 reviews validate", () => {
   const context = productionContext();
   const result = validateCatalog(context);
   assert.equal(result.valid, true, JSON.stringify(result.errors, null, 2));
   assert.deepEqual(result.stats, {
-    products: 467,
-    active: 467,
+    products: 647,
+    active: 647,
     inactive: 0,
     categories: 23,
     subcategories: 22,
   });
   assert.equal(
     buildReport(context).idFingerprint,
-    "87b0b24404119ccabf6fc56a596c0f5e8334d499bfeb05634f3ff1cc5247b325",
+    "31d11cc10d8aed1f7d27b210b8402f1883f87e1a334abe50ec2c2a3b8c0d53ff",
   );
 });
 
@@ -163,7 +163,8 @@ test("Wave 1 shared search fixtures resolve production canonical products", () =
 
   assert.equal(fixtures.fixtureVersion, 1);
   assert.equal(fixtures.locale, "he-IL");
-  assert.equal(fixtures.catalogVersion, context.catalog.catalogVersion);
+  assert.equal(fixtures.catalogVersion, 4);
+  assert.ok(fixtures.catalogVersion < context.catalog.catalogVersion);
   assert.ok(fixtures.cases.length >= 30);
 
   for (const fixture of fixtures.cases) {
@@ -182,7 +183,35 @@ test("Wave 1 shared search fixtures resolve production canonical products", () =
   }
 });
 
-test("Wave 1 preserves all IDs and its immutable authoring audit history", () => {
+test("Wave 2 shared search fixtures resolve production canonical products", () => {
+  const context = productionContext();
+  const fixtures = readJson(
+    path.join(SHARED, "wave-2-search-fixtures.json"),
+    "Wave 2 search fixtures",
+  );
+
+  assert.equal(fixtures.fixtureVersion, 1);
+  assert.equal(fixtures.locale, "he-IL");
+  assert.equal(fixtures.catalogVersion, context.catalog.catalogVersion);
+  assert.ok(fixtures.cases.length >= 40);
+
+  for (const fixture of fixtures.cases) {
+    const results = findProducts(context, fixture.query);
+    if (fixture.expectedProductId === null) {
+      assert.equal(results.length, 0, fixture.id);
+      continue;
+    }
+    assert.equal(results[0]?.id, fixture.expectedProductId, fixture.id);
+    assert.equal(
+      results[0]?.canonicalName,
+      fixture.expectedCanonicalName,
+      fixture.id,
+    );
+    assert.equal(results[0]?.matchSource, fixture.matchSource, fixture.id);
+  }
+});
+
+test("Wave 2 preserves all prior IDs and its transactional audit history", () => {
   const context = productionContext();
   const legacy = readJson(
     path.join(
@@ -197,6 +226,10 @@ test("Wave 1 preserves all IDs and its immutable authoring audit history", () =>
   const legacyIDs = legacy.products.map((product) => product.id);
   assert.equal(legacyIDs.length, 147);
   assert.deepEqual(productionIDs.slice(0, 147), legacyIDs);
+  assert.equal(
+    sha256(`${productionIDs.slice(0, 467).sort().join("\n")}\n`),
+    "87b0b24404119ccabf6fc56a596c0f5e8334d499bfeb05634f3ff1cc5247b325",
+  );
 
   const auditSource = fs.readFileSync(
     path.join(SHARED, "catalog-authoring-audit.jsonl"),
@@ -205,14 +238,20 @@ test("Wave 1 preserves all IDs and its immutable authoring audit history", () =>
   const auditLines = auditSource.trim().split("\n");
   const auditEntries = auditLines.map(JSON.parse);
   const historicalEntries = auditEntries.slice(0, 330);
-  assert.equal(auditEntries.length, 331);
+  const normalization = auditEntries[330];
+  const wave2Entries = auditEntries.slice(331);
+  assert.equal(auditEntries.length, 511);
   assert.equal(
     sha256(`${auditLines.slice(0, 330).join("\n")}\n`),
     "6fdf64be6980f848d1549b1ee9ebd8b247d32016b11bd0ef22df94842f87412f",
   );
+  assert.equal(
+    sha256(`${auditLines.slice(0, 331).join("\n")}\n`),
+    "b5b01012b3427ea92cd109e29267c3634c4a8478134cdf8dc58e4cac47c361d2",
+  );
   assert.deepEqual(
     historicalEntries.slice(0, 320).map((entry) => entry.productId),
-    productionIDs.slice(147),
+    productionIDs.slice(147, 467),
   );
   assert.ok(
     historicalEntries
@@ -248,7 +287,6 @@ test("Wave 1 preserves all IDs and its immutable authoring audit history", () =>
       );
     }
   }
-  const normalization = auditEntries.at(-1);
   assert.equal(normalization.auditVersion, 2);
   assert.equal(normalization.operation, "release_version_normalization");
   assert.equal(normalization.releaseId, "wt-027a-wave-1");
@@ -260,6 +298,33 @@ test("Wave 1 preserves all IDs and its immutable authoring audit history", () =>
   );
   assert.equal(
     normalization.catalogSha256After,
+    wave2Entries[0].catalogSha256Before,
+  );
+
+  assert.equal(wave2Entries.length, 180);
+  assert.deepEqual(
+    wave2Entries.map((entry) => entry.productId),
+    productionIDs.slice(467),
+  );
+  assert.ok(
+    wave2Entries.every(
+      (entry, index) =>
+        entry.auditVersion === 2 &&
+        entry.operation === "add" &&
+        entry.releaseId === "wt-027b-wave-2" &&
+        entry.releaseOperation === "batch" &&
+        entry.catalogVersionFrom === 4 &&
+        entry.catalogVersionTo === 5 &&
+        entry.batchSize === 180 &&
+        entry.batchIndex === index + 1 &&
+        entry.catalogSha256Before ===
+          wave2Entries[0].catalogSha256Before &&
+        entry.catalogSha256After ===
+          wave2Entries[0].catalogSha256After,
+    ),
+  );
+  assert.equal(
+    wave2Entries.at(-1).catalogSha256After,
     fileSha256(PRODUCTION_CATALOG),
   );
 });
@@ -383,11 +448,11 @@ test("read-only CLI commands return actionable machine-readable results", () => 
 
   const validation = runCli(["validate", "--json"]);
   assert.equal(validation.status, 0, validation.stderr);
-  assert.equal(parseStdout(validation).stats.products, 467);
+  assert.equal(parseStdout(validation).stats.products, 647);
 
   const report = runCli(["report", "--json"]);
   assert.equal(report.status, 0, report.stderr);
-  assert.equal(parseStdout(report).metadata.catalogVersion, 4);
+  assert.equal(parseStdout(report).metadata.catalogVersion, 5);
 
   const find = runCli([
     "find",

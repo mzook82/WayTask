@@ -12,6 +12,8 @@ import SwiftData
 struct WayTaskApp: App {
     @StateObject private var appStateManager: AppStateManager
     @StateObject private var locationManager: LocationManager
+    @StateObject private var onboardingCoordinator: OnboardingCoordinator
+    @StateObject private var featureTourCoordinator: FeatureTourCoordinator
     private let modelContainer: ModelContainer
     private let productKnowledgeSearchAvailability: ProductKnowledgeSearchAvailability
 
@@ -24,6 +26,16 @@ struct WayTaskApp: App {
         }
         _appStateManager = StateObject(wrappedValue: AppStateManager())
         _locationManager = StateObject(wrappedValue: LocationManager())
+        let onboardingCoordinator = OnboardingCoordinator()
+        _onboardingCoordinator = StateObject(
+            wrappedValue: onboardingCoordinator
+        )
+        _featureTourCoordinator = StateObject(
+            wrappedValue: FeatureTourCoordinator(
+                presentOnLaunch:
+                    onboardingCoordinator.hasCompletedOnboarding
+            )
+        )
         let catalogProducts = ProductCatalogService().loadProductsOrEmpty()
         if catalogProducts.isEmpty {
             productKnowledgeSearchAvailability = .unavailable
@@ -42,11 +54,28 @@ struct WayTaskApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(
-                productKnowledgeSearchAvailability: productKnowledgeSearchAvailability
-            )
+            Group {
+                if onboardingCoordinator.isPresented {
+                    OnboardingFlowView(
+                        onSkip: {
+                            onboardingCoordinator.complete()
+                            featureTourCoordinator.skip()
+                        },
+                        onComplete: {
+                            featureTourCoordinator.start()
+                            onboardingCoordinator.complete()
+                        }
+                    )
+                } else {
+                    ContentView(
+                        productKnowledgeSearchAvailability:
+                            productKnowledgeSearchAvailability
+                    )
+                }
+            }
                 .environmentObject(appStateManager)
                 .environmentObject(locationManager)
+                .environmentObject(featureTourCoordinator)
         }
         .modelContainer(modelContainer)
     }

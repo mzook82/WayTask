@@ -15,6 +15,10 @@ metadata.
   resolution expectations.
 - `wave-1-search-fixtures.json` — production Wave 1 Hebrew search expectations,
   reusable by Node, Swift, and future Kotlin tests.
+- `wave-2-search-fixtures.json` — production Wave 2 Hebrew search expectations,
+  reusable by Node, Swift, and future Kotlin tests.
+- `releases/wt-027b-wave-2.json` — reviewed 180-operation transactional source for
+  released catalog revision 5.
 - `product-taxonomy-review.json` — non-runtime maintenance evidence containing the
   completed taxonomy decision for every production product.
 - `catalog-authoring-audit.jsonl` — append-only JSON Lines authoring history.
@@ -24,7 +28,7 @@ metadata.
 The iOS compatibility layer accepts:
 
 1. Canonical `schemaVersion: 1`, decoded directly from the JSON Schema shape. The
-   production Hebrew resource is catalog version 4 and taxonomy version 1.
+   production Hebrew resource is catalog version 5 and taxonomy version 1.
 2. The retired legacy v2 shape, identified by the absence of `schemaVersion`. Its
    `name` maps to `canonicalName`, `subcategoryId` maps to `null`, and `brandTerms`
    maps to an empty array. It remains supported and covered by an archived fixture.
@@ -44,6 +48,14 @@ contains all 467 assignments. The 320 toolkit transactions are recorded in
 historical mutation entries. WT-027A.1 preserves those entries, normalizes the Wave
 1 release to catalog version 4, and appends one explicit policy-migration record.
 `wave-1-search-fixtures.json` provides shared regressions for the expanded coverage.
+
+WT-027B adds 180 reviewed canonical products as one transactional batch, bringing
+production to 647 active records and advancing catalog version exactly once from 4
+to 5. All 467 prior records and IDs remain byte-for-byte unchanged. The review
+manifest contains 647 completed assignments, and 180 per-product audit entries
+share release ID `wt-027b-wave-2` and the same release-level before/after hashes.
+`wave-2-search-fixtures.json` supplies 42 shared Hebrew regressions for the new
+coverage.
 
 ## Validation and fixtures
 
@@ -71,7 +83,8 @@ Kotlin decoder, normalizer, validator, and search implementation.
 6. Tag the shared contract release and record its checksum in each platform
    repository.
 
-WT-026B migrated but did not expand the original 147-product catalog. WT-027A is the
-first controlled expansion. All future additions must use canonical schema version
-1, an approved taxonomy assignment, a review-manifest entry, a catalog-version
-increment, an audit record, and shared/native regression coverage.
+WT-026B migrated but did not expand the original 147-product catalog. WT-027A and
+WT-027B are the first two controlled expansions. All future additions must use
+canonical schema version 1, an approved taxonomy assignment, a review-manifest
+entry, one catalog-version increment per transactional release, per-mutation audit
+records, and shared/native regression coverage.

@@ -6,6 +6,7 @@ import UIKit
 struct CameraView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var appStateManager: AppStateManager
+    @EnvironmentObject private var featureTourCoordinator: FeatureTourCoordinator
 
     var onDone: (() -> Void)?
 
@@ -54,6 +55,10 @@ struct CameraView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .featureTourHost(
+            featureTourCoordinator,
+            surface: .camera
+        )
     }
 
     private var header: some View {
@@ -345,23 +350,9 @@ struct CameraView: View {
                 }
                 .buttonStyle(.plain)
 
-                Button {
-                    viewModel.capturePhoto()
-                } label: {
-                    ZStack {
-                        Circle()
-                            .stroke(.white.opacity(0.34), lineWidth: 4)
-                            .frame(width: 70, height: 70)
-
-                        Circle()
-                            .fill(WayTaskDesign.accentGradient)
-                            .frame(width: 56, height: 56)
-                            .shadow(color: WayTaskDesign.accent.opacity(0.36), radius: 18, y: 8)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Take package photo")
+                cameraShutterButton(
+                    accessibilityLabel: "Take package photo"
+                )
 
                 WayTaskModeTile(title: "AI", systemName: "sparkles")
             }
@@ -376,27 +367,38 @@ struct CameraView: View {
                 }
                 .buttonStyle(.plain)
 
-                Button {
-                    viewModel.capturePhoto()
-                } label: {
-                    ZStack {
-                        Circle()
-                            .stroke(.white.opacity(0.34), lineWidth: 4)
-                            .frame(width: 70, height: 70)
-
-                        Circle()
-                            .fill(WayTaskDesign.accentGradient)
-                            .frame(width: 56, height: 56)
-                            .shadow(color: WayTaskDesign.accent.opacity(0.36), radius: 18, y: 8)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Take photo")
+                cameraShutterButton(accessibilityLabel: "Take photo")
 
                 WayTaskModeTile(title: viewModel.selectedMode.title, systemName: viewModel.selectedMode.iconName)
             }
         }
+    }
+
+    private func cameraShutterButton(
+        accessibilityLabel: String
+    ) -> some View {
+        Button {
+            viewModel.capturePhoto()
+        } label: {
+            ZStack {
+                Circle()
+                    .stroke(.white.opacity(0.34), lineWidth: 4)
+                    .frame(width: 70, height: 70)
+
+                Circle()
+                    .fill(WayTaskDesign.accentGradient)
+                    .frame(width: 56, height: 56)
+                    .shadow(
+                        color: WayTaskDesign.accent.opacity(0.36),
+                        radius: 18,
+                        y: 8
+                    )
+            }
+            .featureTourTarget(.cameraShutterButton)
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private var compactBarcodeCameraState: some View {

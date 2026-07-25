@@ -7,6 +7,7 @@ struct MainMapView: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var appStateManager: AppStateManager
     @EnvironmentObject private var locationManager: LocationManager
+    @EnvironmentObject private var featureTourCoordinator: FeatureTourCoordinator
 
     @Query private var locations: [GeoLocation]
     @Query private var items: [ShoppingItem]
@@ -104,6 +105,10 @@ struct MainMapView: View {
                 }
             }
         }
+        .featureTourHost(
+            featureTourCoordinator,
+            surface: .map
+        )
     }
 
     private var mapContent: some View {

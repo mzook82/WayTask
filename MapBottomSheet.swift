@@ -121,6 +121,7 @@ struct MapBottomSheet: View {
                     Label("Navigate", systemImage: "arrow.triangle.turn.up.right.diamond.fill")
                 }
                 .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 48, cornerRadius: 16, shadow: true))
+                .featureTourTarget(.mapNavigateButton)
 
                 Button(action: onOpenItems) {
                     Image(systemName: "list.bullet.rectangle")

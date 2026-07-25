@@ -263,10 +263,11 @@ Run:
 node --test tools/catalog/test/*.test.js
 ```
 
-Tests execute the shared Hebrew normalization and Wave 1 search fixtures, validate
-the 467-product release-4 production catalog and its preserved 330-entry historical
-audit prefix plus policy-migration record, exercise every required validator
-failure, and perform single and transactional-batch dry runs and committed writes
+Tests execute the shared Hebrew normalization plus Wave 1 and Wave 2 search
+fixtures, validate the 647-product release-5 production catalog, verify the
+preserved release-4 ID fingerprint and immutable 331-entry audit prefix, and check
+the 180-entry Wave 2 transaction. They also exercise every required validator
+failure and perform single and transactional-batch dry runs and committed writes
 only against temporary copies.
 
 Before releasing catalog content, also run the complete iOS test suite, the unsigned

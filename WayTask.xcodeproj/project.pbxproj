@@ -14,6 +14,7 @@
 		A1000000000000000000000A /* acceptance-fixtures.json in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* acceptance-fixtures.json */; };
 		A1000000000000000000000C /* product-taxonomy-review.json in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000B /* product-taxonomy-review.json */; };
 		A1000000000000000000000E /* wave-1-search-fixtures.json in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000D /* wave-1-search-fixtures.json */; };
+		A10000000000000000000010 /* wave-2-search-fixtures.json in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000F /* wave-2-search-fixtures.json */; };
 		D11995C52FF3999200C9EAF2 /* CameraService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11995C42FF3999200C9EAF2 /* CameraService.swift */; };
 		D11995C72FF399AE00C9EAF2 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11995C62FF399AE00C9EAF2 /* CameraPreviewView.swift */; };
 		D11995C92FF399B600C9EAF2 /* ProductRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11995C82FF399B600C9EAF2 /* ProductRecognitionService.swift */; };
@@ -87,6 +88,7 @@
 		A10000000000000000000004 /* acceptance-fixtures.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "acceptance-fixtures.json"; sourceTree = "<group>"; };
 		A1000000000000000000000B /* product-taxonomy-review.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "product-taxonomy-review.json"; sourceTree = "<group>"; };
 		A1000000000000000000000D /* wave-1-search-fixtures.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "wave-1-search-fixtures.json"; sourceTree = "<group>"; };
+		A1000000000000000000000F /* wave-2-search-fixtures.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "wave-2-search-fixtures.json"; sourceTree = "<group>"; };
 		D11995C42FF3999200C9EAF2 /* CameraService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraService.swift; sourceTree = "<group>"; };
 		D11995C62FF399AE00C9EAF2 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
 		D11995C82FF399B600C9EAF2 /* ProductRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductRecognitionService.swift; sourceTree = "<group>"; };
@@ -198,6 +200,7 @@
 				A10000000000000000000004 /* acceptance-fixtures.json */,
 				A1000000000000000000000B /* product-taxonomy-review.json */,
 				A1000000000000000000000D /* wave-1-search-fixtures.json */,
+				A1000000000000000000000F /* wave-2-search-fixtures.json */,
 			);
 			name = "Shared Catalog Contract";
 			path = shared/catalog;
@@ -379,6 +382,7 @@
 				A1000000000000000000000A /* acceptance-fixtures.json in Resources */,
 				A1000000000000000000000C /* product-taxonomy-review.json in Resources */,
 				A1000000000000000000000E /* wave-1-search-fixtures.json in Resources */,
+				A10000000000000000000010 /* wave-2-search-fixtures.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

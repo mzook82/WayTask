@@ -5,6 +5,7 @@ import UIKit
 import UniformTypeIdentifiers
 
 struct BetaSettingsEntryView: View {
+    @EnvironmentObject private var featureTourCoordinator: FeatureTourCoordinator
     @AppStorage(BetaDiagnosticsCenter.developerModeKey) private var developerModeEnabled = false
     @State private var activationTapCount = 0
 
@@ -13,19 +14,42 @@ struct BetaSettingsEntryView: View {
             if developerModeEnabled {
                 SettingsView(showsDoneButton: false)
             } else {
-                WayTaskFoundationPlaceholderView(
-                    title: "Settings",
-                    subtitle: "Settings tab foundation is ready. Existing settings logic remains unchanged.",
-                    systemImage: "gearshape.fill"
-                )
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    activationTapCount += 1
-                    if activationTapCount >= 7 {
-                        developerModeEnabled = true
-                        activationTapCount = 0
+                ZStack(alignment: .bottom) {
+                    WayTaskFoundationPlaceholderView(
+                        title: "Settings",
+                        subtitle: "Settings tab foundation is ready. Existing settings logic remains unchanged.",
+                        systemImage: "gearshape.fill"
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        activationTapCount += 1
+                        if activationTapCount >= 7 {
+                            developerModeEnabled = true
+                            activationTapCount = 0
+                        }
                     }
+
+                    FeatureTourReplayButton {
+                        featureTourCoordinator.replay()
+                    } label: {
+                        Label(
+                            "View Feature Tour",
+                            systemImage: "questionmark.circle"
+                        )
+                    }
+                    .buttonStyle(
+                        WayTaskSecondaryPillButtonStyle(
+                            minHeight: 48,
+                            cornerRadius: 16
+                        )
+                    )
+                    .padding(.horizontal, WayTaskDesign.Spacing.lg)
+                    .padding(.bottom, WayTaskDesign.Spacing.xl)
                 }
+                .featureTourHost(
+                    featureTourCoordinator,
+                    surface: .settings
+                )
             }
         }
     }

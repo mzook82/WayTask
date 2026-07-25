@@ -6,6 +6,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject private var appStateManager: AppStateManager
     @EnvironmentObject private var locationManager: LocationManager
+    @EnvironmentObject private var featureTourCoordinator: FeatureTourCoordinator
 
     @Query private var items: [ShoppingItem]
     @Query private var products: [Product]
@@ -15,6 +16,7 @@ struct HomeView: View {
     @Query private var shoppingListEntries: [ShoppingListEntry]
 
     @State private var isShowingScanner = false
+    @State private var featureTourOwnsScannerPresentation = false
     @State private var cachedPlanRows: [HomePlanRow] = []
     @State private var cachedRecentProductCards: [HomeProductCardData] = []
     @State private var homeNow = Date()
@@ -58,6 +60,10 @@ struct HomeView: View {
             }
             .onAppear {
                 refreshHomePresentationCache()
+                synchronizeFeatureTourPresentation()
+            }
+            .onChange(of: featureTourCoordinator.currentStep?.id) {
+                synchronizeFeatureTourPresentation()
             }
             .onReceive(planningTickPublisher) { now in
                 homeNow = now
@@ -74,6 +80,18 @@ struct HomeView: View {
             .onChange(of: productPresentationSignature) {
                 refreshRecentProductCardsCache()
             }
+        }
+    }
+
+    private func synchronizeFeatureTourPresentation() {
+        if featureTourCoordinator.currentStep?.id == .cameraCapture {
+            if !isShowingScanner {
+                featureTourOwnsScannerPresentation = true
+                isShowingScanner = true
+            }
+        } else if featureTourOwnsScannerPresentation {
+            isShowingScanner = false
+            featureTourOwnsScannerPresentation = false
         }
     }
 

@@ -8,10 +8,12 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var locationManager: LocationManager
+    @EnvironmentObject private var featureTourCoordinator: FeatureTourCoordinator
 
     @Query private var locations: [GeoLocation]
     @Query private var productKnowledge: [ProductKnowledge]
     @State private var isShowingStoreEditor = false
+    @State private var isShowingOnboarding = false
     @State private var editingStore: GeoLocation?
     @State private var versionTapCount = 0
     @AppStorage(BetaDiagnosticsCenter.developerModeKey) private var developerModeEnabled = false
@@ -38,15 +40,31 @@ struct SettingsView: View {
                 WayTaskDesign.background
                     .ignoresSafeArea()
 
-                List {
-                    customStoresSection
-                    notificationsSection
-                    aboutSection
-                    if developerModeEnabled {
-                        developerSection
+                ScrollViewReader { proxy in
+                    List {
+                        customStoresSection
+                        notificationsSection
+                        aboutSection
+                        if developerModeEnabled {
+                            developerSection
+                        }
+                    }
+                    .scrollContentBackground(.hidden)
+                    .task(id: featureTourCoordinator.currentStep?.id) {
+                        guard featureTourCoordinator.currentStep?.id ==
+                                .settingsReplay else {
+                            return
+                        }
+
+                        await Task.yield()
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            proxy.scrollTo(
+                                SettingsScrollTarget.featureTourRow,
+                                anchor: .center
+                            )
+                        }
                     }
                 }
-                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -67,8 +85,22 @@ struct SettingsView: View {
                 )
                 .environmentObject(locationManager)
             }
+            .fullScreenCover(isPresented: $isShowingOnboarding) {
+                OnboardingFlowView(
+                    onSkip: {
+                        isShowingOnboarding = false
+                    },
+                    onComplete: {
+                        isShowingOnboarding = false
+                    }
+                )
+            }
         }
         .preferredColorScheme(.dark)
+        .featureTourHost(
+            featureTourCoordinator,
+            surface: .settings
+        )
     }
 
     private var customStoresSection: some View {
@@ -127,6 +159,22 @@ struct SettingsView: View {
             LabeledContent("Learned products", value: "\(productKnowledge.count)")
             LabeledContent("Store sources", value: "Saved, Apple Maps, fallback")
             LabeledContent("Custom stores", value: "\(customStores.filter { $0.sourceType == .userGenerated }.count)")
+
+            Button {
+                isShowingOnboarding = true
+            } label: {
+                Label("View Introduction", systemImage: "sparkles")
+            }
+            .foregroundStyle(WayTaskDesign.accent)
+
+            FeatureTourReplayButton {
+                featureTourCoordinator.replay()
+                dismiss()
+            } label: {
+                Label("View Feature Tour", systemImage: "questionmark.circle")
+            }
+            .foregroundStyle(WayTaskDesign.accent)
+            .id(SettingsScrollTarget.featureTourRow)
 
             #if DEBUG
             Toggle("Debug Store", isOn: $isDebugStoreEnabled)
@@ -206,6 +254,10 @@ struct SettingsView: View {
 
         try? modelContext.save()
     }
+}
+
+private enum SettingsScrollTarget: Hashable {
+    case featureTourRow
 }
 
 private struct CustomStoreEditorView: View {

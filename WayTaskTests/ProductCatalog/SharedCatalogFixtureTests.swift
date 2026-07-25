@@ -90,7 +90,7 @@ final class SharedCatalogFixtureTests: XCTestCase {
 
     func testWave1SearchFixturesResolveBundledCanonicalProducts()
         async throws {
-        let document: Wave1SearchFixtureDocument = try loadFixture(
+        let document: WaveSearchFixtureDocument = try loadFixture(
             named: "wave-1-search-fixtures"
         )
         let products = try ProductCatalogService(bundle: .main)
@@ -122,6 +122,66 @@ final class SharedCatalogFixtureTests: XCTestCase {
                 result.id,
                 expectedProductID,
                 "Wrong product for Wave 1 fixture \(fixture.id)"
+            )
+            XCTAssertEqual(
+                result.product.canonicalName,
+                fixture.expectedCanonicalName
+            )
+
+            switch fixture.matchSource {
+            case "canonical_name":
+                XCTAssertTrue(
+                    [
+                        CatalogProductMatchLevel.exactName,
+                        .namePrefix,
+                        .nameWordPrefix
+                    ].contains(result.matchLevel),
+                    "Unexpected name match level for \(fixture.id)"
+                )
+            case "alias", "brand_term":
+                XCTAssertEqual(result.matchLevel, .aliasPrefix)
+            default:
+                XCTFail(
+                    "Unsupported match source \(fixture.matchSource) in \(fixture.id)"
+                )
+            }
+        }
+    }
+
+    func testWave2SearchFixturesResolveBundledCanonicalProducts()
+        async throws {
+        let document: WaveSearchFixtureDocument = try loadFixture(
+            named: "wave-2-search-fixtures"
+        )
+        let products = try ProductCatalogService(bundle: .main)
+            .loadProducts()
+        let search = ProductCatalogSearch(products: products)
+
+        XCTAssertEqual(document.fixtureVersion, 1)
+        XCTAssertEqual(document.locale, "he-IL")
+        XCTAssertEqual(document.catalogVersion, 5)
+        XCTAssertGreaterThanOrEqual(document.cases.count, 40)
+
+        for fixture in document.cases {
+            let results = await search.suggestions(
+                matching: fixture.query
+            )
+            guard let expectedProductID = fixture.expectedProductId else {
+                XCTAssertTrue(
+                    results.isEmpty,
+                    "Expected no match for Wave 2 fixture \(fixture.id)"
+                )
+                continue
+            }
+
+            let result = try XCTUnwrap(
+                results.first,
+                "Expected a result for Wave 2 fixture \(fixture.id)"
+            )
+            XCTAssertEqual(
+                result.id,
+                expectedProductID,
+                "Wrong product for Wave 2 fixture \(fixture.id)"
             )
             XCTAssertEqual(
                 result.product.canonicalName,
@@ -234,7 +294,7 @@ private struct AcceptanceFixtureDocument: Decodable {
     let cases: [Fixture]
 }
 
-private struct Wave1SearchFixtureDocument: Decodable {
+private struct WaveSearchFixtureDocument: Decodable {
     struct Fixture: Decodable {
         let id: String
         let query: String

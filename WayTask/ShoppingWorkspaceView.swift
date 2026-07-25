@@ -7,6 +7,7 @@ struct ShoppingWorkspaceView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var appStateManager: AppStateManager
     @EnvironmentObject private var locationManager: LocationManager
+    @EnvironmentObject private var featureTourCoordinator: FeatureTourCoordinator
 
     @Query private var items: [ShoppingItem]
     @Query private var locations: [GeoLocation]
@@ -44,18 +45,39 @@ struct ShoppingWorkspaceView: View {
                 if let activeSession {
                     activeShoppingContent(for: activeSession)
                 } else {
-                    ScrollView(showsIndicators: false) {
-                        LazyVStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xl) {
-                            header
-                            listSelector
-                            chooseProductsPanel
-                            recommendedStoresSection
-                            coverageCardsSection
-                            groupedProductsSection
+                    ScrollViewReader { proxy in
+                        ScrollView(showsIndicators: false) {
+                            LazyVStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xl) {
+                                header
+                                listSelector
+                                chooseProductsPanel
+                                recommendedStoresSection
+                                    .id(
+                                        ShoppingWorkspaceScrollTarget
+                                            .recommendedStores
+                                    )
+                                coverageCardsSection
+                                groupedProductsSection
+                            }
+                            .padding(.horizontal, WayTaskDesign.Spacing.lg)
+                            .padding(.top, WayTaskDesign.Spacing.md)
+                            .padding(.bottom, 118)
                         }
-                        .padding(.horizontal, WayTaskDesign.Spacing.lg)
-                        .padding(.top, WayTaskDesign.Spacing.md)
-                        .padding(.bottom, 118)
+                        .task(id: featureTourCoordinator.currentStep?.id) {
+                            guard featureTourCoordinator.currentStep?.id ==
+                                    .storesWorkspace else {
+                                return
+                            }
+
+                            await Task.yield()
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                proxy.scrollTo(
+                                    ShoppingWorkspaceScrollTarget
+                                        .recommendedStores,
+                                    anchor: .center
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -127,6 +149,10 @@ struct ShoppingWorkspaceView: View {
         .onDisappear {
             stopPlanningTimer()
         }
+        .featureTourHost(
+            featureTourCoordinator,
+            surface: .shopping
+        )
     }
 
     private func activeShoppingContent(for session: ShoppingSession) -> some View {
@@ -420,6 +446,9 @@ struct ShoppingWorkspaceView: View {
                         RoundedRectangle(cornerRadius: WayTaskDesign.Radius.xl, style: .continuous)
                             .stroke(isStoreSelected(recommendedStore) ? WayTaskDesign.accent : Color.clear, lineWidth: 2)
                     }
+                    .featureTourTarget(
+                        .shoppingRecommendedStoreCard
+                    )
                 }
             default:
                 planNotReadyState
@@ -1559,6 +1588,10 @@ struct ShoppingWorkspaceView: View {
 
         return "\(max(Int(distance.rounded()), 1)) m"
     }
+}
+
+private enum ShoppingWorkspaceScrollTarget: Hashable {
+    case recommendedStores
 }
 
 private extension BuyingOption {

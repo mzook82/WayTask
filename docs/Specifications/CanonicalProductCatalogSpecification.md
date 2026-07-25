@@ -724,7 +724,7 @@ The convergence migration requirements were:
 
 No product expansion is required to perform this schema convergence.
 
-### 11.5 Non-normative implementation status (WT-026B and WT-027A)
+### 11.5 Non-normative implementation status (WT-026B through WT-027B)
 
 As of WT-026B, the bundled Hebrew catalog implements schema version 1, catalog
 version 3, and taxonomy version 1. All 147 existing stable IDs were preserved and
@@ -739,6 +739,14 @@ resource remains schema version 1 and taxonomy version 1. WT-027A.1 identifies t
 Wave 1 content as released catalog revision 4. Its 320 audited additions and 10
 audited semantic review mutations remain intact, but the historical mutation count
 no longer determines `catalogVersion`. All original 147 IDs remain unchanged.
+
+WT-027B adds 180 reviewed canonical concepts as one transactional release. The
+bundled resource now contains 647 active products at catalog version 5 while
+remaining on schema version 1 and taxonomy version 1. All 467 release-4 product
+records and IDs are preserved. The per-product audit entries, completed taxonomy
+reviews, and shared Wave 2 search fixtures document the release without altering
+the normative identity, ranking, personalization, persistence, or platform-parity
+contracts.
 
 ## 12. Validation
 

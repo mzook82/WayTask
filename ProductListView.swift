@@ -9,6 +9,7 @@ struct ProductListView: View {
     @Environment(\.locale) private var locale
     @EnvironmentObject private var appStateManager: AppStateManager
     @EnvironmentObject private var locationManager: LocationManager
+    @EnvironmentObject private var featureTourCoordinator: FeatureTourCoordinator
 
     @Query private var items: [ShoppingItem]
     @Query private var products: [Product]
@@ -31,6 +32,7 @@ struct ProductListView: View {
     @State private var isShowingScanner = false
     @State private var isShowingAddProductSaveError = false
     @State private var alreadyPresentNotice: ProductAlreadyPresentNotice?
+    @State private var featureTourOwnsAddProductPresentation = false
     @StateObject private var productAutocompleteViewModel: AddProductAutocompleteViewModel
     @FocusState private var isProductNameFocused: Bool
     private let shoppingListService = ShoppingListService()
@@ -175,6 +177,10 @@ struct ProductListView: View {
             .onAppear {
                 appStateManager.setCurrentProductLibrary(products)
                 updateProductCatalogPersonalization()
+                synchronizeFeatureTourPresentation()
+            }
+            .onChange(of: featureTourCoordinator.currentStep?.id) {
+                synchronizeFeatureTourPresentation()
             }
             .onChange(of: productLibrarySignature) {
                 appStateManager.setCurrentProductLibrary(products)
@@ -184,6 +190,10 @@ struct ProductListView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .featureTourHost(
+            featureTourCoordinator,
+            surface: .products
+        )
     }
 
     private var header: some View {
@@ -266,6 +276,10 @@ struct ProductListView: View {
         .preferredColorScheme(.dark)
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+        .featureTourHost(
+            featureTourCoordinator,
+            surface: .productEntry
+        )
     }
 
     private var nearbyOpportunitiesSheet: some View {
@@ -384,6 +398,7 @@ struct ProductListView: View {
                         .onTapGesture {
                             isProductNameFocused = true
                         }
+                        .featureTourTarget(.addProductNameField)
 
                         Text(
                             ProductAutocompleteCopy.productEntryGuidance(
@@ -937,6 +952,7 @@ struct ProductListView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(WayTaskPrimaryPillButtonStyle(height: 44, cornerRadius: 14, shadow: true))
+            .featureTourTarget(.productsBottomAddButton)
 
             Button {
                 isShowingScanner = true
@@ -964,6 +980,31 @@ struct ProductListView: View {
                 .fill(WayTaskDesign.surfaceBorder)
                 .frame(height: 1)
         }
+    }
+
+    private func synchronizeFeatureTourPresentation() {
+        switch featureTourCoordinator.currentStep?.id {
+        case .productAutocomplete:
+            if !isShowingAddProduct {
+                featureTourOwnsAddProductPresentation = true
+                isShowingAddProduct = true
+            }
+
+        case .productsAdd:
+            closeFeatureTourAddProductIfNeeded()
+
+        default:
+            closeFeatureTourAddProductIfNeeded()
+        }
+    }
+
+    private func closeFeatureTourAddProductIfNeeded() {
+        guard featureTourOwnsAddProductPresentation else {
+            return
+        }
+
+        isShowingAddProduct = false
+        featureTourOwnsAddProductPresentation = false
     }
 
     @ViewBuilder

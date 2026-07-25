@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": 4,
+  "catalogVersion": 5,
   "taxonomyVersion": 1,
   "locale": "he-IL",
   "products": [
@@ -8063,6 +8063,2906 @@
         "בריאות",
         "ויטמינים",
         "תוסף"
+      ],
+      "brandTerms": [],
+      "popularityScore": 66,
+      "isActive": true
+    },
+    {
+      "id": "aspirin",
+      "canonicalName": "אספירין",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "חומצה אצטילסליצילית"
+      ],
+      "keywords": [
+        "משכך כאבים",
+        "כאב ראש"
+      ],
+      "brandTerms": [],
+      "popularityScore": 82,
+      "isActive": true
+    },
+    {
+      "id": "throat_lozenges",
+      "canonicalName": "טבליות מציצה לגרון",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "לכסניות לגרון",
+        "סוכריות לגרון"
+      ],
+      "keywords": [
+        "כאב גרון",
+        "צרידות"
+      ],
+      "brandTerms": [],
+      "popularityScore": 85,
+      "isActive": true
+    },
+    {
+      "id": "cough_syrup",
+      "canonicalName": "סירופ לשיעול",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "תרופה לשיעול"
+      ],
+      "keywords": [
+        "שיעול",
+        "הצטננות"
+      ],
+      "brandTerms": [],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "nasal_spray",
+      "canonicalName": "תרסיס לאף",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "ספריי לאף"
+      ],
+      "keywords": [
+        "גודש באף",
+        "נזלת"
+      ],
+      "brandTerms": [],
+      "popularityScore": 83,
+      "isActive": true
+    },
+    {
+      "id": "eye_drops",
+      "canonicalName": "טיפות עיניים",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "טיפות לעיניים"
+      ],
+      "keywords": [
+        "יובש בעיניים",
+        "גירוי בעיניים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 82,
+      "isActive": true
+    },
+    {
+      "id": "allergy_tablets",
+      "canonicalName": "טבליות לאלרגיה",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "כדורים לאלרגיה"
+      ],
+      "keywords": [
+        "אנטיהיסטמין",
+        "נזלת אלרגית"
+      ],
+      "brandTerms": [],
+      "popularityScore": 80,
+      "isActive": true
+    },
+    {
+      "id": "antacid",
+      "canonicalName": "נוגד חומצה",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "תרופה לצרבת",
+        "טבליות לצרבת"
+      ],
+      "keywords": [
+        "צרבת",
+        "חומציות בקיבה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 79,
+      "isActive": true
+    },
+    {
+      "id": "oral_rehydration_solution",
+      "canonicalName": "תמיסת החזרת נוזלים",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "תמיסת אלקטרוליטים"
+      ],
+      "keywords": [
+        "התייבשות",
+        "מלחים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 68,
+      "isActive": true
+    },
+    {
+      "id": "elastic_bandage",
+      "canonicalName": "תחבושת אלסטית",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "אגד אלסטי"
+      ],
+      "keywords": [
+        "חבישה",
+        "נקע"
+      ],
+      "brandTerms": [],
+      "popularityScore": 73,
+      "isActive": true
+    },
+    {
+      "id": "medical_tape",
+      "canonicalName": "סרט הדבקה רפואי",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "אגד דביק רפואי"
+      ],
+      "keywords": [
+        "חבישה",
+        "גזה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 69,
+      "isActive": true
+    },
+    {
+      "id": "disposable_medical_gloves",
+      "canonicalName": "כפפות בדיקה חד-פעמיות",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "כפפות רפואיות"
+      ],
+      "keywords": [
+        "בדיקה רפואית",
+        "היגיינה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 75,
+      "isActive": true
+    },
+    {
+      "id": "medical_face_masks",
+      "canonicalName": "מסכות רפואיות",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "מסכות כירורגיות",
+        "מסכות פה ואף"
+      ],
+      "keywords": [
+        "היגיינה",
+        "הגנה נשימתית"
+      ],
+      "brandTerms": [],
+      "popularityScore": 76,
+      "isActive": true
+    },
+    {
+      "id": "pregnancy_test",
+      "canonicalName": "בדיקת הריון",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "ערכת בדיקת הריון"
+      ],
+      "keywords": [
+        "בדיקה ביתית",
+        "הריון"
+      ],
+      "brandTerms": [],
+      "popularityScore": 72,
+      "isActive": true
+    },
+    {
+      "id": "hot_water_bottle",
+      "canonicalName": "בקבוק מים חמים",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "בקבוק חם",
+        "כרית מים חמים"
+      ],
+      "keywords": [
+        "חימום",
+        "הקלה בכאב"
+      ],
+      "brandTerms": [],
+      "popularityScore": 65,
+      "isActive": true
+    },
+    {
+      "id": "magnesium_supplement",
+      "canonicalName": "תוסף מגנזיום",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [
+        "מגנזיום"
+      ],
+      "keywords": [
+        "מינרלים",
+        "תוסף תזונה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true
+    },
+    {
+      "id": "dark_chocolate",
+      "canonicalName": "שוקולד מריר",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [
+        "שוקולד כהה"
+      ],
+      "keywords": [
+        "קקאו",
+        "חפיסת שוקולד"
+      ],
+      "brandTerms": [],
+      "popularityScore": 85,
+      "isActive": true
+    },
+    {
+      "id": "white_chocolate",
+      "canonicalName": "שוקולד לבן",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "ממתק",
+        "חפיסת שוקולד"
+      ],
+      "brandTerms": [],
+      "popularityScore": 76,
+      "isActive": true
+    },
+    {
+      "id": "chocolate_truffles",
+      "canonicalName": "טראפלס שוקולד",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [
+        "כדורי טראפלס"
+      ],
+      "keywords": [
+        "ממתק שוקולד",
+        "קקאו"
+      ],
+      "brandTerms": [],
+      "popularityScore": 62,
+      "isActive": true
+    },
+    {
+      "id": "marshmallows",
+      "canonicalName": "מרשמלו",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [
+        "סוכריות מרשמלו"
+      ],
+      "keywords": [
+        "ממתק",
+        "צלייה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true
+    },
+    {
+      "id": "licorice_candy",
+      "canonicalName": "סוכריות ליקריץ",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [
+        "ליקריץ"
+      ],
+      "keywords": [
+        "ממתק",
+        "סוכריות"
+      ],
+      "brandTerms": [],
+      "popularityScore": 58,
+      "isActive": true
+    },
+    {
+      "id": "toffee_candy",
+      "canonicalName": "סוכריות טופי",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [
+        "טופי"
+      ],
+      "keywords": [
+        "קרמל",
+        "ממתק"
+      ],
+      "brandTerms": [],
+      "popularityScore": 66,
+      "isActive": true
+    },
+    {
+      "id": "chocolate_coated_nuts",
+      "canonicalName": "אגוזים מצופים שוקולד",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [
+        "אגוזים בשוקולד"
+      ],
+      "keywords": [
+        "ממתק",
+        "שוקולד"
+      ],
+      "brandTerms": [],
+      "popularityScore": 61,
+      "isActive": true
+    },
+    {
+      "id": "chocolate_coated_raisins",
+      "canonicalName": "צימוקים מצופים שוקולד",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [
+        "צימוקים בשוקולד"
+      ],
+      "keywords": [
+        "ממתק",
+        "פירות יבשים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 57,
+      "isActive": true
+    },
+    {
+      "id": "sesame_snack",
+      "canonicalName": "חטיף שומשום",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [
+        "שומשומייה"
+      ],
+      "keywords": [
+        "שומשום",
+        "חטיף מתוק"
+      ],
+      "brandTerms": [],
+      "popularityScore": 69,
+      "isActive": true
+    },
+    {
+      "id": "granola_bar",
+      "canonicalName": "חטיף גרנולה",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [
+        "חטיף דגנים"
+      ],
+      "keywords": [
+        "שיבולת שועל",
+        "חטיף אנרגיה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 80,
+      "isActive": true
+    },
+    {
+      "id": "protein_bar",
+      "canonicalName": "חטיף חלבון",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [
+        "בר חלבון"
+      ],
+      "keywords": [
+        "אימון",
+        "חלבון"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true
+    },
+    {
+      "id": "fruit_snack",
+      "canonicalName": "חטיף פירות",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [
+        "רצועות פרי"
+      ],
+      "keywords": [
+        "פרי מיובש",
+        "חטיף מתוק"
+      ],
+      "brandTerms": [],
+      "popularityScore": 67,
+      "isActive": true
+    },
+    {
+      "id": "salted_roasted_peanuts",
+      "canonicalName": "בוטנים קלויים ומלוחים",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [
+        "בוטנים מלוחים"
+      ],
+      "keywords": [
+        "פיצוחים",
+        "קלייה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 79,
+      "isActive": true
+    },
+    {
+      "id": "pumpkin_seeds",
+      "canonicalName": "גרעיני דלעת",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [
+        "גרעינים לבנים"
+      ],
+      "keywords": [
+        "פיצוחים",
+        "קלייה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 74,
+      "isActive": true
+    },
+    {
+      "id": "pistachios",
+      "canonicalName": "פיסטוקים",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [
+        "אגוזי פיסטוק"
+      ],
+      "keywords": [
+        "פיצוחים",
+        "קלייה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 77,
+      "isActive": true
+    },
+    {
+      "id": "whole_wheat_pita",
+      "canonicalName": "פיתות מחיטה מלאה",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [
+        "פיתות מלאות"
+      ],
+      "keywords": [
+        "מאפייה",
+        "כריך"
+      ],
+      "brandTerms": [],
+      "popularityScore": 83,
+      "isActive": true
+    },
+    {
+      "id": "spelt_pita",
+      "canonicalName": "פיתות כוסמין",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [
+        "פיתה מכוסמין"
+      ],
+      "keywords": [
+        "מאפייה",
+        "קמח כוסמין"
+      ],
+      "brandTerms": [],
+      "popularityScore": 72,
+      "isActive": true
+    },
+    {
+      "id": "gluten_free_pita",
+      "canonicalName": "פיתות ללא גלוטן",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [
+        "פיתות נטולות גלוטן"
+      ],
+      "keywords": [
+        "מאפייה",
+        "צליאק"
+      ],
+      "brandTerms": [],
+      "popularityScore": 70,
+      "isActive": true
+    },
+    {
+      "id": "brioche_rolls",
+      "canonicalName": "לחמניות בריוש",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [
+        "בריוש"
+      ],
+      "keywords": [
+        "מאפייה",
+        "לחמנייה מתוקה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 71,
+      "isActive": true
+    },
+    {
+      "id": "english_muffins",
+      "canonicalName": "מאפינס אנגליים",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [
+        "לחמניות אנגליות"
+      ],
+      "keywords": [
+        "מאפייה",
+        "ארוחת בוקר"
+      ],
+      "brandTerms": [],
+      "popularityScore": 60,
+      "isActive": true
+    },
+    {
+      "id": "donuts",
+      "canonicalName": "סופגניות",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [
+        "דונאטס",
+        "סופגנייה"
+      ],
+      "keywords": [
+        "מאפייה",
+        "חנוכה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 75,
+      "isActive": true
+    },
+    {
+      "id": "muffins",
+      "canonicalName": "מאפינס",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [
+        "עוגות מאפין"
+      ],
+      "keywords": [
+        "מאפייה",
+        "עוגה אישית"
+      ],
+      "brandTerms": [],
+      "popularityScore": 72,
+      "isActive": true
+    },
+    {
+      "id": "cinnamon_rolls",
+      "canonicalName": "שבלולי קינמון",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [
+        "רול קינמון"
+      ],
+      "keywords": [
+        "מאפה קינמון",
+        "מאפה מתוק"
+      ],
+      "brandTerms": [
+        "סינבון"
+      ],
+      "popularityScore": 73,
+      "isActive": true
+    },
+    {
+      "id": "apple_strudel",
+      "canonicalName": "שטרודל תפוחים",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [
+        "כרוכית תפוחים"
+      ],
+      "keywords": [
+        "מאפה תפוחים",
+        "מאפה מתוק"
+      ],
+      "brandTerms": [],
+      "popularityScore": 64,
+      "isActive": true
+    },
+    {
+      "id": "baklava",
+      "canonicalName": "בקלאווה",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [
+        "בקלווה"
+      ],
+      "keywords": [
+        "מאפה מתוק",
+        "אגוזים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 68,
+      "isActive": true
+    },
+    {
+      "id": "kanafeh",
+      "canonicalName": "כנאפה",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [
+        "קדאיף גבינה"
+      ],
+      "keywords": [
+        "מאפה מתוק",
+        "גבינה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 67,
+      "isActive": true
+    },
+    {
+      "id": "naan_bread",
+      "canonicalName": "לחם נאן",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [
+        "נאן"
+      ],
+      "keywords": [
+        "לחם הודי",
+        "מאפייה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 61,
+      "isActive": true
+    },
+    {
+      "id": "espresso_capsules",
+      "canonicalName": "קפסולות קפה",
+      "categoryId": "drinks",
+      "subcategoryId": "drinks.coffee",
+      "aliases": [
+        "קפסולות אספרסו"
+      ],
+      "keywords": [
+        "מכונת קפה",
+        "אספרסו"
+      ],
+      "brandTerms": [],
+      "popularityScore": 87,
+      "isActive": true
+    },
+    {
+      "id": "filter_coffee",
+      "canonicalName": "קפה פילטר",
+      "categoryId": "drinks",
+      "subcategoryId": "drinks.coffee",
+      "aliases": [
+        "קפה לפילטר"
+      ],
+      "keywords": [
+        "קפה טחון",
+        "חליטה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 70,
+      "isActive": true
+    },
+    {
+      "id": "turkish_coffee",
+      "canonicalName": "קפה טורקי",
+      "categoryId": "drinks",
+      "subcategoryId": "drinks.coffee",
+      "aliases": [
+        "קפה טורקי טחון"
+      ],
+      "keywords": [
+        "קפה שחור",
+        "פינג׳אן"
+      ],
+      "brandTerms": [],
+      "popularityScore": 82,
+      "isActive": true
+    },
+    {
+      "id": "coffee_pods",
+      "canonicalName": "פודים לקפה",
+      "categoryId": "drinks",
+      "subcategoryId": "drinks.coffee",
+      "aliases": [
+        "פדים לקפה"
+      ],
+      "keywords": [
+        "מכונת קפה",
+        "אספרסו"
+      ],
+      "brandTerms": [],
+      "popularityScore": 58,
+      "isActive": true
+    },
+    {
+      "id": "drinking_chocolate_powder",
+      "canonicalName": "אבקה להכנת שוקו",
+      "categoryId": "drinks",
+      "subcategoryId": null,
+      "aliases": [
+        "אבקת שוקו"
+      ],
+      "keywords": [
+        "משקה קקאו",
+        "חלב"
+      ],
+      "brandTerms": [],
+      "popularityScore": 81,
+      "isActive": true
+    },
+    {
+      "id": "lemon_lime_soda",
+      "canonicalName": "משקה לימון-ליים מוגז",
+      "categoryId": "drinks",
+      "subcategoryId": null,
+      "aliases": [
+        "סודה לימון ליים"
+      ],
+      "keywords": [
+        "משקה מוגז",
+        "לימון"
+      ],
+      "brandTerms": [
+        "ספרייט",
+        "סבן אפ"
+      ],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "orange_soda",
+      "canonicalName": "משקה תפוזים מוגז",
+      "categoryId": "drinks",
+      "subcategoryId": null,
+      "aliases": [
+        "גזוז תפוזים"
+      ],
+      "keywords": [
+        "משקה מוגז",
+        "תפוז"
+      ],
+      "brandTerms": [
+        "פאנטה"
+      ],
+      "popularityScore": 80,
+      "isActive": true
+    },
+    {
+      "id": "mango_nectar",
+      "canonicalName": "נקטר מנגו",
+      "categoryId": "drinks",
+      "subcategoryId": null,
+      "aliases": [
+        "משקה מנגו"
+      ],
+      "keywords": [
+        "מיץ פירות",
+        "מנגו"
+      ],
+      "brandTerms": [],
+      "popularityScore": 71,
+      "isActive": true
+    },
+    {
+      "id": "peach_nectar",
+      "canonicalName": "נקטר אפרסק",
+      "categoryId": "drinks",
+      "subcategoryId": null,
+      "aliases": [
+        "משקה אפרסק"
+      ],
+      "keywords": [
+        "מיץ פירות",
+        "אפרסק"
+      ],
+      "brandTerms": [],
+      "popularityScore": 69,
+      "isActive": true
+    },
+    {
+      "id": "cranberry_juice",
+      "canonicalName": "מיץ חמוציות",
+      "categoryId": "drinks",
+      "subcategoryId": null,
+      "aliases": [
+        "משקה חמוציות"
+      ],
+      "keywords": [
+        "מיץ פירות",
+        "חמוציות"
+      ],
+      "brandTerms": [],
+      "popularityScore": 68,
+      "isActive": true
+    },
+    {
+      "id": "coconut_water",
+      "canonicalName": "מי קוקוס",
+      "categoryId": "drinks",
+      "subcategoryId": null,
+      "aliases": [
+        "מים קוקוס"
+      ],
+      "keywords": [
+        "משקה קוקוס",
+        "רענון"
+      ],
+      "brandTerms": [],
+      "popularityScore": 64,
+      "isActive": true
+    },
+    {
+      "id": "sports_drink",
+      "canonicalName": "משקה איזוטוני",
+      "categoryId": "drinks",
+      "subcategoryId": null,
+      "aliases": [
+        "משקה ספורט"
+      ],
+      "keywords": [
+        "אלקטרוליטים",
+        "אימון"
+      ],
+      "brandTerms": [
+        "גטורייד",
+        "פאוורייד"
+      ],
+      "popularityScore": 66,
+      "isActive": true
+    },
+    {
+      "id": "matcha_tea",
+      "canonicalName": "תה מאצ׳ה",
+      "categoryId": "drinks",
+      "subcategoryId": null,
+      "aliases": [
+        "מאצ׳ה"
+      ],
+      "keywords": [
+        "תה ירוק",
+        "אבקת תה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 63,
+      "isActive": true
+    },
+    {
+      "id": "raspberry_drink_syrup",
+      "canonicalName": "סירופ פטל לשתייה",
+      "categoryId": "drinks",
+      "subcategoryId": null,
+      "aliases": [
+        "תרכיז פטל"
+      ],
+      "keywords": [
+        "משקה ממותק",
+        "פטל"
+      ],
+      "brandTerms": [],
+      "popularityScore": 75,
+      "isActive": true
+    },
+    {
+      "id": "lemon_juice",
+      "canonicalName": "מיץ לימון",
+      "categoryId": "drinks",
+      "subcategoryId": null,
+      "aliases": [
+        "מיץ מלימון"
+      ],
+      "keywords": [
+        "לימונדה",
+        "משקה חמוץ"
+      ],
+      "brandTerms": [],
+      "popularityScore": 72,
+      "isActive": true
+    },
+    {
+      "id": "baby_food_pouches",
+      "canonicalName": "שקיות מחית לתינוק",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "פאוצ׳ים לתינוק"
+      ],
+      "keywords": [
+        "מזון תינוקות",
+        "מחית פירות"
+      ],
+      "brandTerms": [],
+      "popularityScore": 74,
+      "isActive": true
+    },
+    {
+      "id": "baby_snack_puffs",
+      "canonicalName": "חטיף תירס לתינוקות",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "חטיף תינוקות תפוח"
+      ],
+      "keywords": [
+        "מזון תינוקות",
+        "נשנוש"
+      ],
+      "brandTerms": [],
+      "popularityScore": 71,
+      "isActive": true
+    },
+    {
+      "id": "baby_rice_cakes",
+      "canonicalName": "פריכיות לתינוקות",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "פריכיות לתינוק"
+      ],
+      "keywords": [
+        "מזון תינוקות",
+        "אורז"
+      ],
+      "brandTerms": [],
+      "popularityScore": 68,
+      "isActive": true
+    },
+    {
+      "id": "baby_teething_gel",
+      "canonicalName": "ג׳ל לחניכיים לתינוק",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "ג׳ל בקיעת שיניים"
+      ],
+      "keywords": [
+        "בקיעת שיניים",
+        "חניכיים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 65,
+      "isActive": true
+    },
+    {
+      "id": "baby_nasal_aspirator",
+      "canonicalName": "שואב נזלת לתינוק",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "שואב אף לתינוק"
+      ],
+      "keywords": [
+        "נזלת",
+        "אף סתום"
+      ],
+      "brandTerms": [],
+      "popularityScore": 70,
+      "isActive": true
+    },
+    {
+      "id": "baby_nail_clippers",
+      "canonicalName": "קוצץ ציפורניים לתינוק",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "גוזז ציפורניים לתינוק"
+      ],
+      "keywords": [
+        "טיפוח תינוק",
+        "ציפורניים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 63,
+      "isActive": true
+    },
+    {
+      "id": "baby_hairbrush",
+      "canonicalName": "מברשת שיער לתינוק",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "מברשת לתינוק"
+      ],
+      "keywords": [
+        "טיפוח תינוק",
+        "שיער"
+      ],
+      "brandTerms": [],
+      "popularityScore": 60,
+      "isActive": true
+    },
+    {
+      "id": "bottle_cleaning_brush",
+      "canonicalName": "מברשת לניקוי בקבוקים",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "מברשת בקבוקים"
+      ],
+      "keywords": [
+        "בקבוק תינוק",
+        "ניקוי"
+      ],
+      "brandTerms": [],
+      "popularityScore": 76,
+      "isActive": true
+    },
+    {
+      "id": "bottle_sterilizing_tablets",
+      "canonicalName": "טבליות לחיטוי בקבוקים",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "טבליות סטריליזציה לבקבוקים"
+      ],
+      "keywords": [
+        "בקבוק תינוק",
+        "חיטוי"
+      ],
+      "brandTerms": [],
+      "popularityScore": 57,
+      "isActive": true
+    },
+    {
+      "id": "baby_bib",
+      "canonicalName": "סינר לתינוק",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "סינר אוכל לתינוק"
+      ],
+      "keywords": [
+        "האכלה",
+        "בגדי תינוק"
+      ],
+      "brandTerms": [],
+      "popularityScore": 72,
+      "isActive": true
+    },
+    {
+      "id": "muslin_diapers",
+      "canonicalName": "חיתולי טטרה",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "חיתולי בד לתינוק",
+        "בד טטרה"
+      ],
+      "keywords": [
+        "פליטות",
+        "החתלה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 79,
+      "isActive": true
+    },
+    {
+      "id": "changing_mat",
+      "canonicalName": "משטח החתלה",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "מזרן החתלה"
+      ],
+      "keywords": [
+        "החתלה",
+        "תינוק"
+      ],
+      "brandTerms": [],
+      "popularityScore": 73,
+      "isActive": true
+    },
+    {
+      "id": "baby_bath",
+      "canonicalName": "אמבטיה לתינוק",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "אמבט תינוק"
+      ],
+      "keywords": [
+        "רחצה",
+        "תינוק"
+      ],
+      "brandTerms": [],
+      "popularityScore": 67,
+      "isActive": true
+    },
+    {
+      "id": "potty_training_seat",
+      "canonicalName": "סיר גמילה לילדים",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "סיר לילה לילדים"
+      ],
+      "keywords": [
+        "גמילה מחיתולים",
+        "פעוטות"
+      ],
+      "brandTerms": [],
+      "popularityScore": 64,
+      "isActive": true
+    },
+    {
+      "id": "breast_pump",
+      "canonicalName": "משאבת חלב",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [
+        "משאבת הנקה"
+      ],
+      "keywords": [
+        "הנקה",
+        "חלב אם"
+      ],
+      "brandTerms": [],
+      "popularityScore": 75,
+      "isActive": true
+    },
+    {
+      "id": "bird_food",
+      "canonicalName": "מזון לציפורים",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "אוכל לציפורים"
+      ],
+      "keywords": [
+        "ציפורי מחמד",
+        "האכלה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 70,
+      "isActive": true
+    },
+    {
+      "id": "fish_food",
+      "canonicalName": "מזון לדגים",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "אוכל לדגים"
+      ],
+      "keywords": [
+        "אקווריום",
+        "האכלה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 72,
+      "isActive": true
+    },
+    {
+      "id": "rabbit_food",
+      "canonicalName": "מזון לארנבים",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "אוכל לארנבים"
+      ],
+      "keywords": [
+        "ארנב מחמד",
+        "כופתיות"
+      ],
+      "brandTerms": [],
+      "popularityScore": 63,
+      "isActive": true
+    },
+    {
+      "id": "hamster_food",
+      "canonicalName": "מזון לאוגרים",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "אוכל לאוגרים"
+      ],
+      "keywords": [
+        "אוגר",
+        "מכרסמים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 60,
+      "isActive": true
+    },
+    {
+      "id": "small_pet_hay",
+      "canonicalName": "חציר למכרסמים",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "חציר לארנבים"
+      ],
+      "keywords": [
+        "מזון לארנב",
+        "מכרסמים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 58,
+      "isActive": true
+    },
+    {
+      "id": "aquarium_water_conditioner",
+      "canonicalName": "מנטרל כלור לאקווריום",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "חומר לטיפול במי אקווריום"
+      ],
+      "keywords": [
+        "מי אקווריום",
+        "דגים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 57,
+      "isActive": true
+    },
+    {
+      "id": "pet_bowl",
+      "canonicalName": "קערה לחיות מחמד",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "קערת אוכל לחיות"
+      ],
+      "keywords": [
+        "האכלה",
+        "מים לחיות"
+      ],
+      "brandTerms": [],
+      "popularityScore": 76,
+      "isActive": true
+    },
+    {
+      "id": "pet_water_fountain",
+      "canonicalName": "מזרקת מים לחיות מחמד",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "מתקן מים לחיות"
+      ],
+      "keywords": [
+        "שתייה",
+        "חתולים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 61,
+      "isActive": true
+    },
+    {
+      "id": "pet_harness",
+      "canonicalName": "רתמה לחיות מחמד",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "רתמה לכלב",
+        "רתמה לחתול"
+      ],
+      "keywords": [
+        "טיול",
+        "רצועה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 69,
+      "isActive": true
+    },
+    {
+      "id": "pet_bed",
+      "canonicalName": "מיטה לחיות מחמד",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "מיטה לכלב",
+        "מיטה לחתול"
+      ],
+      "keywords": [
+        "שינה",
+        "ריפוד"
+      ],
+      "brandTerms": [],
+      "popularityScore": 72,
+      "isActive": true
+    },
+    {
+      "id": "pet_grooming_brush",
+      "canonicalName": "מברשת טיפוח לחיות מחמד",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "מברשת פרווה"
+      ],
+      "keywords": [
+        "הברשה",
+        "נשירה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 66,
+      "isActive": true
+    },
+    {
+      "id": "pet_nail_clippers",
+      "canonicalName": "קוצץ ציפורניים לחיות מחמד",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "גוזז ציפורניים לחיות"
+      ],
+      "keywords": [
+        "טיפוח",
+        "ציפורניים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 59,
+      "isActive": true
+    },
+    {
+      "id": "dog_dental_chews",
+      "canonicalName": "חטיפים דנטליים לכלבים",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "עצמות דנטליות לכלב"
+      ],
+      "keywords": [
+        "שיניים לכלב",
+        "לעיסה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 67,
+      "isActive": true
+    },
+    {
+      "id": "cat_hairball_paste",
+      "canonicalName": "משחה לכדורי שיער לחתולים",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "משחת היירבול לחתול"
+      ],
+      "keywords": [
+        "כדורי שיער",
+        "חתולים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 55,
+      "isActive": true
+    },
+    {
+      "id": "aquarium_filter",
+      "canonicalName": "מסנן לאקווריום",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [
+        "פילטר לאקווריום"
+      ],
+      "keywords": [
+        "אקווריום",
+        "טיהור מים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 60,
+      "isActive": true
+    },
+    {
+      "id": "t_shirt",
+      "canonicalName": "חולצת טי",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "טי שירט"
+      ],
+      "keywords": [
+        "ביגוד",
+        "חולצה קצרה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "button_up_shirt",
+      "canonicalName": "חולצה מכופתרת",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "חולצת כפתורים"
+      ],
+      "keywords": [
+        "ביגוד",
+        "חולצה אלגנטית"
+      ],
+      "brandTerms": [],
+      "popularityScore": 73,
+      "isActive": true
+    },
+    {
+      "id": "pants",
+      "canonicalName": "מכנסיים",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "מכנס"
+      ],
+      "keywords": [
+        "ביגוד",
+        "לבוש"
+      ],
+      "brandTerms": [],
+      "popularityScore": 83,
+      "isActive": true
+    },
+    {
+      "id": "jeans",
+      "canonicalName": "ג׳ינס",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "מכנסי ג׳ינס"
+      ],
+      "keywords": [
+        "דנים",
+        "ביגוד"
+      ],
+      "brandTerms": [],
+      "popularityScore": 81,
+      "isActive": true
+    },
+    {
+      "id": "shorts",
+      "canonicalName": "מכנסיים קצרים",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "שורטס"
+      ],
+      "keywords": [
+        "בגדי קיץ",
+        "ביגוד"
+      ],
+      "brandTerms": [],
+      "popularityScore": 77,
+      "isActive": true
+    },
+    {
+      "id": "underwear",
+      "canonicalName": "תחתונים",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "לבנים"
+      ],
+      "keywords": [
+        "ביגוד תחתון",
+        "הלבשה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 86,
+      "isActive": true
+    },
+    {
+      "id": "socks",
+      "canonicalName": "גרביים",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "גרב"
+      ],
+      "keywords": [
+        "ביגוד",
+        "הנעלה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 87,
+      "isActive": true
+    },
+    {
+      "id": "pajamas",
+      "canonicalName": "פיג׳מה",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "בגדי שינה"
+      ],
+      "keywords": [
+        "שינה",
+        "ביגוד"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true
+    },
+    {
+      "id": "sweatshirt",
+      "canonicalName": "סווטשירט",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "חולצת פוטר"
+      ],
+      "keywords": [
+        "ביגוד חורף",
+        "חולצה חמה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 76,
+      "isActive": true
+    },
+    {
+      "id": "hoodie",
+      "canonicalName": "קפוצ׳ון",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "סווטשירט עם קפוצ׳ון"
+      ],
+      "keywords": [
+        "ביגוד חורף",
+        "כובע"
+      ],
+      "brandTerms": [],
+      "popularityScore": 75,
+      "isActive": true
+    },
+    {
+      "id": "jacket",
+      "canonicalName": "מעיל",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "ז׳קט"
+      ],
+      "keywords": [
+        "ביגוד חורף",
+        "לבוש עליון"
+      ],
+      "brandTerms": [],
+      "popularityScore": 82,
+      "isActive": true
+    },
+    {
+      "id": "raincoat",
+      "canonicalName": "מעיל גשם",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "שכמיית גשם"
+      ],
+      "keywords": [
+        "גשם",
+        "ביגוד חורף"
+      ],
+      "brandTerms": [],
+      "popularityScore": 69,
+      "isActive": true
+    },
+    {
+      "id": "sneakers",
+      "canonicalName": "נעלי ספורט",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "סניקרס"
+      ],
+      "keywords": [
+        "הנעלה",
+        "אימון"
+      ],
+      "brandTerms": [],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "sandals",
+      "canonicalName": "סנדלים",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "סנדל"
+      ],
+      "keywords": [
+        "הנעלה",
+        "קיץ"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true
+    },
+    {
+      "id": "slippers",
+      "canonicalName": "נעלי בית",
+      "categoryId": "apparel",
+      "subcategoryId": null,
+      "aliases": [
+        "כפכפי בית"
+      ],
+      "keywords": [
+        "הנעלה",
+        "בית"
+      ],
+      "brandTerms": [],
+      "popularityScore": 79,
+      "isActive": true
+    },
+    {
+      "id": "potting_soil",
+      "canonicalName": "אדמת שתילה",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "תערובת שתילה"
+      ],
+      "keywords": [
+        "עציצים",
+        "גינון"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true
+    },
+    {
+      "id": "plant_fertilizer",
+      "canonicalName": "דשן לצמחים",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "חומר דישון לצמחים"
+      ],
+      "keywords": [
+        "גינון",
+        "צמיחה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 74,
+      "isActive": true
+    },
+    {
+      "id": "flower_pot",
+      "canonicalName": "עציץ",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "כלי שתילה"
+      ],
+      "keywords": [
+        "צמחים",
+        "גינון"
+      ],
+      "brandTerms": [],
+      "popularityScore": 80,
+      "isActive": true
+    },
+    {
+      "id": "planter_box",
+      "canonicalName": "אדנית",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "אדנית שתילה"
+      ],
+      "keywords": [
+        "מרפסת",
+        "גינון"
+      ],
+      "brandTerms": [],
+      "popularityScore": 71,
+      "isActive": true
+    },
+    {
+      "id": "garden_seeds",
+      "canonicalName": "זרעים לשתילה",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "זרעי גינה"
+      ],
+      "keywords": [
+        "גינון",
+        "צמחים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 69,
+      "isActive": true
+    },
+    {
+      "id": "garden_hose",
+      "canonicalName": "צינור גינה",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "צינור השקיה"
+      ],
+      "keywords": [
+        "השקיה",
+        "חצר"
+      ],
+      "brandTerms": [],
+      "popularityScore": 76,
+      "isActive": true
+    },
+    {
+      "id": "watering_can",
+      "canonicalName": "משפך השקיה",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "מזלף"
+      ],
+      "keywords": [
+        "השקיית צמחים",
+        "גינון"
+      ],
+      "brandTerms": [],
+      "popularityScore": 70,
+      "isActive": true
+    },
+    {
+      "id": "pruning_shears",
+      "canonicalName": "מזמרה",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "מספרי גיזום"
+      ],
+      "keywords": [
+        "גיזום",
+        "גינון"
+      ],
+      "brandTerms": [],
+      "popularityScore": 65,
+      "isActive": true
+    },
+    {
+      "id": "garden_gloves",
+      "canonicalName": "כפפות גינון",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "כפפות לגינה"
+      ],
+      "keywords": [
+        "עבודת גינה",
+        "הגנה לידיים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 68,
+      "isActive": true
+    },
+    {
+      "id": "plant_sprayer",
+      "canonicalName": "מרסס לצמחים",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "שפריצר לצמחים"
+      ],
+      "keywords": [
+        "השקיה",
+        "גינון"
+      ],
+      "brandTerms": [],
+      "popularityScore": 64,
+      "isActive": true
+    },
+    {
+      "id": "outdoor_broom",
+      "canonicalName": "מטאטא חצר",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "מטאטא כביש"
+      ],
+      "keywords": [
+        "ניקוי חצר",
+        "גינה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 67,
+      "isActive": true
+    },
+    {
+      "id": "doormat",
+      "canonicalName": "שטיח כניסה",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "מחצלת כניסה"
+      ],
+      "keywords": [
+        "דלת",
+        "בית"
+      ],
+      "brandTerms": [],
+      "popularityScore": 77,
+      "isActive": true
+    },
+    {
+      "id": "picture_hanging_hooks",
+      "canonicalName": "ווים לתליית תמונות",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "מתלים לתמונות"
+      ],
+      "keywords": [
+        "קיר",
+        "תלייה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 62,
+      "isActive": true
+    },
+    {
+      "id": "extension_cord",
+      "canonicalName": "כבל מאריך",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "מאריך חשמל"
+      ],
+      "keywords": [
+        "חשמל",
+        "שקע"
+      ],
+      "brandTerms": [],
+      "popularityScore": 79,
+      "isActive": true
+    },
+    {
+      "id": "power_strip",
+      "canonicalName": "מפצל חשמל",
+      "categoryId": "home_garden",
+      "subcategoryId": null,
+      "aliases": [
+        "רב-שקע",
+        "מפצל שקעים"
+      ],
+      "keywords": [
+        "חשמל",
+        "שקע"
+      ],
+      "brandTerms": [],
+      "popularityScore": 81,
+      "isActive": true
+    },
+    {
+      "id": "notebook",
+      "canonicalName": "מחברת",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "מחברת לימוד"
+      ],
+      "keywords": [
+        "כתיבה",
+        "בית ספר"
+      ],
+      "brandTerms": [],
+      "popularityScore": 90,
+      "isActive": true
+    },
+    {
+      "id": "notepad",
+      "canonicalName": "פנקס רשימות",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "פנקס כתיבה"
+      ],
+      "keywords": [
+        "רשימות",
+        "משרד"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true
+    },
+    {
+      "id": "binder",
+      "canonicalName": "קלסר",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "תיק קלסר"
+      ],
+      "keywords": [
+        "תיוק",
+        "מסמכים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 83,
+      "isActive": true
+    },
+    {
+      "id": "document_folder",
+      "canonicalName": "תיקיית מסמכים",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "פולדר למסמכים"
+      ],
+      "keywords": [
+        "תיוק",
+        "משרד"
+      ],
+      "brandTerms": [],
+      "popularityScore": 81,
+      "isActive": true
+    },
+    {
+      "id": "binder_sleeves",
+      "canonicalName": "שמרדפים",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "ניילוניות לקלסר",
+        "כיסי תיוק"
+      ],
+      "keywords": [
+        "מסמכים",
+        "קלסר"
+      ],
+      "brandTerms": [],
+      "popularityScore": 76,
+      "isActive": true
+    },
+    {
+      "id": "pens",
+      "canonicalName": "עטים",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "עט"
+      ],
+      "keywords": [
+        "כתיבה",
+        "ציוד משרדי"
+      ],
+      "brandTerms": [],
+      "popularityScore": 91,
+      "isActive": true
+    },
+    {
+      "id": "pencils",
+      "canonicalName": "עפרונות",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "עיפרון"
+      ],
+      "keywords": [
+        "כתיבה",
+        "בית ספר"
+      ],
+      "brandTerms": [],
+      "popularityScore": 89,
+      "isActive": true
+    },
+    {
+      "id": "colored_pencils",
+      "canonicalName": "עפרונות צבעוניים",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "צבעי עיפרון"
+      ],
+      "keywords": [
+        "ציור",
+        "יצירה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 82,
+      "isActive": true
+    },
+    {
+      "id": "markers",
+      "canonicalName": "טושים",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "טוש"
+      ],
+      "keywords": [
+        "ציור",
+        "כתיבה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 86,
+      "isActive": true
+    },
+    {
+      "id": "highlighters",
+      "canonicalName": "מרקרים זוהרים",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "מדגישים",
+        "טושים זוהרים"
+      ],
+      "keywords": [
+        "סימון",
+        "לימודים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 79,
+      "isActive": true
+    },
+    {
+      "id": "eraser",
+      "canonicalName": "מחק",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "מחק לעיפרון"
+      ],
+      "keywords": [
+        "כתיבה",
+        "בית ספר"
+      ],
+      "brandTerms": [],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "pencil_sharpener",
+      "canonicalName": "מחדד",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "מחדד עפרונות"
+      ],
+      "keywords": [
+        "עיפרון",
+        "בית ספר"
+      ],
+      "brandTerms": [],
+      "popularityScore": 83,
+      "isActive": true
+    },
+    {
+      "id": "ruler",
+      "canonicalName": "סרגל",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "סרגל מדידה"
+      ],
+      "keywords": [
+        "מדידה",
+        "גאומטריה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 82,
+      "isActive": true
+    },
+    {
+      "id": "glue_stick",
+      "canonicalName": "דבק סטיק",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "דבק מוצק"
+      ],
+      "keywords": [
+        "יצירה",
+        "נייר"
+      ],
+      "brandTerms": [],
+      "popularityScore": 85,
+      "isActive": true
+    },
+    {
+      "id": "scissors",
+      "canonicalName": "מספריים",
+      "categoryId": "office_school",
+      "subcategoryId": "office_school.school_supplies",
+      "aliases": [
+        "מספרי נייר"
+      ],
+      "keywords": [
+        "גזירה",
+        "יצירה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 87,
+      "isActive": true
+    },
+    {
+      "id": "windshield_washer_fluid",
+      "canonicalName": "נוזל לניקוי שמשות רכב",
+      "categoryId": "automotive",
+      "subcategoryId": null,
+      "aliases": [
+        "נוזל לשמשות"
+      ],
+      "keywords": [
+        "שמשה קדמית",
+        "רכב"
+      ],
+      "brandTerms": [],
+      "popularityScore": 80,
+      "isActive": true
+    },
+    {
+      "id": "engine_oil",
+      "canonicalName": "שמן מנוע",
+      "categoryId": "automotive",
+      "subcategoryId": null,
+      "aliases": [
+        "שמן לרכב"
+      ],
+      "keywords": [
+        "מנוע",
+        "תחזוקת רכב"
+      ],
+      "brandTerms": [],
+      "popularityScore": 86,
+      "isActive": true
+    },
+    {
+      "id": "car_coolant",
+      "canonicalName": "נוזל קירור לרכב",
+      "categoryId": "automotive",
+      "subcategoryId": null,
+      "aliases": [
+        "אנטיפריז",
+        "מי קירור לרכב"
+      ],
+      "keywords": [
+        "רדיאטור",
+        "מנוע"
+      ],
+      "brandTerms": [],
+      "popularityScore": 77,
+      "isActive": true
+    },
+    {
+      "id": "brake_fluid",
+      "canonicalName": "נוזל בלמים",
+      "categoryId": "automotive",
+      "subcategoryId": null,
+      "aliases": [
+        "שמן בלמים"
+      ],
+      "keywords": [
+        "בלמים",
+        "תחזוקת רכב"
+      ],
+      "brandTerms": [],
+      "popularityScore": 68,
+      "isActive": true
+    },
+    {
+      "id": "car_air_freshener",
+      "canonicalName": "מפיץ ריח לרכב",
+      "categoryId": "automotive",
+      "subcategoryId": null,
+      "aliases": [
+        "ריחן לרכב"
+      ],
+      "keywords": [
+        "ריח לרכב",
+        "אביזרי רכב"
+      ],
+      "brandTerms": [],
+      "popularityScore": 79,
+      "isActive": true
+    },
+    {
+      "id": "car_shampoo",
+      "canonicalName": "שמפו לרכב",
+      "categoryId": "automotive",
+      "subcategoryId": null,
+      "aliases": [
+        "סבון לרכב"
+      ],
+      "keywords": [
+        "שטיפת רכב",
+        "ניקוי"
+      ],
+      "brandTerms": [],
+      "popularityScore": 70,
+      "isActive": true
+    },
+    {
+      "id": "car_wax",
+      "canonicalName": "וקס לרכב",
+      "categoryId": "automotive",
+      "subcategoryId": null,
+      "aliases": [
+        "שעווה לרכב"
+      ],
+      "keywords": [
+        "פוליש",
+        "צבע רכב"
+      ],
+      "brandTerms": [],
+      "popularityScore": 65,
+      "isActive": true
+    },
+    {
+      "id": "tire_pressure_gauge",
+      "canonicalName": "מד לחץ אוויר לצמיגים",
+      "categoryId": "automotive",
+      "subcategoryId": null,
+      "aliases": [
+        "מד לחץ לצמיג"
+      ],
+      "keywords": [
+        "צמיגים",
+        "אוויר"
+      ],
+      "brandTerms": [],
+      "popularityScore": 64,
+      "isActive": true
+    },
+    {
+      "id": "jumper_cables",
+      "canonicalName": "כבלי התנעה",
+      "categoryId": "automotive",
+      "subcategoryId": null,
+      "aliases": [
+        "כבלים למצבר"
+      ],
+      "keywords": [
+        "מצבר",
+        "התנעת רכב"
+      ],
+      "brandTerms": [],
+      "popularityScore": 75,
+      "isActive": true
+    },
+    {
+      "id": "car_phone_holder",
+      "canonicalName": "מעמד לטלפון ברכב",
+      "categoryId": "automotive",
+      "subcategoryId": null,
+      "aliases": [
+        "מחזיק טלפון לרכב"
+      ],
+      "keywords": [
+        "טלפון",
+        "אביזרי רכב"
+      ],
+      "brandTerms": [],
+      "popularityScore": 82,
+      "isActive": true
+    },
+    {
+      "id": "car_sunshade",
+      "canonicalName": "כיסוי שמש לרכב",
+      "categoryId": "automotive",
+      "subcategoryId": null,
+      "aliases": [
+        "מגן שמש לשמשה"
+      ],
+      "keywords": [
+        "שמשה קדמית",
+        "חום"
+      ],
+      "brandTerms": [],
+      "popularityScore": 72,
+      "isActive": true
+    },
+    {
+      "id": "windshield_wipers",
+      "canonicalName": "מגבים לרכב",
+      "categoryId": "automotive",
+      "subcategoryId": null,
+      "aliases": [
+        "מגבי שמשות"
+      ],
+      "keywords": [
+        "שמשה קדמית",
+        "גשם"
+      ],
+      "brandTerms": [],
+      "popularityScore": 74,
+      "isActive": true
+    },
+    {
+      "id": "yoga_mat",
+      "canonicalName": "מזרן יוגה",
+      "categoryId": "sports_outdoors",
+      "subcategoryId": null,
+      "aliases": [
+        "מזרן אימון"
+      ],
+      "keywords": [
+        "יוגה",
+        "כושר"
+      ],
+      "brandTerms": [],
+      "popularityScore": 81,
+      "isActive": true
+    },
+    {
+      "id": "resistance_bands",
+      "canonicalName": "גומיות התנגדות",
+      "categoryId": "sports_outdoors",
+      "subcategoryId": null,
+      "aliases": [
+        "גומיות כושר"
+      ],
+      "keywords": [
+        "אימון כוח",
+        "כושר"
+      ],
+      "brandTerms": [],
+      "popularityScore": 76,
+      "isActive": true
+    },
+    {
+      "id": "dumbbells",
+      "canonicalName": "משקולות יד",
+      "categoryId": "sports_outdoors",
+      "subcategoryId": null,
+      "aliases": [
+        "דאמבלים"
+      ],
+      "keywords": [
+        "אימון כוח",
+        "כושר"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true
+    },
+    {
+      "id": "jump_rope",
+      "canonicalName": "חבל קפיצה",
+      "categoryId": "sports_outdoors",
+      "subcategoryId": null,
+      "aliases": [
+        "דלגית"
+      ],
+      "keywords": [
+        "אימון",
+        "כושר"
+      ],
+      "brandTerms": [],
+      "popularityScore": 73,
+      "isActive": true
+    },
+    {
+      "id": "sports_water_bottle",
+      "canonicalName": "בקבוק ספורט",
+      "categoryId": "sports_outdoors",
+      "subcategoryId": null,
+      "aliases": [
+        "בקבוק מים לספורט"
+      ],
+      "keywords": [
+        "שתייה",
+        "אימון"
+      ],
+      "brandTerms": [],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "soccer_ball",
+      "canonicalName": "כדורגל",
+      "categoryId": "sports_outdoors",
+      "subcategoryId": null,
+      "aliases": [
+        "כדור לכדורגל"
+      ],
+      "keywords": [
+        "משחק כדור",
+        "ספורט"
+      ],
+      "brandTerms": [],
+      "popularityScore": 82,
+      "isActive": true
+    },
+    {
+      "id": "basketball_ball",
+      "canonicalName": "כדורסל",
+      "categoryId": "sports_outdoors",
+      "subcategoryId": null,
+      "aliases": [
+        "כדור סל"
+      ],
+      "keywords": [
+        "משחק כדור",
+        "ספורט"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true
+    },
+    {
+      "id": "volleyball_ball",
+      "canonicalName": "כדורעף",
+      "categoryId": "sports_outdoors",
+      "subcategoryId": null,
+      "aliases": [
+        "כדור עף"
+      ],
+      "keywords": [
+        "משחק כדור",
+        "ספורט"
+      ],
+      "brandTerms": [],
+      "popularityScore": 70,
+      "isActive": true
+    },
+    {
+      "id": "tennis_balls",
+      "canonicalName": "כדורי טניס",
+      "categoryId": "sports_outdoors",
+      "subcategoryId": null,
+      "aliases": [
+        "כדור טניס"
+      ],
+      "keywords": [
+        "מחבט",
+        "ספורט"
+      ],
+      "brandTerms": [],
+      "popularityScore": 72,
+      "isActive": true
+    },
+    {
+      "id": "swimming_goggles",
+      "canonicalName": "משקפת שחייה",
+      "categoryId": "sports_outdoors",
+      "subcategoryId": null,
+      "aliases": [
+        "משקפי שחייה"
+      ],
+      "keywords": [
+        "בריכה",
+        "שחייה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 75,
+      "isActive": true
+    },
+    {
+      "id": "bicycle_helmet",
+      "canonicalName": "קסדת אופניים",
+      "categoryId": "sports_outdoors",
+      "subcategoryId": null,
+      "aliases": [
+        "קסדה לרכיבה"
+      ],
+      "keywords": [
+        "אופניים",
+        "בטיחות"
+      ],
+      "brandTerms": [],
+      "popularityScore": 79,
+      "isActive": true
+    },
+    {
+      "id": "camping_tent",
+      "canonicalName": "אוהל קמפינג",
+      "categoryId": "sports_outdoors",
+      "subcategoryId": null,
+      "aliases": [
+        "אוהל"
+      ],
+      "keywords": [
+        "טיולים",
+        "לינה בשטח"
+      ],
+      "brandTerms": [],
+      "popularityScore": 77,
+      "isActive": true
+    },
+    {
+      "id": "building_blocks",
+      "canonicalName": "קוביות בנייה",
+      "categoryId": "toys_games",
+      "subcategoryId": null,
+      "aliases": [
+        "קוביות משחק"
+      ],
+      "keywords": [
+        "משחק ילדים",
+        "בנייה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "jigsaw_puzzle",
+      "canonicalName": "פאזל",
+      "categoryId": "toys_games",
+      "subcategoryId": null,
+      "aliases": [
+        "תצרף"
+      ],
+      "keywords": [
+        "משחק חשיבה",
+        "הרכבה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 82,
+      "isActive": true
+    },
+    {
+      "id": "board_game",
+      "canonicalName": "משחק לוח",
+      "categoryId": "toys_games",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "משחק קופסה",
+        "משחק משפחתי"
+      ],
+      "brandTerms": [],
+      "popularityScore": 83,
+      "isActive": true
+    },
+    {
+      "id": "playing_cards",
+      "canonicalName": "קלפי משחק",
+      "categoryId": "toys_games",
+      "subcategoryId": null,
+      "aliases": [
+        "חפיסת קלפים"
+      ],
+      "keywords": [
+        "משחק קלפים",
+        "משחק משפחתי"
+      ],
+      "brandTerms": [],
+      "popularityScore": 79,
+      "isActive": true
+    },
+    {
+      "id": "play_dough",
+      "canonicalName": "בצק משחק",
+      "categoryId": "toys_games",
+      "subcategoryId": null,
+      "aliases": [
+        "בצק לילדים"
+      ],
+      "keywords": [
+        "יצירה",
+        "פיסול"
+      ],
+      "brandTerms": [
+        "פליי-דו"
+      ],
+      "popularityScore": 80,
+      "isActive": true
+    },
+    {
+      "id": "soap_bubbles",
+      "canonicalName": "בועות סבון",
+      "categoryId": "toys_games",
+      "subcategoryId": null,
+      "aliases": [
+        "מפריח בועות"
+      ],
+      "keywords": [
+        "משחק חוץ",
+        "ילדים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 75,
+      "isActive": true
+    },
+    {
+      "id": "toy_cars",
+      "canonicalName": "מכוניות צעצוע",
+      "categoryId": "toys_games",
+      "subcategoryId": null,
+      "aliases": [
+        "רכבי צעצוע"
+      ],
+      "keywords": [
+        "משחק ילדים",
+        "מכוניות"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true
+    },
+    {
+      "id": "doll",
+      "canonicalName": "בובה",
+      "categoryId": "toys_games",
+      "subcategoryId": null,
+      "aliases": [
+        "בובת משחק"
+      ],
+      "keywords": [
+        "משחק ילדים",
+        "צעצוע"
+      ],
+      "brandTerms": [],
+      "popularityScore": 81,
+      "isActive": true
+    },
+    {
+      "id": "plush_toy",
+      "canonicalName": "בובת פרווה",
+      "categoryId": "toys_games",
+      "subcategoryId": null,
+      "aliases": [
+        "בובה רכה"
+      ],
+      "keywords": [
+        "צעצוע",
+        "מתנה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 77,
+      "isActive": true
+    },
+    {
+      "id": "action_figure",
+      "canonicalName": "דמות פעולה",
+      "categoryId": "toys_games",
+      "subcategoryId": null,
+      "aliases": [
+        "בובת אקשן"
+      ],
+      "keywords": [
+        "צעצוע",
+        "דמות משחק"
+      ],
+      "brandTerms": [],
+      "popularityScore": 68,
+      "isActive": true
+    },
+    {
+      "id": "craft_kit",
+      "canonicalName": "ערכת יצירה",
+      "categoryId": "toys_games",
+      "subcategoryId": null,
+      "aliases": [
+        "ערכת עבודות יצירה"
+      ],
+      "keywords": [
+        "יצירה לילדים",
+        "אמנות"
+      ],
+      "brandTerms": [],
+      "popularityScore": 76,
+      "isActive": true
+    },
+    {
+      "id": "water_gun",
+      "canonicalName": "רובה מים",
+      "categoryId": "toys_games",
+      "subcategoryId": null,
+      "aliases": [
+        "אקדח מים"
+      ],
+      "keywords": [
+        "משחק קיץ",
+        "משחק חוץ"
+      ],
+      "brandTerms": [],
+      "popularityScore": 72,
+      "isActive": true
+    },
+    {
+      "id": "novel",
+      "canonicalName": "ספר עלילתי",
+      "categoryId": "books_media",
+      "subcategoryId": null,
+      "aliases": [
+        "רומן"
+      ],
+      "keywords": [
+        "קריאה",
+        "ספרות"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true
+    },
+    {
+      "id": "childrens_book",
+      "canonicalName": "ספר ילדים",
+      "categoryId": "books_media",
+      "subcategoryId": null,
+      "aliases": [
+        "ספר לילדים"
+      ],
+      "keywords": [
+        "קריאה לילדים",
+        "סיפור"
+      ],
+      "brandTerms": [],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "cookbook",
+      "canonicalName": "ספר בישול",
+      "categoryId": "books_media",
+      "subcategoryId": null,
+      "aliases": [
+        "ספר מתכונים"
+      ],
+      "keywords": [
+        "מתכונים",
+        "מטבח"
+      ],
+      "brandTerms": [],
+      "popularityScore": 73,
+      "isActive": true
+    },
+    {
+      "id": "travel_guide",
+      "canonicalName": "מדריך טיולים",
+      "categoryId": "books_media",
+      "subcategoryId": null,
+      "aliases": [
+        "ספר טיולים"
+      ],
+      "keywords": [
+        "נסיעות",
+        "מפות"
+      ],
+      "brandTerms": [],
+      "popularityScore": 62,
+      "isActive": true
+    },
+    {
+      "id": "dictionary",
+      "canonicalName": "מילון",
+      "categoryId": "books_media",
+      "subcategoryId": null,
+      "aliases": [
+        "ספר מילון"
+      ],
+      "keywords": [
+        "שפה",
+        "תרגום"
+      ],
+      "brandTerms": [],
+      "popularityScore": 70,
+      "isActive": true
+    },
+    {
+      "id": "activity_book",
+      "canonicalName": "חוברת פעילות",
+      "categoryId": "books_media",
+      "subcategoryId": null,
+      "aliases": [
+        "חוברת הפעלה"
+      ],
+      "keywords": [
+        "ילדים",
+        "תרגילים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 72,
+      "isActive": true
+    },
+    {
+      "id": "comic_book",
+      "canonicalName": "ספר קומיקס",
+      "categoryId": "books_media",
+      "subcategoryId": null,
+      "aliases": [
+        "קומיקס"
+      ],
+      "keywords": [
+        "סיפורים מצוירים",
+        "קריאה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 71,
+      "isActive": true
+    },
+    {
+      "id": "magazine",
+      "canonicalName": "כתב עת",
+      "categoryId": "books_media",
+      "subcategoryId": null,
+      "aliases": [
+        "מגזין"
+      ],
+      "keywords": [
+        "קריאה",
+        "ירחון"
+      ],
+      "brandTerms": [],
+      "popularityScore": 68,
+      "isActive": true
+    },
+    {
+      "id": "newspaper",
+      "canonicalName": "עיתון",
+      "categoryId": "books_media",
+      "subcategoryId": null,
+      "aliases": [
+        "עיתון יומי"
+      ],
+      "keywords": [
+        "חדשות",
+        "קריאה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 75,
+      "isActive": true
+    },
+    {
+      "id": "calendar",
+      "canonicalName": "לוח שנה",
+      "categoryId": "books_media",
+      "subcategoryId": null,
+      "aliases": [
+        "קלנדר"
+      ],
+      "keywords": [
+        "תאריכים",
+        "תכנון"
+      ],
+      "brandTerms": [],
+      "popularityScore": 69,
+      "isActive": true
+    },
+    {
+      "id": "planner",
+      "canonicalName": "יומן תכנון",
+      "categoryId": "books_media",
+      "subcategoryId": null,
+      "aliases": [
+        "פלנר"
+      ],
+      "keywords": [
+        "משימות",
+        "תכנון שבועי"
+      ],
+      "brandTerms": [],
+      "popularityScore": 71,
+      "isActive": true
+    },
+    {
+      "id": "crossword_book",
+      "canonicalName": "חוברת תשבצים",
+      "categoryId": "books_media",
+      "subcategoryId": null,
+      "aliases": [
+        "תשבצים"
+      ],
+      "keywords": [
+        "משחקי מילים",
+        "פנאי"
       ],
       "brandTerms": [],
       "popularityScore": 66,

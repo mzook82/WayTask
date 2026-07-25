@@ -11,7 +11,7 @@ final class ProductCatalogMigrationTests: XCTestCase {
         timeIntervalSince1970: 2_000_000_000
     )
 
-    func testBundledWave1CatalogIsCanonicalAndPassesFullValidator() throws {
+    func testBundledWave2CatalogIsCanonicalAndPassesFullValidator() throws {
         let data = try canonicalCatalogData()
         let document = try service.loadDocument(data: data)
         let object = try XCTUnwrap(
@@ -23,11 +23,11 @@ final class ProductCatalogMigrationTests: XCTestCase {
         )
 
         XCTAssertEqual(document.schemaVersion, 1)
-        XCTAssertEqual(document.catalogVersion, 4)
+        XCTAssertEqual(document.catalogVersion, 5)
         XCTAssertEqual(document.taxonomyVersion, 1)
         XCTAssertEqual(document.locale, "he-IL")
         XCTAssertEqual(document.sourceFormat, .canonicalV1)
-        XCTAssertEqual(document.products.count, 467)
+        XCTAssertEqual(document.products.count, 647)
         XCTAssertTrue(document.products.allSatisfy(\.isActive))
 
         for record in records {
@@ -72,11 +72,11 @@ final class ProductCatalogMigrationTests: XCTestCase {
         )
 
         XCTAssertEqual(manifest.reviewVersion, 1)
-        XCTAssertEqual(manifest.catalogVersion, 4)
+        XCTAssertEqual(manifest.catalogVersion, 5)
         XCTAssertEqual(manifest.taxonomyVersion, taxonomy.taxonomyVersion)
-        XCTAssertEqual(manifest.productCount, 467)
-        XCTAssertEqual(manifest.products.count, 467)
-        XCTAssertEqual(Set(manifest.products.map(\.productId)).count, 467)
+        XCTAssertEqual(manifest.productCount, 647)
+        XCTAssertEqual(manifest.products.count, 647)
+        XCTAssertEqual(Set(manifest.products.map(\.productId)).count, 647)
         XCTAssertEqual(reviewRequiredCategories.count, 8)
 
         var reviewedAmbiguousProducts = 0
@@ -117,7 +117,7 @@ final class ProductCatalogMigrationTests: XCTestCase {
                     review.note?.contains(
                         "Canonical product added through the catalog authoring toolkit."
                     ) == true,
-                    "Wave 1 assignment lacks toolkit review evidence: \(review.productId)"
+                    "Toolkit assignment lacks review evidence: \(review.productId)"
                 )
             }
         }
@@ -138,8 +138,8 @@ final class ProductCatalogMigrationTests: XCTestCase {
         )
 
         XCTAssertEqual(legacy.products.count, 147)
-        XCTAssertEqual(canonical.products.count, 467)
-        XCTAssertEqual(Set(canonical.products.map(\.id)).count, 467)
+        XCTAssertEqual(canonical.products.count, 647)
+        XCTAssertEqual(Set(canonical.products.map(\.id)).count, 647)
         XCTAssertTrue(
             Set(legacy.products.map(\.id)).isSubset(
                 of: Set(canonical.products.map(\.id))
@@ -319,7 +319,7 @@ final class ProductCatalogMigrationTests: XCTestCase {
                 )
             } else {
                 guard case .inserted(let inserted) = outcome else {
-                    return XCTFail("Expected Wave 1 insert for \(product.id)")
+                    return XCTFail("Expected canonical insert for \(product.id)")
                 }
                 XCTAssertEqual(
                     inserted.catalogProductIDRawValue,
@@ -330,7 +330,7 @@ final class ProductCatalogMigrationTests: XCTestCase {
 
         XCTAssertEqual(
             try context.fetchCount(FetchDescriptor<Product>()),
-            467
+            647
         )
         XCTAssertEqual(shoppingEntry.productID, linkedProductID)
         XCTAssertEqual(

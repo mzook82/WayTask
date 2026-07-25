@@ -159,10 +159,24 @@ Search weights, suggestion limits, personalization, UI, persistence, and saved
 identity behavior are unchanged. The original 147 IDs remain the compatibility
 baseline and are verified as a subset of the 467 production IDs.
 
-## 9. Exact Next Step
+## 9. WT-027B Controlled Coverage Expansion
 
-**WT-027B — Canonical Catalog Coverage Review and Wave 2:** measure real missing
-queries through `CATALOG_FEEDBACK.md`, fill only evidenced gaps in low-coverage
-categories, and extend the shared Swift/Node/Kotlin-ready fixtures. Add a
-reviewed transactional batch for the release so every mutation remains audited and
-`catalogVersion` increments exactly once.
+WT-027B adds 180 reviewed concepts across the documented low-coverage categories,
+bringing production to 647 active products. The release is one transactional
+toolkit batch: all 467 release-4 records and IDs are preserved, 180 product-level
+audit entries share release ID `wt-027b-wave-2`, and `catalogVersion` advances
+exactly once from 4 to 5.
+
+The review manifest now contains 647 approved taxonomy assignments.
+`shared/catalog/wave-2-search-fixtures.json` provides 42 Hebrew canonical-name,
+alias, brand-term, and custom no-match acceptance cases for Node, Swift, and future
+Kotlin use. Ranking, personalization, UI, persistence, schema, and taxonomy
+behavior remain unchanged.
+
+## 10. Exact Next Step
+
+**WT-027C — Catalog Coverage QA and Wave 3 planning:** use
+`CATALOG_FEEDBACK.md` and real query evidence to prioritize the remaining shallow
+areas, especially electronics and the newer non-grocery categories. Review whether
+those categories need additional shared subcategories before preparing another
+single transactional catalog release.

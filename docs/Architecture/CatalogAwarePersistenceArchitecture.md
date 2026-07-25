@@ -1402,3 +1402,18 @@ the former per-mutation authoring counter 333 to release 4. Future release batch
 increment once while retaining an audit line for every mutation. Shared Wave 1
 search fixtures are executed in Node and Swift without adding schema-version
 branches to search, personalization, UI, or persistence.
+
+## 17. WT-027B Controlled Catalog Expansion
+
+WT-027B adds 180 reviewed catalog concepts in a single toolkit batch and brings the
+bundled Hebrew catalog to 647 active products at released catalog version 5. Every
+release-4 product object and stable ID is preserved. New records use the existing
+canonical schema and taxonomy contract, and the review manifest now contains 647
+completed assignments.
+
+The persistence boundary is unchanged: catalog-backed records continue to aggregate
+by stable `catalogProductIDRawValue`, existing snapshots retain their stored names,
+and custom products remain unlinked. The 180 audit records share one release-level
+before/after hash and the 4→5 version transition. Shared Wave 2 search fixtures are
+executed by Node and Swift without changing ranking, personalization, UI, saved
+identity, or migration behavior.

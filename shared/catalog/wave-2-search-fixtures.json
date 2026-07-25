@@ -1,0 +1,62 @@
+{
+  "fixtureVersion": 1,
+  "locale": "he-IL",
+  "catalogVersion": 5,
+  "cases": [
+    { "id": "aspirin_name", "query": "אספירין", "expectedProductId": "aspirin", "expectedCanonicalName": "אספירין", "matchSource": "canonical_name" },
+    { "id": "throat_lozenges_alias", "query": "סוכריות לגרון", "expectedProductId": "throat_lozenges", "expectedCanonicalName": "טבליות מציצה לגרון", "matchSource": "alias" },
+    { "id": "nasal_spray_borrowed_alias", "query": "ספריי לאף", "expectedProductId": "nasal_spray", "expectedCanonicalName": "תרסיס לאף", "matchSource": "alias" },
+    { "id": "magnesium_word_name", "query": "מגנזיום", "expectedProductId": "magnesium_supplement", "expectedCanonicalName": "תוסף מגנזיום", "matchSource": "canonical_name" },
+
+    { "id": "sesame_snack_israeli_alias", "query": "שומשומייה", "expectedProductId": "sesame_snack", "expectedCanonicalName": "חטיף שומשום", "matchSource": "alias" },
+    { "id": "dark_chocolate_name", "query": "שוקולד מריר", "expectedProductId": "dark_chocolate", "expectedCanonicalName": "שוקולד מריר", "matchSource": "canonical_name" },
+    { "id": "pumpkin_seeds_israeli_alias", "query": "גרעינים לבנים", "expectedProductId": "pumpkin_seeds", "expectedCanonicalName": "גרעיני דלעת", "matchSource": "alias" },
+
+    { "id": "donuts_borrowed_alias", "query": "דונאטס", "expectedProductId": "donuts", "expectedCanonicalName": "סופגניות", "matchSource": "alias" },
+    { "id": "cinnamon_rolls_brand_term", "query": "סינבון", "expectedProductId": "cinnamon_rolls", "expectedCanonicalName": "שבלולי קינמון", "matchSource": "brand_term" },
+    { "id": "whole_wheat_pita_alias", "query": "פיתות מלאות", "expectedProductId": "whole_wheat_pita", "expectedCanonicalName": "פיתות מחיטה מלאה", "matchSource": "alias" },
+
+    { "id": "espresso_capsules_name", "query": "קפסולות קפה", "expectedProductId": "espresso_capsules", "expectedCanonicalName": "קפסולות קפה", "matchSource": "canonical_name" },
+    { "id": "lemon_lime_soda_brand_term", "query": "ספרייט", "expectedProductId": "lemon_lime_soda", "expectedCanonicalName": "משקה לימון-ליים מוגז", "matchSource": "brand_term" },
+    { "id": "sports_drink_alias", "query": "משקה ספורט", "expectedProductId": "sports_drink", "expectedCanonicalName": "משקה איזוטוני", "matchSource": "alias" },
+    { "id": "raspberry_syrup_alias", "query": "תרכיז פטל", "expectedProductId": "raspberry_drink_syrup", "expectedCanonicalName": "סירופ פטל לשתייה", "matchSource": "alias" },
+
+    { "id": "muslin_diapers_name", "query": "חיתולי טטרה", "expectedProductId": "muslin_diapers", "expectedCanonicalName": "חיתולי טטרה", "matchSource": "canonical_name" },
+    { "id": "baby_food_pouches_alias", "query": "פאוצ׳ים לתינוק", "expectedProductId": "baby_food_pouches", "expectedCanonicalName": "שקיות מחית לתינוק", "matchSource": "alias" },
+    { "id": "baby_nasal_aspirator_alias", "query": "שואב אף לתינוק", "expectedProductId": "baby_nasal_aspirator", "expectedCanonicalName": "שואב נזלת לתינוק", "matchSource": "alias" },
+
+    { "id": "bird_food_alias", "query": "אוכל לציפורים", "expectedProductId": "bird_food", "expectedCanonicalName": "מזון לציפורים", "matchSource": "alias" },
+    { "id": "pet_harness_dog_alias", "query": "רתמה לכלב", "expectedProductId": "pet_harness", "expectedCanonicalName": "רתמה לחיות מחמד", "matchSource": "alias" },
+    { "id": "aquarium_filter_borrowed_alias", "query": "פילטר לאקווריום", "expectedProductId": "aquarium_filter", "expectedCanonicalName": "מסנן לאקווריום", "matchSource": "alias" },
+
+    { "id": "t_shirt_borrowed_alias", "query": "טי שירט", "expectedProductId": "t_shirt", "expectedCanonicalName": "חולצת טי", "matchSource": "alias" },
+    { "id": "jeans_name", "query": "ג׳ינס", "expectedProductId": "jeans", "expectedCanonicalName": "ג׳ינס", "matchSource": "canonical_name" },
+    { "id": "pajamas_alias", "query": "בגדי שינה", "expectedProductId": "pajamas", "expectedCanonicalName": "פיג׳מה", "matchSource": "alias" },
+
+    { "id": "potting_soil_alias", "query": "תערובת שתילה", "expectedProductId": "potting_soil", "expectedCanonicalName": "אדמת שתילה", "matchSource": "alias" },
+    { "id": "watering_can_israeli_alias", "query": "מזלף", "expectedProductId": "watering_can", "expectedCanonicalName": "משפך השקיה", "matchSource": "alias" },
+    { "id": "power_strip_alias", "query": "רב שקע", "expectedProductId": "power_strip", "expectedCanonicalName": "מפצל חשמל", "matchSource": "alias" },
+
+    { "id": "notebook_name", "query": "מחברת", "expectedProductId": "notebook", "expectedCanonicalName": "מחברת", "matchSource": "canonical_name" },
+    { "id": "binder_sleeves_israeli_alias", "query": "ניילוניות לקלסר", "expectedProductId": "binder_sleeves", "expectedCanonicalName": "שמרדפים", "matchSource": "alias" },
+    { "id": "highlighters_alias", "query": "מדגישים", "expectedProductId": "highlighters", "expectedCanonicalName": "מרקרים זוהרים", "matchSource": "alias" },
+
+    { "id": "coolant_borrowed_alias", "query": "אנטיפריז", "expectedProductId": "car_coolant", "expectedCanonicalName": "נוזל קירור לרכב", "matchSource": "alias" },
+    { "id": "jumper_cables_alias", "query": "כבלים למצבר", "expectedProductId": "jumper_cables", "expectedCanonicalName": "כבלי התנעה", "matchSource": "alias" },
+    { "id": "car_air_freshener_alias", "query": "ריחן לרכב", "expectedProductId": "car_air_freshener", "expectedCanonicalName": "מפיץ ריח לרכב", "matchSource": "alias" },
+
+    { "id": "jump_rope_israeli_alias", "query": "דלגית", "expectedProductId": "jump_rope", "expectedCanonicalName": "חבל קפיצה", "matchSource": "alias" },
+    { "id": "swimming_goggles_alias", "query": "משקפי שחייה", "expectedProductId": "swimming_goggles", "expectedCanonicalName": "משקפת שחייה", "matchSource": "alias" },
+    { "id": "camping_tent_name_prefix", "query": "אוהל", "expectedProductId": "camping_tent", "expectedCanonicalName": "אוהל קמפינג", "matchSource": "canonical_name" },
+
+    { "id": "jigsaw_puzzle_hebrew_alias", "query": "תצרף", "expectedProductId": "jigsaw_puzzle", "expectedCanonicalName": "פאזל", "matchSource": "alias" },
+    { "id": "play_dough_brand_term", "query": "פליי-דו", "expectedProductId": "play_dough", "expectedCanonicalName": "בצק משחק", "matchSource": "brand_term" },
+    { "id": "playing_cards_alias", "query": "חפיסת קלפים", "expectedProductId": "playing_cards", "expectedCanonicalName": "קלפי משחק", "matchSource": "alias" },
+
+    { "id": "cookbook_alias", "query": "ספר מתכונים", "expectedProductId": "cookbook", "expectedCanonicalName": "ספר בישול", "matchSource": "alias" },
+    { "id": "magazine_borrowed_alias", "query": "מגזין", "expectedProductId": "magazine", "expectedCanonicalName": "כתב עת", "matchSource": "alias" },
+    { "id": "planner_borrowed_alias", "query": "פלנר", "expectedProductId": "planner", "expectedCanonicalName": "יומן תכנון", "matchSource": "alias" },
+
+    { "id": "wave_2_custom_product_no_match", "query": "ממרח לוטוס פטל בעבודת יד", "expectedProductId": null, "expectedCanonicalName": null, "matchSource": "no_match" }
+  ]
+}

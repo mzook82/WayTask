@@ -1,9 +1,9 @@
 {
   "reviewVersion": 1,
-  "catalogVersion": 4,
+  "catalogVersion": 5,
   "taxonomyVersion": 1,
   "locale": "he-IL",
-  "productCount": 467,
+  "productCount": 647,
   "products": [
     {
       "productId": "bread_white",
@@ -3648,6 +3648,1446 @@
       "productId": "vitamin_d",
       "previousLegacyCategoryId": null,
       "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "aspirin",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "throat_lozenges",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cough_syrup",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "nasal_spray",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "eye_drops",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "allergy_tablets",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "antacid",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "oral_rehydration_solution",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "elastic_bandage",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "medical_tape",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "disposable_medical_gloves",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "medical_face_masks",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pregnancy_test",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "hot_water_bottle",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "magnesium_supplement",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dark_chocolate",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "white_chocolate",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "chocolate_truffles",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "marshmallows",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "licorice_candy",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "toffee_candy",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "chocolate_coated_nuts",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "chocolate_coated_raisins",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "sesame_snack",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "granola_bar",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "protein_bar",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "fruit_snack",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "salted_roasted_peanuts",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pumpkin_seeds",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pistachios",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "whole_wheat_pita",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "spelt_pita",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "gluten_free_pita",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "brioche_rolls",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "english_muffins",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "donuts",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "muffins",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cinnamon_rolls",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "apple_strudel",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baklava",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "kanafeh",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "naan_bread",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "espresso_capsules",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": "drinks.coffee",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "filter_coffee",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": "drinks.coffee",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "turkish_coffee",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": "drinks.coffee",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "coffee_pods",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": "drinks.coffee",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "drinking_chocolate_powder",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "lemon_lime_soda",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "orange_soda",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "mango_nectar",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "peach_nectar",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cranberry_juice",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "coconut_water",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "sports_drink",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "matcha_tea",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "raspberry_drink_syrup",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "lemon_juice",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_food_pouches",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_snack_puffs",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_rice_cakes",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_teething_gel",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_nasal_aspirator",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_nail_clippers",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_hairbrush",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "bottle_cleaning_brush",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "bottle_sterilizing_tablets",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_bib",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "muslin_diapers",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "changing_mat",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "baby_bath",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "potty_training_seat",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "breast_pump",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "bird_food",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "fish_food",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "rabbit_food",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "hamster_food",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "small_pet_hay",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "aquarium_water_conditioner",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pet_bowl",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pet_water_fountain",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pet_harness",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pet_bed",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pet_grooming_brush",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pet_nail_clippers",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dog_dental_chews",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cat_hairball_paste",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "aquarium_filter",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "t_shirt",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "button_up_shirt",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pants",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "jeans",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "shorts",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "underwear",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "socks",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pajamas",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "sweatshirt",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "hoodie",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "jacket",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "raincoat",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "sneakers",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "sandals",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "slippers",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "apparel",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "potting_soil",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "plant_fertilizer",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "flower_pot",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "planter_box",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "garden_seeds",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "garden_hose",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "watering_can",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pruning_shears",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "garden_gloves",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "plant_sprayer",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "outdoor_broom",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "doormat",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "picture_hanging_hooks",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "extension_cord",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "power_strip",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "home_garden",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "notebook",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "notepad",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "binder",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "document_folder",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "binder_sleeves",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pens",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pencils",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "colored_pencils",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "markers",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "highlighters",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "eraser",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "pencil_sharpener",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "ruler",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "glue_stick",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "scissors",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "office_school",
+      "canonicalSubcategoryId": "office_school.school_supplies",
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "windshield_washer_fluid",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "automotive",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "engine_oil",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "automotive",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "car_coolant",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "automotive",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "brake_fluid",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "automotive",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "car_air_freshener",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "automotive",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "car_shampoo",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "automotive",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "car_wax",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "automotive",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "tire_pressure_gauge",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "automotive",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "jumper_cables",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "automotive",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "car_phone_holder",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "automotive",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "car_sunshade",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "automotive",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "windshield_wipers",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "automotive",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "yoga_mat",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "sports_outdoors",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "resistance_bands",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "sports_outdoors",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dumbbells",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "sports_outdoors",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "jump_rope",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "sports_outdoors",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "sports_water_bottle",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "sports_outdoors",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "soccer_ball",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "sports_outdoors",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "basketball_ball",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "sports_outdoors",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "volleyball_ball",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "sports_outdoors",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "tennis_balls",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "sports_outdoors",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "swimming_goggles",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "sports_outdoors",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "bicycle_helmet",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "sports_outdoors",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "camping_tent",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "sports_outdoors",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "building_blocks",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "toys_games",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "jigsaw_puzzle",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "toys_games",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "board_game",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "toys_games",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "playing_cards",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "toys_games",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "play_dough",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "toys_games",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "soap_bubbles",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "toys_games",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "toy_cars",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "toys_games",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "doll",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "toys_games",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "plush_toy",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "toys_games",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "action_figure",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "toys_games",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "craft_kit",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "toys_games",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "water_gun",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "toys_games",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "novel",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "books_media",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "childrens_book",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "books_media",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "cookbook",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "books_media",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "travel_guide",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "books_media",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "dictionary",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "books_media",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "activity_book",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "books_media",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "comic_book",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "books_media",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "magazine",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "books_media",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "newspaper",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "books_media",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "calendar",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "books_media",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "planner",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "books_media",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "crossword_book",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "books_media",
       "canonicalSubcategoryId": null,
       "reviewStatus": "confirmed",
       "note": "Canonical product added through the catalog authoring toolkit."

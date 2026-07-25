@@ -12,6 +12,7 @@ struct MapControls: View {
                 prominent: true,
                 action: onFollowUser
             )
+            .featureTourTarget(.mapFollowLocationButton)
             controlButton(
                 systemName: "plus",
                 label: "Add location",
