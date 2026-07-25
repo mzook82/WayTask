@@ -13,6 +13,8 @@ WayTask uses Sentry for sanitized crash and non-fatal operational diagnostics du
 
 If no valid DSN exists, `SentrySDK.start` is never called. The reporting service, context updates, breadcrumbs, and DEBUG test actions then no-op safely.
 
+The launch adapter also treats an SDK startup failure as a disabled monitoring state and returns control to `WayTaskApp.init()`. Monitoring configuration can therefore never be a prerequisite for opening the model container or constructing the app UI.
+
 ## Local DSN Setup
 
 `Debug.xcconfig` and `Release.xcconfig` optionally include the ignored `Secrets.xcconfig`. Copy the relevant lines from `Secrets.xcconfig.example`; do not put a real DSN in the template, Info.plist, Swift source, documentation, or Git.
@@ -43,6 +45,8 @@ Configured values:
 - Session Replay: session and error sample rates both `0`.
 - Maximum breadcrumbs: 40.
 
+The resolved launch configuration is shared with DEBUG verification events so they carry only app version, build number, environment, hardware model identifier, OS version, and an enum-backed diagnostic event type.
+
 The integration also disables automatic sessions, watchdog termination reports, app-hang tracking, automatic/network breadcrumbs, URL/network failure capture, swizzling, user-interaction tracing, UIViewController tracing, Core Data tracing, file I/O tracing, MetricKit, logs, screenshots, and view hierarchy capture.
 
 ## Event Privacy Rules
@@ -51,9 +55,11 @@ Every event passes through `beforeSend`. The filter:
 
 - Removes user, request, server name, transaction name, extras, original Error object, module list, and custom fingerprint.
 - Keeps only `area`, `operation`, and `category` tags.
+- Keeps `diagnostic_event_type` only for developer verification events.
 - Keeps only WayTask workflow breadcrumbs and their enum-backed generic fields/aggregate counts.
 - Replaces unapproved free-form messages and all exception values with generic text.
 - Keeps only allowlisted `app`, `device`, `os`, and `waytask` context fields.
+- Keeps the typed `waytask_diagnostic` context fields `app_version`, `build_number`, `environment`, `device_model`, `os_version`, and `diagnostic_event_type`.
 - Removes attachments from every capture scope.
 
 Original `Error` values are accepted by the reporting API, but the transmitted NSError contains only a WayTask operation domain, numeric error code, and enum-backed safe message. Original localized descriptions and userInfo are not sent.
@@ -97,18 +103,36 @@ Breadcrumbs cover app launch, recognition start/complete/fail, plan start/ready/
 
 ## DEBUG Test Procedure
 
-The test UI and intentional crash method are compiled only in DEBUG.
+The non-fatal test UI is compiled only in DEBUG.
 
 1. Configure a local Debug DSN and rebuild.
 2. Open Settings and activate Developer Mode with the existing seven-tap gesture.
 3. Open Developer -> Beta Diagnostics -> Sentry Test (DEBUG Only).
 4. Confirm Status is Enabled.
-5. Tap Send Non-Fatal Test Event once.
-6. In Sentry, confirm one event named `WayTask DEBUG non-fatal test`, environment `development`, correct release/dist, and only the allowed context above.
-7. Tap Trigger Intentional Crash, read the warning, and explicitly choose Crash Now.
-8. Launch the app again without a debugger attached. Wait for the previous-run crash envelope to upload, then confirm symbolication and privacy fields in Sentry.
+5. Tap **Send Sentry Test Message** once.
+6. Tap **Capture Handled Error** once.
+7. Tap **Capture Non-Fatal Exception** once.
+8. In Sentry, confirm three separate events with diagnostic types `test_message`, `handled_error`, and `non_fatal_exception`, environment `development`, correct release/dist, and only the allowed context above.
+9. Confirm **Native crash handler** is **Enabled**.
+10. Confirm the DEBUG-only note states: **Intentional crash validation is disabled for this beta.**
 
-The test action requests a two-second background flush. Sentry's flush API does not return delivery confirmation, so server receipt remains the authoritative check.
+Each non-fatal test action requests a two-second background flush. Sentry's flush API does not return delivery confirmation, so server receipt remains the authoritative check.
+
+The Sentry verification section is shown only when the existing developer-mode gate is enabled in a DEBUG build. Intentional crash validation and its previous-launch test status are disabled for the current beta. This does not disable Sentry's native crash handler: `options.enableCrashHandler` remains explicitly enabled for normal Debug and Release crash reporting.
+
+## Stability Verification
+
+Before distributing a candidate, exercise these existing app paths with monitoring enabled and again with `SENTRY_DSN` blank:
+
+1. Cold launch and terminate/relaunch.
+2. Background the app, wait briefly, and foreground it.
+3. Switch through Home, Products, Shopping, Map, and Settings.
+4. Replay and dismiss onboarding.
+5. Replay, skip, and complete the feature tour.
+6. Present and dismiss the camera without saving.
+7. Open Map and return to another tab.
+
+None of these navigation or presentation actions should create a Sentry issue by themselves. Expected generic workflow breadcrumbs are acceptable. A missing DSN, rejected configuration, or monitoring startup failure must leave every app path usable.
 
 ## dSYM Upload
 
@@ -153,8 +177,8 @@ These are the SDK's manifest declarations, not a complete answer for the whole a
 
 1. Build/launch DEBUG and Release with `SENTRY_DSN` empty; confirm normal behavior and no Sentry network/log activity.
 2. Build/launch DEBUG with the local DSN; confirm Sentry reports Enabled in Beta Diagnostics without displaying the DSN.
-3. Send one non-fatal test event and verify development environment, release, dist, app/OS/device context, generic tags, and no prohibited fields.
-4. Perform the confirmed crash test on a physical DEBUG device without a debugger; relaunch and verify one symbolicated event.
+3. Send the test message, handled error, and non-fatal exception; verify development environment, release, dist, app/OS/device context, distinct diagnostic event types, generic tags, and no prohibited fields.
+4. Confirm the DEBUG diagnostics state that intentional crash validation is disabled for this beta; do not perform a deliberate crash test.
 5. Archive Release with the auth token and CLI; verify archive dSYM UUID upload.
 6. Install the TestFlight build; confirm environment is beta and Debug-only Sentry Test UI is absent.
 7. Exercise Planner success/expected empty/no-match states, store discovery, Map, notifications/deep links, geofence, Gemini/OpenFoodFacts, persistence, and Shopping sessions.
@@ -162,11 +186,25 @@ These are the SDK's manifest declarations, not a complete answer for the whole a
 9. Inspect received events for product names, list content/IDs, photos, coordinates, addresses/store names, notification payload/text, email/name/address, keys/tokens/headers, Gemini prompt, and auth data; all must be absent.
 10. Compare launch, scrolling, Map, plan generation, and Shopping responsiveness with the prior build. Traces/profiling/replay/hang tracking are disabled.
 
-## Automated Validation Record
+## Prior Automated Validation Record
 
 The July 14, 2026 unsigned generic-device Debug and Release builds resolved and compiled Sentry Cocoa 9.21.0. With the ignored local configuration containing no Sentry DSN, both processed app Info.plists contain an empty `SENTRY_DSN`; the app therefore takes the no-op startup path. Release generated a valid arm64 `WayTask.app.dSYM`, and the optimized app contains none of the DEBUG-only Sentry test/crash UI strings. The built app embeds `Sentry.framework/PrivacyInfo.xcprivacy`, and repository inspection confirms that `SentryReportingService.swift` is the only Swift file importing or calling the SDK directly.
 
 A configured-DSN launch, server receipt/field inspection, prior-run crash delivery, symbol-server receipt, and TestFlight regression comparison require the owner's Sentry credentials and a physical-device/TestFlight run. They are intentionally not claimed by the automated build.
+
+## WT-028B Automated Verification Record
+
+On July 25, 2026:
+
+- The focused monitoring suite passed 7 of 7 tests with 0 failures, 0 skips, and 0 build or analyzer warnings.
+- The complete iOS suite passed 247 of 247 tests with 0 failures, 0 skips, and 0 build or analyzer warnings.
+- An unsigned generic-device Release build succeeded with Sentry Cocoa 9.21.0.
+- The ignored, untracked local configuration produced a valid HTTPS-shaped DSN in the processed Release Info.plist; the audit did not print or persist its value.
+- The Release app contains `Sentry.framework`, its `PrivacyInfo.xcprivacy`, and an arm64 dSYM. The optimized executable contains none of the DEBUG-only diagnostic action or deliberate-crash strings.
+- The bundled production catalog and taxonomy are byte-identical to their source resources.
+- Source inspection still finds exactly one Swift file importing Sentry.
+
+Server receipt, field inspection, crash-envelope delivery, dSYM upload receipt, and TestFlight/physical-device stability checks remain owner-operated verification steps because they require dashboard access, archive credentials, and a real beta installation.
 
 ## Rollback
 

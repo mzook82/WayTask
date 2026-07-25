@@ -71,7 +71,6 @@ struct BetaDiagnosticsView: View {
     @State private var copyConfirmation = false
     #if DEBUG
     @State private var sentryTestStatus: String?
-    @State private var isShowingSentryCrashConfirmation = false
     #endif
 
     var body: some View {
@@ -88,7 +87,11 @@ struct BetaDiagnosticsView: View {
             recentDecisionsSection
             exportSection
             #if DEBUG
-            sentryTestSection
+            if SentryDiagnosticsAccessPolicy.shouldShowControls(
+                developerModeEnabled: developerModeEnabled
+            ) {
+                sentryTestSection
+            }
             #endif
             privacySection
             developerModeSection
@@ -110,20 +113,6 @@ struct BetaDiagnosticsView: View {
         .alert("Report copied", isPresented: $copyConfirmation) {
             Button("OK", role: .cancel) { }
         }
-        #if DEBUG
-        .confirmationDialog(
-            "Crash WayTask for Sentry validation?",
-            isPresented: $isShowingSentryCrashConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Crash Now", role: .destructive) {
-                SentryReportingService.shared.crashForDebugValidation()
-            }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("The app will terminate immediately. Reopen it to allow Sentry to send the crash event.")
-        }
-        #endif
     }
 
     private var snapshotSection: some View {
@@ -370,21 +359,64 @@ struct BetaDiagnosticsView: View {
                 "Status",
                 value: SentryReportingService.shared.isEnabled ? "Enabled" : "Disabled — DSN missing"
             )
+            LabeledContent(
+                "Native crash handler",
+                value:
+                    SentryReportingService.shared
+                        .isNativeCrashHandlerEnabled
+                    ? "Enabled"
+                    : "Unavailable"
+            )
 
             Button {
-                sentryTestStatus = SentryReportingService.shared.captureDebugTestEvent()
-                    ? "One sanitized non-fatal test event was queued and a short flush was requested."
-                    : "Sentry is disabled. Configure a local DSN and relaunch this Debug build."
+                updateSentryTestStatus(
+                    eventName: "test message",
+                    wasQueued:
+                        SentryReportingService.shared
+                            .captureDebugTestMessage()
+                )
             } label: {
-                Label("Send Non-Fatal Test Event", systemImage: "exclamationmark.bubble")
+                Label(
+                    "Send Sentry Test Message",
+                    systemImage: "message.badge"
+                )
             }
 
-            Button(role: .destructive) {
-                isShowingSentryCrashConfirmation = true
+            Button {
+                updateSentryTestStatus(
+                    eventName: "handled error",
+                    wasQueued:
+                        SentryReportingService.shared
+                            .captureDebugHandledError()
+                )
             } label: {
-                Label("Trigger Intentional Crash…", systemImage: "bolt.trianglebadge.exclamationmark")
+                Label(
+                    "Capture Handled Error",
+                    systemImage: "exclamationmark.circle"
+                )
             }
-            .disabled(!SentryReportingService.shared.isEnabled)
+
+            Button {
+                updateSentryTestStatus(
+                    eventName: "non-fatal exception",
+                    wasQueued:
+                        SentryReportingService.shared
+                            .captureDebugNonFatalException()
+                )
+            } label: {
+                Label(
+                    "Capture Non-Fatal Exception",
+                    systemImage:
+                        "exclamationmark.triangle"
+                )
+            }
+
+            Label(
+                "Intentional crash validation is disabled for this beta.",
+                systemImage: "info.circle"
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
 
             if let sentryTestStatus {
                 Text(sentryTestStatus)
@@ -394,8 +426,19 @@ struct BetaDiagnosticsView: View {
         } header: {
             Text("Sentry Test (DEBUG Only)")
         } footer: {
-            Text("Crash validation is compiled only in DEBUG and always requires confirmation.")
+            Text(
+                "Events contain only approved technical metadata."
+            )
         }
+    }
+
+    private func updateSentryTestStatus(
+        eventName: String,
+        wasQueued: Bool
+    ) {
+        sentryTestStatus = wasQueued
+            ? "One sanitized \(eventName) was queued and a short flush was requested."
+            : "Sentry is disabled. Configure a local DSN and relaunch this Debug build."
     }
     #endif
 

@@ -21,12 +21,12 @@ Developer Mode can be disabled from the bottom of Beta Diagnostics. The Develope
 
 ## DEBUG-Only Sentry Test
 
-RC-1 adds `Sentry Test (DEBUG Only)` inside Beta Diagnostics. The section and intentional crash method are excluded from Release/TestFlight builds.
+RC-1 adds `Sentry Test (DEBUG Only)` inside Beta Diagnostics. The section is excluded from Release/TestFlight builds.
 
-- `Send Non-Fatal Test Event` queues one enum-backed sanitized event and requests a short background flush. It reports Disabled when the local DSN is absent.
-- `Trigger Intentional Crash…` is disabled unless Sentry initialized and always presents an explicit destructive confirmation dialog.
-- After a confirmed crash, relaunch the app without a debugger so Sentry can transmit the previous-run crash envelope.
-- Neither action displays or logs the DSN. See `docs/180_SENTRY_INTEGRATION.md` for server-side field and symbolication checks.
+- `Send Sentry Test Message`, `Capture Handled Error`, and `Capture Non-Fatal Exception` queue three distinct enum-backed sanitized event types and request a short background flush. They report Disabled when the local DSN is absent.
+- Intentional crash validation is disabled for this beta. No deliberate-crash action or previous-launch test status is presented.
+- The native Sentry crash handler remains enabled for normal Debug and Release crash reporting.
+- None of the actions displays or logs the DSN. Each attaches only approved app/build/environment/device/OS metadata and its diagnostic event type. See `docs/180_SENTRY_INTEGRATION.md` for server-side field and symbolication checks.
 
 ## Runtime Coverage
 
