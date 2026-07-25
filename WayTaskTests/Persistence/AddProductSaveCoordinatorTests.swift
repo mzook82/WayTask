@@ -5,6 +5,51 @@ import XCTest
 
 @MainActor
 final class AddProductSaveCoordinatorTests: XCTestCase {
+    func testHebrewCatalogSelectionPersistsHebrewDisplaySnapshot() throws {
+        let context = try makeContext()
+        let result = ProductSearchResult(
+            productID: ProductID("prd_pilot_0001"),
+            displayName: "חלב",
+            displayLocale: "he",
+            secondaryName: nil,
+            categoryID: ProductCategoryID("dairy"),
+            categoryDisplayName: "מוצרי חלב ותחליפים",
+            iconKey: "product.dairy",
+            matchedRecordAuthority: .primaryDisplayName,
+            matchType: .exact,
+            matchedLocale: "he"
+        )
+        let selection = AddProductCatalogSelection(
+            result: result,
+            preselectionQuery: "חלב"
+        )
+        var capturedRequest: CatalogProductSaveRequest?
+        let coordinator = AddProductSaveCoordinator(
+            catalogSave: { request, _ in
+                capturedRequest = request
+                return .inserted(Product(name: request.displayNameSnapshot))
+            },
+            manualSave: { _, _, _ in
+                throw UnexpectedSavePath()
+            }
+        )
+
+        _ = try coordinator.save(
+            selection: .catalog(selection),
+            imageData: nil,
+            in: context
+        )
+
+        let request = try XCTUnwrap(capturedRequest)
+        XCTAssertEqual(request.productID, ProductID("prd_pilot_0001"))
+        XCTAssertEqual(request.displayNameSnapshot, "חלב")
+        XCTAssertEqual(request.displayLocaleSnapshot, "he")
+        XCTAssertEqual(
+            request.categoryDisplayNameSnapshot,
+            "מוצרי חלב ותחליפים"
+        )
+    }
+
     func testCatalogSelectionMapsExactSnapshotAndNeverCallsManualSave() throws {
         let context = try makeContext()
         let imageData = Data([0x10, 0x20, 0x30])

@@ -1,3 +1,4 @@
+import UIKit
 import XCTest
 @testable import WayTask
 
@@ -22,11 +23,96 @@ final class ProductKnowledgeIconResolverTests: XCTestCase {
         ]
 
         for key in keys {
+            let systemName = ProductKnowledgeIconResolver.systemName(for: key)
             XCTAssertFalse(
-                ProductKnowledgeIconResolver.systemName(for: key).isEmpty,
+                systemName.isEmpty,
                 "Missing icon mapping for \(key)"
             )
+            XCTAssertNotNil(
+                UIImage(systemName: systemName),
+                "Invalid system icon \(systemName) for \(key)"
+            )
         }
+    }
+
+    func testDeviceQACorrectionsAvoidCakeAndPersonIcons() {
+        XCTAssertEqual(
+            ProductKnowledgeIconResolver.systemName(for: "product.bread"),
+            "basket.fill"
+        )
+        XCTAssertEqual(
+            ProductKnowledgeIconResolver.systemName(
+                for: "product.personalcare"
+            ),
+            "comb.fill"
+        )
+        XCTAssertNotEqual(
+            ProductKnowledgeIconResolver.systemName(for: "product.bread"),
+            "birthday.cake.fill"
+        )
+        XCTAssertNotEqual(
+            ProductKnowledgeIconResolver.systemName(
+                for: "product.personalcare"
+            ),
+            "figure.stand"
+        )
+    }
+
+    func testCatalogSnapshotUsesSemanticIconThenGenericFallback() {
+        XCTAssertEqual(
+            ProductKnowledgeIconResolver.systemName(
+                forCatalogSnapshot: "product.bread"
+            ),
+            "basket.fill"
+        )
+        XCTAssertEqual(
+            ProductKnowledgeIconResolver.systemName(
+                forCatalogSnapshot: nil
+            ),
+            ProductKnowledgeIconResolver.fallbackSystemName
+        )
+        XCTAssertEqual(
+            ProductKnowledgeIconResolver.systemName(
+                forCatalogSnapshot: "product.future"
+            ),
+            ProductKnowledgeIconResolver.fallbackSystemName
+        )
+    }
+
+    @MainActor
+    func testChooseProductsThumbnailPreservesPhotoThenCatalogThenGenericFallback() {
+        let photoData = Data([0x01, 0x02, 0x03])
+        let catalogWithPhoto = Product(
+            name: "Bread",
+            imageData: photoData,
+            catalogIconKeySnapshot: "product.bread"
+        )
+        let catalogWithoutPhoto = Product(
+            name: "Bread",
+            catalogIconKeySnapshot: "product.bread"
+        )
+        let manualWithoutPhoto = Product(name: "Custom item")
+
+        let photoPresentation = ProductShoppingThumbnailPresentation(
+            product: catalogWithPhoto
+        )
+        XCTAssertEqual(photoPresentation.imageData, photoData)
+        XCTAssertEqual(photoPresentation.fallbackSystemName, "basket.fill")
+
+        let catalogPresentation = ProductShoppingThumbnailPresentation(
+            product: catalogWithoutPhoto
+        )
+        XCTAssertNil(catalogPresentation.imageData)
+        XCTAssertEqual(catalogPresentation.fallbackSystemName, "basket.fill")
+
+        let manualPresentation = ProductShoppingThumbnailPresentation(
+            product: manualWithoutPhoto
+        )
+        XCTAssertNil(manualPresentation.imageData)
+        XCTAssertEqual(
+            manualPresentation.fallbackSystemName,
+            ProductKnowledgeIconResolver.fallbackSystemName
+        )
     }
 
     func testUnknownSemanticIconUsesGenericFallback() {

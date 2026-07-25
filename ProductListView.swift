@@ -30,6 +30,7 @@ struct ProductListView: View {
     @State private var isShowingSettings = false
     @State private var isShowingScanner = false
     @State private var isShowingAddProductSaveError = false
+    @State private var alreadyPresentNotice: ProductAlreadyPresentNotice?
     @StateObject private var productAutocompleteViewModel: AddProductAutocompleteViewModel
     @FocusState private var isProductNameFocused: Bool
     private let shoppingListService = ShoppingListService()
@@ -56,6 +57,21 @@ struct ProductListView: View {
         )
     }
 
+    private var productAutocompleteLocaleIdentifier: String {
+        ProductAutocompleteLocaleResolver.preferredApplicationLocaleIdentifier(
+            environmentLocaleIdentifier: locale.identifier,
+            preferredLanguages: Locale.preferredLanguages
+        )
+    }
+
+    private var allowsCurrentCatalogResultSelection: Bool {
+        productAutocompleteViewModel.allowsCatalogResultSelection &&
+            ProductSearchNormalizer.normalize(newItemName).value ==
+            ProductSearchNormalizer.normalize(
+                productAutocompleteViewModel.rawQuery
+            ).value
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -75,6 +91,28 @@ struct ProductListView: View {
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $isShowingAddProduct) {
                 addProductSheet
+            }
+            .alert(item: $alreadyPresentNotice) { notice in
+                Alert(
+                    title: Text(
+                        ProductAutocompleteCopy.alreadyPresentTitle(
+                            localeIdentifier: locale.identifier
+                        )
+                    ),
+                    message: Text(
+                        ProductAutocompleteCopy.alreadyPresentMessage(
+                            productName: notice.productName,
+                            localeIdentifier: locale.identifier
+                        )
+                    ),
+                    dismissButton: .default(
+                        Text(
+                            ProductAutocompleteCopy.acknowledge(
+                                localeIdentifier: locale.identifier
+                            )
+                        )
+                    )
+                )
             }
             .sheet(isPresented: $isShowingNearbyOpportunities) {
                 nearbyOpportunitiesSheet
@@ -115,13 +153,13 @@ struct ProductListView: View {
             .onChange(of: newItemName) { _, query in
                 productAutocompleteViewModel.updateQuery(
                     query,
-                    localeIdentifier: locale.identifier
+                    localeIdentifier: productAutocompleteLocaleIdentifier
                 )
             }
-            .onChange(of: locale.identifier) { _, localeIdentifier in
+            .onChange(of: locale.identifier) {
                 productAutocompleteViewModel.updateQuery(
                     newItemName,
-                    localeIdentifier: localeIdentifier
+                    localeIdentifier: productAutocompleteLocaleIdentifier
                 )
             }
             .onChange(of: isShowingAddProduct) {
@@ -136,9 +174,13 @@ struct ProductListView: View {
             }
             .onAppear {
                 appStateManager.setCurrentProductLibrary(products)
+                updateProductCatalogPersonalization()
             }
             .onChange(of: productLibrarySignature) {
                 appStateManager.setCurrentProductLibrary(products)
+            }
+            .onChange(of: productCatalogPersonalizationSignature) {
+                updateProductCatalogPersonalization()
             }
         }
         .preferredColorScheme(.dark)
@@ -196,13 +238,10 @@ struct ProductListView: View {
                 WayTaskDesign.background
                     .ignoresSafeArea()
 
-                ScrollView {
-                    addProductForm
-                        .padding(.horizontal, 20)
-                        .padding(.top, 18)
-                        .padding(.bottom, 28)
-                }
-                .scrollDismissesKeyboard(.interactively)
+                addProductForm
+                    .padding(.horizontal, 20)
+                    .padding(.top, 18)
+                    .padding(.bottom, 28)
             }
             .navigationTitle("Add Product")
             .navigationBarTitleDisplayMode(.inline)
@@ -220,9 +259,12 @@ struct ProductListView: View {
                     .disabled(productAutocompleteViewModel.isSavingProduct)
                 }
             }
+            .onAppear {
+                focusProductNameField()
+            }
         }
         .preferredColorScheme(.dark)
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }
 
@@ -279,23 +321,75 @@ struct ProductListView: View {
             } else if let selectedCustomProduct = productAutocompleteViewModel.selectedCustomProduct {
                 selectedCustomSummary(selectedCustomProduct)
             } else {
-                HStack(spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
                     selectedPhotoPreview
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        TextField("Product name", text: $newItemName)
-                            .textInputAutocapitalization(.words)
-                            .submitLabel(.done)
-                            .focused($isProductNameFocused)
-                            .onSubmit {
-                                if canAddProduct {
-                                    addItem()
-                                }
-                            }
-                            .font(.headline)
-                            .foregroundStyle(WayTaskDesign.primaryText)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(
+                            ProductAutocompleteCopy.productNameFieldLabel(
+                                localeIdentifier: locale.identifier
+                            )
+                        )
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(WayTaskDesign.secondaryText)
 
-                        Text("Saved here first. Add products to Shopping only when you plan to buy them.")
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundStyle(
+                                    isProductNameFocused
+                                        ? WayTaskDesign.accent
+                                        : WayTaskDesign.tertiaryText
+                                )
+                                .accessibilityHidden(true)
+
+                            TextField(
+                                ProductAutocompleteCopy.productNamePlaceholder(
+                                    localeIdentifier: locale.identifier
+                                ),
+                                text: $newItemName
+                            )
+                                .textInputAutocapitalization(.words)
+                                .submitLabel(.done)
+                                .focused($isProductNameFocused)
+                                .onSubmit {
+                                    if canAddProduct {
+                                        addItem()
+                                    }
+                                }
+                                .font(.headline)
+                                .foregroundStyle(WayTaskDesign.primaryText)
+                                .accessibilityLabel(
+                                    ProductAutocompleteCopy.productNameFieldLabel(
+                                        localeIdentifier: locale.identifier
+                                    )
+                                )
+                                .accessibilityIdentifier("addProduct.nameField")
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .padding(.horizontal, 12)
+                        .background(WayTaskDesign.surfaceElevated)
+                        .clipShape(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        )
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(
+                                    isProductNameFocused
+                                        ? WayTaskDesign.accent
+                                        : WayTaskDesign.surfaceBorder,
+                                    lineWidth: isProductNameFocused ? 2 : 1
+                                )
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            isProductNameFocused = true
+                        }
+
+                        Text(
+                            ProductAutocompleteCopy.productEntryGuidance(
+                                localeIdentifier: locale.identifier
+                            )
+                        )
                             .font(.caption)
                             .foregroundStyle(WayTaskDesign.secondaryText)
                             .fixedSize(horizontal: false, vertical: true)
@@ -303,7 +397,18 @@ struct ProductListView: View {
                 }
             }
 
-            productAutocompleteSuggestions
+            GeometryReader { suggestionViewport in
+                ScrollView(showsIndicators: false) {
+                    productAutocompleteSuggestions
+                        .frame(
+                            maxWidth: .infinity,
+                            minHeight: suggestionViewport.size.height,
+                            alignment: .top
+                        )
+                }
+                .scrollDismissesKeyboard(.interactively)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
             HStack(spacing: 10) {
                 PhotosPicker(
@@ -327,113 +432,213 @@ struct ProductListView: View {
             }
         }
         .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .wayTaskCard()
-        .onAppear {
-            isProductNameFocused = true
+    }
+
+    private var productAutocompleteSuggestions: some View {
+        let slots = productAutocompleteViewModel.presentationSlots
+
+        return Group {
+            if slots.isActive {
+                VStack(spacing: 12) {
+                    ZStack(alignment: .topLeading) {
+                        productAutocompleteStatusSlot(slots.statusContent)
+                        productAutocompleteResultsSlot(
+                            isVisible: slots.showsResults
+                        )
+                    }
+
+                    productAutocompleteCustomActionSlot(
+                        name: slots.customActionName
+                    )
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .top)
+        .environment(\.layoutDirection, .rightToLeft)
+    }
+
+    @ViewBuilder
+    private func productAutocompleteResultsSlot(
+        isVisible: Bool
+    ) -> some View {
+        ZStack(alignment: .topLeading) {
+            if isVisible {
+                VStack(spacing: 0) {
+                    ForEach(
+                        Array(
+                            productAutocompleteViewModel.results
+                                .prefix(10)
+                        ).indices,
+                        id: \.self
+                    ) { index in
+                        if index > 0 {
+                            Divider()
+                                .overlay(WayTaskDesign.surfaceBorder)
+                        }
+
+                        let result = productAutocompleteViewModel.results[index]
+                        Button {
+                            selectCatalogProduct(result)
+                        } label: {
+                            productAutocompleteRow(result)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .buttonStyle(.plain)
+                        .disabled(!allowsCurrentCatalogResultSelection)
+                        .accessibilityLabel(
+                            ProductAutocompleteCopy.suggestionAccessibilityLabel(
+                                result,
+                                localeIdentifier: locale.identifier
+                            )
+                        )
+                        .accessibilityIdentifier(
+                            "addProduct.suggestion.\(result.productID.rawValue)"
+                        )
+                    }
+                }
+                .background(WayTaskDesign.surfaceElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(WayTaskDesign.surfaceBorder, lineWidth: 1)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .top)
+        .allowsHitTesting(isVisible)
+        .accessibilityHidden(!isVisible)
+    }
+
+    private func productAutocompleteStatusSlot(
+        _ content: ProductAutocompleteStatusSlotContent
+    ) -> some View {
+        ZStack(alignment: .leading) {
+            productAutocompleteStatusPlaceholder(
+                ProductAutocompleteCopy.searching(
+                    localeIdentifier: locale.identifier
+                )
+            )
+            productAutocompleteStatusPlaceholder(
+                ProductAutocompleteCopy.noMatch(
+                    localeIdentifier: locale.identifier
+                )
+            )
+            productAutocompleteStatusPlaceholder(
+                ProductAutocompleteCopy.unavailable(
+                    localeIdentifier: locale.identifier
+                )
+            )
+
+            if let message = productAutocompleteStatusMessage(for: content) {
+                productAutocompleteStatus(message)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .allowsHitTesting(false)
+    }
+
+    private func productAutocompleteStatusMessage(
+        for content: ProductAutocompleteStatusSlotContent
+    ) -> String? {
+        switch content {
+        case .hidden:
+            nil
+        case .searching:
+            ProductAutocompleteCopy.searching(
+                localeIdentifier: locale.identifier
+            )
+        case .noMatch:
+            ProductAutocompleteCopy.noMatch(
+                localeIdentifier: locale.identifier
+            )
+        case .unavailable:
+            ProductAutocompleteCopy.unavailable(
+                localeIdentifier: locale.identifier
+            )
         }
     }
 
     @ViewBuilder
-    private var productAutocompleteSuggestions: some View {
-        switch productAutocompleteViewModel.phase {
-        case .idle:
-            EmptyView()
-        case .searchingSlow:
-            productAutocompleteStatus(
-                ProductAutocompleteCopy.searching(localeIdentifier: locale.identifier)
-            )
-        case .results:
-            VStack(spacing: 0) {
-                ForEach(Array(productAutocompleteViewModel.results.prefix(8)).indices, id: \.self) { index in
-                    if index > 0 {
-                        Divider()
-                            .overlay(WayTaskDesign.surfaceBorder)
+    private func productAutocompleteCustomActionSlot(
+        name customProductName: String?
+    ) -> some View {
+        ZStack(alignment: .topLeading) {
+            if let customProductName {
+                Button {
+                    selectCustomProduct()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(WayTaskDesign.accent)
+                            .frame(width: 38, height: 38)
+                            .background(WayTaskDesign.accent.opacity(0.12))
+                            .clipShape(
+                                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            )
+                            .accessibilityHidden(true)
+
+                        Text(
+                            ProductAutocompleteCopy.customProductAction(
+                                name: customProductName,
+                                localeIdentifier: locale.identifier
+                            )
+                        )
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(WayTaskDesign.primaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                        Spacer(minLength: 0)
                     }
-
-                    let result = productAutocompleteViewModel.results[index]
-                    Button {
-                        selectCatalogProduct(result)
-                    } label: {
-                        productAutocompleteRow(result)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(
-                        ProductAutocompleteCopy.suggestionAccessibilityLabel(
-                            result,
-                            localeIdentifier: locale.identifier
-                        )
-                    )
-                    .accessibilityIdentifier(
-                        "addProduct.suggestion.\(result.productID.rawValue)"
-                    )
+                    .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .contentShape(Rectangle())
                 }
-            }
-            .background(WayTaskDesign.surfaceElevated)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(WayTaskDesign.surfaceBorder, lineWidth: 1)
-            }
-        case .noMatch:
-            productAutocompleteStatus(
-                ProductAutocompleteCopy.noMatch(localeIdentifier: locale.identifier)
-            )
-        case .unavailable:
-            productAutocompleteStatus(
-                ProductAutocompleteCopy.unavailable(localeIdentifier: locale.identifier)
-            )
-        case .selectedCatalog:
-            EmptyView()
-        case .selectedCustom:
-            EmptyView()
-        }
-
-        if let customProductName = productAutocompleteViewModel.customProductActionName {
-            Button {
-                selectCustomProduct()
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(WayTaskDesign.accent)
-                        .frame(width: 38, height: 38)
-                        .background(WayTaskDesign.accent.opacity(0.12))
-                        .clipShape(
-                            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        )
-                        .accessibilityHidden(true)
-
-                    Text(
-                        ProductAutocompleteCopy.customProductAction(
-                            name: customProductName,
-                            localeIdentifier: locale.identifier
-                        )
-                    )
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(WayTaskDesign.primaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                    Spacer(minLength: 0)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .background(WayTaskDesign.surfaceElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(WayTaskDesign.surfaceBorder, lineWidth: 1)
                 }
-                .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-            }
-            .buttonStyle(.plain)
-            .background(WayTaskDesign.surfaceElevated)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(WayTaskDesign.surfaceBorder, lineWidth: 1)
-            }
-            .accessibilityLabel(
-                ProductAutocompleteCopy.customProductAction(
-                    name: customProductName,
-                    localeIdentifier: locale.identifier
+                .accessibilityLabel(
+                    ProductAutocompleteCopy.customProductAction(
+                        name: customProductName,
+                        localeIdentifier: locale.identifier
+                    )
                 )
-            )
-            .accessibilityIdentifier("addProduct.customAction")
+                .accessibilityIdentifier("addProduct.customAction")
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .top)
+    }
+
+    private func productAutocompleteStatusPlaceholder(
+        _ message: String
+    ) -> some View {
+        productAutocompleteStatusText(message)
+            .hidden()
+            .accessibilityHidden(true)
+    }
+
+    private func productAutocompleteStatusText(
+        _ message: String
+    ) -> some View {
+        Text(message)
+            .font(.caption)
+            .foregroundStyle(WayTaskDesign.secondaryText)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func productAutocompleteStatus(_ message: String) -> some View {
+        productAutocompleteStatusText(message)
+            .accessibilityIdentifier("addProduct.searchStatus")
     }
 
     private func selectedCatalogSummary(
@@ -466,9 +671,18 @@ struct ProductListView: View {
                         .foregroundStyle(WayTaskDesign.primaryText)
                         .fixedSize(horizontal: false, vertical: true)
 
+                    if let secondaryName = nonemptySecondaryName(
+                        selection.secondaryName
+                    ) {
+                        Text(secondaryName)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(WayTaskDesign.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
                     Text(selection.categoryDisplayName)
                         .font(.caption)
-                        .foregroundStyle(WayTaskDesign.secondaryText)
+                        .foregroundStyle(WayTaskDesign.tertiaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -606,9 +820,18 @@ struct ProductListView: View {
                     .foregroundStyle(WayTaskDesign.primaryText)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text(productAutocompleteDetail(for: result))
+                if let secondaryName = nonemptySecondaryName(
+                    result.secondaryName
+                ) {
+                    Text(secondaryName)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Text(result.categoryDisplayName)
                     .font(.caption)
-                    .foregroundStyle(WayTaskDesign.secondaryText)
+                    .foregroundStyle(WayTaskDesign.tertiaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -617,29 +840,33 @@ struct ProductListView: View {
         .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
 
-    private func productAutocompleteStatus(_ message: String) -> some View {
-        Text(message)
-            .font(.caption)
-            .foregroundStyle(WayTaskDesign.secondaryText)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityIdentifier("addProduct.searchStatus")
+    private func nonemptySecondaryName(_ name: String?) -> String? {
+        guard let name,
+              !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        return name
     }
 
-    private func productAutocompleteDetail(for result: ProductSearchResult) -> String {
-        [result.secondaryName, result.categoryDisplayName]
-            .compactMap { value in
-                guard let value, !value.isEmpty else {
-                    return nil
-                }
-                return value
+    private func focusProductNameField() {
+        Task { @MainActor in
+            await Task.yield()
+            guard productAutocompleteViewModel.allowsNameFieldFocus else {
+                return
             }
-            .joined(separator: " · ")
+            isProductNameFocused = true
+        }
     }
 
     private func selectCatalogProduct(_ result: ProductSearchResult) {
+        guard allowsCurrentCatalogResultSelection else {
+            return
+        }
+
         let preselectionQuery = newItemName
         guard productAutocompleteViewModel.selectCatalogProduct(
             result,
@@ -660,7 +887,7 @@ struct ProductListView: View {
 
     private func changeCatalogSelection() {
         guard let preselectionQuery = productAutocompleteViewModel.changeCatalogSelection(
-            localeIdentifier: locale.identifier
+            localeIdentifier: productAutocompleteLocaleIdentifier
         ) else {
             return
         }
@@ -689,7 +916,7 @@ struct ProductListView: View {
 
     private func changeCustomProductSelection() {
         guard let preselectionQuery = productAutocompleteViewModel.changeCustomProductSelection(
-            localeIdentifier: locale.identifier
+            localeIdentifier: productAutocompleteLocaleIdentifier
         ) else {
             return
         }
@@ -1070,6 +1297,43 @@ struct ProductListView: View {
             .joined(separator: "|")
     }
 
+    private var productCatalogPersonalizationSignature: String {
+        let productSignature = products
+            .map {
+                [
+                    $0.id.uuidString,
+                    $0.catalogProductIDRawValue ?? "",
+                    $0.name,
+                    String($0.dateAdded.timeIntervalSince1970)
+                ].joined(separator: ":")
+            }
+            .sorted()
+            .joined(separator: "|")
+        let entrySignature = shoppingListEntries
+            .map {
+                [
+                    $0.id.uuidString,
+                    $0.productID.uuidString,
+                    String($0.createdAt.timeIntervalSince1970)
+                ].joined(separator: ":")
+            }
+            .sorted()
+            .joined(separator: "|")
+        let historySignature = productHistories
+            .map {
+                [
+                    $0.id.uuidString,
+                    $0.productName,
+                    String($0.addCount),
+                    String($0.lastAddedDate.timeIntervalSince1970)
+                ].joined(separator: ":")
+            }
+            .sorted()
+            .joined(separator: "|")
+
+        return "\(productSignature)#\(entrySignature)#\(historySignature)"
+    }
+
     private var activeSession: ShoppingSession? {
         shoppingSessions
             .filter(\.isActive)
@@ -1234,18 +1498,30 @@ struct ProductListView: View {
     }
 
     private func completeProductSave(_ outcome: AddProductSaveOutcome) {
+        let completionNotice: ProductAlreadyPresentNotice?
         switch outcome {
         case .manualInserted:
             BetaDiagnosticsCenter.shared.manualProductAdded()
             productLibraryDidChange()
+            completionNotice = nil
         case .catalogInserted:
             productLibraryDidChange()
-        case .catalogAlreadyPresent:
-            break
+            completionNotice = nil
+        case .catalogAlreadyPresent(let product):
+            completionNotice = ProductAlreadyPresentNotice(
+                productName: product.name
+            )
         }
 
         resetForm()
         isShowingAddProduct = false
+
+        if let completionNotice {
+            Task { @MainActor in
+                await Task.yield()
+                alreadyPresentNotice = completionNotice
+            }
+        }
     }
 
     private func productLibraryDidChange() {
@@ -1253,6 +1529,15 @@ struct ProductListView: View {
         appStateManager.markShoppingPlanStale(
             reason: "Shopping list changed. Generate a new plan before viewing stores."
         )
+    }
+
+    private func updateProductCatalogPersonalization() {
+        let history = ProductCatalogPersonalizationHistoryBuilder.makeHistory(
+            products: products,
+            shoppingListEntries: shoppingListEntries,
+            productHistories: productHistories
+        )
+        productAutocompleteViewModel.updatePersonalization(history)
     }
 
     private var canAddProduct: Bool {
@@ -1749,6 +2034,11 @@ private enum ProductFilter: String, CaseIterable, Identifiable {
     }
 }
 
+private struct ProductAlreadyPresentNotice: Identifiable {
+    let productName: String
+    let id = UUID()
+}
+
 private struct ProductRowCard: View {
     @Bindable var product: Product
     let isInShopping: Bool
@@ -1767,6 +2057,9 @@ private struct ProductRowCard: View {
                     url: product.imageURL,
                     size: 72,
                     cornerRadius: 17,
+                    systemName: ProductKnowledgeIconResolver.systemName(
+                        forCatalogSnapshot: product.catalogIconKeySnapshot
+                    ),
                     onRemoteImageLoaded: onRemoteImageLoaded
                 )
 

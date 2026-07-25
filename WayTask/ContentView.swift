@@ -604,6 +604,20 @@ private struct LegacyShoppingReviewSheet: View {
     }
 }
 
+struct ProductShoppingThumbnailPresentation: Equatable {
+    let imageData: Data?
+    let imageURL: URL?
+    let fallbackSystemName: String
+
+    init(product: Product) {
+        imageData = product.imageData
+        imageURL = product.imageURL
+        fallbackSystemName = ProductKnowledgeIconResolver.systemName(
+            forCatalogSnapshot: product.catalogIconKeySnapshot
+        )
+    }
+}
+
 struct ProductShoppingSelectionSheet: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var appStateManager: AppStateManager
@@ -706,6 +720,7 @@ struct ProductShoppingSelectionSheet: View {
     private func productRow(_ product: Product) -> some View {
         let alreadyInShopping = isProductAlreadyInShopping(product)
         let isSelected = selectedProductIDs.contains(product.id) || alreadyInShopping
+        let thumbnail = ProductShoppingThumbnailPresentation(product: product)
 
         return Button {
             guard !alreadyInShopping else {
@@ -720,10 +735,11 @@ struct ProductShoppingSelectionSheet: View {
         } label: {
             HStack(spacing: WayTaskDesign.Spacing.sm) {
                 WayTaskProductThumbnail(
-                    data: product.imageData,
-                    url: product.imageURL,
+                    data: thumbnail.imageData,
+                    url: thumbnail.imageURL,
                     size: 52,
-                    cornerRadius: WayTaskDesign.Radius.sm
+                    cornerRadius: WayTaskDesign.Radius.sm,
+                    systemName: thumbnail.fallbackSystemName
                 )
 
                 VStack(alignment: .leading, spacing: 3) {

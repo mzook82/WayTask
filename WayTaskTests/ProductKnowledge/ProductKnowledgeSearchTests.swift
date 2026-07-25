@@ -370,7 +370,7 @@ final class ProductKnowledgeSearchTests: XCTestCase {
             limit: -1
         )
 
-        XCTAssertEqual(defaultResults.count, 8)
+        XCTAssertEqual(defaultResults.count, 10)
         XCTAssertEqual(threeResults.count, 3)
         XCTAssertEqual(clampedResults.count, 20)
         XCTAssertTrue(zeroResults.isEmpty)

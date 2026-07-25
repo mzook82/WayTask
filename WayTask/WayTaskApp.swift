@@ -24,24 +24,16 @@ struct WayTaskApp: App {
         }
         _appStateManager = StateObject(wrappedValue: AppStateManager())
         _locationManager = StateObject(wrappedValue: LocationManager())
-        do {
-            let snapshot = try BundledProductKnowledgeLoader().load()
-            let repository = InMemoryProductKnowledgeRepository(snapshot: snapshot)
-            productKnowledgeSearchAvailability = .available(
-                ProductKnowledgeSearch(repository: repository)
-            )
-        } catch {
+        let catalogProducts = ProductCatalogService().loadProductsOrEmpty()
+        if catalogProducts.isEmpty {
             productKnowledgeSearchAvailability = .unavailable
-            SentryReportingService.shared.capture(
-                error: error,
-                message: .productKnowledgeUnavailable,
-                operation: .diagnostics,
-                category: .operational,
-                area: .products
-            )
             #if DEBUG
-            print("[WayTask Product Knowledge] Suggestions unavailable.")
+            print("[WayTask Product Catalog] Suggestions unavailable; custom entry remains enabled.")
             #endif
+        } else {
+            productKnowledgeSearchAvailability = .catalog(
+                ProductCatalogSearch(products: catalogProducts)
+            )
         }
         #if DEBUG
         print(SecretsManager.isGeminiConfigured ? "Gemini configured ✔" : "Gemini unavailable")

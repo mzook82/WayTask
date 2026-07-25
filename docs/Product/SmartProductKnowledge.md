@@ -172,3 +172,9 @@ WT-022A.1 resolves the implementation blockers as follows:
 4. Runtime catalog promotion uses one manually authored, validated JSON file.
 5. Stable pilot IDs are retained and become immutable after release.
 6. Search, normalization, indexed persistence, catalog integration, and migration remain separate future approval gates.
+
+---
+
+## 10. Product Search UX Contract
+
+The [Product Search UX Contract](../Specifications/ProductSearchUXContract.md) defines the Phase 1 Add Product search experience for Hebrew and English: one-character activation, no empty-query recents, up to eight deterministic local suggestions, explicit selection and confirmation, and an always-available custom-product fallback. It preserves the current manual save path and defers catalog identity persistence and production UI integration to separately approved implementation work.

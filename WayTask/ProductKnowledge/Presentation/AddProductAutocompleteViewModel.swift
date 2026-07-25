@@ -4,11 +4,33 @@ import Foundation
 nonisolated enum ProductSuggestionPhase: Equatable, Sendable {
     case idle
     case searchingSlow
+    case replacingResults
     case results
     case noMatch
     case unavailable
     case selectedCatalog
     case selectedCustom
+}
+
+nonisolated enum ProductAutocompleteStatusSlotContent: Equatable, Sendable {
+    case hidden
+    case searching
+    case noMatch
+    case unavailable
+}
+
+nonisolated struct ProductAutocompletePresentationSlots: Equatable, Sendable {
+    let isActive: Bool
+    let statusContent: ProductAutocompleteStatusSlotContent
+    let showsResults: Bool
+    let customActionName: String?
+
+    static let empty = ProductAutocompletePresentationSlots(
+        isActive: false,
+        statusContent: .hidden,
+        showsResults: false,
+        customActionName: nil
+    )
 }
 
 nonisolated struct AddProductCatalogSelection: Hashable, Sendable {
@@ -50,6 +72,28 @@ typealias ProductAutocompleteSuggestionProvider = @Sendable (
 ) async -> [ProductSearchResult]
 
 typealias ProductAutocompleteSlowSearchDelay = @Sendable () async -> Void
+typealias ProductAutocompletePersonalizationUpdater = @Sendable (
+    _ history: [ProductCatalogSelectionHistory]
+) async -> Void
+
+nonisolated enum ProductAutocompleteLocaleResolver {
+    static func preferredApplicationLocaleIdentifier(
+        environmentLocaleIdentifier: String,
+        preferredLanguages: [String]
+    ) -> String {
+        if let preferredLanguage = preferredLanguages.lazy
+            .map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
+            .first(where: { !$0.isEmpty }) {
+            return preferredLanguage
+        }
+
+        let environmentLocaleIdentifier = environmentLocaleIdentifier
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return environmentLocaleIdentifier.isEmpty
+            ? "en"
+            : environmentLocaleIdentifier
+    }
+}
 
 @MainActor
 final class AddProductAutocompleteViewModel: ObservableObject {
@@ -61,6 +105,8 @@ final class AddProductAutocompleteViewModel: ObservableObject {
     @Published private(set) var isSavingProduct = false
 
     private let suggestionProvider: ProductAutocompleteSuggestionProvider?
+    private let personalizationUpdater:
+        ProductAutocompletePersonalizationUpdater?
     private let slowSearchDelay: ProductAutocompleteSlowSearchDelay
 
     private var generation = 0
@@ -71,6 +117,49 @@ final class AddProductAutocompleteViewModel: ObservableObject {
 
     var canChangeSelection: Bool {
         selection != nil && !isSavingProduct
+    }
+
+    var allowsNameFieldFocus: Bool {
+        selection == nil && !isSavingProduct
+    }
+
+    var presentationSlots: ProductAutocompletePresentationSlots {
+        let customActionName = customProductActionName
+        guard selection == nil,
+              customActionName != nil ||
+                !results.isEmpty ||
+                phase != .idle else {
+            return .empty
+        }
+
+        let statusContent: ProductAutocompleteStatusSlotContent
+        switch phase {
+        case .searchingSlow:
+            statusContent = .searching
+        case .noMatch:
+            statusContent = .noMatch
+        case .unavailable:
+            statusContent = .unavailable
+        case .idle, .replacingResults, .results, .selectedCatalog, .selectedCustom:
+            statusContent = .hidden
+        }
+
+        return ProductAutocompletePresentationSlots(
+            isActive: true,
+            statusContent: statusContent,
+            showsResults:
+                !results.isEmpty &&
+                (phase == .replacingResults || phase == .results),
+            customActionName: customActionName
+        )
+    }
+
+    var keepsSuggestionAreaVisible: Bool {
+        presentationSlots.isActive
+    }
+
+    var allowsCatalogResultSelection: Bool {
+        phase == .results
     }
 
     var allowsManualProductSave: Bool {
@@ -97,7 +186,8 @@ final class AddProductAutocompleteViewModel: ObservableObject {
 
     var customProductActionName: String? {
         guard selectedCatalogProduct == nil,
-              selectedCustomProduct == nil else {
+              selectedCustomProduct == nil,
+              !hasExactCatalogNameMatch else {
             return nil
         }
 
@@ -122,8 +212,21 @@ final class AddProductAutocompleteViewModel: ObservableObject {
                     limit: limit
                 )
             }
+            personalizationUpdater = nil
+        case .catalog(let search):
+            suggestionProvider = { query, _, limit in
+                await search.suggestions(
+                    matching: query,
+                    limit: limit
+                )
+                .map { $0.asProductSearchResult() }
+            }
+            personalizationUpdater = { history in
+                await search.updatePersonalization(history)
+            }
         case .unavailable:
             suggestionProvider = nil
+            personalizationUpdater = nil
         }
         self.slowSearchDelay = slowSearchDelay
     }
@@ -135,7 +238,20 @@ final class AddProductAutocompleteViewModel: ObservableObject {
         }
     ) {
         self.suggestionProvider = suggestionProvider
+        personalizationUpdater = nil
         self.slowSearchDelay = slowSearchDelay
+    }
+
+    func updatePersonalization(
+        _ history: [ProductCatalogSelectionHistory]
+    ) {
+        guard let personalizationUpdater else {
+            return
+        }
+
+        Task {
+            await personalizationUpdater(history)
+        }
     }
 
     func updateQuery(_ rawQuery: String, localeIdentifier: String) {
@@ -154,19 +270,20 @@ final class AddProductAutocompleteViewModel: ObservableObject {
         invalidateCurrentSearch()
         lastNormalizedQuery = normalizedQuery
         lastLocaleIdentifier = localeIdentifier
-        results = []
 
         guard !normalizedQuery.isEmpty else {
+            results = []
             phase = .idle
             return
         }
 
         guard let suggestionProvider else {
+            results = []
             phase = .unavailable
             return
         }
 
-        phase = .idle
+        phase = results.isEmpty ? .idle : .replacingResults
         let requestGeneration = generation
 
         searchTask = Task { [weak self] in
@@ -207,7 +324,8 @@ final class AddProductAutocompleteViewModel: ObservableObject {
         _ result: ProductSearchResult,
         preselectionQuery: String
     ) -> Bool {
-        guard phase == .results, results.contains(result) else {
+        guard allowsCatalogResultSelection,
+              results.contains(result) else {
             return false
         }
 
@@ -369,18 +487,47 @@ final class AddProductAutocompleteViewModel: ObservableObject {
             return
         }
 
-        phase = .searchingSlow
+        phase = results.isEmpty ? .searchingSlow : .replacingResults
         slowStatusTask = nil
+    }
+
+    private var hasExactCatalogNameMatch: Bool {
+        let normalizedQuery = HebrewProductSearchNormalizer.normalize(rawQuery).value
+        guard !normalizedQuery.isEmpty else {
+            return false
+        }
+
+        return results.contains {
+            $0.matchType == .exact
+                && $0.matchedRecordAuthority == .primaryDisplayName
+                && HebrewProductSearchNormalizer.normalize($0.displayName).value
+                    == normalizedQuery
+        }
     }
 }
 
 nonisolated enum ProductAutocompleteCopy {
+    static func productNameFieldLabel(localeIdentifier: String) -> String {
+        isHebrew(localeIdentifier) ? "שם המוצר" : "Product name"
+    }
+
+    static func productNamePlaceholder(localeIdentifier: String) -> String {
+        isHebrew(localeIdentifier) ? "הקלדת שם מוצר" : "Type a product name"
+    }
+
+    static func productEntryGuidance(localeIdentifier: String) -> String {
+        if isHebrew(localeIdentifier) {
+            return "המוצר יישמר כאן תחילה. אפשר להוסיף אותו לקניות כשמתכננים לקנות אותו."
+        }
+        return "Saved here first. Add products to Shopping only when you plan to buy them."
+    }
+
     static func searching(localeIdentifier: String) -> String {
         isHebrew(localeIdentifier) ? "מחפש מוצרים…" : "Searching products…"
     }
 
     static func noMatch(localeIdentifier: String) -> String {
-        isHebrew(localeIdentifier) ? "לא נמצא מוצר מתאים בקטלוג" : "No catalog match"
+        "לא נמצא מוצר מתאים בקטלוג"
     }
 
     static func unavailable(localeIdentifier: String) -> String {
@@ -406,14 +553,29 @@ nonisolated enum ProductAutocompleteCopy {
         isHebrew(localeIdentifier) ? "מוצר מותאם אישית" : "Custom Product"
     }
 
+    static func alreadyPresentTitle(localeIdentifier: String) -> String {
+        isHebrew(localeIdentifier) ? "המוצר כבר שמור" : "Already in Products"
+    }
+
+    static func alreadyPresentMessage(
+        productName: String,
+        localeIdentifier: String
+    ) -> String {
+        if isHebrew(localeIdentifier) {
+            return "״\(productName)״ כבר קיים ברשימת המוצרים. המוצר הקיים נשמר ללא שינוי."
+        }
+        return "“\(productName)” is already in Products. Your existing product was kept unchanged."
+    }
+
+    static func acknowledge(localeIdentifier: String) -> String {
+        isHebrew(localeIdentifier) ? "אישור" : "OK"
+    }
+
     static func customProductAction(
         name: String,
         localeIdentifier: String
     ) -> String {
-        if isHebrew(localeIdentifier) {
-            return "הוספת ״\(name)״ כמוצר מותאם אישית"
-        }
-        return "Add “\(name)” as a custom product"
+        "הוסף את ״\(name)״ כמוצר מותאם אישית"
     }
 
     static func suggestionAccessibilityLabel(
@@ -425,17 +587,26 @@ nonisolated enum ProductAutocompleteCopy {
         }
 
         if isHebrew(localeIdentifier) {
-            return "\(result.displayName), \(result.categoryDisplayName), נמצא גם בשם \(secondaryName)"
+            return "\(result.displayName), נמצא גם בשם \(secondaryName), \(result.categoryDisplayName)"
         }
-        return "\(result.displayName), \(result.categoryDisplayName), matched as \(secondaryName)"
+        return "\(result.displayName), matched as \(secondaryName), \(result.categoryDisplayName)"
     }
 
     static func selectedSummaryAccessibilityLabel(
         _ selection: AddProductCatalogSelection,
         localeIdentifier: String
     ) -> String {
+        let secondaryName = selection.secondaryName.flatMap {
+            $0.isEmpty ? nil : $0
+        }
         if isHebrew(localeIdentifier) {
+            if let secondaryName {
+                return "\(selection.displayName) נבחר, \(secondaryName), \(selection.categoryDisplayName)"
+            }
             return "\(selection.displayName) נבחר, \(selection.categoryDisplayName)"
+        }
+        if let secondaryName {
+            return "\(selection.displayName) selected, \(secondaryName), \(selection.categoryDisplayName)"
         }
         return "\(selection.displayName) selected, \(selection.categoryDisplayName)"
     }

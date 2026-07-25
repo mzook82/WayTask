@@ -6,7 +6,7 @@ nonisolated enum ProductKnowledgeIconResolver {
         case "product.dairy":
             return "drop.fill"
         case "product.bread":
-            return "birthday.cake.fill"
+            return "basket.fill"
         case "product.fruit":
             return "carrot.fill"
         case "product.meat":
@@ -24,7 +24,7 @@ nonisolated enum ProductKnowledgeIconResolver {
         case "product.cleaning":
             return "sparkles"
         case "product.personalcare":
-            return "figure.stand"
+            return "comb.fill"
         case "product.pharmacy":
             return "cross.case.fill"
         case "product.baby":
@@ -36,5 +36,12 @@ nonisolated enum ProductKnowledgeIconResolver {
         default:
             return fallbackSystemName
         }
+    }
+
+    static func systemName(forCatalogSnapshot semanticKey: String?) -> String {
+        guard let semanticKey else {
+            return fallbackSystemName
+        }
+        return systemName(for: semanticKey)
     }
 }

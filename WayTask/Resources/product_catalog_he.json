@@ -1,0 +1,1329 @@
+{
+  "catalogVersion": 2,
+  "locale": "he-IL",
+  "products": [
+    {
+      "id": "bread_white",
+      "name": "לחם לבן",
+      "categoryId": "bakery",
+      "aliases": ["לחם", "כיכר לחם", "לחם אחיד"],
+      "keywords": ["מאפייה", "כריך", "טוסט"],
+      "popularityScore": 98,
+      "isActive": true
+    },
+    {
+      "id": "bread_whole_wheat",
+      "name": "לחם מחיטה מלאה",
+      "categoryId": "bakery",
+      "aliases": ["לחם מלא", "לחם חיטה מלאה"],
+      "keywords": ["מאפייה", "כריך", "דגנים מלאים"],
+      "popularityScore": 94,
+      "isActive": true
+    },
+    {
+      "id": "pita",
+      "name": "פיתות",
+      "categoryId": "bakery",
+      "aliases": ["פיתה", "חבילת פיתות"],
+      "keywords": ["מאפייה", "לחם", "כריך"],
+      "popularityScore": 96,
+      "isActive": true
+    },
+    {
+      "id": "challah",
+      "name": "חלה",
+      "categoryId": "bakery",
+      "aliases": ["חלה לשבת", "חלות"],
+      "keywords": ["מאפייה", "שבת", "לחם"],
+      "popularityScore": 91,
+      "isActive": true
+    },
+    {
+      "id": "bread_rolls",
+      "name": "לחמניות",
+      "categoryId": "bakery",
+      "aliases": ["לחמנייה", "לחמניות המבורגר"],
+      "keywords": ["מאפייה", "כריך", "לחם"],
+      "popularityScore": 90,
+      "isActive": true
+    },
+    {
+      "id": "bread_sourdough",
+      "name": "לחם מחמצת",
+      "categoryId": "bakery",
+      "aliases": ["לחם שאור", "מחמצת"],
+      "keywords": ["מאפייה", "לחם כפרי", "כיכר"],
+      "popularityScore": 86,
+      "isActive": true
+    },
+    {
+      "id": "milk_3_percent",
+      "name": "חלב 3%",
+      "categoryId": "dairy",
+      "aliases": ["חלב", "חלב שלושה אחוז", "קרטון חלב"],
+      "keywords": ["מוצרי חלב", "קפה", "דגני בוקר"],
+      "popularityScore": 100,
+      "isActive": true
+    },
+    {
+      "id": "milk_1_percent",
+      "name": "חלב 1%",
+      "categoryId": "dairy",
+      "aliases": ["חלב דל שומן", "חלב אחוז אחד"],
+      "keywords": ["מוצרי חלב", "קפה", "דגני בוקר"],
+      "popularityScore": 91,
+      "isActive": true
+    },
+    {
+      "id": "yogurt_plain",
+      "name": "יוגורט טבעי",
+      "categoryId": "dairy",
+      "aliases": ["יוגורט לבן", "לבן"],
+      "keywords": ["מוצרי חלב", "ארוחת בוקר", "מקרר"],
+      "popularityScore": 88,
+      "isActive": true
+    },
+    {
+      "id": "cottage_cheese",
+      "name": "קוטג׳",
+      "categoryId": "dairy",
+      "aliases": ["קוטג'", "גבינת קוטג", "קוטג"],
+      "keywords": ["גבינה", "מוצרי חלב", "ארוחת ערב"],
+      "popularityScore": 96,
+      "isActive": true
+    },
+    {
+      "id": "yellow_cheese",
+      "name": "גבינה צהובה",
+      "categoryId": "dairy",
+      "aliases": ["גבינה לפרוסות", "פרוסות גבינה"],
+      "keywords": ["מוצרי חלב", "טוסט", "כריך"],
+      "popularityScore": 95,
+      "isActive": true
+    },
+    {
+      "id": "butter",
+      "name": "חמאה",
+      "categoryId": "dairy",
+      "aliases": ["חבילת חמאה"],
+      "keywords": ["מוצרי חלב", "אפייה", "מקרר"],
+      "popularityScore": 90,
+      "isActive": true
+    },
+    {
+      "id": "oat_drink",
+      "name": "משקה שיבולת שועל",
+      "categoryId": "dairy_alternatives",
+      "aliases": ["חלב שיבולת שועל", "חלב שיבולת", "משקה שיבולת"],
+      "keywords": ["תחליף חלב", "טבעוני", "ללא לקטוז", "קפה"],
+      "popularityScore": 94,
+      "isActive": true
+    },
+    {
+      "id": "soy_drink",
+      "name": "משקה סויה",
+      "categoryId": "dairy_alternatives",
+      "aliases": ["חלב סויה", "סויה לשתייה"],
+      "keywords": ["תחליף חלב", "טבעוני", "ללא לקטוז"],
+      "popularityScore": 91,
+      "isActive": true
+    },
+    {
+      "id": "almond_drink",
+      "name": "משקה שקדים",
+      "categoryId": "dairy_alternatives",
+      "aliases": ["חלב שקדים"],
+      "keywords": ["תחליף חלב", "טבעוני", "ללא לקטוז"],
+      "popularityScore": 89,
+      "isActive": true
+    },
+    {
+      "id": "coconut_drink",
+      "name": "משקה קוקוס",
+      "categoryId": "dairy_alternatives",
+      "aliases": ["חלב קוקוס לשתייה", "משקה על בסיס קוקוס"],
+      "keywords": ["תחליף חלב", "טבעוני", "ללא לקטוז"],
+      "popularityScore": 75,
+      "isActive": true
+    },
+    {
+      "id": "vegan_cheese",
+      "name": "גבינה טבעונית",
+      "categoryId": "dairy_alternatives",
+      "aliases": ["תחליף גבינה", "גבינה ללא חלב"],
+      "keywords": ["טבעוני", "ללא לקטוז", "פרווה"],
+      "popularityScore": 72,
+      "isActive": true
+    },
+    {
+      "id": "plant_yogurt",
+      "name": "יוגורט צמחי",
+      "categoryId": "dairy_alternatives",
+      "aliases": ["יוגורט טבעוני", "יוגורט ללא חלב"],
+      "keywords": ["תחליף חלב", "טבעוני", "ארוחת בוקר"],
+      "popularityScore": 74,
+      "isActive": true
+    },
+    {
+      "id": "apple",
+      "name": "תפוח עץ",
+      "categoryId": "fruits",
+      "aliases": ["תפוח", "תפוחים"],
+      "keywords": ["פרי", "פירות", "נשנוש"],
+      "popularityScore": 96,
+      "isActive": true
+    },
+    {
+      "id": "banana",
+      "name": "בננות",
+      "categoryId": "fruits",
+      "aliases": ["בננה"],
+      "keywords": ["פרי", "פירות", "שייק"],
+      "popularityScore": 97,
+      "isActive": true
+    },
+    {
+      "id": "orange",
+      "name": "תפוזים",
+      "categoryId": "fruits",
+      "aliases": ["תפוז"],
+      "keywords": ["פרי", "פירות", "מיץ"],
+      "popularityScore": 90,
+      "isActive": true
+    },
+    {
+      "id": "lemon",
+      "name": "לימון",
+      "categoryId": "fruits",
+      "aliases": ["לימונים"],
+      "keywords": ["פרי הדר", "סלט", "תה"],
+      "popularityScore": 92,
+      "isActive": true
+    },
+    {
+      "id": "grapes",
+      "name": "ענבים",
+      "categoryId": "fruits",
+      "aliases": ["ענבים ירוקים", "ענבים שחורים"],
+      "keywords": ["פרי", "פירות", "נשנוש"],
+      "popularityScore": 87,
+      "isActive": true
+    },
+    {
+      "id": "watermelon",
+      "name": "אבטיח",
+      "categoryId": "fruits",
+      "aliases": ["אבטיח שלם", "חצי אבטיח"],
+      "keywords": ["פרי", "קיץ", "פירות"],
+      "popularityScore": 85,
+      "isActive": true
+    },
+    {
+      "id": "tomato",
+      "name": "עגבניות",
+      "categoryId": "vegetables",
+      "aliases": ["עגבנייה", "עגבניה", "עגבניות לסלט"],
+      "keywords": ["ירק", "סלט", "בישול"],
+      "popularityScore": 99,
+      "isActive": true
+    },
+    {
+      "id": "cucumber",
+      "name": "מלפפונים",
+      "categoryId": "vegetables",
+      "aliases": ["מלפפון", "מלפפונים לסלט"],
+      "keywords": ["ירק", "סלט", "טרי"],
+      "popularityScore": 99,
+      "isActive": true
+    },
+    {
+      "id": "onion",
+      "name": "בצל",
+      "categoryId": "vegetables",
+      "aliases": ["בצלים", "בצל יבש"],
+      "keywords": ["ירק", "בישול", "סלט"],
+      "popularityScore": 97,
+      "isActive": true
+    },
+    {
+      "id": "potato",
+      "name": "תפוחי אדמה",
+      "categoryId": "vegetables",
+      "aliases": ["תפוח אדמה", "תפו״א", "תפוא"],
+      "keywords": ["ירק", "בישול", "תנור"],
+      "popularityScore": 98,
+      "isActive": true
+    },
+    {
+      "id": "carrot",
+      "name": "גזר",
+      "categoryId": "vegetables",
+      "aliases": ["גזרים"],
+      "keywords": ["ירק", "מרק", "סלט"],
+      "popularityScore": 94,
+      "isActive": true
+    },
+    {
+      "id": "lettuce",
+      "name": "חסה",
+      "categoryId": "vegetables",
+      "aliases": ["ראש חסה", "לבבות חסה"],
+      "keywords": ["ירק", "סלט", "עלים"],
+      "popularityScore": 88,
+      "isActive": true
+    },
+    {
+      "id": "chicken_breast",
+      "name": "חזה עוף",
+      "categoryId": "meat",
+      "aliases": ["פילה עוף", "חזה עוף טרי"],
+      "keywords": ["עוף", "בשר", "קצבייה"],
+      "popularityScore": 97,
+      "isActive": true
+    },
+    {
+      "id": "chicken_thighs",
+      "name": "כרעיים עוף",
+      "categoryId": "meat",
+      "aliases": ["כרעיים", "ירכי עוף"],
+      "keywords": ["עוף", "בשר", "תנור"],
+      "popularityScore": 90,
+      "isActive": true
+    },
+    {
+      "id": "whole_chicken",
+      "name": "עוף שלם",
+      "categoryId": "meat",
+      "aliases": ["עוף טרי שלם"],
+      "keywords": ["עוף", "בשר", "תנור"],
+      "popularityScore": 86,
+      "isActive": true
+    },
+    {
+      "id": "ground_beef",
+      "name": "בשר בקר טחון",
+      "categoryId": "meat",
+      "aliases": ["בשר טחון", "טחון בקר"],
+      "keywords": ["בקר", "קציצות", "קצבייה"],
+      "popularityScore": 94,
+      "isActive": true
+    },
+    {
+      "id": "beef_steak",
+      "name": "סטייק בקר",
+      "categoryId": "meat",
+      "aliases": ["נתח סטייק", "אנטרקוט"],
+      "keywords": ["בקר", "בשר", "קצבייה"],
+      "popularityScore": 78,
+      "isActive": true
+    },
+    {
+      "id": "turkey_schnitzel",
+      "name": "שניצל הודו",
+      "categoryId": "meat",
+      "aliases": ["חזה הודו לשניצל", "הודו פרוס"],
+      "keywords": ["הודו", "בשר", "טיגון"],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "salmon_fillet",
+      "name": "פילה סלמון",
+      "categoryId": "fish",
+      "aliases": ["סלמון", "דג סלמון"],
+      "keywords": ["דג", "דגים", "טרי"],
+      "popularityScore": 92,
+      "isActive": true
+    },
+    {
+      "id": "tilapia_fillet",
+      "name": "פילה אמנון",
+      "categoryId": "fish",
+      "aliases": ["דג אמנון", "מושט"],
+      "keywords": ["דג", "דגים", "טרי"],
+      "popularityScore": 85,
+      "isActive": true
+    },
+    {
+      "id": "sea_bream",
+      "name": "דניס",
+      "categoryId": "fish",
+      "aliases": ["דג דניס", "דניס שלם"],
+      "keywords": ["דג", "דגים", "טרי"],
+      "popularityScore": 83,
+      "isActive": true
+    },
+    {
+      "id": "tuna_steak",
+      "name": "סטייק טונה",
+      "categoryId": "fish",
+      "aliases": ["טונה טרייה", "פילה טונה"],
+      "keywords": ["דג", "דגים", "טרי"],
+      "popularityScore": 70,
+      "isActive": true
+    },
+    {
+      "id": "cod_fillet",
+      "name": "פילה בקלה",
+      "categoryId": "fish",
+      "aliases": ["דג בקלה", "קוד"],
+      "keywords": ["דג", "דגים", "פילה"],
+      "popularityScore": 72,
+      "isActive": true
+    },
+    {
+      "id": "gefilte_fish",
+      "name": "גפילטע פיש",
+      "categoryId": "fish",
+      "aliases": ["גפילטה פיש", "קציצות דג מתוקות"],
+      "keywords": ["דג", "שבת", "חג"],
+      "popularityScore": 60,
+      "isActive": true
+    },
+    {
+      "id": "frozen_mixed_vegetables",
+      "name": "לקט ירקות קפוא",
+      "categoryId": "frozen_food",
+      "aliases": ["ירקות קפואים", "ירקות מוקפאים"],
+      "keywords": ["מקפיא", "בישול", "ירקות"],
+      "popularityScore": 88,
+      "isActive": true
+    },
+    {
+      "id": "frozen_peas",
+      "name": "אפונה קפואה",
+      "categoryId": "frozen_food",
+      "aliases": ["אפונה מוקפאת"],
+      "keywords": ["מקפיא", "ירקות", "בישול"],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "frozen_french_fries",
+      "name": "צ׳יפס קפוא",
+      "categoryId": "frozen_food",
+      "aliases": ["צ'יפס קפוא", "תפוחי אדמה קפואים"],
+      "keywords": ["מקפיא", "טיגון", "תנור"],
+      "popularityScore": 90,
+      "isActive": true
+    },
+    {
+      "id": "frozen_pizza",
+      "name": "פיצה קפואה",
+      "categoryId": "frozen_food",
+      "aliases": ["פיצה מהמקפיא"],
+      "keywords": ["מקפיא", "ארוחה מהירה", "תנור"],
+      "popularityScore": 82,
+      "isActive": true
+    },
+    {
+      "id": "frozen_bourekas",
+      "name": "בורקס קפוא",
+      "categoryId": "frozen_food",
+      "aliases": ["בורקסים קפואים", "בורקס להקפאה"],
+      "keywords": ["מקפיא", "מאפה", "תנור"],
+      "popularityScore": 79,
+      "isActive": true
+    },
+    {
+      "id": "ice_cream",
+      "name": "גלידה",
+      "categoryId": "frozen_food",
+      "aliases": ["קופסת גלידה"],
+      "keywords": ["מקפיא", "קינוח", "מתוק"],
+      "popularityScore": 91,
+      "isActive": true
+    },
+    {
+      "id": "olive_oil",
+      "name": "שמן זית",
+      "categoryId": "pantry",
+      "aliases": ["בקבוק שמן זית"],
+      "keywords": ["בישול", "סלט", "מזווה"],
+      "popularityScore": 95,
+      "isActive": true
+    },
+    {
+      "id": "canola_oil",
+      "name": "שמן קנולה",
+      "categoryId": "pantry",
+      "aliases": ["שמן לטיגון", "שמן צמחי"],
+      "keywords": ["בישול", "טיגון", "מזווה"],
+      "popularityScore": 90,
+      "isActive": true
+    },
+    {
+      "id": "dry_lentils",
+      "name": "עדשים",
+      "categoryId": "pantry",
+      "aliases": ["עדשים ירוקות", "עדשים כתומות"],
+      "keywords": ["קטניות", "מרק", "מזווה"],
+      "popularityScore": 82,
+      "isActive": true
+    },
+    {
+      "id": "dry_chickpeas",
+      "name": "גרגרי חומוס יבשים",
+      "categoryId": "pantry",
+      "aliases": ["חומוס יבש", "גרגירי חומוס"],
+      "keywords": ["קטניות", "מזווה", "בישול"],
+      "popularityScore": 76,
+      "isActive": true
+    },
+    {
+      "id": "tahini_raw",
+      "name": "טחינה גולמית",
+      "categoryId": "pantry",
+      "aliases": ["טחינה", "טחינה מלאה"],
+      "keywords": ["שומשום", "ממרח", "מזווה"],
+      "popularityScore": 91,
+      "isActive": true
+    },
+    {
+      "id": "peanut_butter",
+      "name": "חמאת בוטנים",
+      "categoryId": "pantry",
+      "aliases": ["ממרח בוטנים"],
+      "keywords": ["ממרח", "כריך", "מזווה"],
+      "popularityScore": 83,
+      "isActive": true
+    },
+    {
+      "id": "rice_white",
+      "name": "אורז לבן",
+      "categoryId": "pasta_rice",
+      "aliases": ["אורז", "אורז רגיל"],
+      "keywords": ["תוספת", "בישול", "מזווה"],
+      "popularityScore": 98,
+      "isActive": true
+    },
+    {
+      "id": "rice_basmati",
+      "name": "אורז בסמטי",
+      "categoryId": "pasta_rice",
+      "aliases": ["בסמטי"],
+      "keywords": ["תוספת", "בישול", "אורז ארוך"],
+      "popularityScore": 89,
+      "isActive": true
+    },
+    {
+      "id": "pasta_penne",
+      "name": "פסטה פנה",
+      "categoryId": "pasta_rice",
+      "aliases": ["פנה", "פסטה קצרה"],
+      "keywords": ["איטלקי", "מזווה", "רוטב"],
+      "popularityScore": 90,
+      "isActive": true
+    },
+    {
+      "id": "spaghetti",
+      "name": "ספגטי",
+      "categoryId": "pasta_rice",
+      "aliases": ["פסטה ספגטי", "פסטה ארוכה"],
+      "keywords": ["איטלקי", "מזווה", "רוטב"],
+      "popularityScore": 93,
+      "isActive": true
+    },
+    {
+      "id": "couscous",
+      "name": "קוסקוס",
+      "categoryId": "pasta_rice",
+      "aliases": ["גרגרי קוסקוס", "קוסקוס מהיר"],
+      "keywords": ["תוספת", "מזווה", "סולת"],
+      "popularityScore": 87,
+      "isActive": true
+    },
+    {
+      "id": "ptitim",
+      "name": "פתיתים",
+      "categoryId": "pasta_rice",
+      "aliases": ["אורז בן גוריון", "פתיתים אפויים"],
+      "keywords": ["תוספת", "ילדים", "מזווה"],
+      "popularityScore": 92,
+      "isActive": true
+    },
+    {
+      "id": "canned_tuna",
+      "name": "טונה בשימורים",
+      "categoryId": "canned_food",
+      "aliases": ["קופסת טונה", "טונה בקופסה"],
+      "keywords": ["שימורים", "דג", "כריך"],
+      "popularityScore": 96,
+      "isActive": true
+    },
+    {
+      "id": "canned_corn",
+      "name": "תירס בשימורים",
+      "categoryId": "canned_food",
+      "aliases": ["קופסת תירס", "תירס מתוק"],
+      "keywords": ["שימורים", "סלט", "מזווה"],
+      "popularityScore": 90,
+      "isActive": true
+    },
+    {
+      "id": "canned_crushed_tomatoes",
+      "name": "עגבניות מרוסקות",
+      "categoryId": "canned_food",
+      "aliases": ["קופסת עגבניות", "רסק עגבניות מרוסקות"],
+      "keywords": ["שימורים", "רוטב", "בישול"],
+      "popularityScore": 89,
+      "isActive": true
+    },
+    {
+      "id": "canned_chickpeas",
+      "name": "גרגרי חומוס בשימורים",
+      "categoryId": "canned_food",
+      "aliases": ["קופסת חומוס", "חומוס משומר"],
+      "keywords": ["שימורים", "קטניות", "סלט"],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "canned_beans",
+      "name": "שעועית בשימורים",
+      "categoryId": "canned_food",
+      "aliases": ["קופסת שעועית", "שעועית משומרת"],
+      "keywords": ["שימורים", "קטניות", "בישול"],
+      "popularityScore": 78,
+      "isActive": true
+    },
+    {
+      "id": "pickles",
+      "name": "מלפפונים חמוצים",
+      "categoryId": "canned_food",
+      "aliases": ["חמוצים", "מלפפון חמוץ"],
+      "keywords": ["שימורים", "צנצנת", "כריך"],
+      "popularityScore": 88,
+      "isActive": true
+    },
+    {
+      "id": "cornflakes",
+      "name": "קורנפלקס",
+      "categoryId": "breakfast",
+      "aliases": ["קורן פלקס", "דגני תירס"],
+      "keywords": ["דגני בוקר", "חלב", "ארוחת בוקר"],
+      "popularityScore": 95,
+      "isActive": true
+    },
+    {
+      "id": "granola",
+      "name": "גרנולה",
+      "categoryId": "breakfast",
+      "aliases": ["דגני גרנולה"],
+      "keywords": ["דגני בוקר", "יוגורט", "ארוחת בוקר"],
+      "popularityScore": 86,
+      "isActive": true
+    },
+    {
+      "id": "oatmeal",
+      "name": "שיבולת שועל",
+      "categoryId": "breakfast",
+      "aliases": ["קוואקר", "דייסת שיבולת שועל"],
+      "keywords": ["ארוחת בוקר", "דייסה", "דגנים"],
+      "popularityScore": 88,
+      "isActive": true
+    },
+    {
+      "id": "eggs",
+      "name": "ביצים",
+      "categoryId": "breakfast",
+      "aliases": ["ביצי תרנגולת", "תבנית ביצים"],
+      "keywords": ["ארוחת בוקר", "חביתה", "אפייה"],
+      "popularityScore": 100,
+      "isActive": true
+    },
+    {
+      "id": "chocolate_cereal",
+      "name": "דגני בוקר שוקולד",
+      "categoryId": "breakfast",
+      "aliases": ["קורנפלקס שוקולד", "דגנים לילדים"],
+      "keywords": ["ארוחת בוקר", "חלב", "מתוק"],
+      "popularityScore": 82,
+      "isActive": true
+    },
+    {
+      "id": "strawberry_jam",
+      "name": "ריבת תות",
+      "categoryId": "breakfast",
+      "aliases": ["ריבה", "קונפיטורת תות"],
+      "keywords": ["ארוחת בוקר", "ממרח", "כריך"],
+      "popularityScore": 80,
+      "isActive": true
+    },
+    {
+      "id": "bamba",
+      "name": "במבה",
+      "categoryId": "snacks",
+      "aliases": ["חטיף בוטנים"],
+      "keywords": ["חטיף", "נשנוש", "מלוח"],
+      "popularityScore": 96,
+      "isActive": true
+    },
+    {
+      "id": "bissli",
+      "name": "ביסלי",
+      "categoryId": "snacks",
+      "aliases": ["חטיף ביסלי"],
+      "keywords": ["חטיף", "נשנוש", "מלוח"],
+      "popularityScore": 92,
+      "isActive": true
+    },
+    {
+      "id": "potato_chips",
+      "name": "תפוצ׳יפס",
+      "categoryId": "snacks",
+      "aliases": ["תפוצ'יפס", "צ׳יפס תפוחי אדמה", "חטיף תפוחי אדמה"],
+      "keywords": ["חטיף", "נשנוש", "מלוח"],
+      "popularityScore": 93,
+      "isActive": true
+    },
+    {
+      "id": "chocolate_bar",
+      "name": "שוקולד",
+      "categoryId": "snacks",
+      "aliases": ["חפיסת שוקולד", "שוקולד חלב"],
+      "keywords": ["מתוק", "ממתק", "קינוח"],
+      "popularityScore": 95,
+      "isActive": true
+    },
+    {
+      "id": "cookies",
+      "name": "עוגיות",
+      "categoryId": "snacks",
+      "aliases": ["ביסקוויטים", "עוגייה"],
+      "keywords": ["מתוק", "נשנוש", "קפה"],
+      "popularityScore": 91,
+      "isActive": true
+    },
+    {
+      "id": "wafers",
+      "name": "ופלים",
+      "categoryId": "snacks",
+      "aliases": ["וופלים", "ופל שוקולד"],
+      "keywords": ["מתוק", "חטיף", "קפה"],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "mineral_water",
+      "name": "מים מינרליים",
+      "categoryId": "drinks",
+      "aliases": ["מים", "מי שתייה", "שישיית מים"],
+      "keywords": ["שתייה", "בקבוק", "משקה"],
+      "popularityScore": 99,
+      "isActive": true
+    },
+    {
+      "id": "sparkling_water",
+      "name": "סודה",
+      "categoryId": "drinks",
+      "aliases": ["מים מוגזים", "מי סודה"],
+      "keywords": ["שתייה", "משקה מוגז", "בקבוק"],
+      "popularityScore": 88,
+      "isActive": true
+    },
+    {
+      "id": "cola",
+      "name": "קולה",
+      "categoryId": "drinks",
+      "aliases": ["משקה קולה", "קוקה קולה"],
+      "keywords": ["שתייה", "משקה מוגז", "קל"],
+      "popularityScore": 94,
+      "isActive": true
+    },
+    {
+      "id": "orange_juice",
+      "name": "מיץ תפוזים",
+      "categoryId": "drinks",
+      "aliases": ["מיץ תפוז", "מיץ סחוט"],
+      "keywords": ["שתייה", "מיץ", "ארוחת בוקר"],
+      "popularityScore": 87,
+      "isActive": true
+    },
+    {
+      "id": "instant_coffee",
+      "name": "קפה נמס",
+      "categoryId": "drinks",
+      "aliases": ["נס קפה", "קפה אינסטנט"],
+      "keywords": ["שתייה חמה", "קפאין", "בוקר"],
+      "popularityScore": 93,
+      "isActive": true
+    },
+    {
+      "id": "black_tea",
+      "name": "תה שחור",
+      "categoryId": "drinks",
+      "aliases": ["תיונים", "שקיקי תה", "תה"],
+      "keywords": ["שתייה חמה", "חליטה", "קפאין"],
+      "popularityScore": 86,
+      "isActive": true
+    },
+    {
+      "id": "flour_all_purpose",
+      "name": "קמח לבן",
+      "categoryId": "baking",
+      "aliases": ["קמח לבן רגיל", "קמח רב תכליתי"],
+      "keywords": ["אפייה", "עוגה", "לחם"],
+      "popularityScore": 96,
+      "isActive": true
+    },
+    {
+      "id": "flour",
+      "name": "קמח",
+      "categoryId": "baking",
+      "aliases": ["קמח חיטה", "שקית קמח"],
+      "keywords": ["אפייה", "בצק", "עוגה", "לחם"],
+      "popularityScore": 98,
+      "isActive": true
+    },
+    {
+      "id": "sugar",
+      "name": "סוכר",
+      "categoryId": "baking",
+      "aliases": ["סוכר לבן", "שקית סוכר"],
+      "keywords": ["אפייה", "המתקה", "קפה", "תה"],
+      "popularityScore": 99,
+      "isActive": true
+    },
+    {
+      "id": "baking_powder",
+      "name": "אבקת אפייה",
+      "categoryId": "baking",
+      "aliases": ["אבקת אפיה"],
+      "keywords": ["אפייה", "עוגה", "תפיחה"],
+      "popularityScore": 89,
+      "isActive": true
+    },
+    {
+      "id": "vanilla_sugar",
+      "name": "סוכר וניל",
+      "categoryId": "baking",
+      "aliases": ["שקית סוכר וניל"],
+      "keywords": ["אפייה", "עוגה", "וניל"],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "dry_yeast",
+      "name": "שמרים יבשים",
+      "categoryId": "baking",
+      "aliases": ["שמרים", "שמרית"],
+      "keywords": ["אפייה", "לחם", "תפיחה"],
+      "popularityScore": 87,
+      "isActive": true
+    },
+    {
+      "id": "cocoa_powder",
+      "name": "אבקת קקאו",
+      "categoryId": "baking",
+      "aliases": ["קקאו"],
+      "keywords": ["אפייה", "שוקולד", "עוגה"],
+      "popularityScore": 83,
+      "isActive": true
+    },
+    {
+      "id": "cornstarch",
+      "name": "קורנפלור",
+      "categoryId": "baking",
+      "aliases": ["עמילן תירס", "קמח תירס להסמכה"],
+      "keywords": ["אפייה", "הסמכה", "בישול"],
+      "popularityScore": 75,
+      "isActive": true
+    },
+    {
+      "id": "salt",
+      "name": "מלח",
+      "categoryId": "spices",
+      "aliases": ["מלח שולחן", "מלח דק"],
+      "keywords": ["תיבול", "בישול", "אפייה"],
+      "popularityScore": 99,
+      "isActive": true
+    },
+    {
+      "id": "black_pepper",
+      "name": "פלפל שחור",
+      "categoryId": "spices",
+      "aliases": ["פלפל שחור טחון"],
+      "keywords": ["תבלין", "תיבול", "בישול"],
+      "popularityScore": 96,
+      "isActive": true
+    },
+    {
+      "id": "sweet_paprika",
+      "name": "פפריקה מתוקה",
+      "categoryId": "spices",
+      "aliases": ["פפריקה", "פפריקה אדומה"],
+      "keywords": ["תבלין", "תיבול", "בישול"],
+      "popularityScore": 93,
+      "isActive": true
+    },
+    {
+      "id": "cumin",
+      "name": "כמון",
+      "categoryId": "spices",
+      "aliases": ["כמון טחון"],
+      "keywords": ["תבלין", "תיבול", "בישול"],
+      "popularityScore": 87,
+      "isActive": true
+    },
+    {
+      "id": "turmeric",
+      "name": "כורכום",
+      "categoryId": "spices",
+      "aliases": ["כורכום טחון"],
+      "keywords": ["תבלין", "תיבול", "בישול"],
+      "popularityScore": 88,
+      "isActive": true
+    },
+    {
+      "id": "cinnamon",
+      "name": "קינמון",
+      "categoryId": "spices",
+      "aliases": ["קינמון טחון"],
+      "keywords": ["תבלין", "אפייה", "מתוק"],
+      "popularityScore": 90,
+      "isActive": true
+    },
+    {
+      "id": "zaatar",
+      "name": "זעתר",
+      "categoryId": "spices",
+      "aliases": ["תערובת זעתר"],
+      "keywords": ["תבלין", "תיבול", "מאפה"],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "dish_liquid",
+      "name": "נוזל כלים",
+      "categoryId": "cleaning",
+      "aliases": ["סבון כלים", "נוזל לשטיפת כלים"],
+      "keywords": ["ניקיון", "שטיפת כלים", "מטבח"],
+      "popularityScore": 97,
+      "isActive": true
+    },
+    {
+      "id": "laundry_detergent",
+      "name": "ג׳ל כביסה",
+      "categoryId": "cleaning",
+      "aliases": ["ג'ל כביסה", "נוזל כביסה", "אבקת כביסה"],
+      "keywords": ["ניקיון", "מכונת כביסה", "בגדים"],
+      "popularityScore": 96,
+      "isActive": true
+    },
+    {
+      "id": "fabric_softener",
+      "name": "מרכך כביסה",
+      "categoryId": "cleaning",
+      "aliases": ["מרכך לבגדים"],
+      "keywords": ["ניקיון", "מכונת כביסה", "ריח"],
+      "popularityScore": 92,
+      "isActive": true
+    },
+    {
+      "id": "bleach",
+      "name": "אקונומיקה",
+      "categoryId": "cleaning",
+      "aliases": ["מלבין", "חומר הלבנה"],
+      "keywords": ["ניקיון", "חיטוי", "שירותים"],
+      "popularityScore": 89,
+      "isActive": true
+    },
+    {
+      "id": "floor_cleaner",
+      "name": "נוזל רצפות",
+      "categoryId": "cleaning",
+      "aliases": ["חומר לניקוי רצפה", "סבון רצפה"],
+      "keywords": ["ניקיון", "שטיפה", "בית"],
+      "popularityScore": 91,
+      "isActive": true
+    },
+    {
+      "id": "dishwasher_tablets",
+      "name": "טבליות למדיח",
+      "categoryId": "cleaning",
+      "aliases": ["קפסולות למדיח", "טבליות למדיח כלים"],
+      "keywords": ["ניקיון", "מדיח כלים", "מטבח"],
+      "popularityScore": 88,
+      "isActive": true
+    },
+    {
+      "id": "toilet_paper",
+      "name": "נייר טואלט",
+      "categoryId": "paper_products",
+      "aliases": ["נייר שירותים", "גלילי נייר טואלט", "נייר לבית שימוש"],
+      "keywords": ["מוצרי נייר", "שירותים", "אמבטיה"],
+      "popularityScore": 100,
+      "isActive": true
+    },
+    {
+      "id": "paper_towels",
+      "name": "מגבות נייר",
+      "categoryId": "paper_products",
+      "aliases": ["נייר סופג", "גליל נייר למטבח"],
+      "keywords": ["מוצרי נייר", "מטבח", "ניקיון"],
+      "popularityScore": 96,
+      "isActive": true
+    },
+    {
+      "id": "facial_tissues",
+      "name": "ממחטות נייר",
+      "categoryId": "paper_products",
+      "aliases": ["טישו", "נייר טישו"],
+      "keywords": ["מוצרי נייר", "אף", "קופסה"],
+      "popularityScore": 88,
+      "isActive": true
+    },
+    {
+      "id": "baking_paper",
+      "name": "נייר אפייה",
+      "categoryId": "paper_products",
+      "aliases": ["נייר אפיה", "נייר לתנור"],
+      "keywords": ["מוצרי נייר", "אפייה", "תבנית"],
+      "popularityScore": 85,
+      "isActive": true
+    },
+    {
+      "id": "trash_bags",
+      "name": "שקיות אשפה",
+      "categoryId": "paper_products",
+      "aliases": ["שקיות זבל", "שקיות לפח"],
+      "keywords": ["ניקיון", "פח", "בית"],
+      "popularityScore": 95,
+      "isActive": true
+    },
+    {
+      "id": "wet_cleaning_wipes",
+      "name": "מטליות לחות לניקוי",
+      "categoryId": "paper_products",
+      "aliases": ["מגבוני ניקוי", "מטליות חד פעמיות"],
+      "keywords": ["ניקיון", "בית", "מוצרי נייר"],
+      "popularityScore": 83,
+      "isActive": true
+    },
+    {
+      "id": "toothpaste",
+      "name": "משחת שיניים",
+      "categoryId": "personal_care",
+      "aliases": ["משחה לשיניים", "משחת שיניים למבוגרים"],
+      "keywords": ["היגיינת פה", "צחצוח", "אמבטיה"],
+      "popularityScore": 98,
+      "isActive": true
+    },
+    {
+      "id": "shampoo",
+      "name": "שמפו",
+      "categoryId": "personal_care",
+      "aliases": ["שמפו לשיער"],
+      "keywords": ["חפיפה", "שיער", "אמבטיה"],
+      "popularityScore": 96,
+      "isActive": true
+    },
+    {
+      "id": "conditioner",
+      "name": "מרכך שיער",
+      "categoryId": "personal_care",
+      "aliases": ["קונדישינר", "מרכך"],
+      "keywords": ["חפיפה", "שיער", "אמבטיה"],
+      "popularityScore": 89,
+      "isActive": true
+    },
+    {
+      "id": "bar_soap",
+      "name": "סבון מוצק",
+      "categoryId": "personal_care",
+      "aliases": ["סבון ידיים מוצק", "סבון רחצה"],
+      "keywords": ["היגיינה", "רחצה", "אמבטיה"],
+      "popularityScore": 87,
+      "isActive": true
+    },
+    {
+      "id": "body_wash",
+      "name": "סבון גוף",
+      "categoryId": "personal_care",
+      "aliases": ["ג׳ל רחצה", "ג'ל רחצה", "תחליב רחצה"],
+      "keywords": ["היגיינה", "מקלחת", "אמבטיה"],
+      "popularityScore": 92,
+      "isActive": true
+    },
+    {
+      "id": "deodorant",
+      "name": "דאודורנט",
+      "categoryId": "personal_care",
+      "aliases": ["דאודורנט ספריי", "דאודורנט סטיק"],
+      "keywords": ["היגיינה", "טיפוח", "ריח"],
+      "popularityScore": 93,
+      "isActive": true
+    },
+    {
+      "id": "paracetamol",
+      "name": "פרצטמול",
+      "categoryId": "pharmacy",
+      "aliases": ["אקמול", "משכך כאבים פרצטמול"],
+      "keywords": ["תרופה", "חום", "כאב"],
+      "popularityScore": 94,
+      "isActive": true
+    },
+    {
+      "id": "ibuprofen",
+      "name": "איבופרופן",
+      "categoryId": "pharmacy",
+      "aliases": ["אדוויל", "נורופן", "משכך כאבים איבופרופן"],
+      "keywords": ["תרופה", "כאב", "דלקת"],
+      "popularityScore": 89,
+      "isActive": true
+    },
+    {
+      "id": "adhesive_bandages",
+      "name": "פלסטרים",
+      "categoryId": "pharmacy",
+      "aliases": ["פלסטר", "אגד מדבק"],
+      "keywords": ["עזרה ראשונה", "פצע", "חבישה"],
+      "popularityScore": 82,
+      "isActive": true
+    },
+    {
+      "id": "antiseptic_solution",
+      "name": "חומר חיטוי",
+      "categoryId": "pharmacy",
+      "aliases": ["נוזל לחיטוי פצעים", "תמיסת חיטוי"],
+      "keywords": ["עזרה ראשונה", "פצע", "חיטוי"],
+      "popularityScore": 78,
+      "isActive": true
+    },
+    {
+      "id": "hand_sanitizer",
+      "name": "אלכוג׳ל",
+      "categoryId": "pharmacy",
+      "aliases": ["אלכוג'ל", "ג׳ל לחיטוי ידיים", "ג'ל לחיטוי ידיים"],
+      "keywords": ["היגיינה", "חיטוי", "ידיים"],
+      "popularityScore": 81,
+      "isActive": true
+    },
+    {
+      "id": "multivitamin",
+      "name": "מולטי ויטמין",
+      "categoryId": "pharmacy",
+      "aliases": ["ויטמינים", "תוסף מולטי ויטמין"],
+      "keywords": ["תוסף תזונה", "בריאות", "פארם"],
+      "popularityScore": 72,
+      "isActive": true
+    },
+    {
+      "id": "baby_diapers",
+      "name": "חיתולים",
+      "categoryId": "baby",
+      "aliases": ["חיתולים לתינוק", "טיטולים"],
+      "keywords": ["תינוק", "החתלה", "חד פעמי"],
+      "popularityScore": 98,
+      "isActive": true
+    },
+    {
+      "id": "baby_wipes",
+      "name": "מגבונים לתינוקות",
+      "categoryId": "baby",
+      "aliases": ["מגבוני תינוקות", "מגבונים לתינוק", "מגבונים לחים"],
+      "keywords": ["תינוק", "החתלה", "ניקוי"],
+      "popularityScore": 97,
+      "isActive": true
+    },
+    {
+      "id": "infant_formula",
+      "name": "תרכובת מזון לתינוקות",
+      "categoryId": "baby",
+      "aliases": ["תמ״ל", "תמל", "פורמולה לתינוק", "תחליף חלב לתינוק"],
+      "keywords": ["תינוק", "האכלה", "בקבוק"],
+      "popularityScore": 91,
+      "isActive": true
+    },
+    {
+      "id": "baby_puree",
+      "name": "מחית לתינוק",
+      "categoryId": "baby",
+      "aliases": ["מזון תינוקות", "גרבר", "מחית פירות לתינוק"],
+      "keywords": ["תינוק", "האכלה", "טעימות"],
+      "popularityScore": 76,
+      "isActive": true
+    },
+    {
+      "id": "baby_shampoo",
+      "name": "שמפו לתינוק",
+      "categoryId": "baby",
+      "aliases": ["שמפו תינוקות"],
+      "keywords": ["תינוק", "רחצה", "שיער"],
+      "popularityScore": 80,
+      "isActive": true
+    },
+    {
+      "id": "diaper_cream",
+      "name": "משחה להחתלה",
+      "categoryId": "baby",
+      "aliases": ["משחת החתלה", "קרם לטוסיק"],
+      "keywords": ["תינוק", "החתלה", "עור"],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "dog_food",
+      "name": "מזון לכלבים",
+      "categoryId": "pet_supplies",
+      "aliases": ["אוכל לכלבים", "מזון לכלב", "אוכל לכלב"],
+      "keywords": ["כלב", "חיות מחמד", "יבש"],
+      "popularityScore": 96,
+      "isActive": true
+    },
+    {
+      "id": "cat_food",
+      "name": "מזון לחתולים",
+      "categoryId": "pet_supplies",
+      "aliases": ["אוכל לחתולים", "מזון לחתול", "אוכל לחתול"],
+      "keywords": ["חתול", "חיות מחמד", "יבש"],
+      "popularityScore": 95,
+      "isActive": true
+    },
+    {
+      "id": "cat_litter",
+      "name": "חול לחתולים",
+      "categoryId": "pet_supplies",
+      "aliases": ["חול לחתול", "מצע לחתולים"],
+      "keywords": ["חתול", "ארגז חול", "חיות מחמד"],
+      "popularityScore": 91,
+      "isActive": true
+    },
+    {
+      "id": "dog_treats",
+      "name": "חטיפים לכלבים",
+      "categoryId": "pet_supplies",
+      "aliases": ["חטיף לכלב", "צ׳ופרים לכלב"],
+      "keywords": ["כלב", "אילוף", "חיות מחמד"],
+      "popularityScore": 81,
+      "isActive": true
+    },
+    {
+      "id": "cat_treats",
+      "name": "חטיפים לחתולים",
+      "categoryId": "pet_supplies",
+      "aliases": ["חטיף לחתול", "צ׳ופרים לחתול"],
+      "keywords": ["חתול", "חיות מחמד", "נשנוש"],
+      "popularityScore": 76,
+      "isActive": true
+    },
+    {
+      "id": "pet_flea_treatment",
+      "name": "טיפול נגד פרעושים",
+      "categoryId": "pet_supplies",
+      "aliases": ["אמפולה נגד פרעושים", "חומר נגד קרציות"],
+      "keywords": ["כלב", "חתול", "חיות מחמד"],
+      "popularityScore": 70,
+      "isActive": true
+    },
+    {
+      "id": "disposable_cups",
+      "name": "כוסות חד-פעמיות",
+      "categoryId": "disposable_products",
+      "aliases": ["כוסות חד פעמי", "כוסות פלסטיק"],
+      "keywords": ["אירוח", "פיקניק", "כלים"],
+      "popularityScore": 94,
+      "isActive": true
+    },
+    {
+      "id": "disposable_plates",
+      "name": "צלחות חד-פעמיות",
+      "categoryId": "disposable_products",
+      "aliases": ["צלחות חד פעמי", "צלחות פלסטיק"],
+      "keywords": ["אירוח", "פיקניק", "כלים"],
+      "popularityScore": 92,
+      "isActive": true
+    },
+    {
+      "id": "disposable_forks",
+      "name": "מזלגות חד-פעמיים",
+      "categoryId": "disposable_products",
+      "aliases": ["מזלגות חד פעמי", "מזלגות פלסטיק"],
+      "keywords": ["אירוח", "פיקניק", "סכו״ם"],
+      "popularityScore": 86,
+      "isActive": true
+    },
+    {
+      "id": "disposable_knives",
+      "name": "סכינים חד-פעמיים",
+      "categoryId": "disposable_products",
+      "aliases": ["סכינים חד פעמי", "סכינים פלסטיק"],
+      "keywords": ["אירוח", "פיקניק", "סכו״ם"],
+      "popularityScore": 84,
+      "isActive": true
+    },
+    {
+      "id": "disposable_spoons",
+      "name": "כפיות חד-פעמיות",
+      "categoryId": "disposable_products",
+      "aliases": ["כפיות חד פעמי", "כפיות פלסטיק"],
+      "keywords": ["אירוח", "קפה", "סכו״ם"],
+      "popularityScore": 87,
+      "isActive": true
+    },
+    {
+      "id": "napkins",
+      "name": "מפיות",
+      "categoryId": "disposable_products",
+      "aliases": ["מפיות נייר", "מפיות שולחן"],
+      "keywords": ["אירוח", "שולחן", "חד פעמי"],
+      "popularityScore": 90,
+      "isActive": true
+    },
+    {
+      "id": "aluminum_foil",
+      "name": "נייר אלומיניום",
+      "categoryId": "household_products",
+      "aliases": ["רדיד אלומיניום", "נייר כסף"],
+      "keywords": ["מטבח", "עטיפה", "תנור"],
+      "popularityScore": 93,
+      "isActive": true
+    },
+    {
+      "id": "cling_film",
+      "name": "ניילון נצמד",
+      "categoryId": "household_products",
+      "aliases": ["פלסטיק נצמד", "ניילון למזון"],
+      "keywords": ["מטבח", "עטיפה", "אחסון"],
+      "popularityScore": 91,
+      "isActive": true
+    },
+    {
+      "id": "food_storage_bags",
+      "name": "שקיות אוכל",
+      "categoryId": "household_products",
+      "aliases": ["שקיות סנדוויץ׳", "שקיות סנדוויץ'", "שקיות כריכים"],
+      "keywords": ["מטבח", "אחסון", "כריך"],
+      "popularityScore": 88,
+      "isActive": true
+    },
+    {
+      "id": "batteries_aa",
+      "name": "סוללות AA",
+      "categoryId": "household_products",
+      "aliases": ["סוללות אצבע", "בטריות AA"],
+      "keywords": ["חשמל", "מכשירים", "בית"],
+      "popularityScore": 85,
+      "isActive": true
+    },
+    {
+      "id": "light_bulb",
+      "name": "נורת לד",
+      "categoryId": "household_products",
+      "aliases": ["נורה", "נורת LED", "מנורת לד"],
+      "keywords": ["חשמל", "תאורה", "בית"],
+      "popularityScore": 80,
+      "isActive": true
+    },
+    {
+      "id": "matches",
+      "name": "גפרורים",
+      "categoryId": "household_products",
+      "aliases": ["קופסת גפרורים"],
+      "keywords": ["אש", "נרות", "בית"],
+      "popularityScore": 72,
+      "isActive": true
+    }
+  ]
+}

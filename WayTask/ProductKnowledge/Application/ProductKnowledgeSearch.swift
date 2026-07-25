@@ -1,7 +1,7 @@
 import Foundation
 
 actor ProductKnowledgeSearch {
-    static nonisolated let defaultResultLimit = 8
+    static nonisolated let defaultResultLimit = 10
     static nonisolated let maximumResultLimit = 20
 
     private let repository: any ProductKnowledgeRepository
