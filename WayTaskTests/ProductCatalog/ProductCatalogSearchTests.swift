@@ -198,7 +198,11 @@ final class ProductCatalogSearchTests: XCTestCase {
 
         XCTAssertEqual(results.first?.id, "salt")
         XCTAssertEqual(results.first?.matchLevel, .exactName)
-        XCTAssertEqual(results.first?.product.categoryId, "spices")
+        XCTAssertEqual(results.first?.product.categoryId, "pantry")
+        XCTAssertEqual(
+            results.first?.product.subcategoryId,
+            "pantry.spices"
+        )
     }
 
     func testCAT002SugarPrefixAndExactRankGenericSugarFirst() async throws {
@@ -239,7 +243,7 @@ final class ProductCatalogSearchTests: XCTestCase {
             results.allSatisfy {
                 $0.matchLevel <= .nameWordPrefix
                     && HebrewProductSearchNormalizer
-                        .normalize($0.product.name)
+                        .normalize($0.product.canonicalName)
                         .value
                         .hasPrefix("פס")
             }
@@ -326,7 +330,7 @@ final class ProductCatalogSearchTests: XCTestCase {
     ) -> CatalogProduct {
         CatalogProduct(
             id: id,
-            name: name,
+            canonicalName: name,
             categoryId: categoryId,
             aliases: aliases,
             keywords: keywords,

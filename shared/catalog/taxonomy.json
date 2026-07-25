@@ -1,0 +1,546 @@
+{
+  "taxonomyVersion": 1,
+  "locale": "he-IL",
+  "categories": [
+    {
+      "id": "dairy",
+      "canonicalName": "Dairy & Alternatives",
+      "localizedNames": {
+        "he-IL": "מוצרי חלב ותחליפים"
+      },
+      "description": "Dairy, eggs, and direct dairy alternatives.",
+      "subcategories": [
+        {
+          "id": "dairy.milk",
+          "canonicalName": "Milk",
+          "localizedNames": {
+            "he-IL": "חלב"
+          },
+          "parentCategoryId": "dairy"
+        },
+        {
+          "id": "dairy.alternatives",
+          "canonicalName": "Dairy Alternatives",
+          "localizedNames": {
+            "he-IL": "תחליפי חלב"
+          },
+          "parentCategoryId": "dairy"
+        }
+      ]
+    },
+    {
+      "id": "bakery",
+      "canonicalName": "Bakery",
+      "localizedNames": {
+        "he-IL": "מאפייה"
+      },
+      "description": "Bread and prepared bakery products.",
+      "subcategories": []
+    },
+    {
+      "id": "fruits_vegetables",
+      "canonicalName": "Fruits & Vegetables",
+      "localizedNames": {
+        "he-IL": "פירות וירקות"
+      },
+      "description": "Fresh produce and herbs.",
+      "subcategories": [
+        {
+          "id": "fruits_vegetables.fruits",
+          "canonicalName": "Fruits",
+          "localizedNames": {
+            "he-IL": "פירות"
+          },
+          "parentCategoryId": "fruits_vegetables"
+        },
+        {
+          "id": "fruits_vegetables.vegetables",
+          "canonicalName": "Vegetables",
+          "localizedNames": {
+            "he-IL": "ירקות"
+          },
+          "parentCategoryId": "fruits_vegetables"
+        }
+      ]
+    },
+    {
+      "id": "meat_fish",
+      "canonicalName": "Meat, Fish & Alternatives",
+      "localizedNames": {
+        "he-IL": "בשר, דגים ותחליפים"
+      },
+      "description": "Fresh or chilled meat, poultry, fish, seafood, and direct alternatives.",
+      "subcategories": [
+        {
+          "id": "meat_fish.meat",
+          "canonicalName": "Meat & Poultry",
+          "localizedNames": {
+            "he-IL": "בשר ועוף"
+          },
+          "parentCategoryId": "meat_fish"
+        },
+        {
+          "id": "meat_fish.fish",
+          "canonicalName": "Fish & Seafood",
+          "localizedNames": {
+            "he-IL": "דגים ופירות ים"
+          },
+          "parentCategoryId": "meat_fish"
+        }
+      ]
+    },
+    {
+      "id": "pantry",
+      "canonicalName": "Pantry",
+      "localizedNames": {
+        "he-IL": "מזווה"
+      },
+      "description": "Shelf-stable foods, cooking ingredients, canned goods, breakfast, and baking.",
+      "subcategories": [
+        {
+          "id": "pantry.pasta_rice",
+          "canonicalName": "Pasta & Rice",
+          "localizedNames": {
+            "he-IL": "פסטה ואורז"
+          },
+          "parentCategoryId": "pantry"
+        },
+        {
+          "id": "pantry.canned_food",
+          "canonicalName": "Canned Food",
+          "localizedNames": {
+            "he-IL": "שימורים"
+          },
+          "parentCategoryId": "pantry"
+        },
+        {
+          "id": "pantry.breakfast",
+          "canonicalName": "Breakfast",
+          "localizedNames": {
+            "he-IL": "ארוחת בוקר"
+          },
+          "parentCategoryId": "pantry"
+        },
+        {
+          "id": "pantry.breakfast_cereal",
+          "canonicalName": "Breakfast Cereal",
+          "localizedNames": {
+            "he-IL": "דגני בוקר"
+          },
+          "parentCategoryId": "pantry"
+        },
+        {
+          "id": "pantry.baking",
+          "canonicalName": "Baking",
+          "localizedNames": {
+            "he-IL": "אפייה"
+          },
+          "parentCategoryId": "pantry"
+        },
+        {
+          "id": "pantry.spices",
+          "canonicalName": "Spices",
+          "localizedNames": {
+            "he-IL": "תבלינים"
+          },
+          "parentCategoryId": "pantry"
+        }
+      ]
+    },
+    {
+      "id": "drinks",
+      "canonicalName": "Drinks",
+      "localizedNames": {
+        "he-IL": "משקאות"
+      },
+      "description": "Non-dairy beverages and beverage preparation.",
+      "subcategories": [
+        {
+          "id": "drinks.coffee",
+          "canonicalName": "Coffee",
+          "localizedNames": {
+            "he-IL": "קפה"
+          },
+          "parentCategoryId": "drinks"
+        }
+      ]
+    },
+    {
+      "id": "frozen",
+      "canonicalName": "Frozen",
+      "localizedNames": {
+        "he-IL": "קפואים"
+      },
+      "description": "Products whose frozen state is fundamental.",
+      "subcategories": [
+        {
+          "id": "frozen.food",
+          "canonicalName": "Frozen Food",
+          "localizedNames": {
+            "he-IL": "מזון קפוא"
+          },
+          "parentCategoryId": "frozen"
+        }
+      ]
+    },
+    {
+      "id": "snacks",
+      "canonicalName": "Snacks & Sweets",
+      "localizedNames": {
+        "he-IL": "חטיפים ומתוקים"
+      },
+      "description": "Snacks, sweets, and confectionery.",
+      "subcategories": []
+    },
+    {
+      "id": "household",
+      "canonicalName": "Household",
+      "localizedNames": {
+        "he-IL": "מוצרי בית"
+      },
+      "description": "Paper, storage, disposables, and general household consumables.",
+      "subcategories": [
+        {
+          "id": "household.paper_products",
+          "canonicalName": "Paper Products",
+          "localizedNames": {
+            "he-IL": "מוצרי נייר"
+          },
+          "parentCategoryId": "household"
+        },
+        {
+          "id": "household.disposable_products",
+          "canonicalName": "Disposable Products",
+          "localizedNames": {
+            "he-IL": "כלים חד-פעמיים"
+          },
+          "parentCategoryId": "household"
+        },
+        {
+          "id": "household.storage",
+          "canonicalName": "Food & Home Storage",
+          "localizedNames": {
+            "he-IL": "אחסון לבית ולמזון"
+          },
+          "parentCategoryId": "household"
+        },
+        {
+          "id": "household.waste_bags",
+          "canonicalName": "Waste Bags",
+          "localizedNames": {
+            "he-IL": "שקיות אשפה"
+          },
+          "parentCategoryId": "household"
+        }
+      ]
+    },
+    {
+      "id": "cleaning",
+      "canonicalName": "Cleaning",
+      "localizedNames": {
+        "he-IL": "ניקיון"
+      },
+      "description": "Cleaning, dishwashing, laundry, and cleaning tools.",
+      "subcategories": []
+    },
+    {
+      "id": "personal_care",
+      "canonicalName": "Personal Care",
+      "localizedNames": {
+        "he-IL": "טיפוח אישי"
+      },
+      "description": "Hygiene, oral care, grooming, and routine body care.",
+      "subcategories": [
+        {
+          "id": "personal_care.oral_care",
+          "canonicalName": "Oral Care",
+          "localizedNames": {
+            "he-IL": "טיפוח הפה"
+          },
+          "parentCategoryId": "personal_care"
+        }
+      ]
+    },
+    {
+      "id": "pharmacy",
+      "canonicalName": "Pharmacy & Health",
+      "localizedNames": {
+        "he-IL": "פארם ובריאות"
+      },
+      "description": "Medicines, supplements, first aid, and health support.",
+      "subcategories": []
+    },
+    {
+      "id": "baby",
+      "canonicalName": "Baby",
+      "localizedNames": {
+        "he-IL": "תינוקות"
+      },
+      "description": "Non-therapeutic infant feeding, diapering, hygiene, and care.",
+      "subcategories": []
+    },
+    {
+      "id": "pets",
+      "canonicalName": "Pets",
+      "localizedNames": {
+        "he-IL": "בעלי חיים"
+      },
+      "description": "Pet food, care, hygiene, and animal-specific consumables.",
+      "subcategories": [
+        {
+          "id": "pets.supplies",
+          "canonicalName": "Pet Supplies",
+          "localizedNames": {
+            "he-IL": "ציוד לבעלי חיים"
+          },
+          "parentCategoryId": "pets"
+        }
+      ]
+    },
+    {
+      "id": "apparel",
+      "canonicalName": "Apparel",
+      "localizedNames": {
+        "he-IL": "ביגוד והנעלה"
+      },
+      "description": "Clothing, footwear, and wearable accessories.",
+      "subcategories": []
+    },
+    {
+      "id": "electronics",
+      "canonicalName": "Electronics",
+      "localizedNames": {
+        "he-IL": "אלקטרוניקה"
+      },
+      "description": "Consumer electronics, cables, batteries, and accessories.",
+      "subcategories": [
+        {
+          "id": "electronics.mobile_accessories",
+          "canonicalName": "Mobile Accessories",
+          "localizedNames": {
+            "he-IL": "אביזרים לטלפון"
+          },
+          "parentCategoryId": "electronics"
+        }
+      ]
+    },
+    {
+      "id": "home_garden",
+      "canonicalName": "Home & Garden",
+      "localizedNames": {
+        "he-IL": "בית וגינה"
+      },
+      "description": "Home improvement, kitchenware, furniture, garden, and tools.",
+      "subcategories": []
+    },
+    {
+      "id": "office_school",
+      "canonicalName": "Office & School",
+      "localizedNames": {
+        "he-IL": "משרד ובית ספר"
+      },
+      "description": "Office, stationery, art, and school supplies.",
+      "subcategories": [
+        {
+          "id": "office_school.school_supplies",
+          "canonicalName": "School Supplies",
+          "localizedNames": {
+            "he-IL": "ציוד לבית ספר"
+          },
+          "parentCategoryId": "office_school"
+        }
+      ]
+    },
+    {
+      "id": "automotive",
+      "canonicalName": "Automotive",
+      "localizedNames": {
+        "he-IL": "רכב"
+      },
+      "description": "Vehicle care, accessories, and consumables.",
+      "subcategories": []
+    },
+    {
+      "id": "sports_outdoors",
+      "canonicalName": "Sports & Outdoors",
+      "localizedNames": {
+        "he-IL": "ספורט וטיולים"
+      },
+      "description": "Sports, fitness, travel, and outdoor products.",
+      "subcategories": []
+    },
+    {
+      "id": "toys_games",
+      "canonicalName": "Toys & Games",
+      "localizedNames": {
+        "he-IL": "צעצועים ומשחקים"
+      },
+      "description": "Toys, hobbies, puzzles, and games.",
+      "subcategories": []
+    },
+    {
+      "id": "books_media",
+      "canonicalName": "Books & Media",
+      "localizedNames": {
+        "he-IL": "ספרים ומדיה"
+      },
+      "description": "Books and physical media.",
+      "subcategories": []
+    },
+    {
+      "id": "uncategorized",
+      "canonicalName": "Uncategorized",
+      "localizedNames": {
+        "he-IL": "ללא קטגוריה"
+      },
+      "description": "Review-only fallback that is never a search synonym.",
+      "subcategories": []
+    }
+  ],
+  "compatibilityMappings": [
+    {
+      "legacyCategoryId": "baby",
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "migrationMode": "direct"
+    },
+    {
+      "legacyCategoryId": "bakery",
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "migrationMode": "direct"
+    },
+    {
+      "legacyCategoryId": "baking",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "migrationMode": "subcategory_default"
+    },
+    {
+      "legacyCategoryId": "breakfast",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast",
+      "migrationMode": "product_review_required"
+    },
+    {
+      "legacyCategoryId": "canned_food",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "migrationMode": "subcategory_default"
+    },
+    {
+      "legacyCategoryId": "cleaning",
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "migrationMode": "direct"
+    },
+    {
+      "legacyCategoryId": "dairy",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "migrationMode": "product_review_required"
+    },
+    {
+      "legacyCategoryId": "dairy_alternatives",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": "dairy.alternatives",
+      "migrationMode": "subcategory_default"
+    },
+    {
+      "legacyCategoryId": "disposable_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "migrationMode": "subcategory_default"
+    },
+    {
+      "legacyCategoryId": "drinks",
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "migrationMode": "product_review_required"
+    },
+    {
+      "legacyCategoryId": "fish",
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "migrationMode": "subcategory_default"
+    },
+    {
+      "legacyCategoryId": "frozen_food",
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "migrationMode": "subcategory_default"
+    },
+    {
+      "legacyCategoryId": "fruits",
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "migrationMode": "subcategory_default"
+    },
+    {
+      "legacyCategoryId": "household_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "migrationMode": "product_review_required"
+    },
+    {
+      "legacyCategoryId": "meat",
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "migrationMode": "subcategory_default"
+    },
+    {
+      "legacyCategoryId": "pantry",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "migrationMode": "product_review_required"
+    },
+    {
+      "legacyCategoryId": "paper_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "migrationMode": "product_review_required"
+    },
+    {
+      "legacyCategoryId": "pasta_rice",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "migrationMode": "subcategory_default"
+    },
+    {
+      "legacyCategoryId": "personal_care",
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "migrationMode": "product_review_required"
+    },
+    {
+      "legacyCategoryId": "pet_supplies",
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "migrationMode": "product_review_required"
+    },
+    {
+      "legacyCategoryId": "pharmacy",
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "migrationMode": "direct"
+    },
+    {
+      "legacyCategoryId": "snacks",
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "migrationMode": "direct"
+    },
+    {
+      "legacyCategoryId": "spices",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "migrationMode": "subcategory_default"
+    },
+    {
+      "legacyCategoryId": "vegetables",
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "migrationMode": "subcategory_default"
+    }
+  ]
+}

@@ -26,13 +26,14 @@ The recommended foundation is:
 
 ## 2. Deliverables
 
-1. [Product Audit](../Audits/2026-07-23_WT-020_ProductAudit.md)
-2. [UX Specification](../Specifications/SmartProductCreation.md)
-3. [Architecture Proposal](../Architecture/ProductKnowledgeArchitecture.md)
-4. [Product Entity Data Model](../Architecture/ProductEntityDataModel.md)
-5. [Suggested Folder Structure](../Implementation/SmartProductKnowledge_Implementation.md)
-6. [Migration Strategy](../Architecture/ProductKnowledgeMigrationStrategy.md)
-7. [Risk Analysis](../Audits/2026-07-23_WT-020_RiskAnalysis.md)
+1. [Canonical Product Catalog Specification](../Specifications/CanonicalProductCatalogSpecification.md)
+2. [Product Audit](../Audits/2026-07-23_WT-020_ProductAudit.md)
+3. [UX Specification](../Specifications/SmartProductCreation.md)
+4. [Architecture Proposal](../Architecture/ProductKnowledgeArchitecture.md)
+5. [Product Entity Data Model](../Architecture/ProductEntityDataModel.md)
+6. [Suggested Folder Structure](../Implementation/SmartProductKnowledge_Implementation.md)
+7. [Migration Strategy](../Architecture/ProductKnowledgeMigrationStrategy.md)
+8. [Risk Analysis](../Audits/2026-07-23_WT-020_RiskAnalysis.md)
 
 ---
 
@@ -106,13 +107,42 @@ Existing integrations are documented only so the architecture can accept them th
 
 ---
 
-## 7. Recommended Next Decision
+## 7. WT-026A Shared Contract and WT-026B Migration
 
-Before implementation planning, Product and Engineering should approve:
+The approved canonical model is now represented by platform-neutral resources in
+`shared/catalog/`:
 
-1. Canonical Product Entity versus user/shopping state separation.
-2. Generic-product and sellable-variant behavior.
-3. Taxonomy revision 1 and semantic icon contract.
-4. Search normalization and supported-language fixtures.
-5. iOS local search persistence spike.
-6. Migration release gates and rollback window.
+- JSON Schema version 1.
+- Taxonomy version 1 with 23 top-level retail categories.
+- Explicit compatibility mappings for all 24 production v2 category IDs.
+- Hebrew normalization fixtures.
+- Canonical resolution acceptance fixtures.
+
+iOS supports the retired schema-less v2 resource and canonical schema version 1.
+Both decode to one `CatalogProduct` model; the search, ranking, personalization, UI,
+and catalog-aware persistence paths remain source-format independent. The bundled
+production catalog now uses schema version 1, catalog version 3, and taxonomy version
+1.
+
+WT-026B reviewed all 147 products and assigned canonical category/subcategory IDs.
+The 48 products belonging to the eight broad `product_review_required` legacy
+groups were reviewed individually, and none remains unresolved. The non-runtime
+audit is `shared/catalog/product-taxonomy-review.json`.
+
+Every stable product ID, popularity score, and active state was preserved. Search
+equivalence fixtures cover representative canonical-name, alias, brand-term, and
+custom queries. Catalog-aware persistence and personalization continue to aggregate
+by the same product IDs; the legacy decoder remains covered for backward
+compatibility.
+
+The future Android repository should vendor the same released `shared/catalog/`
+artifact, validate its checksum, and execute the same normalization and acceptance
+fixtures through native Kotlin loaders and search code.
+
+## 8. Exact Next Step
+
+**WT-027A — Controlled Canonical Catalog Coverage Expansion:** add only reviewed
+`CATALOG_FEEDBACK.md` gaps in canonical schema version 1, increment the catalog
+version, complete taxonomy review entries, and add shared and native regressions.
+The Android repository should vendor and verify the same immutable shared contract
+release before product coverage diverges.

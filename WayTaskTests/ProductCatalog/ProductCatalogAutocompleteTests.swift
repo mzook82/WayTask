@@ -89,7 +89,7 @@ final class ProductCatalogAutocompleteTests: XCTestCase {
     private func product(id: String, name: String) -> CatalogProduct {
         CatalogProduct(
             id: id,
-            name: name,
+            canonicalName: name,
             categoryId: "bakery",
             aliases: [],
             keywords: [],

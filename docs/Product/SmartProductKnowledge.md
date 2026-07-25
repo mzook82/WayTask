@@ -26,13 +26,14 @@ The recommended foundation is:
 
 ## 2. Deliverables
 
-1. [Product Audit](../Audits/2026-07-23_WT-020_ProductAudit.md)
-2. [UX Specification](../Specifications/SmartProductCreation.md)
-3. [Architecture Proposal](../Architecture/ProductKnowledgeArchitecture.md)
-4. [Product Entity Data Model](../Architecture/ProductEntityDataModel.md)
-5. [Suggested Folder Structure](../Implementation/SmartProductKnowledge_Implementation.md)
-6. [Migration Strategy](../Architecture/ProductKnowledgeMigrationStrategy.md)
-7. [Risk Analysis](../Audits/2026-07-23_WT-020_RiskAnalysis.md)
+1. [Canonical Product Catalog Specification](../Specifications/CanonicalProductCatalogSpecification.md)
+2. [Product Audit](../Audits/2026-07-23_WT-020_ProductAudit.md)
+3. [UX Specification](../Specifications/SmartProductCreation.md)
+4. [Architecture Proposal](../Architecture/ProductKnowledgeArchitecture.md)
+5. [Product Entity Data Model](../Architecture/ProductEntityDataModel.md)
+6. [Suggested Folder Structure](../Implementation/SmartProductKnowledge_Implementation.md)
+7. [Migration Strategy](../Architecture/ProductKnowledgeMigrationStrategy.md)
+8. [Risk Analysis](../Audits/2026-07-23_WT-020_RiskAnalysis.md)
 
 ---
 

@@ -1,17 +1,222 @@
 import Foundation
 
-nonisolated struct CatalogProduct: Codable, Hashable, Identifiable, Sendable {
-    let id: String
-    let name: String
-    let categoryId: String
-    let aliases: [String]
-    let keywords: [String]
-    let popularityScore: Int
-    let isActive: Bool
+nonisolated indirect enum CatalogMetadataValue:
+    Codable,
+    Hashable,
+    Sendable
+{
+    case string(String)
+    case number(Double)
+    case boolean(Bool)
+    case object([String: CatalogMetadataValue])
+    case array([CatalogMetadataValue])
+    case null
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(Bool.self) {
+            self = .boolean(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .number(value)
+        } else if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode(
+            [String: CatalogMetadataValue].self
+        ) {
+            self = .object(value)
+        } else if let value = try? container.decode(
+            [CatalogMetadataValue].self
+        ) {
+            self = .array(value)
+        } else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Unsupported catalog metadata value."
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let value):
+            try container.encode(value)
+        case .number(let value):
+            try container.encode(value)
+        case .boolean(let value):
+            try container.encode(value)
+        case .object(let value):
+            try container.encode(value)
+        case .array(let value):
+            try container.encode(value)
+        case .null:
+            try container.encodeNil()
+        }
+    }
 }
 
-nonisolated struct ProductCatalogDocument: Codable, Equatable, Sendable {
+nonisolated struct CatalogProduct:
+    Codable,
+    Hashable,
+    Identifiable,
+    Sendable
+{
+    let id: String
+    let canonicalName: String
+    let categoryId: String
+    let subcategoryId: String?
+    let aliases: [String]
+    let keywords: [String]
+    let brandTerms: [String]
+    let popularityScore: Int
+    let isActive: Bool
+    let replacementProductId: String?
+    let deprecatedSinceCatalogVersion: Int?
+    let legacyNames: [String]
+    let metadata: [String: CatalogMetadataValue]?
+
+    init(
+        id: String,
+        canonicalName: String,
+        categoryId: String,
+        subcategoryId: String? = nil,
+        aliases: [String],
+        keywords: [String],
+        brandTerms: [String] = [],
+        popularityScore: Int,
+        isActive: Bool,
+        replacementProductId: String? = nil,
+        deprecatedSinceCatalogVersion: Int? = nil,
+        legacyNames: [String] = [],
+        metadata: [String: CatalogMetadataValue]? = nil
+    ) {
+        self.id = id
+        self.canonicalName = canonicalName
+        self.categoryId = categoryId
+        self.subcategoryId = subcategoryId
+        self.aliases = aliases
+        self.keywords = keywords
+        self.brandTerms = brandTerms
+        self.popularityScore = popularityScore
+        self.isActive = isActive
+        self.replacementProductId = replacementProductId
+        self.deprecatedSinceCatalogVersion =
+            deprecatedSinceCatalogVersion
+        self.legacyNames = legacyNames
+        self.metadata = metadata
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case canonicalName
+        case categoryId
+        case subcategoryId
+        case aliases
+        case keywords
+        case brandTerms
+        case popularityScore
+        case isActive
+        case replacementProductId
+        case deprecatedSinceCatalogVersion
+        case legacyNames
+        case metadata
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        guard container.contains(.subcategoryId) else {
+            throw DecodingError.keyNotFound(
+                CodingKeys.subcategoryId,
+                DecodingError.Context(
+                    codingPath: container.codingPath,
+                    debugDescription:
+                        "Canonical products require subcategoryId, which may be null."
+                )
+            )
+        }
+
+        id = try container.decode(String.self, forKey: .id)
+        canonicalName = try container.decode(
+            String.self,
+            forKey: .canonicalName
+        )
+        categoryId = try container.decode(String.self, forKey: .categoryId)
+        subcategoryId = try container.decodeIfPresent(
+            String.self,
+            forKey: .subcategoryId
+        )
+        aliases = try container.decode([String].self, forKey: .aliases)
+        keywords = try container.decode([String].self, forKey: .keywords)
+        brandTerms = try container.decode(
+            [String].self,
+            forKey: .brandTerms
+        )
+        popularityScore = try container.decode(
+            Int.self,
+            forKey: .popularityScore
+        )
+        isActive = try container.decode(Bool.self, forKey: .isActive)
+        replacementProductId = try container.decodeIfPresent(
+            String.self,
+            forKey: .replacementProductId
+        )
+        deprecatedSinceCatalogVersion = try container.decodeIfPresent(
+            Int.self,
+            forKey: .deprecatedSinceCatalogVersion
+        )
+        legacyNames = try container.decodeIfPresent(
+            [String].self,
+            forKey: .legacyNames
+        ) ?? []
+        metadata = try container.decodeIfPresent(
+            [String: CatalogMetadataValue].self,
+            forKey: .metadata
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(canonicalName, forKey: .canonicalName)
+        try container.encode(categoryId, forKey: .categoryId)
+        if let subcategoryId {
+            try container.encode(subcategoryId, forKey: .subcategoryId)
+        } else {
+            try container.encodeNil(forKey: .subcategoryId)
+        }
+        try container.encode(aliases, forKey: .aliases)
+        try container.encode(keywords, forKey: .keywords)
+        try container.encode(brandTerms, forKey: .brandTerms)
+        try container.encode(popularityScore, forKey: .popularityScore)
+        try container.encode(isActive, forKey: .isActive)
+        try container.encodeIfPresent(
+            replacementProductId,
+            forKey: .replacementProductId
+        )
+        try container.encodeIfPresent(
+            deprecatedSinceCatalogVersion,
+            forKey: .deprecatedSinceCatalogVersion
+        )
+        if !legacyNames.isEmpty {
+            try container.encode(legacyNames, forKey: .legacyNames)
+        }
+        try container.encodeIfPresent(metadata, forKey: .metadata)
+    }
+}
+
+nonisolated enum ProductCatalogSourceFormat: String, Equatable, Sendable {
+    case legacyV2 = "legacy_v2"
+    case canonicalV1 = "canonical_v1"
+}
+
+nonisolated struct ProductCatalogDocument: Equatable, Sendable {
+    let schemaVersion: Int?
     let catalogVersion: Int
+    let taxonomyVersion: Int?
     let locale: String
     let products: [CatalogProduct]
+    let sourceFormat: ProductCatalogSourceFormat
 }

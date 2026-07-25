@@ -1,0 +1,73 @@
+{
+  "fixtureVersion": 1,
+  "locale": "he-IL",
+  "normalizationContract": "hebrew_product_search_v1",
+  "fixtures": [
+    {
+      "id": "whitespace_collapse",
+      "input": "  לחם   מלא  ",
+      "expected": "לחמ מלא",
+      "purpose": "Trim leading and trailing whitespace and collapse repeated spaces."
+    },
+    {
+      "id": "punctuation_boundaries",
+      "input": "נייר---שירותים",
+      "expected": "נייר שירותימ",
+      "purpose": "Treat punctuation runs as one token boundary."
+    },
+    {
+      "id": "hebrew_apostrophe_removal",
+      "input": "ג׳ל כביסה",
+      "expected": "גל כביסה",
+      "purpose": "Remove Hebrew geresh without splitting the word."
+    },
+    {
+      "id": "ascii_apostrophe_removal",
+      "input": "קוטג' 3%",
+      "expected": "קוטג 3",
+      "purpose": "Normalize ASCII apostrophes and percent punctuation."
+    },
+    {
+      "id": "quotation_mark_removal",
+      "input": "תמ״ל",
+      "expected": "תמל",
+      "purpose": "Remove Hebrew gershayim within an abbreviation."
+    },
+    {
+      "id": "niqqud_removal",
+      "input": "מֶלֶךְ",
+      "expected": "מלכ",
+      "purpose": "Remove Hebrew combining marks."
+    },
+    {
+      "id": "final_letter_kaf",
+      "input": "מלך",
+      "expected": "מלכ",
+      "purpose": "Normalize final kaf to regular kaf."
+    },
+    {
+      "id": "final_letters_all",
+      "input": "ך ם ן ף ץ",
+      "expected": "כ מ נ פ צ",
+      "purpose": "Normalize all five Hebrew final letters."
+    },
+    {
+      "id": "case_fold_latin",
+      "input": "  AA   Batteries ",
+      "expected": "aa batteries",
+      "purpose": "Apply locale-stable case folding where relevant."
+    },
+    {
+      "id": "canonical_name_comparison",
+      "input": "  שקיות אשפה ",
+      "expected": "שקיות אשפה",
+      "purpose": "Produce the canonical comparison key for a product name."
+    },
+    {
+      "id": "alias_comparison",
+      "input": "״שקיות זבל״",
+      "expected": "שקיות זבל",
+      "purpose": "Produce the same comparison form used for aliases."
+    }
+  ]
+}

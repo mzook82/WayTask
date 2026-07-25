@@ -1,0 +1,1096 @@
+{
+  "reviewVersion": 1,
+  "catalogVersion": 3,
+  "taxonomyVersion": 1,
+  "locale": "he-IL",
+  "productCount": 147,
+  "products": [
+    {
+      "productId": "bread_white",
+      "previousLegacyCategoryId": "bakery",
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "bread_whole_wheat",
+      "previousLegacyCategoryId": "bakery",
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "pita",
+      "previousLegacyCategoryId": "bakery",
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "challah",
+      "previousLegacyCategoryId": "bakery",
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "bread_rolls",
+      "previousLegacyCategoryId": "bakery",
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "bread_sourdough",
+      "previousLegacyCategoryId": "bakery",
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "milk_3_percent",
+      "previousLegacyCategoryId": "dairy",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": "dairy.milk",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy dairy; assigned dairy / dairy.milk."
+    },
+    {
+      "productId": "milk_1_percent",
+      "previousLegacyCategoryId": "dairy",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": "dairy.milk",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy dairy; assigned dairy / dairy.milk."
+    },
+    {
+      "productId": "yogurt_plain",
+      "previousLegacyCategoryId": "dairy",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy dairy; assigned dairy / no approved subcategory."
+    },
+    {
+      "productId": "cottage_cheese",
+      "previousLegacyCategoryId": "dairy",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "alias_updated",
+      "note": "Individually reviewed from legacy dairy; assigned dairy / no approved subcategory. Updated aliases to remove normalization duplicates or add approved equivalents."
+    },
+    {
+      "productId": "yellow_cheese",
+      "previousLegacyCategoryId": "dairy",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy dairy; assigned dairy / no approved subcategory."
+    },
+    {
+      "productId": "butter",
+      "previousLegacyCategoryId": "dairy",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy dairy; assigned dairy / no approved subcategory."
+    },
+    {
+      "productId": "oat_drink",
+      "previousLegacyCategoryId": "dairy_alternatives",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": "dairy.alternatives",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "soy_drink",
+      "previousLegacyCategoryId": "dairy_alternatives",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": "dairy.alternatives",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "almond_drink",
+      "previousLegacyCategoryId": "dairy_alternatives",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": "dairy.alternatives",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "coconut_drink",
+      "previousLegacyCategoryId": "dairy_alternatives",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": "dairy.alternatives",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "vegan_cheese",
+      "previousLegacyCategoryId": "dairy_alternatives",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": "dairy.alternatives",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "plant_yogurt",
+      "previousLegacyCategoryId": "dairy_alternatives",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": "dairy.alternatives",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "apple",
+      "previousLegacyCategoryId": "fruits",
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "banana",
+      "previousLegacyCategoryId": "fruits",
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "orange",
+      "previousLegacyCategoryId": "fruits",
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "lemon",
+      "previousLegacyCategoryId": "fruits",
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "grapes",
+      "previousLegacyCategoryId": "fruits",
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "watermelon",
+      "previousLegacyCategoryId": "fruits",
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "tomato",
+      "previousLegacyCategoryId": "vegetables",
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "cucumber",
+      "previousLegacyCategoryId": "vegetables",
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "onion",
+      "previousLegacyCategoryId": "vegetables",
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "potato",
+      "previousLegacyCategoryId": "vegetables",
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "alias_updated",
+      "note": "Updated aliases to remove normalization duplicates or add approved equivalents."
+    },
+    {
+      "productId": "carrot",
+      "previousLegacyCategoryId": "vegetables",
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "lettuce",
+      "previousLegacyCategoryId": "vegetables",
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "chicken_breast",
+      "previousLegacyCategoryId": "meat",
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "chicken_thighs",
+      "previousLegacyCategoryId": "meat",
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "whole_chicken",
+      "previousLegacyCategoryId": "meat",
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "ground_beef",
+      "previousLegacyCategoryId": "meat",
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "beef_steak",
+      "previousLegacyCategoryId": "meat",
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "turkey_schnitzel",
+      "previousLegacyCategoryId": "meat",
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "salmon_fillet",
+      "previousLegacyCategoryId": "fish",
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "tilapia_fillet",
+      "previousLegacyCategoryId": "fish",
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "sea_bream",
+      "previousLegacyCategoryId": "fish",
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "tuna_steak",
+      "previousLegacyCategoryId": "fish",
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "cod_fillet",
+      "previousLegacyCategoryId": "fish",
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "gefilte_fish",
+      "previousLegacyCategoryId": "fish",
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.fish",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "frozen_mixed_vegetables",
+      "previousLegacyCategoryId": "frozen_food",
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "frozen_peas",
+      "previousLegacyCategoryId": "frozen_food",
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "frozen_french_fries",
+      "previousLegacyCategoryId": "frozen_food",
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "alias_updated",
+      "note": "Updated aliases to remove normalization duplicates or add approved equivalents."
+    },
+    {
+      "productId": "frozen_pizza",
+      "previousLegacyCategoryId": "frozen_food",
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "frozen_bourekas",
+      "previousLegacyCategoryId": "frozen_food",
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "ice_cream",
+      "previousLegacyCategoryId": "frozen_food",
+      "canonicalCategoryId": "frozen",
+      "canonicalSubcategoryId": "frozen.food",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "olive_oil",
+      "previousLegacyCategoryId": "pantry",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy pantry; assigned pantry / no approved subcategory."
+    },
+    {
+      "productId": "canola_oil",
+      "previousLegacyCategoryId": "pantry",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy pantry; assigned pantry / no approved subcategory."
+    },
+    {
+      "productId": "dry_lentils",
+      "previousLegacyCategoryId": "pantry",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy pantry; assigned pantry / no approved subcategory."
+    },
+    {
+      "productId": "dry_chickpeas",
+      "previousLegacyCategoryId": "pantry",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy pantry; assigned pantry / no approved subcategory."
+    },
+    {
+      "productId": "tahini_raw",
+      "previousLegacyCategoryId": "pantry",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy pantry; assigned pantry / no approved subcategory."
+    },
+    {
+      "productId": "peanut_butter",
+      "previousLegacyCategoryId": "pantry",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy pantry; assigned pantry / no approved subcategory."
+    },
+    {
+      "productId": "rice_white",
+      "previousLegacyCategoryId": "pasta_rice",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "rice_basmati",
+      "previousLegacyCategoryId": "pasta_rice",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "pasta_penne",
+      "previousLegacyCategoryId": "pasta_rice",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "spaghetti",
+      "previousLegacyCategoryId": "pasta_rice",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "couscous",
+      "previousLegacyCategoryId": "pasta_rice",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "ptitim",
+      "previousLegacyCategoryId": "pasta_rice",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.pasta_rice",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "canned_tuna",
+      "previousLegacyCategoryId": "canned_food",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "canned_corn",
+      "previousLegacyCategoryId": "canned_food",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "canned_crushed_tomatoes",
+      "previousLegacyCategoryId": "canned_food",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "canned_chickpeas",
+      "previousLegacyCategoryId": "canned_food",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "canned_beans",
+      "previousLegacyCategoryId": "canned_food",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "pickles",
+      "previousLegacyCategoryId": "canned_food",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.canned_food",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "cornflakes",
+      "previousLegacyCategoryId": "breakfast",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast_cereal",
+      "reviewStatus": "canonical_name_updated",
+      "note": "Individually reviewed from legacy breakfast; assigned pantry / pantry.breakfast_cereal. Canonical name changed from קורנפלקס; the previous name remains an alias and legacyName."
+    },
+    {
+      "productId": "granola",
+      "previousLegacyCategoryId": "breakfast",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast_cereal",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy breakfast; assigned pantry / pantry.breakfast_cereal."
+    },
+    {
+      "productId": "oatmeal",
+      "previousLegacyCategoryId": "breakfast",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy breakfast; assigned pantry / pantry.breakfast."
+    },
+    {
+      "productId": "eggs",
+      "previousLegacyCategoryId": "breakfast",
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy breakfast; assigned dairy / no approved subcategory."
+    },
+    {
+      "productId": "chocolate_cereal",
+      "previousLegacyCategoryId": "breakfast",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast_cereal",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy breakfast; assigned pantry / pantry.breakfast_cereal."
+    },
+    {
+      "productId": "strawberry_jam",
+      "previousLegacyCategoryId": "breakfast",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy breakfast; assigned pantry / pantry.breakfast."
+    },
+    {
+      "productId": "bamba",
+      "previousLegacyCategoryId": "snacks",
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "bissli",
+      "previousLegacyCategoryId": "snacks",
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "potato_chips",
+      "previousLegacyCategoryId": "snacks",
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "alias_updated",
+      "note": "Updated aliases to remove normalization duplicates or add approved equivalents."
+    },
+    {
+      "productId": "chocolate_bar",
+      "previousLegacyCategoryId": "snacks",
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "cookies",
+      "previousLegacyCategoryId": "snacks",
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "wafers",
+      "previousLegacyCategoryId": "snacks",
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "mineral_water",
+      "previousLegacyCategoryId": "drinks",
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy drinks; assigned drinks / no approved subcategory."
+    },
+    {
+      "productId": "sparkling_water",
+      "previousLegacyCategoryId": "drinks",
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy drinks; assigned drinks / no approved subcategory."
+    },
+    {
+      "productId": "cola",
+      "previousLegacyCategoryId": "drinks",
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "brand_term_updated",
+      "note": "Individually reviewed from legacy drinks; assigned drinks / no approved subcategory. Moved non-generic brand expressions from aliases to brandTerms."
+    },
+    {
+      "productId": "orange_juice",
+      "previousLegacyCategoryId": "drinks",
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy drinks; assigned drinks / no approved subcategory."
+    },
+    {
+      "productId": "instant_coffee",
+      "previousLegacyCategoryId": "drinks",
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": "drinks.coffee",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy drinks; assigned drinks / drinks.coffee."
+    },
+    {
+      "productId": "black_tea",
+      "previousLegacyCategoryId": "drinks",
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy drinks; assigned drinks / no approved subcategory."
+    },
+    {
+      "productId": "flour_all_purpose",
+      "previousLegacyCategoryId": "baking",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "flour",
+      "previousLegacyCategoryId": "baking",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "sugar",
+      "previousLegacyCategoryId": "baking",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "baking_powder",
+      "previousLegacyCategoryId": "baking",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "vanilla_sugar",
+      "previousLegacyCategoryId": "baking",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "dry_yeast",
+      "previousLegacyCategoryId": "baking",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "brand_term_updated",
+      "note": "Moved non-generic brand expressions from aliases to brandTerms."
+    },
+    {
+      "productId": "cocoa_powder",
+      "previousLegacyCategoryId": "baking",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "cornstarch",
+      "previousLegacyCategoryId": "baking",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "salt",
+      "previousLegacyCategoryId": "spices",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "black_pepper",
+      "previousLegacyCategoryId": "spices",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "sweet_paprika",
+      "previousLegacyCategoryId": "spices",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "cumin",
+      "previousLegacyCategoryId": "spices",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "turmeric",
+      "previousLegacyCategoryId": "spices",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "cinnamon",
+      "previousLegacyCategoryId": "spices",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "zaatar",
+      "previousLegacyCategoryId": "spices",
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "dish_liquid",
+      "previousLegacyCategoryId": "cleaning",
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "laundry_detergent",
+      "previousLegacyCategoryId": "cleaning",
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "alias_updated",
+      "note": "Updated aliases to remove normalization duplicates or add approved equivalents."
+    },
+    {
+      "productId": "fabric_softener",
+      "previousLegacyCategoryId": "cleaning",
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "bleach",
+      "previousLegacyCategoryId": "cleaning",
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "floor_cleaner",
+      "previousLegacyCategoryId": "cleaning",
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "dishwasher_tablets",
+      "previousLegacyCategoryId": "cleaning",
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "toilet_paper",
+      "previousLegacyCategoryId": "paper_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.paper_products",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy paper_products; assigned household / household.paper_products."
+    },
+    {
+      "productId": "paper_towels",
+      "previousLegacyCategoryId": "paper_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.paper_products",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy paper_products; assigned household / household.paper_products."
+    },
+    {
+      "productId": "facial_tissues",
+      "previousLegacyCategoryId": "paper_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.paper_products",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy paper_products; assigned household / household.paper_products."
+    },
+    {
+      "productId": "baking_paper",
+      "previousLegacyCategoryId": "paper_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.paper_products",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy paper_products; assigned household / household.paper_products."
+    },
+    {
+      "productId": "trash_bags",
+      "previousLegacyCategoryId": "paper_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.waste_bags",
+      "reviewStatus": "alias_updated",
+      "note": "Individually reviewed from legacy paper_products; assigned household / household.waste_bags. Updated aliases to remove normalization duplicates or add approved equivalents."
+    },
+    {
+      "productId": "wet_cleaning_wipes",
+      "previousLegacyCategoryId": "paper_products",
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy paper_products; assigned cleaning / no approved subcategory."
+    },
+    {
+      "productId": "toothpaste",
+      "previousLegacyCategoryId": "personal_care",
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": "personal_care.oral_care",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy personal_care; assigned personal_care / personal_care.oral_care."
+    },
+    {
+      "productId": "shampoo",
+      "previousLegacyCategoryId": "personal_care",
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy personal_care; assigned personal_care / no approved subcategory."
+    },
+    {
+      "productId": "conditioner",
+      "previousLegacyCategoryId": "personal_care",
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy personal_care; assigned personal_care / no approved subcategory."
+    },
+    {
+      "productId": "bar_soap",
+      "previousLegacyCategoryId": "personal_care",
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy personal_care; assigned personal_care / no approved subcategory."
+    },
+    {
+      "productId": "body_wash",
+      "previousLegacyCategoryId": "personal_care",
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "alias_updated",
+      "note": "Individually reviewed from legacy personal_care; assigned personal_care / no approved subcategory. Updated aliases to remove normalization duplicates or add approved equivalents."
+    },
+    {
+      "productId": "deodorant",
+      "previousLegacyCategoryId": "personal_care",
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Individually reviewed from legacy personal_care; assigned personal_care / no approved subcategory."
+    },
+    {
+      "productId": "paracetamol",
+      "previousLegacyCategoryId": "pharmacy",
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "brand_term_updated",
+      "note": "Moved non-generic brand expressions from aliases to brandTerms."
+    },
+    {
+      "productId": "ibuprofen",
+      "previousLegacyCategoryId": "pharmacy",
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "brand_term_updated",
+      "note": "Moved non-generic brand expressions from aliases to brandTerms."
+    },
+    {
+      "productId": "adhesive_bandages",
+      "previousLegacyCategoryId": "pharmacy",
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "antiseptic_solution",
+      "previousLegacyCategoryId": "pharmacy",
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "hand_sanitizer",
+      "previousLegacyCategoryId": "pharmacy",
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "alias_updated",
+      "note": "Updated aliases to remove normalization duplicates or add approved equivalents."
+    },
+    {
+      "productId": "multivitamin",
+      "previousLegacyCategoryId": "pharmacy",
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "baby_diapers",
+      "previousLegacyCategoryId": "baby",
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "baby_wipes",
+      "previousLegacyCategoryId": "baby",
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "infant_formula",
+      "previousLegacyCategoryId": "baby",
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "alias_updated",
+      "note": "Updated aliases to remove normalization duplicates or add approved equivalents."
+    },
+    {
+      "productId": "baby_puree",
+      "previousLegacyCategoryId": "baby",
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "brand_term_updated",
+      "note": "Moved non-generic brand expressions from aliases to brandTerms."
+    },
+    {
+      "productId": "baby_shampoo",
+      "previousLegacyCategoryId": "baby",
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "diaper_cream",
+      "previousLegacyCategoryId": "baby",
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed"
+    },
+    {
+      "productId": "dog_food",
+      "previousLegacyCategoryId": "pet_supplies",
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy pet_supplies; assigned pets / pets.supplies."
+    },
+    {
+      "productId": "cat_food",
+      "previousLegacyCategoryId": "pet_supplies",
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy pet_supplies; assigned pets / pets.supplies."
+    },
+    {
+      "productId": "cat_litter",
+      "previousLegacyCategoryId": "pet_supplies",
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy pet_supplies; assigned pets / pets.supplies."
+    },
+    {
+      "productId": "dog_treats",
+      "previousLegacyCategoryId": "pet_supplies",
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy pet_supplies; assigned pets / pets.supplies."
+    },
+    {
+      "productId": "cat_treats",
+      "previousLegacyCategoryId": "pet_supplies",
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy pet_supplies; assigned pets / pets.supplies."
+    },
+    {
+      "productId": "pet_flea_treatment",
+      "previousLegacyCategoryId": "pet_supplies",
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy pet_supplies; assigned pets / pets.supplies."
+    },
+    {
+      "productId": "disposable_cups",
+      "previousLegacyCategoryId": "disposable_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "disposable_plates",
+      "previousLegacyCategoryId": "disposable_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "disposable_forks",
+      "previousLegacyCategoryId": "disposable_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "disposable_knives",
+      "previousLegacyCategoryId": "disposable_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "disposable_spoons",
+      "previousLegacyCategoryId": "disposable_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "napkins",
+      "previousLegacyCategoryId": "disposable_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "reclassified"
+    },
+    {
+      "productId": "aluminum_foil",
+      "previousLegacyCategoryId": "household_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.storage",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy household_products; assigned household / household.storage."
+    },
+    {
+      "productId": "cling_film",
+      "previousLegacyCategoryId": "household_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.storage",
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy household_products; assigned household / household.storage."
+    },
+    {
+      "productId": "food_storage_bags",
+      "previousLegacyCategoryId": "household_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.storage",
+      "reviewStatus": "alias_updated",
+      "note": "Individually reviewed from legacy household_products; assigned household / household.storage. Updated aliases to remove normalization duplicates or add approved equivalents."
+    },
+    {
+      "productId": "batteries_aa",
+      "previousLegacyCategoryId": "household_products",
+      "canonicalCategoryId": "electronics",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy household_products; assigned electronics / no approved subcategory."
+    },
+    {
+      "productId": "light_bulb",
+      "previousLegacyCategoryId": "household_products",
+      "canonicalCategoryId": "electronics",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy household_products; assigned electronics / no approved subcategory."
+    },
+    {
+      "productId": "matches",
+      "previousLegacyCategoryId": "household_products",
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "reclassified",
+      "note": "Individually reviewed from legacy household_products; assigned household / no approved subcategory."
+    }
+  ]
+}

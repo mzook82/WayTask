@@ -10,7 +10,8 @@ final class ProductCatalogServiceTests: XCTestCase {
         XCTAssertEqual(Set(products.map(\.id)).count, products.count)
         XCTAssertTrue(products.allSatisfy(\.isActive))
         XCTAssertEqual(
-            products.first(where: { $0.id == "bread_white" })?.name,
+            products.first(where: { $0.id == "bread_white" })?
+                .canonicalName,
             "לחם לבן"
         )
         XCTAssertEqual(
@@ -20,58 +21,203 @@ final class ProductCatalogServiceTests: XCTestCase {
         )
         XCTAssertEqual(
             products.first(where: { $0.id == "salt" })?.categoryId,
-            "spices"
+            "pantry"
         )
         XCTAssertEqual(
-            products.first(where: { $0.id == "sugar" })?.categoryId,
-            "baking"
+            products.first(where: { $0.id == "salt" })?.subcategoryId,
+            "pantry.spices"
         )
         XCTAssertEqual(
-            products.first(where: { $0.id == "flour" })?.categoryId,
-            "baking"
+            products.first(where: { $0.id == "sugar" })?.subcategoryId,
+            "pantry.baking"
+        )
+        XCTAssertEqual(
+            products.first(where: { $0.id == "flour" })?.subcategoryId,
+            "pantry.baking"
+        )
+        XCTAssertEqual(
+            products.first(where: { $0.id == "cornflakes" })?
+                .canonicalName,
+            "דגני בוקר"
+        )
+        XCTAssertEqual(
+            products.first(where: { $0.id == "cola" })?.brandTerms,
+            ["קוקה קולה"]
         )
     }
 
-    func testCatalogMetadataDecodes() throws {
-        let data = try bundledCatalogData()
-        let document = try JSONDecoder().decode(ProductCatalogDocument.self, from: data)
+    func testBundledCatalogMetadataIdentifiesCanonicalV3Format() throws {
+        let document = try ProductCatalogService(bundle: .main)
+            .loadDocument(data: bundledCatalogData())
 
-        XCTAssertEqual(document.catalogVersion, 2)
+        XCTAssertEqual(document.schemaVersion, 1)
+        XCTAssertEqual(document.catalogVersion, 3)
+        XCTAssertEqual(document.taxonomyVersion, 1)
         XCTAssertEqual(document.locale, "he-IL")
+        XCTAssertEqual(document.sourceFormat, .canonicalV1)
         XCTAssertEqual(document.products.count, 147)
     }
 
-    func testDuplicateCatalogIDIsRejectedBeforeProductsAreExposed() throws {
-        let duplicate = makeProduct(id: "duplicate")
-        let data = try makeData(products: [duplicate, duplicate])
+    func testCanonicalSchemaVersionOneDecodesDirectly() throws {
+        let product = makeProduct(
+            id: "trash_bags",
+            canonicalName: "שקיות אשפה",
+            categoryId: "household",
+            subcategoryId: "household.waste_bags",
+            aliases: ["שקיות זבל"],
+            brandTerms: ["מותג בדיקה"],
+            replacementProductId: nil,
+            metadata: [
+                "reviewed": .boolean(true),
+                "source": .string("fixture")
+            ]
+        )
+        let data = try makeCanonicalData(products: [product])
+
+        let document = try ProductCatalogService(bundle: .main)
+            .loadDocument(data: data)
+
+        XCTAssertEqual(document.schemaVersion, 1)
+        XCTAssertEqual(document.taxonomyVersion, 1)
+        XCTAssertEqual(document.sourceFormat, .canonicalV1)
+        XCTAssertEqual(document.products, [product])
+    }
+
+    func testLegacyAndCanonicalFormatsProduceEquivalentCanonicalProduct() throws {
+        let legacyData = try makeLegacyData(products: [
+            LegacyProduct(
+                id: "bread_test",
+                name: "לחם בדיקה",
+                categoryId: "bakery",
+                aliases: ["כיכר בדיקה"],
+                keywords: ["מאפייה"],
+                popularityScore: 70,
+                isActive: true
+            )
+        ])
+        let canonicalProduct = makeProduct(
+            id: "bread_test",
+            canonicalName: "לחם בדיקה",
+            categoryId: "bakery",
+            aliases: ["כיכר בדיקה"],
+            keywords: ["מאפייה"],
+            popularity: 70
+        )
+        let canonicalData = try makeCanonicalData(
+            products: [canonicalProduct]
+        )
+        let service = ProductCatalogService(bundle: .main)
+
+        let legacy = try service.loadDocument(data: legacyData)
+        let canonical = try service.loadDocument(data: canonicalData)
+
+        XCTAssertEqual(legacy.products, canonical.products)
+        XCTAssertEqual(legacy.products.first?.id, "bread_test")
+        XCTAssertEqual(
+            legacy.products.first?.aliases,
+            canonical.products.first?.aliases
+        )
+    }
+
+    func testMissingOptionalCanonicalMigrationFieldsUseSafeDefaults() throws {
+        let data = Data(
+            """
+            {
+              "schemaVersion": 1,
+              "catalogVersion": 1,
+              "taxonomyVersion": 1,
+              "locale": "he-IL",
+              "products": [{
+                "id": "simple_product",
+                "canonicalName": "מוצר פשוט",
+                "categoryId": "pantry",
+                "subcategoryId": null,
+                "aliases": [],
+                "keywords": [],
+                "brandTerms": [],
+                "popularityScore": 50,
+                "isActive": true
+              }]
+            }
+            """.utf8
+        )
+
+        let product = try ProductCatalogService(bundle: .main)
+            .loadProducts(data: data)
+            .first
+
+        XCTAssertNil(product?.replacementProductId)
+        XCTAssertNil(product?.deprecatedSinceCatalogVersion)
+        XCTAssertEqual(product?.legacyNames, [])
+        XCTAssertNil(product?.metadata)
+    }
+
+    func testUnsupportedCanonicalSchemaVersionIsRejected() throws {
+        let data = try makeCanonicalData(
+            products: [makeProduct()],
+            schemaVersion: 99
+        )
 
         XCTAssertThrowsError(
-            try ProductCatalogService().loadProducts(data: data)
+            try ProductCatalogService(bundle: .main)
+                .loadProducts(data: data)
         ) { error in
-            guard case ProductCatalogError.duplicateProductID("duplicate") = error else {
+            guard case ProductCatalogError.unsupportedSchemaVersion(99) =
+                    error else {
+                return XCTFail("Unexpected error: \(error)")
+            }
+        }
+    }
+
+    func testIncompatibleTaxonomyVersionIsRejected() throws {
+        let data = try makeCanonicalData(
+            products: [makeProduct()],
+            taxonomyVersion: 99
+        )
+
+        XCTAssertThrowsError(
+            try ProductCatalogService(bundle: .main)
+                .loadProducts(data: data)
+        ) { error in
+            guard case ProductCatalogError.incompatibleTaxonomyVersion(
+                catalog: 99,
+                registry: 1
+            ) = error else {
+                return XCTFail("Unexpected error: \(error)")
+            }
+        }
+    }
+
+    func testDuplicateCatalogIDIsRejectedBeforeProductsAreExposed()
+        throws {
+        let duplicate = makeProduct(id: "duplicate")
+        let data = try makeCanonicalData(products: [duplicate, duplicate])
+
+        XCTAssertThrowsError(
+            try ProductCatalogService(bundle: .main)
+                .loadProducts(data: data)
+        ) { error in
+            guard case ProductCatalogError.duplicateProductID("duplicate") =
+                    error else {
                 return XCTFail("Unexpected error: \(error)")
             }
         }
     }
 
     func testEmptyRequiredFieldIsRejected() throws {
-        let invalid = CatalogProduct(
+        let invalid = makeProduct(
             id: "empty_name",
-            name: "  ",
-            categoryId: "pantry",
-            aliases: [],
-            keywords: [],
-            popularityScore: 50,
-            isActive: true
+            canonicalName: "  "
         )
-        let data = try makeData(products: [invalid])
+        let data = try makeCanonicalData(products: [invalid])
 
         XCTAssertThrowsError(
-            try ProductCatalogService().loadProducts(data: data)
+            try ProductCatalogService(bundle: .main)
+                .loadProducts(data: data)
         ) { error in
             guard case ProductCatalogError.emptyRequiredField(
                 productID: "empty_name",
-                field: "name"
+                field: "canonicalName"
             ) = error else {
                 return XCTFail("Unexpected error: \(error)")
             }
@@ -80,20 +226,34 @@ final class ProductCatalogServiceTests: XCTestCase {
 
     func testInactiveProductsAreValidatedButExcluded() throws {
         let active = makeProduct(id: "active")
-        let inactive = CatalogProduct(
+        let inactive = makeProduct(
             id: "inactive",
-            name: "מוצר ישן",
-            categoryId: "pantry",
-            aliases: [],
-            keywords: [],
-            popularityScore: 20,
+            canonicalName: "מוצר ישן",
             isActive: false
         )
-        let data = try makeData(products: [active, inactive])
+        let data = try makeCanonicalData(products: [active, inactive])
 
-        let products = try ProductCatalogService().loadProducts(data: data)
+        let products = try ProductCatalogService(bundle: .main)
+            .loadProducts(data: data)
 
         XCTAssertEqual(products.map(\.id), ["active"])
+    }
+
+    func testAllBundledProductIDsArePreservedByCanonicalDecoding()
+        throws {
+        let data = try bundledCatalogData()
+        let rawDocument = try JSONDecoder().decode(
+            IDDocument.self,
+            from: data
+        )
+        let decodedIDs = try ProductCatalogService(bundle: .main)
+            .loadDocument(data: data)
+            .products
+            .map(\.id)
+
+        XCTAssertEqual(decodedIDs.count, 147)
+        XCTAssertEqual(decodedIDs, rawDocument.products.map(\.id))
+        XCTAssertEqual(Set(decodedIDs).count, 147)
     }
 
     func testMalformedCatalogReturnsEmptySafeFallback() {
@@ -114,27 +274,98 @@ final class ProductCatalogServiceTests: XCTestCase {
         return try Data(contentsOf: url)
     }
 
-    private func makeData(products: [CatalogProduct]) throws -> Data {
+    private func makeLegacyData(
+        products: [LegacyProduct],
+        catalogVersion: Int = 2
+    ) throws -> Data {
         try JSONEncoder().encode(
-            ProductCatalogDocument(
-                catalogVersion: 1,
+            LegacyDocument(
+                catalogVersion: catalogVersion,
                 locale: "he-IL",
                 products: products
             )
         )
     }
 
-    private func makeProduct(id: String) -> CatalogProduct {
-        CatalogProduct(
-            id: id,
-            name: "מוצר",
-            categoryId: "pantry",
-            aliases: [],
-            keywords: [],
-            popularityScore: 50,
-            isActive: true
+    private func makeCanonicalData(
+        products: [CatalogProduct],
+        schemaVersion: Int = 1,
+        taxonomyVersion: Int = 1,
+        catalogVersion: Int = 1
+    ) throws -> Data {
+        try JSONEncoder().encode(
+            CanonicalDocument(
+                schemaVersion: schemaVersion,
+                catalogVersion: catalogVersion,
+                taxonomyVersion: taxonomyVersion,
+                locale: "he-IL",
+                products: products
+            )
         )
     }
+
+    private func makeProduct(
+        id: String = "test_product",
+        canonicalName: String = "מוצר",
+        categoryId: String = "pantry",
+        subcategoryId: String? = nil,
+        aliases: [String] = [],
+        keywords: [String] = [],
+        brandTerms: [String] = [],
+        popularity: Int = 50,
+        isActive: Bool = true,
+        replacementProductId: String? = nil,
+        deprecatedSinceCatalogVersion: Int? = nil,
+        metadata: [String: CatalogMetadataValue]? = nil
+    ) -> CatalogProduct {
+        CatalogProduct(
+            id: id,
+            canonicalName: canonicalName,
+            categoryId: categoryId,
+            subcategoryId: subcategoryId,
+            aliases: aliases,
+            keywords: keywords,
+            brandTerms: brandTerms,
+            popularityScore: popularity,
+            isActive: isActive,
+            replacementProductId: replacementProductId,
+            deprecatedSinceCatalogVersion:
+                deprecatedSinceCatalogVersion,
+            metadata: metadata
+        )
+    }
+}
+
+private struct LegacyDocument: Encodable {
+    let catalogVersion: Int
+    let locale: String
+    let products: [LegacyProduct]
+}
+
+private struct LegacyProduct: Encodable {
+    let id: String
+    let name: String
+    let categoryId: String
+    let aliases: [String]
+    let keywords: [String]
+    let popularityScore: Int
+    let isActive: Bool
+}
+
+private struct CanonicalDocument: Encodable {
+    let schemaVersion: Int
+    let catalogVersion: Int
+    let taxonomyVersion: Int
+    let locale: String
+    let products: [CatalogProduct]
+}
+
+private struct IDDocument: Decodable {
+    struct Product: Decodable {
+        let id: String
+    }
+
+    let products: [Product]
 }
 
 private final class MissingCatalogBundleToken {}

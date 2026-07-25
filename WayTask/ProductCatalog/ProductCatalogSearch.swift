@@ -61,7 +61,7 @@ nonisolated struct CatalogProductSuggestion: Identifiable, Sendable {
 
         return ProductSearchResult(
             productID: ProductID(product.id),
-            displayName: product.name,
+            displayName: product.canonicalName,
             displayLocale: "he",
             secondaryName: secondaryName,
             categoryID: ProductCategoryID(product.categoryId),
@@ -214,11 +214,12 @@ actor ProductCatalogSearch {
         }
 
         let category = ProductCatalogCategoryMetadata.metadata(
-            for: product.product.categoryId
+            for: product.product.categoryId,
+            subcategoryId: product.product.subcategoryId
         )
         let personalizationBoost = personalizationIndex.profile(
             catalogProductID: product.product.id,
-            normalizedName: product.name.value
+            normalizedNames: product.personalizationNames
         )?.totalBoost(relativeTo: referenceDate) ?? 0
         return RankedCandidate(
             product: product,
@@ -240,19 +241,31 @@ actor ProductCatalogSearch {
     private func bestMatch(for product: IndexedProduct, query: String) -> Match? {
         let queryLength = query.unicodeScalars.filter { $0.value != 0x20 }.count
         if product.name.value == query {
-            return Match(level: .exactName, value: product.product.name)
+            return Match(
+                level: .exactName,
+                value: product.product.canonicalName
+            )
         }
         if product.name.value.hasPrefix(query) {
-            return Match(level: .namePrefix, value: product.product.name)
+            return Match(
+                level: .namePrefix,
+                value: product.product.canonicalName
+            )
         }
         if beginsAtWordBoundary(product.name.value, query: query) {
-            return Match(level: .nameWordPrefix, value: product.product.name)
+            return Match(
+                level: .nameWordPrefix,
+                value: product.product.canonicalName
+            )
         }
         guard queryLength >= 3 else {
             return nil
         }
         if product.name.value.contains(query) {
-            return Match(level: .nameContains, value: product.product.name)
+            return Match(
+                level: .nameContains,
+                value: product.product.canonicalName
+            )
         }
         if let alias = shortestMatch(
             in: product.aliases,
@@ -283,7 +296,8 @@ actor ProductCatalogSearch {
         }
 
         let category = ProductCatalogCategoryMetadata.metadata(
-            for: product.product.categoryId
+            for: product.product.categoryId,
+            subcategoryId: product.product.subcategoryId
         )
         if category.searchTerms.contains(where: {
             let normalized = HebrewProductSearchNormalizer.normalize($0).value
@@ -359,16 +373,23 @@ nonisolated private extension ProductCatalogSearch {
         let name: HebrewProductSearchNormalizedText
         let aliases: [IndexedValue]
         let keywords: [IndexedValue]
+        let personalizationNames: [String]
 
         init?(product: CatalogProduct) {
-            let name = HebrewProductSearchNormalizer.normalize(product.name)
+            let name = HebrewProductSearchNormalizer.normalize(
+                product.canonicalName
+            )
             guard !name.value.isEmpty else {
                 return nil
             }
 
             self.product = product
             self.name = name
-            aliases = product.aliases.compactMap {
+            aliases = (
+                product.aliases
+                + product.brandTerms
+                + product.legacyNames
+            ).compactMap {
                 let normalized = HebrewProductSearchNormalizer.normalize($0)
                 return normalized.value.isEmpty
                     ? nil
@@ -380,6 +401,12 @@ nonisolated private extension ProductCatalogSearch {
                     ? nil
                     : IndexedValue(original: $0, normalized: normalized)
             }
+            personalizationNames = ([name.value] + aliases.map(\.normalized.value))
+                .reduce(into: [String]()) { result, value in
+                    if !result.contains(value) {
+                        result.append(value)
+                    }
+                }
         }
     }
 

@@ -1289,3 +1289,99 @@ providing a stable identity boundary for autocomplete, AI recognition, community
 catalog entries, aliases, and future Product Knowledge revisions.
 
 APPROVED FOR WT-025B IMPLEMENTATION
+
+## 14. WT-026A Canonical Catalog Compatibility Layer
+
+WT-026A adds a source-format boundary ahead of search and persistence:
+
+```text
+legacy v2 JSON ───────┐
+                     ├─> ProductCatalogCompatibilityDecoder
+canonical schema v1 ─┘          |
+                                 v
+                         CatalogProduct
+                                 |
+                      search / personalization
+                                 |
+                     existing catalog save path
+```
+
+`CatalogProduct` is the only production product-concept record used by the Hebrew
+catalog path. Its canonical fields are `id`, `canonicalName`, `categoryId`,
+nullable `subcategoryId`, `aliases`, `keywords`, `brandTerms`, popularity, active
+state, and optional replacement metadata.
+
+The decoder maps legacy `name` to `canonicalName` and supplies safe defaults for
+fields absent from v2. It does not alter product IDs, category IDs, aliases,
+popularity, or active state. Canonical schema version 1 decodes directly to the same
+model. Search and persistence never branch on source format.
+
+The shared taxonomy in `shared/catalog/taxonomy.json` validates canonical assignments
+and every legacy category through an explicit compatibility map. It does not rewrite
+legacy category IDs during WT-026A, because doing so would change current display
+labels, semantic icons, and selection snapshots. Product-by-product category
+migration is deferred to WT-026B.
+
+The validator fails atomically for unsupported schema/taxonomy metadata, invalid
+stable IDs, duplicate normalized canonical names, alias ownership collisions,
+orphan/mismatched taxonomy references, invalid popularity, inconsistent inactive
+replacements, missing targets, and replacement loops.
+
+Catalog-aware persistence remains unchanged:
+
+- `Product.id` is still the user-library UUID.
+- `ShoppingListEntry.productID` still references that UUID.
+- `catalogProductIDRawValue` still stores the stable canonical ID.
+- Same-ID saves deduplicate regardless of whether the result originated in v2 or
+  canonical JSON.
+- Custom Products remain unlinked.
+- Saved snapshots and personalization history are not migrated.
+
+Future Android code should consume the same JSON Schema, taxonomy, normalization
+fixtures, and acceptance fixtures with native Kotlin implementations. No backend or
+remote delivery is introduced by WT-026A.
+
+The exact next persistence-safe migration is **WT-026B — Canonical Taxonomy
+Assignment and Bundled-Resource Migration**: review all 147 category assignments,
+resolve every compatibility mapping marked `product_review_required`, migrate the
+bundled resource to canonical schema version 1, and verify byte-independent semantic
+equivalence without changing any product ID or user record.
+
+## 15. WT-026B Canonical Bundled-Resource Migration
+
+WT-026B completes that migration. The production resource is canonical schema
+version 1, catalog version 3, and taxonomy version 1. All 147 products have an
+explicit reviewed canonical category and nullable subcategory; the maintenance-only
+review manifest is `shared/catalog/product-taxonomy-review.json`.
+
+The legacy decoder remains at the source boundary for backward compatibility, but
+the shipped resource now follows the canonical path directly:
+
+```text
+canonical catalog v3 ─> compatibility decoder ─> CatalogProduct
+                                               ├─> unchanged search/ranking
+                                               ├─> unchanged personalization scores
+                                               └─> unchanged catalog-aware save path
+```
+
+The migration preserves persistence identity:
+
+- All 147 `CatalogProduct.id` values are unchanged as a set.
+- Existing `catalogProductIDRawValue` links continue to resolve.
+- User-library UUIDs and shopping-entry relationships are not rewritten.
+- Canonical-name, alias, brand-term, and legacy-name searches return the same stable
+  catalog ID.
+- Legacy normalized-name history can recognize retained aliases/legacy names, while
+  exact catalog-ID history remains authoritative.
+- Custom products remain unlinked and keep their existing identity.
+
+Canonical taxonomy can differ from the former aisle category without changing saved
+identity. The iOS presentation adapter maps approved subcategories to established
+labels and icon metadata where needed; platform metadata is not stored in the shared
+registry. Search match tiers, ranking weights, suggestion limits, personalization
+scoring, and custom-save behavior are unchanged.
+
+The archived v2 fixture and representative before/after queries prove semantic
+equivalence. The validator and review-manifest tests reject unresolved taxonomy
+work, invalid parent relationships, identity/name/alias/brand collisions, and broken
+replacement metadata.

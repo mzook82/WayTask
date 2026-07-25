@@ -1,0 +1,284 @@
+{
+  "fixtureVersion": 1,
+  "locale": "he-IL",
+  "catalog": {
+    "schemaVersion": 1,
+    "catalogVersion": 1,
+    "taxonomyVersion": 1,
+    "locale": "he-IL",
+    "products": [
+      {
+        "id": "trash_bags",
+        "canonicalName": "שקיות אשפה",
+        "categoryId": "household",
+        "subcategoryId": "household.waste_bags",
+        "aliases": [
+          "שקיות זבל",
+          "שקי אשפה",
+          "שקי זבל"
+        ],
+        "keywords": [
+          "פח",
+          "פסולת"
+        ],
+        "brandTerms": [],
+        "popularityScore": 92,
+        "isActive": true
+      },
+      {
+        "id": "toilet_paper",
+        "canonicalName": "נייר טואלט",
+        "categoryId": "household",
+        "subcategoryId": "household.paper_products",
+        "aliases": [
+          "נייר שירותים"
+        ],
+        "keywords": [
+          "אמבטיה"
+        ],
+        "brandTerms": [],
+        "popularityScore": 96,
+        "isActive": true
+      },
+      {
+        "id": "instant_coffee",
+        "canonicalName": "קפה נמס",
+        "categoryId": "drinks",
+        "subcategoryId": "drinks.coffee",
+        "aliases": [
+          "נס קפה"
+        ],
+        "keywords": [
+          "שתייה חמה"
+        ],
+        "brandTerms": [
+          "נסקפה"
+        ],
+        "popularityScore": 93,
+        "isActive": true
+      },
+      {
+        "id": "oat_drink",
+        "canonicalName": "משקה שיבולת שועל",
+        "categoryId": "dairy",
+        "subcategoryId": "dairy.alternatives",
+        "aliases": [
+          "חלב שיבולת שועל"
+        ],
+        "keywords": [
+          "טבעוני"
+        ],
+        "brandTerms": [],
+        "popularityScore": 90,
+        "isActive": true
+      },
+      {
+        "id": "breakfast_cereal",
+        "canonicalName": "דגני בוקר",
+        "categoryId": "pantry",
+        "subcategoryId": "pantry.breakfast_cereal",
+        "aliases": [
+          "קורנפלקס",
+          "קורן פלקס"
+        ],
+        "keywords": [
+          "ארוחת בוקר"
+        ],
+        "brandTerms": [],
+        "popularityScore": 91,
+        "isActive": true
+      },
+      {
+        "id": "milk_1_percent",
+        "canonicalName": "חלב 1%",
+        "categoryId": "dairy",
+        "subcategoryId": "dairy.milk",
+        "aliases": [
+          "חלב אחוז אחד"
+        ],
+        "keywords": [],
+        "brandTerms": [],
+        "popularityScore": 88,
+        "isActive": true
+      },
+      {
+        "id": "milk_3_percent",
+        "canonicalName": "חלב 3%",
+        "categoryId": "dairy",
+        "subcategoryId": "dairy.milk",
+        "aliases": [
+          "חלב שלושה אחוז"
+        ],
+        "keywords": [],
+        "brandTerms": [],
+        "popularityScore": 96,
+        "isActive": true
+      },
+      {
+        "id": "lactose_free_milk",
+        "canonicalName": "חלב ללא לקטוז",
+        "categoryId": "dairy",
+        "subcategoryId": "dairy.milk",
+        "aliases": [],
+        "keywords": [
+          "רגישות ללקטוז"
+        ],
+        "brandTerms": [],
+        "popularityScore": 84,
+        "isActive": true
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "trash_bags_canonical",
+      "query": "שקיות אשפה",
+      "expectedProductId": "trash_bags",
+      "expectedCanonicalName": "שקיות אשפה",
+      "matchSource": "canonical_name",
+      "customCreationAllowed": false,
+      "categoryId": "household",
+      "subcategoryId": "household.waste_bags"
+    },
+    {
+      "id": "trash_bags_alias",
+      "query": "שקיות זבל",
+      "expectedProductId": "trash_bags",
+      "expectedCanonicalName": "שקיות אשפה",
+      "matchSource": "alias",
+      "customCreationAllowed": false,
+      "categoryId": "household",
+      "subcategoryId": "household.waste_bags"
+    },
+    {
+      "id": "trash_bags_short_alias",
+      "query": "שקי אשפה",
+      "expectedProductId": "trash_bags",
+      "expectedCanonicalName": "שקיות אשפה",
+      "matchSource": "alias",
+      "customCreationAllowed": false,
+      "categoryId": "household",
+      "subcategoryId": "household.waste_bags"
+    },
+    {
+      "id": "toilet_paper_canonical",
+      "query": "נייר טואלט",
+      "expectedProductId": "toilet_paper",
+      "expectedCanonicalName": "נייר טואלט",
+      "matchSource": "canonical_name",
+      "customCreationAllowed": false,
+      "categoryId": "household",
+      "subcategoryId": "household.paper_products"
+    },
+    {
+      "id": "toilet_paper_alias",
+      "query": "נייר שירותים",
+      "expectedProductId": "toilet_paper",
+      "expectedCanonicalName": "נייר טואלט",
+      "matchSource": "alias",
+      "customCreationAllowed": false,
+      "categoryId": "household",
+      "subcategoryId": "household.paper_products"
+    },
+    {
+      "id": "instant_coffee_canonical",
+      "query": "קפה נמס",
+      "expectedProductId": "instant_coffee",
+      "expectedCanonicalName": "קפה נמס",
+      "matchSource": "canonical_name",
+      "customCreationAllowed": false,
+      "categoryId": "drinks",
+      "subcategoryId": "drinks.coffee"
+    },
+    {
+      "id": "instant_coffee_alias",
+      "query": "נס קפה",
+      "expectedProductId": "instant_coffee",
+      "expectedCanonicalName": "קפה נמס",
+      "matchSource": "alias",
+      "customCreationAllowed": false,
+      "categoryId": "drinks",
+      "subcategoryId": "drinks.coffee"
+    },
+    {
+      "id": "oat_drink_canonical",
+      "query": "משקה שיבולת שועל",
+      "expectedProductId": "oat_drink",
+      "expectedCanonicalName": "משקה שיבולת שועל",
+      "matchSource": "canonical_name",
+      "customCreationAllowed": false,
+      "categoryId": "dairy",
+      "subcategoryId": "dairy.alternatives"
+    },
+    {
+      "id": "oat_drink_alias",
+      "query": "חלב שיבולת שועל",
+      "expectedProductId": "oat_drink",
+      "expectedCanonicalName": "משקה שיבולת שועל",
+      "matchSource": "alias",
+      "customCreationAllowed": false,
+      "categoryId": "dairy",
+      "subcategoryId": "dairy.alternatives"
+    },
+    {
+      "id": "breakfast_cereal_canonical",
+      "query": "דגני בוקר",
+      "expectedProductId": "breakfast_cereal",
+      "expectedCanonicalName": "דגני בוקר",
+      "matchSource": "canonical_name",
+      "customCreationAllowed": false,
+      "categoryId": "pantry",
+      "subcategoryId": "pantry.breakfast_cereal"
+    },
+    {
+      "id": "cornflakes_alias",
+      "query": "קורנפלקס",
+      "expectedProductId": "breakfast_cereal",
+      "expectedCanonicalName": "דגני בוקר",
+      "matchSource": "alias",
+      "customCreationAllowed": false,
+      "categoryId": "pantry",
+      "subcategoryId": "pantry.breakfast_cereal"
+    },
+    {
+      "id": "milk_one_percent",
+      "query": "חלב 1%",
+      "expectedProductId": "milk_1_percent",
+      "expectedCanonicalName": "חלב 1%",
+      "matchSource": "canonical_name",
+      "customCreationAllowed": false,
+      "categoryId": "dairy",
+      "subcategoryId": "dairy.milk"
+    },
+    {
+      "id": "milk_three_percent",
+      "query": "חלב 3%",
+      "expectedProductId": "milk_3_percent",
+      "expectedCanonicalName": "חלב 3%",
+      "matchSource": "canonical_name",
+      "customCreationAllowed": false,
+      "categoryId": "dairy",
+      "subcategoryId": "dairy.milk"
+    },
+    {
+      "id": "lactose_free_milk",
+      "query": "חלב ללא לקטוז",
+      "expectedProductId": "lactose_free_milk",
+      "expectedCanonicalName": "חלב ללא לקטוז",
+      "matchSource": "canonical_name",
+      "customCreationAllowed": false,
+      "categoryId": "dairy",
+      "subcategoryId": "dairy.milk"
+    },
+    {
+      "id": "custom_product",
+      "query": "פודינג חלבון וניל מהמאפייה",
+      "expectedProductId": null,
+      "expectedCanonicalName": null,
+      "matchSource": "no_match",
+      "customCreationAllowed": true,
+      "categoryId": null,
+      "subcategoryId": null
+    }
+  ]
+}

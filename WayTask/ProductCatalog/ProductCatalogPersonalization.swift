@@ -82,10 +82,17 @@ nonisolated struct ProductCatalogPersonalizationIndex: Sendable {
 
     func profile(
         catalogProductID: String,
-        normalizedName: String
+        normalizedNames: [String]
     ) -> ProductCatalogPersonalizationProfile? {
-        profilesByCatalogID[catalogProductID]
-            ?? profilesByNormalizedName[normalizedName]
+        if let exact = profilesByCatalogID[catalogProductID] {
+            return exact
+        }
+        for normalizedName in normalizedNames {
+            if let fallback = profilesByNormalizedName[normalizedName] {
+                return fallback
+            }
+        }
+        return nil
     }
 
     private static func merged(

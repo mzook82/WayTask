@@ -19,6 +19,8 @@ This document tracks catalog, autocomplete, ranking, and personalization issues 
 - Incorrect ranking
 - Weak match shown
 - Duplicate product
+- Incorrect canonical resolution
+- Brand-term issue
 - Incorrect category
 - Localization
 - Personalization

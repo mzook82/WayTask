@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A10000000000000000000006 /* taxonomy.json in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* taxonomy.json */; };
+		A10000000000000000000007 /* product-catalog.schema.json in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* product-catalog.schema.json */; };
+		A10000000000000000000008 /* taxonomy.json in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* taxonomy.json */; };
+		A10000000000000000000009 /* normalization-fixtures.json in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* normalization-fixtures.json */; };
+		A1000000000000000000000A /* acceptance-fixtures.json in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* acceptance-fixtures.json */; };
+		A1000000000000000000000C /* product-taxonomy-review.json in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000B /* product-taxonomy-review.json */; };
 		D11995C52FF3999200C9EAF2 /* CameraService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11995C42FF3999200C9EAF2 /* CameraService.swift */; };
 		D11995C72FF399AE00C9EAF2 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11995C62FF399AE00C9EAF2 /* CameraPreviewView.swift */; };
 		D11995C92FF399B600C9EAF2 /* ProductRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11995C82FF399B600C9EAF2 /* ProductRecognitionService.swift */; };
@@ -74,6 +80,11 @@
 
 /* Begin PBXFileReference section */
 		5150CB4832DA4643A5144038 /* WayTaskTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WayTaskTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000001 /* product-catalog.schema.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "product-catalog.schema.json"; sourceTree = "<group>"; };
+		A10000000000000000000002 /* taxonomy.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taxonomy.json; sourceTree = "<group>"; };
+		A10000000000000000000003 /* normalization-fixtures.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "normalization-fixtures.json"; sourceTree = "<group>"; };
+		A10000000000000000000004 /* acceptance-fixtures.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "acceptance-fixtures.json"; sourceTree = "<group>"; };
+		A1000000000000000000000B /* product-taxonomy-review.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "product-taxonomy-review.json"; sourceTree = "<group>"; };
 		D11995C42FF3999200C9EAF2 /* CameraService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraService.swift; sourceTree = "<group>"; };
 		D11995C62FF399AE00C9EAF2 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
 		D11995C82FF399B600C9EAF2 /* ProductRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductRecognitionService.swift; sourceTree = "<group>"; };
@@ -176,11 +187,25 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		A10000000000000000000005 /* Shared Catalog Contract */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000001 /* product-catalog.schema.json */,
+				A10000000000000000000002 /* taxonomy.json */,
+				A10000000000000000000003 /* normalization-fixtures.json */,
+				A10000000000000000000004 /* acceptance-fixtures.json */,
+				A1000000000000000000000B /* product-taxonomy-review.json */,
+			);
+			name = "Shared Catalog Contract";
+			path = shared/catalog;
+			sourceTree = "<group>";
+		};
 		D1B851752FEFF2F40083B34C = {
 			isa = PBXGroup;
 			children = (
 				D1B851802FEFF2F40083B34C /* WayTask */,
 				E5219B1F88E1445F97CA6F27 /* WayTaskTests */,
+				A10000000000000000000005 /* Shared Catalog Contract */,
 				D1B8517F2FEFF2F40083B34C /* Products */,
 				D1B8519A2FF18FF50083B34C /* ProductListView.swift */,
 				D12B90972FF2FCC800531ECE /* CameraView.swift */,
@@ -345,6 +370,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000007 /* product-catalog.schema.json in Resources */,
+				A10000000000000000000008 /* taxonomy.json in Resources */,
+				A10000000000000000000009 /* normalization-fixtures.json in Resources */,
+				A1000000000000000000000A /* acceptance-fixtures.json in Resources */,
+				A1000000000000000000000C /* product-taxonomy-review.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -352,6 +382,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000006 /* taxonomy.json in Resources */,
 				D1954E3C2FF85B7D00E946DA /* Secrets.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

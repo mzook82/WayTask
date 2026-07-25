@@ -161,7 +161,7 @@ final class ProductCatalogPersonalizationTests: XCTestCase {
     ) -> CatalogProduct {
         CatalogProduct(
             id: id,
-            name: name,
+            canonicalName: name,
             categoryId: "bakery",
             aliases: [],
             keywords: keywords,
