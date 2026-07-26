@@ -20,7 +20,12 @@ struct ContentView: View {
     @Query private var items: [ShoppingItem]
     @Query private var locations: [GeoLocation]
     @Query private var shoppingSessions: [ShoppingSession]
-    @Query private var products: [Product]
+    @Query(
+        filter: #Predicate<Product> { product in
+            product.deletedAt == nil
+        }
+    )
+    private var products: [Product]
     @Query private var shoppingLists: [ShoppingList]
     @Query private var shoppingListEntries: [ShoppingListEntry]
 
@@ -674,7 +679,12 @@ struct ProductShoppingSelectionSheet: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var appStateManager: AppStateManager
 
-    @Query private var products: [Product]
+    @Query(
+        filter: #Predicate<Product> { product in
+            product.deletedAt == nil
+        }
+    )
+    private var products: [Product]
     @Query private var shoppingLists: [ShoppingList]
     @Query private var shoppingListEntries: [ShoppingListEntry]
 

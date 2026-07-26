@@ -3,6 +3,149 @@ import XCTest
 
 @MainActor
 final class ProductCatalogAutocompleteTests: XCTestCase {
+    func testHebrewWholeWheatSelectionLocksFullDisplayAndCanonicalID()
+        async throws {
+        let viewModel = try makeBundledViewModel()
+
+        XCTAssertEqual(
+            viewModel.acceptTextFieldEdit(
+                "לח",
+                localeIdentifier: "he-IL"
+            ),
+            "לח"
+        )
+        try await waitUntil { viewModel.phase == .results }
+
+        let result = try XCTUnwrap(
+            viewModel.results.first {
+                $0.productID == ProductID("bread_whole_wheat")
+            }
+        )
+        XCTAssertEqual(result.displayName, "לחם מחיטה מלאה")
+        XCTAssertTrue(
+            viewModel.selectCatalogProduct(
+                result,
+                preselectionQuery: "לח"
+            )
+        )
+
+        XCTAssertEqual(
+            viewModel.selectedCatalogProduct?.productID,
+            ProductID("bread_whole_wheat")
+        )
+        XCTAssertEqual(
+            viewModel.selectedCatalogProduct?.displayName,
+            "לחם מחיטה מלאה"
+        )
+        XCTAssertEqual(viewModel.rawQuery, "לחם מחיטה מלאה")
+        XCTAssertEqual(
+            viewModel.acceptTextFieldEdit(
+                "לי",
+                localeIdentifier: "he-IL"
+            ),
+            "לחם מחיטה מלאה"
+        )
+
+        await Task.yield()
+        await Task.yield()
+
+        XCTAssertEqual(viewModel.rawQuery, "לחם מחיטה מלאה")
+        XCTAssertEqual(viewModel.phase, .selectedCatalog)
+        XCTAssertTrue(viewModel.results.isEmpty)
+    }
+
+    func testHebrewMilkSelectionRemainsCorrect() async throws {
+        let viewModel = try makeBundledViewModel()
+
+        _ = viewModel.acceptTextFieldEdit(
+            "חלב",
+            localeIdentifier: "he-IL"
+        )
+        try await waitUntil { viewModel.phase == .results }
+        let result = try XCTUnwrap(
+            viewModel.results.first {
+                $0.productID == ProductID("milk_3_percent")
+            }
+        )
+
+        XCTAssertTrue(
+            viewModel.selectCatalogProduct(
+                result,
+                preselectionQuery: "חלב"
+            )
+        )
+        XCTAssertEqual(viewModel.rawQuery, "חלב 3%")
+        XCTAssertEqual(
+            viewModel.selectedCatalogProduct?.productID,
+            ProductID("milk_3_percent")
+        )
+    }
+
+    func testComposedHebrewTextNeverBecomesPartialAfterSelection()
+        async throws {
+        let viewModel = try makeBundledViewModel()
+        let composedQuery = "ל\u{05B8}ח"
+
+        XCTAssertEqual(
+            viewModel.acceptTextFieldEdit(
+                composedQuery,
+                localeIdentifier: "he-IL"
+            ),
+            composedQuery
+        )
+        XCTAssertEqual(viewModel.rawQuery, composedQuery)
+        try await waitUntil { viewModel.phase == .results }
+        let result = try XCTUnwrap(
+            viewModel.results.first {
+                $0.productID == ProductID("bread_whole_wheat")
+            }
+        )
+
+        XCTAssertTrue(
+            viewModel.selectCatalogProduct(
+                result,
+                preselectionQuery: composedQuery
+            )
+        )
+        XCTAssertEqual(
+            viewModel.acceptTextFieldEdit(
+                "ל\u{05B8}י",
+                localeIdentifier: "he-IL"
+            ),
+            "לחם מחיטה מלאה"
+        )
+        XCTAssertEqual(viewModel.rawQuery, "לחם מחיטה מלאה")
+    }
+
+    func testEnglishSelectionContractRemainsUnchanged() async throws {
+        let viewModel = makeViewModel(
+            search: ProductCatalogSearch(
+                products: [
+                    product(id: "milk_en", name: "Milk")
+                ]
+            )
+        )
+
+        _ = viewModel.acceptTextFieldEdit(
+            "mi",
+            localeIdentifier: "en"
+        )
+        try await waitUntil { viewModel.phase == .results }
+        let result = try XCTUnwrap(viewModel.results.first)
+
+        XCTAssertTrue(
+            viewModel.selectCatalogProduct(
+                result,
+                preselectionQuery: "mi"
+            )
+        )
+        XCTAssertEqual(viewModel.rawQuery, "Milk")
+        XCTAssertEqual(
+            viewModel.selectedCatalogProduct?.productID,
+            ProductID("milk_en")
+        )
+    }
+
     func testExactCatalogNameSuppressesCustomProductOption() async throws {
         let search = ProductCatalogSearch(products: [
             product(id: "bread", name: "לחם")
@@ -83,6 +226,15 @@ final class ProductCatalogAutocompleteTests: XCTestCase {
             slowSearchDelay: {
                 try? await Task.sleep(nanoseconds: 5_000_000_000)
             }
+        )
+    }
+
+    private func makeBundledViewModel() throws
+        -> AddProductAutocompleteViewModel {
+        makeViewModel(
+            search: ProductCatalogSearch(
+                products: try ProductCatalogService().loadProducts()
+            )
         )
     }
 

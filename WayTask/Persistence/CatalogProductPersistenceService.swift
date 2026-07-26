@@ -128,18 +128,41 @@ struct CatalogProductPersistenceService {
             )
         }
 
-        if matches.count > 1 {
+        let activeMatches = matches.filter {
+            !$0.isDeletedFromLibrary
+        }
+
+        if activeMatches.count > 1 {
             throw CatalogProductPersistenceError.duplicateCatalogIdentity(
                 productID: rawProductID,
-                userProductIDs: matches.map(\.id)
+                userProductIDs: activeMatches.map(\.id)
             )
         }
 
-        if let existing = matches.first {
+        if let existing = activeMatches.first {
             return .alreadyPresent(existing)
         }
 
         let now = clock()
+        if let deletedProduct = matches.first {
+            let restoreSnapshot = CatalogProductRestoreSnapshot(product: deletedProduct)
+            restore(
+                deletedProduct,
+                from: request,
+                at: now
+            )
+            do {
+                try saveContext(modelContext)
+            } catch {
+                restoreSnapshot.restore(deletedProduct)
+                throw CatalogProductPersistenceError.saveFailed(
+                    productID: rawProductID,
+                    underlying: error
+                )
+            }
+            return .inserted(deletedProduct)
+        }
+
         let product = Product(
             name: request.displayNameSnapshot,
             imageData: request.imageData,
@@ -169,6 +192,29 @@ struct CatalogProductPersistenceService {
         }
 
         return .inserted(product)
+    }
+
+    private func restore(
+        _ product: Product,
+        from request: CatalogProductSaveRequest,
+        at date: Date
+    ) {
+        product.restoreToLibrary(at: date)
+        product.name = request.displayNameSnapshot
+        product.imageData = request.imageData ?? product.imageData
+        product.category = request.categoryDisplayNameSnapshot
+        product.sourceRawValue = request.source.rawValue
+        product.catalogProductIDRawValue = request.productID.rawValue
+        product.catalogDisplayNameSnapshot =
+            request.displayNameSnapshot
+        product.catalogDisplayLocaleSnapshot =
+            request.displayLocaleSnapshot
+        product.catalogCategoryIDSnapshotRawValue =
+            request.categoryIDSnapshot.rawValue
+        product.catalogCategoryDisplayNameSnapshot =
+            request.categoryDisplayNameSnapshot
+        product.catalogIconKeySnapshot = request.iconKeySnapshot
+        product.catalogSnapshotUpdatedAt = date
     }
 
     private func validate(_ request: CatalogProductSaveRequest) throws {
@@ -222,5 +268,53 @@ struct CatalogProductPersistenceService {
         guard !trimmed.isEmpty, trimmed == value else {
             throw CatalogProductPersistenceError.invalidField(field)
         }
+    }
+}
+
+private struct CatalogProductRestoreSnapshot {
+    let deletedAt: Date?
+    let updatedAt: Date
+    let name: String
+    let imageData: Data?
+    let category: String?
+    let sourceRawValue: String
+    let catalogProductIDRawValue: String?
+    let catalogDisplayNameSnapshot: String?
+    let catalogDisplayLocaleSnapshot: String?
+    let catalogCategoryIDSnapshotRawValue: String?
+    let catalogCategoryDisplayNameSnapshot: String?
+    let catalogIconKeySnapshot: String?
+    let catalogSnapshotUpdatedAt: Date?
+
+    init(product: Product) {
+        deletedAt = product.deletedAt
+        updatedAt = product.updatedAt
+        name = product.name
+        imageData = product.imageData
+        category = product.category
+        sourceRawValue = product.sourceRawValue
+        catalogProductIDRawValue = product.catalogProductIDRawValue
+        catalogDisplayNameSnapshot = product.catalogDisplayNameSnapshot
+        catalogDisplayLocaleSnapshot = product.catalogDisplayLocaleSnapshot
+        catalogCategoryIDSnapshotRawValue = product.catalogCategoryIDSnapshotRawValue
+        catalogCategoryDisplayNameSnapshot = product.catalogCategoryDisplayNameSnapshot
+        catalogIconKeySnapshot = product.catalogIconKeySnapshot
+        catalogSnapshotUpdatedAt = product.catalogSnapshotUpdatedAt
+    }
+
+    func restore(_ product: Product) {
+        product.deletedAt = deletedAt
+        product.updatedAt = updatedAt
+        product.name = name
+        product.imageData = imageData
+        product.category = category
+        product.sourceRawValue = sourceRawValue
+        product.catalogProductIDRawValue = catalogProductIDRawValue
+        product.catalogDisplayNameSnapshot = catalogDisplayNameSnapshot
+        product.catalogDisplayLocaleSnapshot = catalogDisplayLocaleSnapshot
+        product.catalogCategoryIDSnapshotRawValue = catalogCategoryIDSnapshotRawValue
+        product.catalogCategoryDisplayNameSnapshot = catalogCategoryDisplayNameSnapshot
+        product.catalogIconKeySnapshot = catalogIconKeySnapshot
+        product.catalogSnapshotUpdatedAt = catalogSnapshotUpdatedAt
     }
 }

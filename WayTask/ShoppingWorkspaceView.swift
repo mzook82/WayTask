@@ -12,15 +12,21 @@ struct ShoppingWorkspaceView: View {
     @Query private var items: [ShoppingItem]
     @Query private var locations: [GeoLocation]
     @Query private var shoppingSessions: [ShoppingSession]
-    @Query private var products: [Product]
+    @Query(
+        filter: #Predicate<Product> { product in
+            product.deletedAt == nil
+        }
+    )
+    private var products: [Product]
     @Query private var shoppingLists: [ShoppingList]
     @Query private var shoppingListEntries: [ShoppingListEntry]
 
     @State private var selectedListID = ""
     @State private var searchText = ""
-    @State private var isShowingPlanSheet = false
     @State private var isShowingProductChooser = false
+    @State private var recommendedStoreID: UUID?
     @State private var selectedStoreID: UUID?
+    @State private var expandedStoreID: UUID?
     @State private var shoppingFlowErrorMessage = ""
     @State private var isShowingShoppingFlowError = false
     @State private var cachedRecommendedStoreRows: [ShoppingWorkspaceStoreRow] = []
@@ -54,11 +60,14 @@ struct ShoppingWorkspaceView: View {
                                 listSelector
                                 chooseProductsPanel
                                 recommendedStoresSection
+                                    .accessibilityIdentifier(
+                                        ShoppingWorkspacePresentationPolicy
+                                            .inlinePlanAccessibilityIdentifier
+                                    )
                                     .id(
                                         ShoppingWorkspaceScrollTarget
                                             .recommendedStores
                                     )
-                                coverageCardsSection
                                 groupedProductsSection
                             }
                             .padding(.horizontal, WayTaskDesign.Spacing.lg)
@@ -91,11 +100,6 @@ struct ShoppingWorkspaceView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .sheet(isPresented: $isShowingPlanSheet) {
-                planBottomSheet
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.hidden)
-            }
             .sheet(isPresented: $isShowingProductChooser) {
                 ProductShoppingSelectionSheet(
                     title: "Choose products",
@@ -123,7 +127,9 @@ struct ShoppingWorkspaceView: View {
                 refreshShoppingPresentationCache()
             }
             .onChange(of: appStateManager.shoppingPlan?.id) {
+                recommendedStoreID = nil
                 selectedStoreID = nil
+                expandedStoreID = nil
                 refreshRecommendedStoreRowsCache()
             }
             .onChange(of: appStateManager.shoppingPlanState) { _, state in
@@ -420,9 +426,12 @@ struct ShoppingWorkspaceView: View {
 
     private var recommendedStoresSection: some View {
         VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.sm) {
-            WayTaskSectionHeader(title: "Recommended stores", subtitle: "Planner preview", actionTitle: recommendedStoreRows.isEmpty ? nil : "Details") {
-                isShowingPlanSheet = true
-            }
+            WayTaskSectionHeader(
+                title: "Shopping plan",
+                subtitle: "Recommended stores"
+            )
+
+            unresolvedItemsNotice
 
             switch appStateManager.shoppingPlanState {
             case .generating:
@@ -435,30 +444,15 @@ struct ShoppingWorkspaceView: View {
                     actionTitle: actionTitle,
                     action: actionTitle == nil ? nil : { handlePlanFailureAction(actionTitle) }
                 )
-            case .ready where recommendedStoreRows.first != nil:
-                if let recommendedStore = recommendedStoreRows.first {
-                    WayTaskRecommendationCard(
-                        recommendationTitle: recommendedStore.recommendationTitle,
-                        storeName: recommendedStore.storeName,
-                        likelyItemNames: recommendedStore.likelyItemNames,
-                        otherItemNames: recommendedStore.otherItemNames,
-                        totalItemCount: recommendedStore.totalItemCount,
-                        hasProductCoverageEstimate: recommendedStore.hasProductCoverageEstimate,
-                        distanceText: recommendedStore.distanceText,
-                        isHighlighted: recommendedStore.isPrimaryRecommendation,
-                        isSelected: isStoreSelected(recommendedStore),
-                        actionTitle: isStoreSelected(recommendedStore) ? "Selected Store" : "Select Store"
-                    ) {
-                        selectStore(recommendedStore)
+            case .ready where !recommendedStoreRows.isEmpty:
+                VStack(spacing: WayTaskDesign.Spacing.sm) {
+                    ForEach(recommendedStoreRows) { row in
+                        storeAccordionCard(row)
                     }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: WayTaskDesign.Radius.xl, style: .continuous)
-                            .stroke(isStoreSelected(recommendedStore) ? WayTaskDesign.accent : Color.clear, lineWidth: 2)
-                    }
-                    .featureTourTarget(
-                        .shoppingRecommendedStoreCard
-                    )
                 }
+                .featureTourTarget(
+                    .shoppingRecommendedStoreCard
+                )
             default:
                 planNotReadyState
             }
@@ -503,7 +497,6 @@ struct ShoppingWorkspaceView: View {
             actionTitle: planNotReadyActionTitle,
             action: planNotReadyActionTitle == nil ? nil : {
                 generateShoppingPlan()
-                isShowingPlanSheet = true
             }
         )
     }
@@ -531,40 +524,6 @@ struct ShoppingWorkspaceView: View {
     }
 
 
-    @ViewBuilder
-    private var coverageCardsSection: some View {
-        let additionalRows = Array(recommendedStoreRows.dropFirst())
-
-        if !additionalRows.isEmpty {
-            VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.sm) {
-                WayTaskSectionHeader(title: "Other recommended stores")
-
-                VStack(spacing: WayTaskDesign.Spacing.sm) {
-                    ForEach(additionalRows) { row in
-                        WayTaskRecommendationCard(
-                            recommendationTitle: row.recommendationTitle,
-                            storeName: row.storeName,
-                            likelyItemNames: row.likelyItemNames,
-                            otherItemNames: row.otherItemNames,
-                            totalItemCount: row.totalItemCount,
-                            hasProductCoverageEstimate: row.hasProductCoverageEstimate,
-                            distanceText: row.distanceText,
-                            isHighlighted: row.isPrimaryRecommendation,
-                            isSelected: isStoreSelected(row),
-                            actionTitle: isStoreSelected(row) ? "Selected Store" : "Select Store"
-                        ) {
-                            selectStore(row)
-                        }
-                        .overlay {
-                            RoundedRectangle(cornerRadius: WayTaskDesign.Radius.xl, style: .continuous)
-                                .stroke(isStoreSelected(row) ? WayTaskDesign.accent : Color.clear, lineWidth: 2)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     private var groupedProductsSection: some View {
         VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.sm) {
             WayTaskSectionHeader(title: "Your list", subtitle: "Grouped by store intent", actionTitle: "Choose products") {
@@ -572,8 +531,6 @@ struct ShoppingWorkspaceView: View {
             }
 
             WayTaskSearchField(placeholder: "Search shopping list", text: $searchText)
-
-            unresolvedItemsNotice
 
             VStack(spacing: WayTaskDesign.Spacing.md) {
                 if groupedProductRows.isEmpty {
@@ -727,58 +684,6 @@ struct ShoppingWorkspaceView: View {
                 Rectangle()
                     .fill(WayTaskDesign.surfaceBorder)
                     .frame(height: 1)
-            }
-        }
-    }
-
-    private var planBottomSheet: some View {
-        WayTaskBottomSheet(title: "Shopping plan") {
-            VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.md) {
-                unresolvedItemsNotice
-
-                switch appStateManager.shoppingPlanState {
-                case .generating:
-                    planningStatusCard
-                case let .failed(message, actionTitle):
-                    WayTaskEmptyState(
-                        title: "Plan failed",
-                        message: message,
-                        systemImage: "exclamationmark.triangle",
-                        actionTitle: actionTitle,
-                        action: actionTitle == nil ? nil : { handlePlanFailureAction(actionTitle) }
-                    )
-                case .ready where !recommendedStoreRows.isEmpty:
-                    ForEach(recommendedStoreRows) { row in
-                        WayTaskRecommendationCard(
-                            recommendationTitle: row.recommendationTitle,
-                            storeName: row.storeName,
-                            likelyItemNames: row.likelyItemNames,
-                            otherItemNames: row.otherItemNames,
-                            totalItemCount: row.totalItemCount,
-                            hasProductCoverageEstimate: row.hasProductCoverageEstimate,
-                            distanceText: row.distanceText,
-                            isHighlighted: row.isPrimaryRecommendation,
-                            isSelected: isStoreSelected(row),
-                            actionTitle: isStoreSelected(row) ? "Selected Store" : "Select Store"
-                        ) {
-                            selectStore(row)
-                        }
-                    }
-
-                    HStack(spacing: WayTaskDesign.Spacing.sm) {
-                        WayTaskSecondaryButton("View Map", systemImage: "map.fill") {
-                            isShowingPlanSheet = false
-                            openPlanOnMap()
-                        }
-
-                        WayTaskPrimaryButton("Start Shopping", systemImage: "play.fill", isDisabled: !canStartShopping) {
-                            isShowingPlanSheet = false
-                            startShopping()
-                        }
-                    }
-                default:
-                    planNotReadyState
-                }
             }
         }
     }
@@ -1097,21 +1002,90 @@ struct ShoppingWorkspaceView: View {
     private func updateRecommendedStoreRows(_ rows: [ShoppingWorkspaceStoreRow]) {
         cachedRecommendedStoreRows = rows
 
-        if let selectedStoreID,
-           rows.contains(where: { $0.storeID == selectedStoreID }) {
-            return
-        }
+        var state = ShoppingStoreAccordionState(
+            recommendedStoreID: recommendedStoreID,
+            selectedStoreID: selectedStoreID,
+            expandedStoreID: expandedStoreID
+        )
+        state.synchronize(storeIDs: rows.map(\.storeID))
+        applyStoreAccordionState(state)
+    }
 
-        selectedStoreID = rows.first?.storeID
+    private func storeAccordionCard(
+        _ row: ShoppingWorkspaceStoreRow
+    ) -> some View {
+        WayTaskRecommendationCard(
+            recommendationTitle: row.recommendationTitle,
+            storeName: row.storeName,
+            likelyItemNames: row.likelyItemNames,
+            otherItemNames: row.otherItemNames,
+            totalItemCount: row.totalItemCount,
+            hasProductCoverageEstimate:
+                row.hasProductCoverageEstimate,
+            distanceText: row.distanceText,
+            isHighlighted: row.storeID == recommendedStoreID,
+            isSelected: isStoreSelected(row),
+            isExpanded: row.storeID == expandedStoreID,
+            onExpansionToggle: {
+                toggleStoreExpansion(row)
+            },
+            actionTitle:
+                isStoreSelected(row)
+                ? "Selected Store"
+                : "Select Store",
+            action: {
+                selectStore(row)
+            }
+        )
+        .overlay {
+            RoundedRectangle(
+                cornerRadius: WayTaskDesign.Radius.xl,
+                style: .continuous
+            )
+            .stroke(
+                isStoreSelected(row)
+                    ? WayTaskDesign.accent
+                    : Color.clear,
+                lineWidth: 2
+            )
+        }
     }
 
     private func isStoreSelected(_ row: ShoppingWorkspaceStoreRow) -> Bool {
         row.storeID == selectedStoreID
     }
 
-    private func selectStore(_ row: ShoppingWorkspaceStoreRow) {
-        selectedStoreID = row.storeID
+    private func toggleStoreExpansion(
+        _ row: ShoppingWorkspaceStoreRow
+    ) {
+        var state = currentStoreAccordionState
+        state.toggleExpansion(for: row.storeID)
+        applyStoreAccordionState(state)
         WayTaskHaptics.selection()
+    }
+
+    private func selectStore(_ row: ShoppingWorkspaceStoreRow) {
+        var state = currentStoreAccordionState
+        state.select(storeID: row.storeID)
+        applyStoreAccordionState(state)
+        WayTaskHaptics.selection()
+    }
+
+    private var currentStoreAccordionState:
+        ShoppingStoreAccordionState {
+        ShoppingStoreAccordionState(
+            recommendedStoreID: recommendedStoreID,
+            selectedStoreID: selectedStoreID,
+            expandedStoreID: expandedStoreID
+        )
+    }
+
+    private func applyStoreAccordionState(
+        _ state: ShoppingStoreAccordionState
+    ) {
+        recommendedStoreID = state.recommendedStoreID
+        selectedStoreID = state.selectedStoreID
+        expandedStoreID = state.expandedStoreID
     }
 
     private var isCurrentShoppingPlanForActiveItems: Bool {
@@ -1269,7 +1243,6 @@ struct ShoppingWorkspaceView: View {
             startShopping()
         case .failed, .idle, .stale:
             generateShoppingPlan()
-            isShowingPlanSheet = true
         }
     }
 
@@ -1371,14 +1344,12 @@ struct ShoppingWorkspaceView: View {
                 shoppingTripCoverages: shoppingTripCoverages
             )
             refreshRecommendedStoreRowsCache()
-            isShowingPlanSheet = true
         }
     }
 
     private func failShoppingPlan(message: String, actionTitle: String?) {
         appStateManager.markShoppingPlanFailed(message: message, actionTitle: actionTitle)
         stopPlanningTimer()
-        isShowingPlanSheet = true
     }
 
     private func failIfPlanningTimedOut(since startedAt: Date) -> Bool {
@@ -1475,7 +1446,6 @@ struct ShoppingWorkspaceView: View {
                 selectedStore: selectedStore,
                 in: modelContext
             )
-            isShowingPlanSheet = false
         } catch {
             showShoppingFlowError("WayTask could not start shopping. \(error.localizedDescription)")
         }
@@ -1504,8 +1474,9 @@ struct ShoppingWorkspaceView: View {
     private func finishShopping(_ session: ShoppingSession) {
         do {
             try shoppingSessionService.finishShopping(session, in: modelContext)
-            isShowingPlanSheet = false
+            recommendedStoreID = nil
             selectedStoreID = nil
+            expandedStoreID = nil
             appStateManager.clearShoppingPlan()
             refreshShoppingPresentationCache()
         } catch {
@@ -1678,6 +1649,54 @@ struct ShoppingWorkspaceView: View {
 
 private enum ShoppingWorkspaceScrollTarget: Hashable {
     case recommendedStores
+}
+
+struct ShoppingStoreAccordionState: Equatable {
+    var recommendedStoreID: UUID?
+    var selectedStoreID: UUID?
+    var expandedStoreID: UUID?
+
+    mutating func synchronize(storeIDs: [UUID]) {
+        let validStoreIDs = Set(storeIDs)
+        let hadRecommendation = recommendedStoreID != nil
+        recommendedStoreID = storeIDs.first
+
+        if let selectedStoreID,
+           !validStoreIDs.contains(selectedStoreID) {
+            self.selectedStoreID = nil
+        }
+
+        if let expandedStoreID {
+            if !validStoreIDs.contains(expandedStoreID) {
+                self.expandedStoreID = recommendedStoreID
+            }
+        } else if !hadRecommendation {
+            expandedStoreID = recommendedStoreID
+        }
+    }
+
+    mutating func toggleExpansion(for storeID: UUID) {
+        expandedStoreID =
+            expandedStoreID == storeID ? nil : storeID
+    }
+
+    mutating func select(storeID: UUID) {
+        if selectedStoreID != storeID {
+            selectedStoreID = storeID
+            expandedStoreID = storeID
+        }
+    }
+}
+
+enum ShoppingPlanPresentationMode: Equatable {
+    case inline
+}
+
+enum ShoppingWorkspacePresentationPolicy {
+    static let shoppingPlanMode:
+        ShoppingPlanPresentationMode = .inline
+    static let inlinePlanAccessibilityIdentifier =
+        "shopping-plan-inline"
 }
 
 private extension BuyingOption {

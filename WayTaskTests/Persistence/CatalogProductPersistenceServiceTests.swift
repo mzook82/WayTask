@@ -152,6 +152,39 @@ final class CatalogProductPersistenceServiceTests: XCTestCase {
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<Product>()), 1)
     }
 
+    func testExplicitCatalogAddRestoresTombstoneWithoutCreatingDuplicate()
+        throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let tombstone = Product(
+            name: "Old snapshot",
+            updatedAt: fixedDate.addingTimeInterval(-200),
+            deletedAt: fixedDate.addingTimeInterval(-100),
+            catalogProductIDRawValue: "prd_pilot_0001"
+        )
+        context.insert(tombstone)
+        try context.save()
+
+        let restoredAt = fixedDate.addingTimeInterval(100)
+        let outcome = try CatalogProductPersistenceService(
+            clock: { restoredAt }
+        ).save(makeRequest(), in: context)
+        let restored = try insertedProduct(from: outcome)
+
+        XCTAssertEqual(restored.id, tombstone.id)
+        XCTAssertNil(restored.deletedAt)
+        XCTAssertEqual(restored.updatedAt, restoredAt)
+        XCTAssertEqual(restored.name, "חלב")
+        XCTAssertEqual(
+            restored.catalogProductIDRawValue,
+            "prd_pilot_0001"
+        )
+        XCTAssertEqual(
+            try context.fetchCount(FetchDescriptor<Product>()),
+            1
+        )
+    }
+
     func testDeduplicationUsesOnlyExactProductID() throws {
         let container = try makeContainer()
         let context = ModelContext(container)
@@ -172,6 +205,57 @@ final class CatalogProductPersistenceServiceTests: XCTestCase {
         XCTAssertNotEqual(first.catalogProductID, second.catalogProductID)
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<Product>()), 3)
         XCTAssertNil(manual.catalogProductIDRawValue)
+    }
+
+    func testFailedExplicitRestoreLeavesTombstoneUnchanged() throws {
+        struct ExpectedFailure: Error {}
+
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let deletedAt = fixedDate.addingTimeInterval(-100)
+        let tombstone = Product(
+            name: "Original snapshot",
+            imageData: Data([0xaa]),
+            category: "Original category",
+            updatedAt: fixedDate.addingTimeInterval(-200),
+            deletedAt: deletedAt,
+            source: .barcode,
+            catalogProductIDRawValue: "prd_pilot_0001",
+            catalogDisplayNameSnapshot: "Original snapshot",
+            catalogDisplayLocaleSnapshot: "en",
+            catalogCategoryIDSnapshotRawValue: "original-category",
+            catalogCategoryDisplayNameSnapshot: "Original category",
+            catalogIconKeySnapshot: "product.original",
+            catalogSnapshotUpdatedAt: fixedDate.addingTimeInterval(-300)
+        )
+        context.insert(tombstone)
+        try context.save()
+
+        let service = CatalogProductPersistenceService(
+            clock: { self.fixedDate.addingTimeInterval(100) },
+            saveContext: { _ in throw ExpectedFailure() }
+        )
+
+        XCTAssertThrowsError(
+            try service.save(self.makeRequest(imageData: Data([0xbb])), in: context)
+        )
+        XCTAssertEqual(tombstone.deletedAt, deletedAt)
+        XCTAssertTrue(tombstone.isDeletedFromLibrary)
+        XCTAssertEqual(tombstone.updatedAt, fixedDate.addingTimeInterval(-200))
+        XCTAssertEqual(tombstone.name, "Original snapshot")
+        XCTAssertEqual(tombstone.imageData, Data([0xaa]))
+        XCTAssertEqual(tombstone.category, "Original category")
+        XCTAssertEqual(tombstone.source, .barcode)
+        XCTAssertEqual(tombstone.catalogDisplayLocaleSnapshot, "en")
+        XCTAssertEqual(
+            tombstone.catalogCategoryIDSnapshotRawValue,
+            "original-category"
+        )
+        XCTAssertEqual(tombstone.catalogIconKeySnapshot, "product.original")
+        XCTAssertEqual(
+            try context.fetchCount(FetchDescriptor<Product>()),
+            1
+        )
     }
 
     func testMultipleExactMatchesFailDeterministicallyWithoutSaving() throws {

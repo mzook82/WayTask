@@ -12,7 +12,12 @@ struct ProductListView: View {
     @EnvironmentObject private var featureTourCoordinator: FeatureTourCoordinator
 
     @Query private var items: [ShoppingItem]
-    @Query private var products: [Product]
+    @Query(
+        filter: #Predicate<Product> { product in
+            product.deletedAt == nil
+        }
+    )
+    private var products: [Product]
     @Query private var locations: [GeoLocation]
     @Query private var productHistories: [ProductHistory]
     @Query private var shoppingSessions: [ShoppingSession]
@@ -36,6 +41,8 @@ struct ProductListView: View {
     @StateObject private var productAutocompleteViewModel: AddProductAutocompleteViewModel
     @FocusState private var isProductNameFocused: Bool
     private let shoppingListService = ShoppingListService()
+    private let productLibraryDeletionService =
+        ProductLibraryDeletionService()
     private let addProductSaveCoordinator = AddProductSaveCoordinator()
     private let shoppingIntentMatcher = ShoppingIntentMatcher()
     private let shoppingItemCatalogResolver =
@@ -65,6 +72,22 @@ struct ProductListView: View {
         ProductAutocompleteLocaleResolver.preferredApplicationLocaleIdentifier(
             environmentLocaleIdentifier: locale.identifier,
             preferredLanguages: Locale.preferredLanguages
+        )
+    }
+
+    private var productNameTextBinding: Binding<String> {
+        Binding(
+            get: {
+                newItemName
+            },
+            set: { proposedValue in
+                newItemName =
+                    productAutocompleteViewModel.acceptTextFieldEdit(
+                        proposedValue,
+                        localeIdentifier:
+                            productAutocompleteLocaleIdentifier
+                    )
+            }
         )
     }
 
@@ -153,12 +176,6 @@ struct ProductListView: View {
             }
             .onChange(of: selectedPhotoItem) {
                 loadSelectedPhoto()
-            }
-            .onChange(of: newItemName) { _, query in
-                productAutocompleteViewModel.updateQuery(
-                    query,
-                    localeIdentifier: productAutocompleteLocaleIdentifier
-                )
             }
             .onChange(of: locale.identifier) {
                 productAutocompleteViewModel.updateQuery(
@@ -362,8 +379,9 @@ struct ProductListView: View {
                                 ProductAutocompleteCopy.productNamePlaceholder(
                                     localeIdentifier: locale.identifier
                                 ),
-                                text: $newItemName
+                                text: productNameTextBinding
                             )
+                                .autocorrectionDisabled()
                                 .textInputAutocapitalization(.words)
                                 .submitLabel(.done)
                                 .focused($isProductNameFocused)
@@ -1629,16 +1647,18 @@ struct ProductListView: View {
     private func deleteFilteredProducts(at offsets: IndexSet) {
         for index in offsets.sorted(by: >) {
             let product = filteredProducts[index]
-            let listIDs = Set(shoppingListEntries.filter { $0.productID == product.id }.map(\.shoppingListID))
-            for shoppingListID in listIDs {
-                try? shoppingListService.removeProductFromShopping(
+            do {
+                try productLibraryDeletionService.delete(
                     product,
-                    shoppingListID: shoppingListID,
                     in: modelContext
                 )
+            } catch {
+                assertionFailure(
+                    "Failed to delete Product Library product: \(error.localizedDescription)"
+                )
             }
-            modelContext.delete(product)
         }
+        appStateManager.shoppingListDidChange()
         appStateManager.markShoppingPlanStale(reason: "Shopping list changed. Generate a new plan before viewing stores.")
     }
 

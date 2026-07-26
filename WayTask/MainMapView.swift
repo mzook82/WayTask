@@ -11,7 +11,12 @@ struct MainMapView: View {
 
     @Query private var locations: [GeoLocation]
     @Query private var items: [ShoppingItem]
-    @Query private var products: [Product]
+    @Query(
+        filter: #Predicate<Product> { product in
+            product.deletedAt == nil
+        }
+    )
+    private var products: [Product]
     @Query private var shoppingListEntries: [ShoppingListEntry]
     @StateObject private var mapViewModel = MapViewModel()
     private let shoppingIntentMatcher = ShoppingIntentMatcher()

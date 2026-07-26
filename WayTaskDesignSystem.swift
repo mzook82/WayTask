@@ -587,8 +587,10 @@ struct WayTaskRecommendationCard: View {
     var distanceText: String?
     var isHighlighted = false
     var isSelected = false
+    var isExpanded = true
     var isEmbedded = false
     var showsItemDetails = true
+    var onExpansionToggle: (() -> Void)?
     var actionTitle: String?
     var action: (() -> Void)?
 
@@ -605,76 +607,124 @@ struct WayTaskRecommendationCard: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.md) {
-            HStack(alignment: .top, spacing: WayTaskDesign.Spacing.sm) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: WayTaskDesign.Radius.md, style: .continuous)
-                        .fill(isHighlighted ? WayTaskDesign.accentGradient : LinearGradient(colors: [WayTaskDesign.surfaceElevated, WayTaskDesign.surfaceElevated], startPoint: .top, endPoint: .bottom))
+            header
 
-                    Image(systemName: "storefront.fill")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(isHighlighted ? .white : WayTaskDesign.accent)
+            if isExpanded {
+                Text(coverageSummary)
+                    .font(WayTaskDesign.Typography.subheadline.weight(.semibold))
+                    .foregroundStyle(WayTaskDesign.primaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if showsItemDetails {
+                    itemSection(
+                        title: "Likely here",
+                        itemNames: likelyItemNames,
+                        systemImage: "checkmark",
+                        emptyMessage: "No product-level estimate."
+                    )
+
+                    itemSection(
+                        title: "Other items",
+                        itemNames: otherItemNames,
+                        systemImage: "circle.fill",
+                        emptyMessage: "No other shopping list items."
+                    )
                 }
-                .frame(width: 52, height: 52)
 
-                VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xxs) {
-                    Text(recommendationTitle)
-                        .font(WayTaskDesign.Typography.captionStrong)
-                        .foregroundStyle(WayTaskDesign.accent)
+                HStack(alignment: .top, spacing: WayTaskDesign.Spacing.xs) {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(WayTaskDesign.secondaryText)
 
-                    Text(storeName)
-                        .font(WayTaskDesign.Typography.headline)
-                        .foregroundStyle(WayTaskDesign.primaryText)
-                        .lineLimit(1)
-
-                    if let distanceText {
-                        Label(distanceText, systemImage: "location")
-                            .font(WayTaskDesign.Typography.caption.weight(.semibold))
-                            .foregroundStyle(WayTaskDesign.secondaryText)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Availability is estimated.")
+                        Text("Some items may require another store.")
                     }
-                }
-
-                Spacer(minLength: WayTaskDesign.Spacing.xs)
-
-                if isSelected {
-                    WayTaskBadge(title: "Selected", systemImage: "checkmark", tone: .accent)
-                }
-            }
-
-            Text(coverageSummary)
-                .font(WayTaskDesign.Typography.subheadline.weight(.semibold))
-                .foregroundStyle(WayTaskDesign.primaryText)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if showsItemDetails {
-                itemSection(
-                    title: "Likely here",
-                    itemNames: likelyItemNames,
-                    systemImage: "checkmark",
-                    emptyMessage: "No product-level estimate."
-                )
-
-                itemSection(
-                    title: "Other items",
-                    itemNames: otherItemNames,
-                    systemImage: "circle.fill",
-                    emptyMessage: "No other shopping list items."
-                )
-            }
-
-            HStack(alignment: .top, spacing: WayTaskDesign.Spacing.xs) {
-                Image(systemName: "info.circle")
+                    .font(WayTaskDesign.Typography.caption)
                     .foregroundStyle(WayTaskDesign.secondaryText)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Availability is estimated.")
-                    Text("Some items may require another store.")
                 }
-                .font(WayTaskDesign.Typography.caption)
-                .foregroundStyle(WayTaskDesign.secondaryText)
+
+                if let actionTitle, let action {
+                    WayTaskPrimaryButton(
+                        actionTitle,
+                        systemImage: "arrow.right",
+                        action: action
+                    )
+                }
+            }
+        }
+        .animation(
+            .easeInOut(duration: 0.2),
+            value: isExpanded
+        )
+    }
+
+    @ViewBuilder
+    private var header: some View {
+        if let onExpansionToggle {
+            Button(action: onExpansionToggle) {
+                headerContent(showsDisclosure: true)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(
+                "\(storeName), \(isExpanded ? "collapse" : "expand") store details"
+            )
+            .accessibilityValue(
+                isExpanded ? "Expanded" : "Collapsed"
+            )
+        } else {
+            headerContent(showsDisclosure: false)
+        }
+    }
+
+    private func headerContent(
+        showsDisclosure: Bool
+    ) -> some View {
+        HStack(alignment: .top, spacing: WayTaskDesign.Spacing.sm) {
+            ZStack {
+                RoundedRectangle(cornerRadius: WayTaskDesign.Radius.md, style: .continuous)
+                    .fill(isHighlighted ? WayTaskDesign.accentGradient : LinearGradient(colors: [WayTaskDesign.surfaceElevated, WayTaskDesign.surfaceElevated], startPoint: .top, endPoint: .bottom))
+
+                Image(systemName: "storefront.fill")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(isHighlighted ? .white : WayTaskDesign.accent)
+            }
+            .frame(width: 52, height: 52)
+
+            VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xxs) {
+                Text(recommendationTitle)
+                    .font(WayTaskDesign.Typography.captionStrong)
+                    .foregroundStyle(WayTaskDesign.accent)
+
+                Text(storeName)
+                    .font(WayTaskDesign.Typography.headline)
+                    .foregroundStyle(WayTaskDesign.primaryText)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let distanceText {
+                    Label(distanceText, systemImage: "location")
+                        .font(WayTaskDesign.Typography.caption.weight(.semibold))
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if isSelected {
+                WayTaskBadge(title: "Selected", systemImage: "checkmark", tone: .accent)
             }
 
-            if let actionTitle, let action {
-                WayTaskPrimaryButton(actionTitle, systemImage: "arrow.right", action: action)
+            if showsDisclosure {
+                Image(
+                    systemName:
+                        isExpanded
+                        ? "chevron.up"
+                        : "chevron.down"
+                )
+                .font(.caption.weight(.bold))
+                .foregroundStyle(WayTaskDesign.secondaryText)
+                .frame(width: 32, height: 44)
+                .accessibilityHidden(true)
             }
         }
     }
@@ -694,7 +744,10 @@ struct WayTaskRecommendationCard: View {
         systemImage: String,
         emptyMessage: String
     ) -> some View {
-        VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xs) {
+        let presentation =
+            WayTaskProductLabelPresentation(itemNames: itemNames)
+
+        return VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xs) {
             Text(title)
                 .font(WayTaskDesign.Typography.captionStrong)
                 .foregroundStyle(WayTaskDesign.secondaryText)
@@ -704,21 +757,63 @@ struct WayTaskRecommendationCard: View {
                     .font(WayTaskDesign.Typography.caption)
                     .foregroundStyle(WayTaskDesign.tertiaryText)
             } else {
-                ForEach(Array(itemNames.prefix(3).enumerated()), id: \.offset) { _, itemName in
-                    Label(itemName, systemImage: systemImage)
-                        .font(WayTaskDesign.Typography.caption)
-                        .foregroundStyle(WayTaskDesign.primaryText)
-                        .lineLimit(1)
+                ForEach(
+                    Array(
+                        presentation.visibleNames.enumerated()
+                    ),
+                    id: \.offset
+                ) { _, itemName in
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Image(systemName: systemImage)
+                            .accessibilityHidden(true)
+
+                        Text(itemName)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(
+                                WayTaskProductLabelPresentation
+                                    .maximumLineCount
+                            )
+                            .fixedSize(
+                                horizontal: false,
+                                vertical: true
+                            )
+                            .frame(
+                                maxWidth: .infinity,
+                                alignment: .leading
+                            )
+                    }
+                    .font(WayTaskDesign.Typography.caption)
+                    .foregroundStyle(WayTaskDesign.primaryText)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(itemName)
                 }
 
-                if itemNames.count > 3 {
-                    Text("+\(itemNames.count - 3) more")
+                if presentation.additionalCount > 0 {
+                    Text("+\(presentation.additionalCount) more")
                         .font(WayTaskDesign.Typography.caption.weight(.semibold))
                         .foregroundStyle(WayTaskDesign.secondaryText)
+                        .accessibilityLabel(
+                            "\(presentation.additionalCount) more products"
+                        )
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct WayTaskProductLabelPresentation: Equatable {
+    static let maximumVisibleCount = 3
+    static let maximumLineCount = 2
+
+    let itemNames: [String]
+
+    var visibleNames: [String] {
+        Array(itemNames.prefix(Self.maximumVisibleCount))
+    }
+
+    var additionalCount: Int {
+        max(itemNames.count - Self.maximumVisibleCount, 0)
     }
 }
 

@@ -9,7 +9,12 @@ struct HomeView: View {
     @EnvironmentObject private var featureTourCoordinator: FeatureTourCoordinator
 
     @Query private var items: [ShoppingItem]
-    @Query private var products: [Product]
+    @Query(
+        filter: #Predicate<Product> { product in
+            product.deletedAt == nil
+        }
+    )
+    private var products: [Product]
     @Query private var locations: [GeoLocation]
     @Query private var shoppingSessions: [ShoppingSession]
     @Query private var shoppingLists: [ShoppingList]
@@ -254,10 +259,11 @@ struct HomeView: View {
                             totalItemCount: row.totalItemCount,
                             distanceText: row.distanceText,
                             isHighlighted: row.isHighlighted,
-                            showsItemDetails: false
-                        ) {
+                            showsItemDetails: false,
+                            action: {
                             appStateManager.selectedTab = .shopping
-                        }
+                            }
+                        )
                     }
                 }
             }

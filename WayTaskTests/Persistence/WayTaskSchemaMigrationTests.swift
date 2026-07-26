@@ -180,7 +180,7 @@ final class WayTaskSchemaMigrationTests: XCTestCase {
 
     func testV2IsV1PlusExactlySevenNullableProductAttributes() throws {
         let v1 = Schema(versionedSchema: WayTaskSchemaV1.self)
-        let v2 = WayTaskModelContainer.currentSchema
+        let v2 = Schema(versionedSchema: WayTaskSchemaV2.self)
         let catalogFields: Set<String> = [
             "catalogProductIDRawValue",
             "catalogDisplayNameSnapshot",
@@ -220,7 +220,44 @@ final class WayTaskSchemaMigrationTests: XCTestCase {
         }
     }
 
-    func testFileBackedV1StoreMigratesToV2WithoutDataLossOrCatalogInference() throws {
+    func testV3IsV2PlusDurableNullableProductDeletionDate() throws {
+        let v2 = Schema(versionedSchema: WayTaskSchemaV2.self)
+        let v3 = WayTaskModelContainer.currentSchema
+
+        XCTAssertEqual(
+            Set(v2.entities.map(\.name)),
+            Set(v3.entities.map(\.name))
+        )
+        for v2Entity in v2.entities {
+            let v3Entity = try XCTUnwrap(
+                v3.entities.first { $0.name == v2Entity.name }
+            )
+            let v2AttributeNames =
+                Set(v2Entity.attributesByName.keys)
+            let v3AttributeNames =
+                Set(v3Entity.attributesByName.keys)
+
+            if v2Entity.name == "Product" {
+                XCTAssertEqual(
+                    v3AttributeNames.subtracting(v2AttributeNames),
+                    Set(["deletedAt"])
+                )
+                XCTAssertTrue(
+                    v3Entity.attributesByName["deletedAt"]?
+                        .isOptional == true
+                )
+            } else {
+                XCTAssertEqual(v3AttributeNames, v2AttributeNames)
+            }
+
+            XCTAssertEqual(
+                Set(v3Entity.relationshipsByName.keys),
+                Set(v2Entity.relationshipsByName.keys)
+            )
+        }
+    }
+
+    func testFileBackedV1StoreMigratesToV3WithoutDataLossOrCatalogInference() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("WT025C-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(
@@ -289,6 +326,7 @@ final class WayTaskSchemaMigrationTests: XCTestCase {
         XCTAssertNil(product.catalogCategoryDisplayNameSnapshot)
         XCTAssertNil(product.catalogIconKeySnapshot)
         XCTAssertNil(product.catalogSnapshotUpdatedAt)
+        XCTAssertNil(product.deletedAt)
 
         let entry = try XCTUnwrap(entries.first)
         XCTAssertEqual(entry.id, fixture.entryID)

@@ -184,6 +184,16 @@ final class AddProductAutocompleteViewModel: ObservableObject {
         return nil
     }
 
+    var selectedFieldValue: String? {
+        if let selectedCatalogProduct {
+            return selectedCatalogProduct.displayName
+        }
+        if let selectedCustomProduct {
+            return selectedCustomProduct.name
+        }
+        return nil
+    }
+
     var customProductActionName: String? {
         guard selectedCatalogProduct == nil,
               selectedCustomProduct == nil,
@@ -320,6 +330,25 @@ final class AddProductAutocompleteViewModel: ObservableObject {
     }
 
     @discardableResult
+    func acceptTextFieldEdit(
+        _ proposedValue: String,
+        localeIdentifier: String
+    ) -> String {
+        guard let selectedFieldValue else {
+            updateQuery(
+                proposedValue,
+                localeIdentifier: localeIdentifier
+            )
+            return proposedValue
+        }
+
+        // A keyboard can deliver a final marked-text or autocorrection write
+        // while SwiftUI is replacing the field with the selected summary.
+        // Once selection is committed, keep its exact display value authoritative.
+        return selectedFieldValue
+    }
+
+    @discardableResult
     func selectCatalogProduct(
         _ result: ProductSearchResult,
         preselectionQuery: String
@@ -336,6 +365,7 @@ final class AddProductAutocompleteViewModel: ObservableObject {
             result: result,
             preselectionQuery: preselectionQuery
         )
+        rawQuery = result.displayName
         phase = .selectedCatalog
         return true
     }

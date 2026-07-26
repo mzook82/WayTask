@@ -468,6 +468,62 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
         XCTAssertEqual(requests.count, 1)
     }
 
+    func testLateHebrewFieldCommitCannotStartSearchOrRewriteSelection()
+        async throws {
+        let result = makeResult(
+            id: "bread_whole_wheat",
+            displayName: "לחם מחיטה מלאה",
+            displayLocale: "he",
+            categoryID: "bakery",
+            categoryDisplayName: "מאפים ולחמים",
+            iconKey: "product.bread"
+        )
+        let recorder = ProductAutocompleteSearchRecorder(
+            responses: ["לח": [result]]
+        )
+        let viewModel = makeViewModel(recorder: recorder)
+
+        XCTAssertEqual(
+            viewModel.acceptTextFieldEdit(
+                "לח",
+                localeIdentifier: "he-IL"
+            ),
+            "לח"
+        )
+        try await waitUntil {
+            viewModel.phase == .results
+        }
+        XCTAssertTrue(
+            viewModel.selectCatalogProduct(
+                result,
+                preselectionQuery: "לח"
+            )
+        )
+
+        XCTAssertEqual(
+            viewModel.acceptTextFieldEdit(
+                "לי",
+                localeIdentifier: "he-IL"
+            ),
+            "לחם מחיטה מלאה"
+        )
+        await Task.yield()
+        await Task.yield()
+        let requests = await recorder.requests
+
+        XCTAssertEqual(
+            requests.map(\.query),
+            ["לח"]
+        )
+        XCTAssertEqual(viewModel.rawQuery, "לחם מחיטה מלאה")
+        XCTAssertEqual(
+            viewModel.selectedCatalogProduct?.productID,
+            ProductID("bread_whole_wheat")
+        )
+        XCTAssertEqual(viewModel.phase, .selectedCatalog)
+        XCTAssertTrue(viewModel.results.isEmpty)
+    }
+
     func testNoncurrentResultCannotBeSelectedAndNoResultIsSelectedAutomatically() async throws {
         let current = makeResult(id: "milk", displayName: "Milk")
         let other = makeResult(id: "bread", displayName: "Bread")

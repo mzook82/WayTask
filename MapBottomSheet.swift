@@ -94,7 +94,9 @@ struct MapBottomSheet: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else {
-                    FlowItems(items: Array(displayedLikelyItemNames(for: store).prefix(5)))
+                    MapStoreProductLabels(
+                        itemNames: displayedLikelyItemNames(for: store)
+                    )
                 }
             }
 
@@ -105,7 +107,7 @@ struct MapBottomSheet: View {
                         .foregroundStyle(.secondary)
                         .textCase(.uppercase)
 
-                    FlowItems(items: Array(otherItemNames.prefix(5)))
+                    MapStoreProductLabels(itemNames: otherItemNames)
                 }
             }
 
@@ -207,21 +209,66 @@ struct MapBottomSheet: View {
     }
 }
 
-private struct FlowItems: View {
-    let items: [String]
+struct MapStoreProductLabelPresentation: Equatable {
+    static let maximumVisibleCount = 3
+    static let maximumLineCount = 2
+
+    let itemNames: [String]
+
+    var visibleNames: [String] {
+        Array(itemNames.prefix(Self.maximumVisibleCount))
+    }
+
+    var additionalCount: Int {
+        max(itemNames.count - Self.maximumVisibleCount, 0)
+    }
+}
+
+private struct MapStoreProductLabels: View {
+    let itemNames: [String]
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], alignment: .leading, spacing: 8) {
-            ForEach(items, id: \.self) { item in
-                Text(item)
+        let presentation = MapStoreProductLabelPresentation(
+            itemNames: itemNames
+        )
+
+        VStack(alignment: .leading, spacing: 7) {
+            ForEach(
+                Array(presentation.visibleNames.enumerated()),
+                id: \.offset
+            ) { _, itemName in
+                Text(itemName)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.primary)
-                    .lineLimit(1)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(
+                        MapStoreProductLabelPresentation
+                            .maximumLineCount
+                    )
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 7)
                     .background(Color.primary.opacity(0.08))
-                    .clipShape(Capsule())
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: 10,
+                            style: .continuous
+                        )
+                    )
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(itemName)
+            }
+
+            if presentation.additionalCount > 0 {
+                Text("+\(presentation.additionalCount) more")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(
+                        "\(presentation.additionalCount) more products"
+                    )
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

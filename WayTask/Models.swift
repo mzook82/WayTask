@@ -199,6 +199,7 @@ final class Product {
     var imageURLString: String?
     var dateAdded: Date
     var updatedAt: Date
+    var deletedAt: Date?
     var sourceRawValue: String
     var productType: String?
     var flavor: String?
@@ -225,6 +226,7 @@ final class Product {
         imageURL: URL? = nil,
         dateAdded: Date = Date(),
         updatedAt: Date = Date(),
+        deletedAt: Date? = nil,
         source: ProductSource = .manual,
         productType: String? = nil,
         flavor: String? = nil,
@@ -250,6 +252,7 @@ final class Product {
         self.imageURLString = imageURL?.absoluteString
         self.dateAdded = dateAdded
         self.updatedAt = updatedAt
+        self.deletedAt = deletedAt
         self.sourceRawValue = source.rawValue
         self.productType = productType
         self.flavor = flavor
@@ -350,6 +353,10 @@ final class Product {
         catalogProductIDRawValue != nil
     }
 
+    var isDeletedFromLibrary: Bool {
+        deletedAt != nil
+    }
+
     var searchKeywords: [String] {
         get {
             guard let searchKeywordsRawValue else {
@@ -367,7 +374,7 @@ final class Product {
     }
 
     func refresh(from item: ShoppingItem) {
-        guard !isCatalogLinked else {
+        guard !isCatalogLinked, !isDeletedFromLibrary else {
             return
         }
 
@@ -409,7 +416,7 @@ final class Product {
     }
 
     func refresh(from candidate: ProductCandidate, fallbackImageData: Data?) {
-        guard !isCatalogLinked else {
+        guard !isCatalogLinked, !isDeletedFromLibrary else {
             return
         }
 
@@ -458,6 +465,24 @@ final class Product {
         visibleText = nextVisibleText
         searchKeywordsRawValue = nextSearchKeywordsRawValue ?? searchKeywordsRawValue
         updatedAt = Date()
+    }
+
+    func markDeletedFromLibrary(at date: Date = Date()) {
+        guard deletedAt == nil else {
+            return
+        }
+
+        deletedAt = date
+        updatedAt = date
+    }
+
+    func restoreToLibrary(at date: Date = Date()) {
+        guard deletedAt != nil else {
+            return
+        }
+
+        deletedAt = nil
+        updatedAt = date
     }
 
     func makeShoppingItem() -> ShoppingItem {

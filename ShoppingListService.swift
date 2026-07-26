@@ -116,13 +116,21 @@ struct ShoppingListService: ShoppingListServicing {
     ) throws -> Product {
         let products = try modelContext.fetch(FetchDescriptor<Product>())
         let unlinkedProducts = products.filter { $0.catalogProductIDRawValue == nil }
+        let activeUnlinkedProducts = unlinkedProducts.filter {
+            !$0.isDeletedFromLibrary
+        }
         let product: Product
 
         if let barcode = normalizedText(candidate.barcode),
            let existing = unlinkedProducts.first(where: { normalizedText($0.barcode) == barcode }) {
+            // Scanning the same barcode is an explicit user request to restore
+            // this identity; passive repair never calls this path.
+            existing.restoreToLibrary()
             existing.refresh(from: candidate, fallbackImageData: fallbackImageData)
             product = existing
-        } else if let existing = unlinkedProducts.first(where: { productMatches($0, candidate: candidate) }) {
+        } else if let existing = activeUnlinkedProducts.first(where: {
+            productMatches($0, candidate: candidate)
+        }) {
             existing.refresh(from: candidate, fallbackImageData: fallbackImageData)
             product = existing
         } else {
@@ -398,6 +406,55 @@ struct ShoppingListService: ShoppingListServicing {
     }
 }
 
+@MainActor
+struct ProductLibraryDeletionService {
+    typealias Clock = () -> Date
+
+    private let clock: Clock
+
+    init(clock: @escaping Clock = Date.init) {
+        self.clock = clock
+    }
+
+    func delete(
+        _ product: Product,
+        in modelContext: ModelContext
+    ) throws {
+        let lists = try modelContext.fetch(FetchDescriptor<ShoppingList>())
+        let activeListIDs = Set(
+            lists.filter { $0.kind == .weekly }.map(\.id)
+        )
+        let entries = try modelContext.fetch(
+            FetchDescriptor<ShoppingListEntry>()
+        )
+        let legacyItems = try modelContext.fetch(
+            FetchDescriptor<ShoppingItem>()
+        )
+        let legacyItemsByID = legacyItems.reduce(
+            into: [UUID: ShoppingItem]()
+        ) { result, item in
+            result[item.id] = item
+        }
+
+        product.markDeletedFromLibrary(at: clock())
+
+        // Removing a library product also removes it from current shopping,
+        // while completed and recent list entries remain durable history.
+        for entry in entries where
+            entry.productID == product.id &&
+            activeListIDs.contains(entry.shoppingListID)
+        {
+            if let legacyShoppingItemID = entry.legacyShoppingItemID,
+               let item = legacyItemsByID[legacyShoppingItemID] {
+                item.isCompleted = true
+            }
+            modelContext.delete(entry)
+        }
+
+        try modelContext.save()
+    }
+}
+
 struct ShoppingListBackfillResult {
     let weeklyListID: UUID?
     let productIDs: [UUID]
@@ -418,15 +475,32 @@ struct ShoppingListBackfillService {
         let entries = try modelContext.fetch(FetchDescriptor<ShoppingListEntry>())
         var productIDs: [UUID] = []
 
-        repairCatalogProducts(products)
+        repairCatalogProducts(
+            products.filter { !$0.isDeletedFromLibrary }
+        )
 
         for item in legacyItems {
-            let product = product(
+            guard let product = product(
                 for: item,
                 entries: entries,
                 products: &products,
+                weeklyListID: weeklyList.id,
                 in: modelContext
-            )
+            ) else {
+                continue
+            }
+
+            if product.isDeletedFromLibrary {
+                removeActiveEntries(
+                    for: product,
+                    item: item,
+                    entries: entries,
+                    weeklyListID: weeklyList.id,
+                    in: modelContext
+                )
+                continue
+            }
+
             if product.catalogProductIDRawValue == nil {
                 product.refresh(from: item)
             }
@@ -517,8 +591,9 @@ struct ShoppingListBackfillService {
         for item: ShoppingItem,
         entries: [ShoppingListEntry],
         products: inout [Product],
+        weeklyListID: UUID,
         in modelContext: ModelContext
-    ) -> Product {
+    ) -> Product? {
         if let existing = products.first(where: { $0.legacyShoppingItemID == item.id }) {
             return existing
         }
@@ -532,9 +607,78 @@ struct ShoppingListBackfillService {
             return linkedProduct
         }
 
+        if let catalogProductID = canonicalProductID(for: item),
+           let existing = products.first(where: {
+               canonicalProductID(for: $0) == catalogProductID
+           }) {
+            return existing
+        }
+
+        if let barcode = normalizedBarcode(item.barcode),
+           let existing = products.first(where: {
+               normalizedBarcode($0.barcode) == barcode
+           }) {
+            return existing
+        }
+
+        let itemEntries = entries.filter {
+            $0.legacyShoppingItemID == item.id
+        }
+        let isCurrentWeeklyItem = itemEntries.contains {
+            $0.shoppingListID == weeklyListID
+        }
+        let isUnlinkedActiveLegacyItem =
+            itemEntries.isEmpty && !item.isCompleted
+        guard isCurrentWeeklyItem || isUnlinkedActiveLegacyItem else {
+            // Completed/recent history is a consumer of Product identity, not
+            // a source allowed to create an active library Product.
+            return nil
+        }
+
         let product = Product(legacyItem: item)
         modelContext.insert(product)
         products.append(product)
         return product
+    }
+
+    private func removeActiveEntries(
+        for product: Product,
+        item: ShoppingItem,
+        entries: [ShoppingListEntry],
+        weeklyListID: UUID,
+        in modelContext: ModelContext
+    ) {
+        item.isCompleted = true
+        for entry in entries where
+            entry.shoppingListID == weeklyListID &&
+            (
+                entry.productID == product.id ||
+                entry.legacyShoppingItemID == item.id
+            )
+        {
+            modelContext.delete(entry)
+        }
+    }
+
+    private func canonicalProductID(for item: ShoppingItem) -> String? {
+        catalogResolver.resolve(
+            productIDRawValue: item.catalogProductIDRawValue
+        )?.productID
+    }
+
+    private func canonicalProductID(for product: Product) -> String? {
+        catalogResolver.resolve(
+            productIDRawValue: product.catalogProductIDRawValue
+        )?.productID
+    }
+
+    private func normalizedBarcode(_ barcode: String?) -> String? {
+        let normalized = barcode?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        guard let normalized, !normalized.isEmpty else {
+            return nil
+        }
+        return normalized
     }
 }
