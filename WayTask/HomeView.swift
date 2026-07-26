@@ -24,6 +24,8 @@ struct HomeView: View {
     private let buyingOptionsService = BuyingOptionsService()
     private let intentMatcher = ShoppingIntentMatcher()
     private let shoppingTripPlanningService = ShoppingTripService()
+    private let shoppingItemCatalogResolver =
+        ShoppingItemCatalogResolver()
 
     var body: some View {
         NavigationStack {
@@ -449,6 +451,8 @@ struct HomeView: View {
             return "Recommended Pet Store"
         case .pharmacy:
             return "Recommended Pharmacy"
+        case .general:
+            return "Recommended Store"
         case .other:
             return "Recommended Store"
         }
@@ -725,7 +729,21 @@ struct HomeView: View {
             return nil
         }
 
-        return items.first { $0.id == legacyShoppingItemID }
+        guard let item = items.first(where: {
+            $0.id == legacyShoppingItemID
+        }) else {
+            return nil
+        }
+
+        if let product = entry.product ??
+            products.first(where: { $0.id == entry.productID })
+        {
+            shoppingItemCatalogResolver.hydrate(
+                item,
+                from: product
+            )
+        }
+        return item
     }
 
     private var greeting: String {

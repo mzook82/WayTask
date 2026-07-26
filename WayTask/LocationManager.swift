@@ -55,7 +55,9 @@ final class LocationManager: NSObject, ObservableObject {
         let relevantLocations = locations
             .filter(shouldIncludeLocationInGeofenceResults)
             .filter { location in
-                location.shoppingItems.contains { !$0.isCompleted }
+                !intentMatcher.eligibleItems(
+                    from: location.shoppingItems.filter { !$0.isCompleted }
+                ).isEmpty
             }
             .prefix(maxMonitoredShoppingRegions)
 
@@ -65,8 +67,10 @@ final class LocationManager: NSObject, ObservableObject {
     }
 
     func startMonitoring(location: GeoLocation) {
-        let openItemNames = location.shoppingItems
-            .filter { !$0.isCompleted }
+        let eligibleItems = intentMatcher.eligibleItems(
+            from: location.shoppingItems.filter { !$0.isCompleted }
+        )
+        let openItemNames = eligibleItems
             .prefix(3)
             .map(\.name)
 
@@ -82,7 +86,7 @@ final class LocationManager: NSObject, ObservableObject {
             coordinate: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude),
             radius: notificationRadius(for: location.radius),
             itemNames: Array(openItemNames),
-            itemIDs: location.shoppingItems.filter { !$0.isCompleted }.prefix(3).map(\.id),
+            itemIDs: eligibleItems.prefix(3).map(\.id),
             shoppingListID: nil,
             sourceType: location.sourceType.rawValue,
             distanceMeters: distanceFromCurrentUser(to: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude)),
@@ -160,11 +164,21 @@ final class LocationManager: NSObject, ObservableObject {
         items: [ShoppingItem],
         shoppingListID: UUID?
     ) -> [ShoppingGeofenceCandidate] {
-        stores.compactMap { store in
+        let eligibleItems = intentMatcher.eligibleItems(from: items)
+        guard !eligibleItems.isEmpty else {
+            return []
+        }
+
+        return stores.compactMap { store in
             let taggedNames = Set(store.itemNames.map { $0.lowercased() })
-            let directlyMatchedItems = items.filter { taggedNames.contains($0.name.lowercased()) }
+            let directlyMatchedItems = eligibleItems.filter {
+                taggedNames.contains($0.name.lowercased())
+            }
             let matchingItems = directlyMatchedItems.isEmpty
-                ? intentMatcher.relevantItems(from: items, for: store)
+                ? intentMatcher.relevantItems(
+                    from: eligibleItems,
+                    for: store
+                )
                 : directlyMatchedItems
             guard !matchingItems.isEmpty else { return nil }
 

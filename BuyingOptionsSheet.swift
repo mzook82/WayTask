@@ -204,6 +204,8 @@ private struct ShoppingTripCoverageCard: View {
             return "Recommended Pet Store"
         case .pharmacy:
             return "Recommended Pharmacy"
+        case .general:
+            return "Recommended Store"
         case .other:
             return "Recommended Store"
         }

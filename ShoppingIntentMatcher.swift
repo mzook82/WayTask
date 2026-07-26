@@ -15,6 +15,7 @@ enum ShoppingIntentGroup: String, CaseIterable, Identifiable, Equatable, Hashabl
     case electronics
     case pet
     case pharmacy
+    case general
     case other
 
     var id: String { rawValue }
@@ -29,6 +30,8 @@ enum ShoppingIntentGroup: String, CaseIterable, Identifiable, Equatable, Hashabl
             return "Pet store"
         case .pharmacy:
             return "Pharmacy"
+        case .general:
+            return "General retail"
         case .other:
             return "Other"
         }
@@ -44,6 +47,8 @@ enum ShoppingIntentGroup: String, CaseIterable, Identifiable, Equatable, Hashabl
             return [.petStore]
         case .pharmacy:
             return [.pharmacy]
+        case .general:
+            return [.generalStore]
         case .other:
             return []
         }
@@ -157,6 +162,11 @@ enum ShoppingStoreCategory: String, CaseIterable, Identifiable, Equatable, Hasha
 
 enum NormalizedProductCategory: String, Equatable, Hashable, Codable, Sendable {
     case unknown
+    case catalogGrocery = "catalog.grocery"
+    case catalogElectronics = "catalog.electronics"
+    case catalogPet = "catalog.pet"
+    case catalogPharmacy = "catalog.pharmacy"
+    case catalogGeneral = "catalog.general"
     case groceryBaking = "grocery.baking"
     case groceryCondiment = "grocery.condiment"
     case groceryCoffee = "grocery.coffee"
@@ -279,7 +289,35 @@ enum ShoppingDiscoveryDebugLogger {
 }
 
 struct ProductIntentResolver {
+    private let catalogResolver: ShoppingItemCatalogResolver
+
+    init(
+        catalogResolver: ShoppingItemCatalogResolver =
+            ShoppingItemCatalogResolver()
+    ) {
+        self.catalogResolver = catalogResolver
+    }
+
     func resolve(for item: ShoppingItem) -> ProductIntentProfile {
+        if let identity = catalogResolver.resolve(item: item) {
+            return resolveCanonical(identity)
+        }
+
+        if item.catalogProductID != nil {
+            return profile(
+                category: .unknown,
+                group: .other,
+                confidence: 0,
+                evidence: [
+                    "catalog product ID is not present in the current catalog"
+                ],
+                primary: [],
+                secondary: [],
+                fallback: [],
+                excluded: []
+            )
+        }
+
         let terms = [
             item.name,
             item.brand,
@@ -302,6 +340,120 @@ struct ProductIntentResolver {
         #endif
 
         return profile
+    }
+
+    private func resolveCanonical(
+        _ identity: ResolvedShoppingItemCatalogIdentity
+    ) -> ProductIntentProfile {
+        let evidence = [
+            "catalog product ID \(identity.productID)",
+            "catalog category ID \(identity.categoryID)",
+            identity.subcategoryID.map {
+                "catalog subcategory ID \($0)"
+            }
+        ]
+        .compactMap { $0 }
+
+        switch identity.categoryID {
+        case "dairy",
+             "bakery",
+             "fruits_vegetables",
+             "meat_fish",
+             "pantry",
+             "drinks",
+             "frozen",
+             "snacks",
+             "household",
+             "cleaning":
+            return profile(
+                category: .catalogGrocery,
+                group: .grocery,
+                confidence: 1,
+                evidence: evidence,
+                primary: [.grocery, .supermarket],
+                secondary: [.convenienceStore],
+                fallback: [],
+                excluded: [
+                    .electronicsStore,
+                    .petStore,
+                    .homeImprovement
+                ]
+            )
+        case "personal_care", "pharmacy", "baby":
+            return profile(
+                category: .catalogPharmacy,
+                group: .pharmacy,
+                confidence: 1,
+                evidence: evidence,
+                primary: [.pharmacy],
+                secondary: [.supermarket],
+                fallback: [],
+                excluded: [
+                    .electronicsStore,
+                    .petStore,
+                    .homeImprovement
+                ]
+            )
+        case "pets":
+            return profile(
+                category: .catalogPet,
+                group: .pet,
+                confidence: 1,
+                evidence: evidence,
+                primary: [.petStore],
+                secondary: [.supermarket, .grocery],
+                fallback: [],
+                excluded: [
+                    .electronicsStore,
+                    .pharmacy,
+                    .homeImprovement
+                ]
+            )
+        case "electronics":
+            return profile(
+                category: .catalogElectronics,
+                group: .electronics,
+                confidence: 1,
+                evidence: evidence,
+                primary: [.electronicsStore],
+                secondary: [],
+                fallback: [.generalStore],
+                excluded: [
+                    .grocery,
+                    .supermarket,
+                    .convenienceStore,
+                    .petStore,
+                    .pharmacy,
+                    .homeImprovement
+                ]
+            )
+        case "home_garden":
+            return profile(
+                category: .catalogGeneral,
+                group: .general,
+                confidence: 1,
+                evidence: evidence,
+                primary: [.homeImprovement],
+                secondary: [.generalStore],
+                fallback: [],
+                excluded: [
+                    .electronicsStore,
+                    .petStore,
+                    .pharmacy
+                ]
+            )
+        default:
+            return profile(
+                category: .catalogGeneral,
+                group: .general,
+                confidence: 1,
+                evidence: evidence,
+                primary: [.generalStore],
+                secondary: [],
+                fallback: [],
+                excluded: []
+            )
+        }
     }
 
     private func resolve(haystack: String, tokens: Set<String>, itemName: String) -> ProductIntentProfile {
@@ -577,6 +729,14 @@ struct ProductIntentStoreEligibility {
             return Evaluation(isEligible: false, reason: "unknown intent has no allowed store types")
         }
 
+        if allowed.allSatisfy({ $0 == .generalStore }),
+           !store.storeCategories.isEmpty {
+            return Evaluation(
+                isEligible: true,
+                reason: "canonical general-retail category"
+            )
+        }
+
         if store.storeCategories.contains(where: { storeCategory in
             profile.excludedStoreTypes.contains { excludedCategory in
                 storeCategory.matches(excludedCategory) || excludedCategory.matches(storeCategory)
@@ -827,10 +987,19 @@ enum ShoppingStoreCategoryFilter {
 
 struct ShoppingIntentMatcher {
     var categoryMappings: [ShoppingStoreCategory: [String]]
-    private let resolver = ProductIntentResolver()
+    private let resolver: ProductIntentResolver
 
-    init(categoryMappings: [ShoppingStoreCategory: [String]] = ShoppingIntentMatcher.defaultCategoryMappings) {
+    init(
+        categoryMappings: [ShoppingStoreCategory: [String]] =
+            ShoppingIntentMatcher.defaultCategoryMappings,
+        catalogProducts: [CatalogProduct]? = nil
+    ) {
         self.categoryMappings = categoryMappings
+        resolver = ProductIntentResolver(
+            catalogResolver: ShoppingItemCatalogResolver(
+                products: catalogProducts
+            )
+        )
     }
 
     func suggestionRequest(for item: ShoppingItem) -> ShoppingStoreSuggestionRequest {
@@ -849,7 +1018,9 @@ struct ShoppingIntentMatcher {
     }
 
     func groupedIntents(for items: [ShoppingItem]) -> [ShoppingIntentGroupResult] {
-        let activeItems = items.filter { !$0.isCompleted }
+        let activeItems = items.filter {
+            !$0.isCompleted && !resolver.resolve(for: $0).isUnresolved
+        }
         let groupedItems = Dictionary(grouping: activeItems) { item in
             intentGroup(for: item)
         }
@@ -892,6 +1063,12 @@ struct ShoppingIntentMatcher {
             return .pharmacy
         }
 
+        if categories.contains(
+            where: { $0 == .generalStore || $0 == .homeImprovement }
+        ) {
+            return .general
+        }
+
         if categories.contains(where: { category in
             category == .grocery || category == .supermarket || category == .convenienceStore
         }) {
@@ -909,6 +1086,10 @@ struct ShoppingIntentMatcher {
 
         return activeItems.filter { item in
             let profile = resolver.resolve(for: item)
+            guard !profile.isUnresolved else {
+                return false
+            }
+
             return ProductIntentStoreEligibility.evaluate(
                 store: store,
                 profile: profile,
@@ -919,6 +1100,18 @@ struct ShoppingIntentMatcher {
 
     func intentProfile(for item: ShoppingItem) -> ProductIntentProfile {
         resolver.resolve(for: item)
+    }
+
+    func eligibleItems(from items: [ShoppingItem]) -> [ShoppingItem] {
+        items.filter {
+            !$0.isCompleted && !resolver.resolve(for: $0).isUnresolved
+        }
+    }
+
+    func unresolvedItems(from items: [ShoppingItem]) -> [ShoppingItem] {
+        items.filter {
+            !$0.isCompleted && resolver.resolve(for: $0).isUnresolved
+        }
     }
 
     func aggregateProfile(for items: [ShoppingItem], fallbackGroup: ShoppingIntentGroup = .other) -> ProductIntentProfile {
@@ -933,10 +1126,11 @@ struct ShoppingIntentMatcher {
     }
 
     func request(for items: [ShoppingItem], in group: ShoppingIntentGroup, fallbackID: UUID = UUID()) -> ShoppingStoreSuggestionRequest {
-        suggestionRequest(
+        let eligibleItems = eligibleItems(from: items)
+        return suggestionRequest(
             for: group,
-            items: items,
-            fallbackItem: items.first,
+            items: eligibleItems,
+            fallbackItem: eligibleItems.first,
             fallbackID: fallbackID
         )
     }
@@ -968,12 +1162,18 @@ struct ShoppingIntentMatcher {
         fallbackItem: ShoppingItem?,
         fallbackID: UUID = UUID()
     ) -> ShoppingStoreSuggestionRequest {
-        let itemNames = items.map(\.name).deduplicatedCaseInsensitive()
+        let eligibleItems = items.filter {
+            !resolver.resolve(for: $0).isUnresolved
+        }
+        let itemNames = eligibleItems.map(\.name)
+            .deduplicatedCaseInsensitive()
         let categoryText = group.displayName
-        let profiles = items.map { resolver.resolve(for: $0) }
+        let profiles = eligibleItems.map {
+            resolver.resolve(for: $0)
+        }
         let intentProfile = ProductIntentProfile.aggregate(profiles: profiles, group: group)
         let storeCategories = intentProfile.allowedStoreTypes
-        let groupSearchTerms = items
+        let groupSearchTerms = eligibleItems
             .flatMap { item in
                 searchTerms(for: item, categories: storeCategories)
             }

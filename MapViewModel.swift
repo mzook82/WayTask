@@ -777,6 +777,10 @@ final class MapViewModel: ObservableObject {
             return intents
         }
 
+        guard activeShoppingItems.isEmpty else {
+            return []
+        }
+
         return [StoreResolutionIntent(
             itemNames: [],
             storeCategories: [.grocery, .supermarket, .convenienceStore, .pharmacy, .petStore, .electronicsStore, .homeImprovement]

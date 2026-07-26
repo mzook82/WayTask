@@ -27,7 +27,14 @@ final class AddProductSaveCoordinatorTests: XCTestCase {
         let coordinator = AddProductSaveCoordinator(
             catalogSave: { request, _ in
                 capturedRequest = request
-                return .inserted(Product(name: request.displayNameSnapshot))
+                return .inserted(
+                    Product(
+                        name: request.displayNameSnapshot,
+                        source: .catalog,
+                        catalogProductIDRawValue:
+                            request.productID.rawValue
+                    )
+                )
             },
             manualSave: { _, _, _ in
                 throw UnexpectedSavePath()
@@ -41,12 +48,12 @@ final class AddProductSaveCoordinatorTests: XCTestCase {
         )
 
         let request = try XCTUnwrap(capturedRequest)
-        XCTAssertEqual(request.productID, ProductID("prd_pilot_0001"))
+        XCTAssertEqual(request.productID, ProductID("milk_3_percent"))
         XCTAssertEqual(request.displayNameSnapshot, "חלב")
         XCTAssertEqual(request.displayLocaleSnapshot, "he")
         XCTAssertEqual(
             request.categoryDisplayNameSnapshot,
-            "מוצרי חלב ותחליפים"
+            "מוצרי חלב"
         )
     }
 
@@ -58,7 +65,11 @@ final class AddProductSaveCoordinatorTests: XCTestCase {
             result: selectedResult,
             preselectionQuery: "mi"
         )
-        let inserted = Product(name: "Inserted")
+        let inserted = Product(
+            name: "Inserted",
+            source: .catalog,
+            catalogProductIDRawValue: selectedResult.productID.rawValue
+        )
         var capturedRequest: CatalogProductSaveRequest?
         var catalogSaveCount = 0
         var manualSaveCount = 0
@@ -147,7 +158,7 @@ final class AddProductSaveCoordinatorTests: XCTestCase {
             name: "Saved Milk",
             imageData: Data([0x01]),
             source: .catalog,
-            catalogProductIDRawValue: "prd_milk"
+            catalogProductIDRawValue: "milk_3_percent"
         )
         var manualSaveCount = 0
         let coordinator = AddProductSaveCoordinator(
@@ -191,7 +202,11 @@ final class AddProductSaveCoordinatorTests: XCTestCase {
                 preselectionQuery: "mi"
             )
         )
-        let inserted = Product(name: result.displayName)
+        let inserted = Product(
+            name: result.displayName,
+            source: .catalog,
+            catalogProductIDRawValue: result.productID.rawValue
+        )
         var catalogSaveCount = 0
         var manualSaveCount = 0
         var shouldFail = true
@@ -248,14 +263,14 @@ final class AddProductSaveCoordinatorTests: XCTestCase {
 
     private func makeSearchResult() -> ProductSearchResult {
         ProductSearchResult(
-            productID: ProductID("prd_milk"),
-            displayName: "Milk",
-            displayLocale: "en",
+            productID: ProductID("milk_3_percent"),
+            displayName: "חלב 3%",
+            displayLocale: "he",
             secondaryName: "חלב",
             categoryID: ProductCategoryID("dairy"),
-            categoryDisplayName: "Dairy",
+            categoryDisplayName: "מוצרי חלב",
             iconKey: "product.dairy",
-            matchedRecordAuthority: .preferredDisplayName,
+            matchedRecordAuthority: .primaryDisplayName,
             matchType: .exact,
             matchedLocale: "he"
         )

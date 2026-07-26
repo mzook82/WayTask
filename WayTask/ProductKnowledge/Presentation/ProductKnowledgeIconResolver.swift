@@ -12,7 +12,7 @@ nonisolated enum ProductKnowledgeIconResolver {
         case "product.meat":
             return "fork.knife"
         case "product.pantry":
-            return "shippingbox.fill"
+            return "square.grid.2x2.fill"
         case "product.drink":
             return "cup.and.saucer.fill"
         case "product.frozen":
@@ -32,7 +32,7 @@ nonisolated enum ProductKnowledgeIconResolver {
         case "product.pet":
             return "pawprint.fill"
         case "product.generic":
-            return fallbackSystemName
+            return "tag.fill"
         default:
             return fallbackSystemName
         }

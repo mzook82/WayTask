@@ -38,6 +38,8 @@ struct ProductListView: View {
     private let shoppingListService = ShoppingListService()
     private let addProductSaveCoordinator = AddProductSaveCoordinator()
     private let shoppingIntentMatcher = ShoppingIntentMatcher()
+    private let shoppingItemCatalogResolver =
+        ShoppingItemCatalogResolver()
     private let buyingOptionsService = BuyingOptionsService()
     private let shoppingMemoryService = ShoppingMemoryService()
     private let shoppingTripService = ShoppingTripService()
@@ -1153,6 +1155,13 @@ struct ProductListView: View {
                 ForEach(filteredProducts) { product in
                     ProductRowCard(
                         product: product,
+                        fallbackSystemName:
+                            ProductKnowledgeIconResolver.systemName(
+                                forCatalogSnapshot:
+                                    shoppingItemCatalogResolver.iconKey(
+                                        for: product
+                                    )
+                            ),
                         isInShopping: isProductInCurrentShoppingList(product),
                         memoryIndicators: memoryIndicators(for: product),
                         onAddToShopping: {
@@ -1331,6 +1340,12 @@ struct ProductListView: View {
             .filter { !$0.isCompleted }
     }
 
+    private var eligibleShoppingItems: [ShoppingItem] {
+        shoppingIntentMatcher.eligibleItems(
+            from: activeShoppingItems
+        )
+    }
+
     private var productLibrarySignature: String {
         products
             .map { "\($0.id.uuidString)-\($0.updatedAt.timeIntervalSince1970)" }
@@ -1462,28 +1477,33 @@ struct ProductListView: View {
     }
 
     private func refreshSharedShoppingPlanForActiveItems() {
-        guard !activeShoppingItems.isEmpty else {
+        let planningItems = eligibleShoppingItems
+        guard !planningItems.isEmpty else {
             return
         }
 
-        let request = appStateManager.storeSuggestionRequest ?? shoppingIntentMatcher.request(for: activeShoppingItems, in: .grocery)
+        let request = appStateManager.storeSuggestionRequest ??
+            shoppingIntentMatcher.request(
+                for: planningItems,
+                in: .grocery
+            )
         let userCoordinate = locationManager.currentCoordinate
         let candidateStores = suggestionStores(for: request, userCoordinate: userCoordinate)
         let buyingOptions = buyingOptionsService.localOptions(
             for: request,
-            shoppingItems: activeShoppingItems,
+            shoppingItems: planningItems,
             stores: candidateStores,
             userCoordinate: userCoordinate
         )
         let tripCoverages = shoppingTripService.coverage(
-            for: activeShoppingItems,
+            for: planningItems,
             stores: candidateStores,
             request: request,
             userCoordinate: userCoordinate
         )
         appStateManager.setShoppingPlan(
             request: request,
-            items: activeShoppingItems,
+            items: planningItems,
             stores: candidateStores,
             buyingOptions: buyingOptions,
             shoppingTripCoverages: tripCoverages
@@ -1667,7 +1687,21 @@ struct ProductListView: View {
             return nil
         }
 
-        return items.first { $0.id == legacyShoppingItemID }
+        guard let item = items.first(where: {
+            $0.id == legacyShoppingItemID
+        }) else {
+            return nil
+        }
+
+        if let product = entry.product ??
+            products.first(where: { $0.id == entry.productID })
+        {
+            shoppingItemCatalogResolver.hydrate(
+                item,
+                from: product
+            )
+        }
+        return item
     }
 
     private func assignedLocation(for item: ShoppingItem) -> GeoLocation? {
@@ -1767,12 +1801,26 @@ struct ProductListView: View {
             item.packageType = product.packageType
             item.visibleText = product.visibleText
             item.searchKeywords = product.searchKeywords
+            shoppingItemCatalogResolver.hydrate(
+                item,
+                from: product
+            )
         }
     }
 
     private func findSuggestions(for item: ShoppingItem) {
-        let request = shoppingIntentMatcher.suggestionRequest(for: item)
-        let groups = shoppingIntentMatcher.groupedIntents(for: activeShoppingItems)
+        let planningItems = eligibleShoppingItems
+        let request = shoppingIntentMatcher
+            .eligibleItems(from: [item])
+            .isEmpty
+            ? shoppingIntentMatcher.request(
+                for: planningItems,
+                in: .grocery
+            )
+            : shoppingIntentMatcher.suggestionRequest(for: item)
+        let groups = shoppingIntentMatcher.groupedIntents(
+            for: planningItems
+        )
         ShoppingDiscoveryDebugLogger.logGroups(
             context: "Suggest Places / Buying Options",
             groups: groups
@@ -1788,12 +1836,12 @@ struct ProductListView: View {
         )
         let buyingOptions = buyingOptionsService.localOptions(
             for: request,
-            shoppingItems: activeShoppingItems,
+            shoppingItems: planningItems,
             stores: candidateStores,
             userCoordinate: userCoordinate
         )
         let tripCoverages = shoppingTripService.coverage(
-            for: activeShoppingItems,
+            for: planningItems,
             stores: candidateStores,
             request: request,
             userCoordinate: userCoordinate
@@ -1801,7 +1849,7 @@ struct ProductListView: View {
         buyingOptionsRequest = request
         appStateManager.setShoppingPlan(
             request: request,
-            items: activeShoppingItems,
+            items: planningItems,
             stores: candidateStores,
             buyingOptions: buyingOptions,
             shoppingTripCoverages: tripCoverages
@@ -1831,7 +1879,10 @@ struct ProductListView: View {
             return
         }
 
-        let groups = shoppingIntentMatcher.groupedIntents(for: activeShoppingItems)
+        let planningItems = eligibleShoppingItems
+        let groups = shoppingIntentMatcher.groupedIntents(
+            for: planningItems
+        )
         let discoveryRequests = groups.map { group in
             (request: group.request, itemNames: group.itemNames)
         }
@@ -1846,7 +1897,7 @@ struct ProductListView: View {
         Task {
             let resolvedStores = await storeResolutionEngine.resolve(
                 savedLocations: locations,
-                items: activeShoppingItems,
+                items: planningItems,
                 around: coordinate,
                 fallback: request,
                 forceRefresh: forceRefresh
@@ -1863,12 +1914,12 @@ struct ProductListView: View {
             )
             let buyingOptions = buyingOptionsService.localOptions(
                 for: request,
-                shoppingItems: activeShoppingItems,
+                shoppingItems: planningItems,
                 stores: mergedStores,
                 userCoordinate: coordinate
             )
             let tripCoverages = shoppingTripService.coverage(
-                for: activeShoppingItems,
+                for: planningItems,
                 stores: mergedStores,
                 request: request,
                 userCoordinate: coordinate
@@ -1880,7 +1931,7 @@ struct ProductListView: View {
 
             appStateManager.setShoppingPlan(
                 request: request,
-                items: activeShoppingItems,
+                items: planningItems,
                 stores: mergedStores,
                 buyingOptions: buyingOptions,
                 shoppingTripCoverages: tripCoverages
@@ -1903,7 +1954,7 @@ struct ProductListView: View {
         isShowingBuyingOptions = false
         appStateManager.suggestStores(
             for: buyingOptionsRequest,
-            items: activeShoppingItems,
+            items: eligibleShoppingItems,
             stores: appStateManager.shoppingPlan?.stores ?? [],
             buyingOptions: appStateManager.buyingOptions,
             shoppingTripCoverages: appStateManager.shoppingTripCoverages
@@ -1924,7 +1975,7 @@ struct ProductListView: View {
         isShowingBuyingOptions = false
         appStateManager.showTripOnMap(
             for: buyingOptionsRequest,
-            items: activeShoppingItems,
+            items: eligibleShoppingItems,
             stores: appStateManager.shoppingPlan?.stores ?? [],
             buyingOptions: appStateManager.buyingOptions,
             shoppingTripCoverages: appStateManager.shoppingTripCoverages
@@ -2082,6 +2133,7 @@ private struct ProductAlreadyPresentNotice: Identifiable {
 
 private struct ProductRowCard: View {
     @Bindable var product: Product
+    let fallbackSystemName: String
     let isInShopping: Bool
     let memoryIndicators: [String]
     let onAddToShopping: () -> Void
@@ -2098,9 +2150,7 @@ private struct ProductRowCard: View {
                     url: product.imageURL,
                     size: 72,
                     cornerRadius: 17,
-                    systemName: ProductKnowledgeIconResolver.systemName(
-                        forCatalogSnapshot: product.catalogIconKeySnapshot
-                    ),
+                    systemName: fallbackSystemName,
                     onRemoteImageLoaded: onRemoteImageLoaded
                 )
 

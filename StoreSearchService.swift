@@ -68,17 +68,26 @@ final class StoreResolutionEngine {
         for items: [ShoppingItem],
         fallback request: ShoppingStoreSuggestionRequest? = nil
     ) -> [StoreResolutionIntent] {
-        let groups = intentMatcher.groupedIntents(for: items.filter { !$0.isCompleted })
+        let activeItems = items.filter { !$0.isCompleted }
+        let groups = intentMatcher.groupedIntents(
+            for: activeItems
+        )
         if !groups.isEmpty {
-            return groups.map { group in
-                StoreResolutionIntent(
+            return groups.compactMap { group in
+                guard !group.request.storeCategories.isEmpty else {
+                    return nil
+                }
+
+                return StoreResolutionIntent(
                     itemNames: group.itemNames,
                     storeCategories: group.request.storeCategories
                 )
             }
         }
 
-        guard let request else {
+        guard activeItems.isEmpty,
+              let request,
+              !request.storeCategories.isEmpty else {
             return []
         }
 

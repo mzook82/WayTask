@@ -85,6 +85,9 @@ final class ShoppingItem {
     var packageType: String?
     var visibleText: String?
     var searchKeywordsRawValue: String?
+    @Transient var catalogProductIDRawValue: String? = nil
+    @Transient var catalogCategoryIDRawValue: String? = nil
+    @Transient var catalogSubcategoryIDRawValue: String? = nil
 
     init(
         id: UUID = UUID(),
@@ -102,7 +105,10 @@ final class ShoppingItem {
         packageSize: String? = nil,
         packageType: String? = nil,
         visibleText: String? = nil,
-        searchKeywords: [String] = []
+        searchKeywords: [String] = [],
+        catalogProductIDRawValue: String? = nil,
+        catalogCategoryIDRawValue: String? = nil,
+        catalogSubcategoryIDRawValue: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -120,6 +126,9 @@ final class ShoppingItem {
         self.packageType = packageType
         self.visibleText = visibleText
         self.searchKeywordsRawValue = Self.encodeSearchKeywords(searchKeywords)
+        self.catalogProductIDRawValue = catalogProductIDRawValue
+        self.catalogCategoryIDRawValue = catalogCategoryIDRawValue
+        self.catalogSubcategoryIDRawValue = catalogSubcategoryIDRawValue
     }
 
     var imageURL: URL? {
@@ -132,6 +141,21 @@ final class ShoppingItem {
 
     var source: ProductSource {
         ProductSource(rawValue: sourceRawValue) ?? .manual
+    }
+
+    var catalogProductID: ProductID? {
+        guard let catalogProductIDRawValue else {
+            return nil
+        }
+
+        let trimmed = catalogProductIDRawValue.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        guard !trimmed.isEmpty, trimmed == catalogProductIDRawValue else {
+            return nil
+        }
+
+        return ProductID(catalogProductIDRawValue)
     }
 
     var searchKeywords: [String] {
@@ -452,7 +476,10 @@ final class Product {
             packageSize: packageSize,
             packageType: packageType,
             visibleText: visibleText,
-            searchKeywords: searchKeywords
+            searchKeywords: searchKeywords,
+            catalogProductIDRawValue: catalogProductID?.rawValue,
+            catalogCategoryIDRawValue:
+                catalogCategoryIDSnapshotRawValue
         )
     }
 

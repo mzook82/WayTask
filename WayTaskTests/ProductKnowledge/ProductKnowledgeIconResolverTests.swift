@@ -32,6 +32,11 @@ final class ProductKnowledgeIconResolverTests: XCTestCase {
                 UIImage(systemName: systemName),
                 "Invalid system icon \(systemName) for \(key)"
             )
+            XCTAssertNotEqual(
+                systemName,
+                ProductKnowledgeIconResolver.fallbackSystemName,
+                "Resolved catalog icon \(key) must not use the unresolved fallback"
+            )
         }
     }
 
@@ -85,10 +90,12 @@ final class ProductKnowledgeIconResolverTests: XCTestCase {
         let catalogWithPhoto = Product(
             name: "Bread",
             imageData: photoData,
+            catalogProductIDRawValue: "bread_white",
             catalogIconKeySnapshot: "product.bread"
         )
         let catalogWithoutPhoto = Product(
             name: "Bread",
+            catalogProductIDRawValue: "bread_white",
             catalogIconKeySnapshot: "product.bread"
         )
         let manualWithoutPhoto = Product(name: "Custom item")

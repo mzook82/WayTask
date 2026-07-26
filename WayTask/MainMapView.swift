@@ -11,8 +11,12 @@ struct MainMapView: View {
 
     @Query private var locations: [GeoLocation]
     @Query private var items: [ShoppingItem]
+    @Query private var products: [Product]
+    @Query private var shoppingListEntries: [ShoppingListEntry]
     @StateObject private var mapViewModel = MapViewModel()
     private let shoppingIntentMatcher = ShoppingIntentMatcher()
+    private let shoppingItemCatalogResolver =
+        ShoppingItemCatalogResolver()
 
     @State private var mapCenter = CLLocationCoordinate2D(latitude: 32.0853, longitude: 34.7818)
     @State private var appliedShoppingPlanID: UUID?
@@ -68,14 +72,20 @@ struct MainMapView: View {
                 )
                 locationManager.requestWhenInUseAuthorization()
                 applyPendingShoppingPlanIfNeeded()
-                mapViewModel.update(locations: locations, shoppingItems: items)
+                mapViewModel.update(
+                    locations: locations,
+                    shoppingItems: classifiedItems
+                )
                 focusSelectedLocation()
                 applyStoreNavigationContext()
                 focusUserIfNoReadyPlan()
             }
             .onChange(of: mapSignatures) {
                 if appStateManager.selectedTab == .map {
-                    mapViewModel.update(locations: locations, shoppingItems: items)
+                    mapViewModel.update(
+                        locations: locations,
+                        shoppingItems: classifiedItems
+                    )
                 }
             }
             .onChange(of: appStateManager.focusedLocationID) {
@@ -97,7 +107,10 @@ struct MainMapView: View {
             .onChange(of: appStateManager.selectedTab) {
                 if appStateManager.selectedTab == .map {
                     applyPendingShoppingPlanIfNeeded()
-                    mapViewModel.update(locations: locations, shoppingItems: items)
+                    mapViewModel.update(
+                        locations: locations,
+                        shoppingItems: classifiedItems
+                    )
                     focusSelectedLocation()
                     applyStoreNavigationContext()
                     activateTripMapIfNeeded()
@@ -330,19 +343,34 @@ struct MainMapView: View {
             return "Recommended Pet Store"
         case .pharmacy:
             return "Recommended Pharmacy"
+        case .general:
+            return "Recommended Store"
         case .other:
             return "Recommended Store"
         }
     }
 
+    private var classifiedItems: [ShoppingItem] {
+        shoppingItemCatalogResolver.hydrate(
+            items,
+            products: products,
+            entries: shoppingListEntries
+        )
+        return items
+    }
+
     private var mapSignatures: [String] {
-        locations.map { location in
+        let locationSignatures = locations.map { location in
             let itemSignature = location.shoppingItems
                 .map { "\($0.id.uuidString)-\($0.name)-\($0.isCompleted)" }
                 .joined(separator: ",")
 
             return "\(location.id.uuidString)-\(location.title)-\(location.latitude)-\(location.longitude)-\(location.radius)-\(location.storeCategoryRawValue ?? "")-\(location.addressText ?? "")-\(location.notes ?? "")-\(itemSignature)"
         }
+        let shoppingItemSignatures = classifiedItems.map {
+            "item-\($0.id.uuidString)-\($0.name)-\($0.isCompleted)-\($0.catalogProductIDRawValue ?? "")-\($0.catalogCategoryIDRawValue ?? "")-\($0.catalogSubcategoryIDRawValue ?? "")"
+        }
+        return locationSignatures + shoppingItemSignatures
     }
 
     private func saveLocation() {
@@ -371,11 +399,14 @@ struct MainMapView: View {
 
             let savedLocations = try fetchSavedStores()
             locationManager.refreshShoppingGeofences(
-                items: items,
+                items: classifiedItems,
                 savedLocations: savedLocations,
                 shoppingListID: appStateManager.selectedShoppingListID ?? appStateManager.currentShoppingListID
             )
-            mapViewModel.update(locations: savedLocations, shoppingItems: items)
+            mapViewModel.update(
+                locations: savedLocations,
+                shoppingItems: classifiedItems
+            )
             mapViewModel.selectStore(id: location.id)
 
             resetForm()
@@ -430,7 +461,10 @@ struct MainMapView: View {
             return
         }
 
-        mapViewModel.update(locations: locations, shoppingItems: items)
+        mapViewModel.update(
+            locations: locations,
+            shoppingItems: classifiedItems
+        )
         mapViewModel.focusStore(id: focusedLocationID)
     }
 
@@ -443,7 +477,9 @@ struct MainMapView: View {
             return
         }
 
-        let matchingItems = items.filter { context.matchedShoppingItemIDs.contains($0.id) }
+        let matchingItems = classifiedItems.filter {
+            context.matchedShoppingItemIDs.contains($0.id)
+        }
         let matchingItemNames = matchingItems.isEmpty
             ? context.matchedItemNames
             : matchingItems.map(\.name)

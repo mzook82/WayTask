@@ -33,6 +33,8 @@ struct ShoppingWorkspaceView: View {
     private let shoppingTripPlanningService = ShoppingTripService()
     private let shoppingSessionService = ShoppingSessionService()
     private let shoppingListService = ShoppingListService()
+    private let shoppingItemCatalogResolver =
+        ShoppingItemCatalogResolver()
     private let storeResolutionEngine = StoreResolutionEngine.shared
     private let planningTimeoutSeconds: TimeInterval = 30
 
@@ -265,7 +267,14 @@ struct ShoppingWorkspaceView: View {
                                     data: item.imageData,
                                     url: item.imageURL,
                                     size: 42,
-                                    cornerRadius: WayTaskDesign.Radius.sm
+                                    cornerRadius: WayTaskDesign.Radius.sm,
+                                    systemName:
+                                        ProductKnowledgeIconResolver
+                                            .systemName(
+                                                forCatalogSnapshot:
+                                                    shoppingItemCatalogResolver
+                                                        .iconKey(for: item)
+                                            )
                                 )
 
                                 VStack(alignment: .leading, spacing: 2) {
@@ -564,6 +573,8 @@ struct ShoppingWorkspaceView: View {
 
             WayTaskSearchField(placeholder: "Search shopping list", text: $searchText)
 
+            unresolvedItemsNotice
+
             VStack(spacing: WayTaskDesign.Spacing.md) {
                 if groupedProductRows.isEmpty {
                     WayTaskEmptyState(
@@ -623,7 +634,8 @@ struct ShoppingWorkspaceView: View {
                             data: item.imageData,
                             url: item.imageURL,
                             size: 42,
-                            cornerRadius: WayTaskDesign.Radius.sm
+                            cornerRadius: WayTaskDesign.Radius.sm,
+                            systemName: item.fallbackSystemName
                         )
 
                         VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xs) {
@@ -722,6 +734,8 @@ struct ShoppingWorkspaceView: View {
     private var planBottomSheet: some View {
         WayTaskBottomSheet(title: "Shopping plan") {
             VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.md) {
+                unresolvedItemsNotice
+
                 switch appStateManager.shoppingPlanState {
                 case .generating:
                     planningStatusCard
@@ -769,12 +783,57 @@ struct ShoppingWorkspaceView: View {
         }
     }
 
+    @ViewBuilder
+    private var unresolvedItemsNotice: some View {
+        if !unresolvedPlanningItems.isEmpty {
+            let names = unresolvedPlanningItems
+                .map(\.name)
+                .prefix(5)
+                .joined(separator: ", ")
+            let remainingCount = max(
+                unresolvedPlanningItems.count - 5,
+                0
+            )
+            let suffix = remainingCount > 0
+                ? ", and \(remainingCount) more"
+                : ""
+
+            VStack(alignment: .leading, spacing: WayTaskDesign.Spacing.xs) {
+                Label(
+                    "Not included in store matching",
+                    systemImage: "info.circle.fill"
+                )
+                .font(WayTaskDesign.Typography.subheadline.weight(.semibold))
+                .foregroundStyle(WayTaskDesign.Colors.warning)
+
+                Text(
+                    "\(names)\(suffix). These unresolved items remain on your shopping list and do not block planning for eligible products."
+                )
+                .font(WayTaskDesign.Typography.caption)
+                .foregroundStyle(WayTaskDesign.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(WayTaskDesign.Spacing.md)
+            .wayTaskGlassCard(
+                cornerRadius: WayTaskDesign.Radius.lg
+            )
+        }
+    }
+
     private var activeItems: [ShoppingItem] {
         selectedShoppingListItems(includeChecked: false)
     }
 
     private var activeItemCount: Int {
         activeItems.count
+    }
+
+    private var eligiblePlanningItems: [ShoppingItem] {
+        intentMatcher.eligibleItems(from: activeItems)
+    }
+
+    private var unresolvedPlanningItems: [ShoppingItem] {
+        intentMatcher.unresolvedItems(from: activeItems)
     }
 
     private var workspaceItems: [ShoppingItem] {
@@ -890,7 +949,9 @@ struct ShoppingWorkspaceView: View {
     }
 
     private var canOpenMapPlan: Bool {
-        !activeItems.isEmpty || !appStateManager.shoppingTripCoverages.isEmpty || !recommendedStoreRows.isEmpty
+        !eligiblePlanningItems.isEmpty ||
+            !appStateManager.shoppingTripCoverages.isEmpty ||
+            !recommendedStoreRows.isEmpty
     }
 
     private var canViewMapPlan: Bool {
@@ -973,6 +1034,9 @@ struct ShoppingWorkspaceView: View {
                     $0.name,
                     $0.brand ?? "",
                     $0.category ?? "",
+                    $0.catalogProductIDRawValue ?? "",
+                    $0.catalogCategoryIDRawValue ?? "",
+                    $0.catalogSubcategoryIDRawValue ?? "",
                     String($0.dateAdded.timeIntervalSince1970),
                     $0.isCompleted ? "1" : "0",
                     $0.imageURL?.absoluteString ?? "",
@@ -1055,7 +1119,8 @@ struct ShoppingWorkspaceView: View {
             return false
         }
 
-        return Set(planItems.map(\.id)) == Set(activeItems.map(\.id))
+        return Set(planItems.map(\.id)) ==
+            Set(eligiblePlanningItems.map(\.id))
     }
 
     private func refreshGroupedProductRowsCache() {
@@ -1129,7 +1194,22 @@ struct ShoppingWorkspaceView: View {
                     return nil
                 }
 
-                return itemsByID[legacyShoppingItemID]
+                guard let item = itemsByID[legacyShoppingItemID]
+                else {
+                    return nil
+                }
+
+                if let product = entry.product ??
+                    products.first(where: {
+                        $0.id == entry.productID
+                    })
+                {
+                    shoppingItemCatalogResolver.hydrate(
+                        item,
+                        from: product
+                    )
+                }
+                return item
             }
     }
 
@@ -1217,11 +1297,11 @@ struct ShoppingWorkspaceView: View {
             return
         }
 
-        let planningItems = activeItems
+        let planningItems = eligiblePlanningItems
         guard !planningItems.isEmpty else {
             failShoppingPlan(
-                message: "Add at least one needed product before generating a plan.",
-                actionTitle: "Add products"
+                message: "None of the selected items can be matched to stores yet. Choose a product from the catalog or add enough detail to classify a custom product.",
+                actionTitle: "Review Products"
             )
             return
         }
@@ -1552,6 +1632,8 @@ struct ShoppingWorkspaceView: View {
             return "Pet items"
         case .pharmacy:
             return "Health items"
+        case .general:
+            return "General retail items"
         case .other:
             return "Other items"
         }
@@ -1561,6 +1643,8 @@ struct ShoppingWorkspaceView: View {
         switch group {
         case .pharmacy:
             return "Health"
+        case .other:
+            return "Not eligible for store matching"
         default:
             return group.displayName
         }
@@ -1576,6 +1660,8 @@ struct ShoppingWorkspaceView: View {
             return "Recommended Pet Store"
         case .pharmacy:
             return "Recommended Pharmacy"
+        case .general:
+            return "Recommended Store"
         case .other:
             return "Recommended Store"
         }
@@ -1646,6 +1732,7 @@ private struct ShoppingWorkspaceItemRow: Identifiable {
     let subtitle: String
     var imageData: Data?
     var imageURL: URL?
+    let fallbackSystemName: String
     var isChecked: Bool
     var quantity: Double
 
@@ -1657,6 +1744,8 @@ private struct ShoppingWorkspaceItemRow: Identifiable {
         subtitle: String,
         imageData: Data? = nil,
         imageURL: URL? = nil,
+        fallbackSystemName: String =
+            ProductKnowledgeIconResolver.fallbackSystemName,
         isChecked: Bool = false,
         quantity: Double = 1
     ) {
@@ -1667,6 +1756,7 @@ private struct ShoppingWorkspaceItemRow: Identifiable {
         self.subtitle = subtitle
         self.imageData = imageData
         self.imageURL = imageURL
+        self.fallbackSystemName = fallbackSystemName
         self.isChecked = isChecked
         self.quantity = quantity
     }
@@ -1679,6 +1769,11 @@ private struct ShoppingWorkspaceItemRow: Identifiable {
         self.subtitle = item.brand ?? item.category ?? "Shopping item"
         self.imageData = item.imageData
         self.imageURL = item.imageURL
+        self.fallbackSystemName =
+            ProductKnowledgeIconResolver.systemName(
+                forCatalogSnapshot:
+                    ShoppingItemCatalogResolver().iconKey(for: item)
+            )
         self.isChecked = entry.isChecked
         self.quantity = entry.quantity
     }

@@ -31,6 +31,8 @@ struct ContentView: View {
     @State private var hasCompletedActiveSessionLaunchRecovery = false
     @State private var isCheckingActiveSessionLaunchRecovery = false
     private let shoppingListBackfillService = ShoppingListBackfillService()
+    private let shoppingItemCatalogResolver =
+        ShoppingItemCatalogResolver()
     private let productKnowledgeSearchAvailability: ProductKnowledgeSearchAvailability
 
     init(productKnowledgeSearchAvailability: ProductKnowledgeSearchAvailability) {
@@ -185,6 +187,7 @@ struct ContentView: View {
                     item.brand ?? "",
                     item.category ?? "",
                     item.barcode ?? "",
+                    item.catalogProductIDRawValue ?? "",
                     String(item.dateAdded.timeIntervalSince1970)
                 ].joined(separator: ":")
             }
@@ -228,6 +231,11 @@ struct ContentView: View {
     private func ensureShoppingListArchitecture() {
         do {
             let result = try shoppingListBackfillService.ensureDefaultListsAndBackfill(in: modelContext)
+            shoppingItemCatalogResolver.hydrate(
+                items,
+                products: products,
+                entries: shoppingListEntries
+            )
             appStateManager.setCurrentShoppingList(result.weeklyListID)
         } catch {
             SentryReportingService.shared.capture(
@@ -403,7 +411,7 @@ struct ContentView: View {
         let itemSignature = items
             .filter { !$0.isCompleted }
             .map { item in
-                "\(item.id.uuidString)-\(item.name)-\(item.category ?? "")-\(item.isCompleted)"
+                "\(item.id.uuidString)-\(item.name)-\(item.category ?? "")-\(item.catalogProductIDRawValue ?? "")-\(item.isCompleted)"
             }
             .sorted()
             .joined(separator: "|")
@@ -656,7 +664,8 @@ struct ProductShoppingThumbnailPresentation: Equatable {
         imageData = product.imageData
         imageURL = product.imageURL
         fallbackSystemName = ProductKnowledgeIconResolver.systemName(
-            forCatalogSnapshot: product.catalogIconKeySnapshot
+            forCatalogSnapshot:
+                ShoppingItemCatalogResolver().iconKey(for: product)
         )
     }
 }

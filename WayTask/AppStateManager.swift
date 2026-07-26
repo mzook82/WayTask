@@ -207,6 +207,9 @@ struct ShoppingPlan: Identifiable {
                     item.name,
                     item.brand ?? "",
                     item.category ?? "",
+                    item.catalogProductIDRawValue ?? "",
+                    item.catalogCategoryIDRawValue ?? "",
+                    item.catalogSubcategoryIDRawValue ?? "",
                     item.isCompleted ? "1" : "0"
                 ].joined(separator: ":")
             }
@@ -611,7 +614,9 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
             return
         }
 
-        let activeItems = items.filter { !$0.isCompleted }
+        let activeItems = nearbyIntentMatcher.eligibleItems(
+            from: items
+        )
         guard !activeItems.isEmpty else {
             nearbyOpportunities = []
             return

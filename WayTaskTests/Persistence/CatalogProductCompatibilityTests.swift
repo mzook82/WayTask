@@ -76,11 +76,39 @@ final class CatalogProductCompatibilityTests: XCTestCase {
         let backfill = ShoppingListBackfillService()
         _ = try backfill.ensureDefaultListsAndBackfill(in: context)
         let firstCounts = try compatibilityCounts(in: context)
+        let repairedCatalogValues = CatalogValues(product: product)
         _ = try backfill.ensureDefaultListsAndBackfill(in: context)
         let secondCounts = try compatibilityCounts(in: context)
 
         XCTAssertEqual(product.id, originalProductID)
-        XCTAssertEqual(CatalogValues(product: product), originalCatalogValues)
+        XCTAssertEqual(
+            product.catalogProductIDRawValue,
+            "milk_3_percent"
+        )
+        XCTAssertEqual(
+            repairedCatalogValues.displayName,
+            originalCatalogValues.displayName
+        )
+        XCTAssertEqual(
+            repairedCatalogValues.displayLocale,
+            originalCatalogValues.displayLocale
+        )
+        XCTAssertEqual(
+            repairedCatalogValues.categoryID,
+            originalCatalogValues.categoryID
+        )
+        XCTAssertEqual(
+            repairedCatalogValues.categoryDisplayName,
+            originalCatalogValues.categoryDisplayName
+        )
+        XCTAssertEqual(
+            repairedCatalogValues.iconKey,
+            originalCatalogValues.iconKey
+        )
+        XCTAssertEqual(
+            CatalogValues(product: product),
+            repairedCatalogValues
+        )
         XCTAssertEqual(product.name, "חלב")
         XCTAssertEqual(product.category, "מוצרי חלב")
         XCTAssertEqual(product.imageData, Data([0x10, 0x20]))
@@ -103,7 +131,10 @@ final class CatalogProductCompatibilityTests: XCTestCase {
         )
         XCTAssertEqual(reloaded.imageData, replacementPhoto)
         XCTAssertEqual(reloaded.updatedAt, photoUpdateDate)
-        XCTAssertEqual(CatalogValues(product: reloaded), originalCatalogValues)
+        XCTAssertEqual(
+            CatalogValues(product: reloaded),
+            repairedCatalogValues
+        )
     }
 
     func testUnresolvedRecognitionIgnoresCatalogLinkedProductForBarcodeAndMetadataMatch() throws {

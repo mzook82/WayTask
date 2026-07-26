@@ -62,6 +62,7 @@ struct ShoppingListService: ShoppingListServicing {
     private let shoppingMemoryService = ShoppingMemoryService()
     private let productKnowledgeService = ProductKnowledgeService()
     private let backfillService = ShoppingListBackfillService()
+    private let catalogResolver = ShoppingItemCatalogResolver()
 
     @discardableResult
     func addManualItem(
@@ -148,10 +149,12 @@ struct ShoppingListService: ShoppingListServicing {
         if let existingEntry = entries.first(where: { $0.shoppingListID == shoppingListID && $0.productID == product.id }) {
             existingEntry.isChecked = false
             if let item = legacyItem(for: existingEntry, in: modelContext) {
+                refresh(item, from: product)
                 item.isCompleted = false
                 product.legacyShoppingItemID = item.id
             } else {
                 let item = product.makeShoppingItem()
+                catalogResolver.hydrate(item, from: product)
                 modelContext.insert(item)
                 existingEntry.legacyShoppingItemID = item.id
                 product.legacyShoppingItemID = item.id
@@ -333,6 +336,7 @@ struct ShoppingListService: ShoppingListServicing {
         }
 
         let item = product.makeShoppingItem()
+        catalogResolver.hydrate(item, from: product)
         modelContext.insert(item)
         product.legacyShoppingItemID = item.id
         return item
@@ -361,6 +365,7 @@ struct ShoppingListService: ShoppingListServicing {
         item.packageType = product.packageType
         item.visibleText = product.visibleText
         item.searchKeywords = product.searchKeywords
+        catalogResolver.hydrate(item, from: product)
     }
 
     private func normalizedText(_ value: String?) -> String? {
@@ -399,6 +404,8 @@ struct ShoppingListBackfillResult {
 }
 
 struct ShoppingListBackfillService {
+    private let catalogResolver = ShoppingItemCatalogResolver()
+
     @discardableResult
     func ensureDefaultListsAndBackfill(in modelContext: ModelContext) throws -> ShoppingListBackfillResult {
         let lists = try modelContext.fetch(FetchDescriptor<ShoppingList>())
@@ -411,11 +418,19 @@ struct ShoppingListBackfillService {
         let entries = try modelContext.fetch(FetchDescriptor<ShoppingListEntry>())
         var productIDs: [UUID] = []
 
+        repairCatalogProducts(products)
+
         for item in legacyItems {
-            let product = product(for: item, products: &products, in: modelContext)
+            let product = product(
+                for: item,
+                entries: entries,
+                products: &products,
+                in: modelContext
+            )
             if product.catalogProductIDRawValue == nil {
                 product.refresh(from: item)
             }
+            catalogResolver.hydrate(item, from: product)
             productIDs.append(product.id)
 
             if let existingEntry = entries.first(where: { entry in
@@ -435,6 +450,46 @@ struct ShoppingListBackfillService {
 
         try modelContext.save()
         return ShoppingListBackfillResult(weeklyListID: weeklyList.id, productIDs: productIDs)
+    }
+
+    private func repairCatalogProducts(_ products: [Product]) {
+        let resolvableProducts = products.compactMap { product in
+            catalogResolver.resolve(
+                productIDRawValue: product.catalogProductIDRawValue
+            ).map { identity in
+                (product: product, canonicalID: identity.productID)
+            }
+        }
+        let groups = Dictionary(
+            grouping: resolvableProducts,
+            by: { $0.canonicalID }
+        )
+        let referenceDate = Date()
+
+        for (canonicalID, group) in groups {
+            let canRewriteIdentity = group.count == 1
+            for value in group {
+                catalogResolver.repairCanonicalMetadata(
+                    for: value.product,
+                    rewriteProductID: canRewriteIdentity,
+                    referenceDate: referenceDate
+                )
+            }
+
+            guard !canRewriteIdentity else {
+                continue
+            }
+
+            #if DEBUG
+            let userProductIDs = group
+                .map(\.product.id.uuidString)
+                .sorted()
+                .joined(separator: ",")
+            print(
+                "[WayTask Catalog Identity] logical duplicate canonicalID=\(canonicalID) userProductIDs=\(userProductIDs); IDs preserved for non-destructive review"
+            )
+            #endif
+        }
     }
 
     private func ensureList(
@@ -460,11 +515,21 @@ struct ShoppingListBackfillService {
 
     private func product(
         for item: ShoppingItem,
+        entries: [ShoppingListEntry],
         products: inout [Product],
         in modelContext: ModelContext
     ) -> Product {
         if let existing = products.first(where: { $0.legacyShoppingItemID == item.id }) {
             return existing
+        }
+
+        if let linkedProduct = entries.first(where: {
+            $0.legacyShoppingItemID == item.id
+        })?.product {
+            if linkedProduct.legacyShoppingItemID == nil {
+                linkedProduct.legacyShoppingItemID = item.id
+            }
+            return linkedProduct
         }
 
         let product = Product(legacyItem: item)
