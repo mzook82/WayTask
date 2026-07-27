@@ -246,6 +246,68 @@ enum SentrySafeMessage: String, CaseIterable {
     case recognitionProviderFailed = "Product recognition provider failed"
     case persistenceFailed = "Local persistence failed"
     case productKnowledgeUnavailable = "Product suggestions unavailable"
+    case startupPersistenceFailed =
+        "Startup persistence initialization failed"
+    case startupPersistenceRecovered =
+        "Startup persistence recovered"
+    case startupPersistenceDegraded =
+        "Startup persistence is using temporary storage"
+    case startupPersistenceUnrecoverable =
+        "Startup persistence is unrecoverable"
+}
+
+enum SentryStartupPersistenceMetadataPolicy {
+    static let contextKey = "waytask_startup_persistence"
+    static let allowedKeys: Set<String> = [
+        "stage",
+        "outcome",
+        "schema_version",
+        "error_domain",
+        "error_code",
+        "underlying_error_domain",
+        "underlying_error_code",
+        "quarantined_component_count",
+        "repair_action_count"
+    ]
+
+    static func context(
+        for diagnostic: WayTaskStartupPersistenceDiagnostic
+    ) -> [String: Any] {
+        var context: [String: Any] = [
+            "stage": diagnostic.stage.rawValue,
+            "outcome": diagnostic.outcome.rawValue,
+            "schema_version": "3.0.0",
+            "quarantined_component_count":
+                min(
+                    max(
+                        diagnostic.quarantinedComponentCount,
+                        0
+                    ),
+                    10
+                ),
+            "repair_action_count":
+                min(max(diagnostic.repairActionCount, 0), 10_000)
+        ]
+        if let errorDomain = diagnostic.errorDomain {
+            context["error_domain"] = errorDomain
+        }
+        if let errorCode = diagnostic.errorCode {
+            context["error_code"] = errorCode
+        }
+        if let underlyingErrorDomain =
+            diagnostic.underlyingErrorDomain
+        {
+            context["underlying_error_domain"] =
+                underlyingErrorDomain
+        }
+        if let underlyingErrorCode =
+            diagnostic.underlyingErrorCode
+        {
+            context["underlying_error_code"] =
+                underlyingErrorCode
+        }
+        return context
+    }
 }
 
 enum SentryWorkflowBreadcrumb: String {
@@ -274,6 +336,9 @@ final class SentryReportingService {
     typealias DiagnosticCaptureAction = @MainActor (
         SentryDiagnosticEventType
     ) -> Void
+    typealias StartupPersistenceCaptureAction = @MainActor (
+        WayTaskStartupPersistenceDiagnostic
+    ) -> Void
 
     private static let breadcrumbCategory = "waytask.workflow"
     private static let contextKey = "waytask"
@@ -285,12 +350,16 @@ final class SentryReportingService {
 
     private let sdkStartAction: SDKStartAction
     private let diagnosticCaptureAction: DiagnosticCaptureAction?
+    private let startupPersistenceCaptureAction:
+        StartupPersistenceCaptureAction?
     private let usesLiveSDK: Bool
     private var activeConfiguration: SentryLaunchConfiguration?
 
     init(
         sdkStartAction: SDKStartAction? = nil,
-        diagnosticCaptureAction: DiagnosticCaptureAction? = nil
+        diagnosticCaptureAction: DiagnosticCaptureAction? = nil,
+        startupPersistenceCaptureAction:
+            StartupPersistenceCaptureAction? = nil
     ) {
         if let sdkStartAction {
             self.sdkStartAction = sdkStartAction
@@ -300,6 +369,8 @@ final class SentryReportingService {
             }
         }
         self.diagnosticCaptureAction = diagnosticCaptureAction
+        self.startupPersistenceCaptureAction =
+            startupPersistenceCaptureAction
         usesLiveSDK = sdkStartAction == nil
     }
 
@@ -482,6 +553,62 @@ final class SentryReportingService {
                 category: category,
                 area: area,
                 numericContext: numericContext
+            )
+        }
+    }
+
+    func captureStartupPersistence(
+        _ diagnostic: WayTaskStartupPersistenceDiagnostic
+    ) {
+        guard isEnabled else { return }
+
+        if let startupPersistenceCaptureAction {
+            startupPersistenceCaptureAction(diagnostic)
+            return
+        }
+
+        let message: SentrySafeMessage
+        switch diagnostic.outcome {
+        case .failed:
+            message = .startupPersistenceFailed
+        case .recovered:
+            message = .startupPersistenceRecovered
+        case .degraded:
+            message = .startupPersistenceDegraded
+        case .fatal:
+            message = .startupPersistenceUnrecoverable
+        }
+
+        let error = NSError(
+            domain: "WayTask.startup.persistence",
+            code: diagnostic.errorCode ?? 0,
+            userInfo: [
+                NSLocalizedDescriptionKey: message.rawValue
+            ]
+        )
+        SentrySDK.capture(error: error) { scope in
+            Self.configure(
+                scope,
+                operation: .persistence,
+                category: .persistence,
+                area: .home,
+                numericContext: [:]
+            )
+            scope.setTag(
+                value: diagnostic.stage.rawValue,
+                key: "startup_stage"
+            )
+            scope.setTag(
+                value: diagnostic.outcome.rawValue,
+                key: "startup_outcome"
+            )
+            scope.setContext(
+                value:
+                    SentryStartupPersistenceMetadataPolicy
+                        .context(for: diagnostic),
+                key:
+                    SentryStartupPersistenceMetadataPolicy
+                        .contextKey
             )
         }
     }
@@ -672,7 +799,9 @@ final class SentryReportingService {
             key == "area" ||
                 key == "operation" ||
                 key == "category" ||
-                key == "diagnostic_event_type"
+                key == "diagnostic_event_type" ||
+                key == "startup_stage" ||
+                key == "startup_outcome"
         }
 
         if let message = event.message?.formatted,
@@ -720,7 +849,9 @@ final class SentryReportingService {
                 SentryNumericContext.discoveryResultCount.rawValue
             ],
             SentryDiagnosticMetadataPolicy.contextKey:
-                SentryDiagnosticMetadataPolicy.allowedKeys
+                SentryDiagnosticMetadataPolicy.allowedKeys,
+            SentryStartupPersistenceMetadataPolicy.contextKey:
+                SentryStartupPersistenceMetadataPolicy.allowedKeys
         ]
 
         return contexts.reduce(into: [:]) { result, entry in

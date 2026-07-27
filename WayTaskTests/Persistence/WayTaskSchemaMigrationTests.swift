@@ -385,6 +385,155 @@ final class WayTaskSchemaMigrationTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: storeURL.path))
     }
 
+    func testFileBackedShippedV2StoreMigratesToV3AndRepeatedRepairIsStable()
+        throws
+    {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "WT029B2-V2-\(UUID().uuidString)",
+                isDirectory: true
+            )
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storeURL = directory.appendingPathComponent(
+            "WayTask.store"
+        )
+
+        try writeV2Fixture(to: storeURL)
+
+        let configuration = ModelConfiguration(
+            "WT029B2",
+            schema: WayTaskModelContainer.currentSchema,
+            url: storeURL,
+            allowsSave: true,
+            cloudKitDatabase: .none
+        )
+        let container = try WayTaskModelContainer.make(
+            configurations: [configuration]
+        )
+        let context = ModelContext(container)
+        let migratedProduct = try XCTUnwrap(
+            try context.fetch(FetchDescriptor<Product>()).first
+        )
+        let migratedEntry = try XCTUnwrap(
+            try context.fetch(
+                FetchDescriptor<ShoppingListEntry>()
+            ).first
+        )
+
+        XCTAssertEqual(migratedProduct.id, fixture.productID)
+        XCTAssertEqual(
+            migratedProduct.legacyShoppingItemID,
+            fixture.itemID
+        )
+        XCTAssertEqual(migratedProduct.name, "Milk")
+        XCTAssertEqual(
+            migratedProduct.catalogProductIDRawValue,
+            "milk_3_percent"
+        )
+        XCTAssertEqual(
+            migratedProduct.catalogDisplayNameSnapshot,
+            "חלב 3%"
+        )
+        XCTAssertEqual(
+            migratedProduct.catalogDisplayLocaleSnapshot,
+            "he"
+        )
+        XCTAssertNil(migratedProduct.deletedAt)
+        XCTAssertEqual(
+            migratedEntry.product?.id,
+            fixture.productID
+        )
+
+        let repair = ShoppingListBackfillService()
+        let firstResult =
+            try repair.ensureDefaultListsAndBackfill(in: context)
+        let firstCounts = try persistenceCounts(in: context)
+        let firstUpdatedAt = migratedProduct.updatedAt
+        let firstSnapshotUpdatedAt =
+            migratedProduct.catalogSnapshotUpdatedAt
+        let secondResult =
+            try repair.ensureDefaultListsAndBackfill(in: context)
+        let secondCounts = try persistenceCounts(in: context)
+
+        XCTAssertEqual(
+            firstResult.weeklyListID,
+            fixture.listID
+        )
+        XCTAssertEqual(
+            secondResult.weeklyListID,
+            fixture.listID
+        )
+        XCTAssertEqual(firstCounts, secondCounts)
+        XCTAssertEqual(migratedProduct.updatedAt, firstUpdatedAt)
+        XCTAssertEqual(
+            migratedProduct.catalogSnapshotUpdatedAt,
+            firstSnapshotUpdatedAt
+        )
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: storeURL.path)
+        )
+    }
+
+    private func writeV2Fixture(to storeURL: URL) throws {
+        let schema = Schema(versionedSchema: WayTaskSchemaV2.self)
+        let configuration = ModelConfiguration(
+            "WT029B2",
+            schema: schema,
+            url: storeURL,
+            allowsSave: true,
+            cloudKitDatabase: .none
+        )
+        let container = try ModelContainer(
+            for: schema,
+            configurations: [configuration]
+        )
+        let context = ModelContext(container)
+        let item = ShoppingItem(
+            id: fixture.itemID,
+            name: "Milk",
+            barcode: "729000000001"
+        )
+        let product = WayTaskSchemaV2.Product(
+            id: fixture.productID,
+            legacyShoppingItemID: fixture.itemID,
+            name: "Milk",
+            barcode: "729000000001",
+            dateAdded: fixture.productCreatedAt,
+            updatedAt: fixture.productUpdatedAt,
+            catalogProductIDRawValue: "milk_3_percent",
+            catalogDisplayNameSnapshot: "חלב 3%",
+            catalogDisplayLocaleSnapshot: "he",
+            catalogCategoryIDSnapshotRawValue: "dairy",
+            catalogCategoryDisplayNameSnapshot: "מוצרי חלב",
+            catalogIconKeySnapshot: "product.dairy",
+            catalogSnapshotUpdatedAt: fixture.productUpdatedAt
+        )
+        let list = ShoppingList(
+            id: fixture.listID,
+            title: "Weekly Shopping",
+            kind: .weekly,
+            createdAt: fixture.listCreatedAt,
+            updatedAt: fixture.listUpdatedAt,
+            isDefault: true
+        )
+        let entry = WayTaskSchemaV2.ShoppingListEntry(
+            id: fixture.entryID,
+            shoppingListID: fixture.listID,
+            product: product,
+            legacyShoppingItemID: fixture.itemID,
+            createdAt: fixture.entryCreatedAt
+        )
+        context.insert(item)
+        context.insert(product)
+        context.insert(list)
+        context.insert(entry)
+        try context.save()
+    }
+
     private func writeV1Fixture(to storeURL: URL) throws {
         let schema = Schema(versionedSchema: WayTaskSchemaV1.self)
         let configuration = ModelConfiguration(

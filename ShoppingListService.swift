@@ -458,6 +458,7 @@ struct ProductLibraryDeletionService {
 struct ShoppingListBackfillResult {
     let weeklyListID: UUID?
     let productIDs: [UUID]
+    let repairActionCount: Int
 }
 
 struct ShoppingListBackfillService {
@@ -465,21 +466,59 @@ struct ShoppingListBackfillService {
 
     @discardableResult
     func ensureDefaultListsAndBackfill(in modelContext: ModelContext) throws -> ShoppingListBackfillResult {
-        let lists = try modelContext.fetch(FetchDescriptor<ShoppingList>())
-        let weeklyList = ensureList(kind: .weekly, title: "Weekly Shopping", isDefault: true, existingLists: lists, in: modelContext)
-        _ = ensureList(kind: .completed, title: "Completed", isDefault: false, existingLists: lists, in: modelContext)
-        _ = ensureList(kind: .recent, title: "Recent", isDefault: false, existingLists: lists, in: modelContext)
+        let lists = try modelContext
+            .fetch(FetchDescriptor<ShoppingList>())
+            .sorted(by: stableIDOrder)
+        let legacyItems = try modelContext
+            .fetch(FetchDescriptor<ShoppingItem>())
+            .sorted(by: stableIDOrder)
+        var products = try modelContext
+            .fetch(FetchDescriptor<Product>())
+            .sorted(by: stableIDOrder)
+        let entries = try modelContext
+            .fetch(FetchDescriptor<ShoppingListEntry>())
+            .sorted(by: stableIDOrder)
+        var productIDs = Set<UUID>()
+        var repairActionCount = 0
+        let hasExistingState =
+            !lists.isEmpty ||
+            !legacyItems.isEmpty ||
+            !products.isEmpty ||
+            !entries.isEmpty
+        let weeklyList = ensureList(
+            kind: .weekly,
+            title: "Weekly Shopping",
+            isDefault: true,
+            existingLists: lists,
+            countCreationAsRepair: hasExistingState,
+            repairActionCount: &repairActionCount,
+            in: modelContext
+        )
+        _ = ensureList(
+            kind: .completed,
+            title: "Completed",
+            isDefault: false,
+            existingLists: lists,
+            countCreationAsRepair: hasExistingState,
+            repairActionCount: &repairActionCount,
+            in: modelContext
+        )
+        _ = ensureList(
+            kind: .recent,
+            title: "Recent",
+            isDefault: false,
+            existingLists: lists,
+            countCreationAsRepair: hasExistingState,
+            repairActionCount: &repairActionCount,
+            in: modelContext
+        )
 
-        let legacyItems = try modelContext.fetch(FetchDescriptor<ShoppingItem>())
-        var products = try modelContext.fetch(FetchDescriptor<Product>())
-        let entries = try modelContext.fetch(FetchDescriptor<ShoppingListEntry>())
-        var productIDs: [UUID] = []
-
-        repairCatalogProducts(
+        repairActionCount += repairCatalogProducts(
             products.filter { !$0.isDeletedFromLibrary }
         )
 
         for item in legacyItems {
+            let productCountBeforeRepair = products.count
             guard let product = product(
                 for: item,
                 entries: entries,
@@ -489,9 +528,12 @@ struct ShoppingListBackfillService {
             ) else {
                 continue
             }
+            if products.count > productCountBeforeRepair {
+                repairActionCount += 1
+            }
 
             if product.isDeletedFromLibrary {
-                removeActiveEntries(
+                repairActionCount += removeActiveEntries(
                     for: product,
                     item: item,
                     entries: entries,
@@ -501,32 +543,49 @@ struct ShoppingListBackfillService {
                 continue
             }
 
-            if product.catalogProductIDRawValue == nil {
-                product.refresh(from: item)
+            if product.catalogProductIDRawValue == nil,
+               product.legacyShoppingItemID == nil ||
+                product.legacyShoppingItemID == item.id
+            {
+                if product.refresh(from: item) {
+                    repairActionCount += 1
+                }
             }
             catalogResolver.hydrate(item, from: product)
-            productIDs.append(product.id)
+            productIDs.insert(product.id)
 
             if let existingEntry = entries.first(where: { entry in
                 entry.shoppingListID == weeklyList.id &&
                 (entry.legacyShoppingItemID == item.id || entry.productID == product.id)
             }) {
-                if existingEntry.productID != product.id {
+                if existingEntry.productID != product.id ||
+                    existingEntry.product?.id != product.id
+                {
                     existingEntry.productID = product.id
                     existingEntry.product = product
+                    repairActionCount += 1
                 }
 
                 if existingEntry.legacyShoppingItemID != item.id {
                     existingEntry.legacyShoppingItemID = item.id
+                    repairActionCount += 1
                 }
             }
         }
 
         try modelContext.save()
-        return ShoppingListBackfillResult(weeklyListID: weeklyList.id, productIDs: productIDs)
+        return ShoppingListBackfillResult(
+            weeklyListID: weeklyList.id,
+            productIDs: productIDs.sorted {
+                $0.uuidString < $1.uuidString
+            },
+            repairActionCount: repairActionCount
+        )
     }
 
-    private func repairCatalogProducts(_ products: [Product]) {
+    private func repairCatalogProducts(
+        _ products: [Product]
+    ) -> Int {
         let resolvableProducts = products.compactMap { product in
             catalogResolver.resolve(
                 productIDRawValue: product.catalogProductIDRawValue
@@ -539,15 +598,18 @@ struct ShoppingListBackfillService {
             by: { $0.canonicalID }
         )
         let referenceDate = Date()
+        var repairActionCount = 0
 
         for (canonicalID, group) in groups {
             let canRewriteIdentity = group.count == 1
             for value in group {
-                catalogResolver.repairCanonicalMetadata(
+                if catalogResolver.repairCanonicalMetadata(
                     for: value.product,
                     rewriteProductID: canRewriteIdentity,
                     referenceDate: referenceDate
-                )
+                ) {
+                    repairActionCount += 1
+                }
             }
 
             guard !canRewriteIdentity else {
@@ -564,6 +626,7 @@ struct ShoppingListBackfillService {
             )
             #endif
         }
+        return repairActionCount
     }
 
     private func ensureList(
@@ -571,6 +634,8 @@ struct ShoppingListBackfillService {
         title: String,
         isDefault: Bool,
         existingLists: [ShoppingList],
+        countCreationAsRepair: Bool,
+        repairActionCount: inout Int,
         in modelContext: ModelContext
     ) -> ShoppingList {
         if let existing = existingLists.first(where: { $0.kind == kind }) {
@@ -578,12 +643,16 @@ struct ShoppingListBackfillService {
                 existing.title = title
                 existing.isDefault = isDefault
                 existing.updatedAt = Date()
+                repairActionCount += 1
             }
             return existing
         }
 
         let list = ShoppingList(title: title, kind: kind, isDefault: isDefault)
         modelContext.insert(list)
+        if countCreationAsRepair {
+            repairActionCount += 1
+        }
         return list
     }
 
@@ -598,9 +667,12 @@ struct ShoppingListBackfillService {
             return existing
         }
 
-        if let linkedProduct = entries.first(where: {
-            $0.legacyShoppingItemID == item.id
-        })?.product {
+        if let linkedProduct = entries.lazy.compactMap({ entry -> Product? in
+            guard entry.legacyShoppingItemID == item.id else {
+                return nil
+            }
+            return entry.product
+        }).first {
             if linkedProduct.legacyShoppingItemID == nil {
                 linkedProduct.legacyShoppingItemID = item.id
             }
@@ -647,8 +719,12 @@ struct ShoppingListBackfillService {
         entries: [ShoppingListEntry],
         weeklyListID: UUID,
         in modelContext: ModelContext
-    ) {
-        item.isCompleted = true
+    ) -> Int {
+        var repairActionCount = 0
+        if !item.isCompleted {
+            item.isCompleted = true
+            repairActionCount += 1
+        }
         for entry in entries where
             entry.shoppingListID == weeklyListID &&
             (
@@ -657,7 +733,9 @@ struct ShoppingListBackfillService {
             )
         {
             modelContext.delete(entry)
+            repairActionCount += 1
         }
+        return repairActionCount
     }
 
     private func canonicalProductID(for item: ShoppingItem) -> String? {
@@ -680,5 +758,12 @@ struct ShoppingListBackfillService {
             return nil
         }
         return normalized
+    }
+
+    private func stableIDOrder<T: Identifiable>(
+        _ lhs: T,
+        _ rhs: T
+    ) -> Bool where T.ID == UUID {
+        lhs.id.uuidString < rhs.id.uuidString
     }
 }

@@ -188,8 +188,20 @@ enum WayTaskModelContainer {
         Schema(versionedSchema: WayTaskSchemaV3.self)
     }
 
+    static var defaultStoreURL: URL {
+        ModelConfiguration().url
+    }
+
     static func makeDefault() throws -> ModelContainer {
         try make(configurations: [])
+    }
+
+    static func makeInMemory() throws -> ModelContainer {
+        let configuration = ModelConfiguration(
+            schema: currentSchema,
+            isStoredInMemoryOnly: true
+        )
+        return try make(configurations: [configuration])
     }
 
     static func make(configurations: [ModelConfiguration]) throws

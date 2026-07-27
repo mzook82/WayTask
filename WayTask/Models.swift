@@ -373,9 +373,10 @@ final class Product {
         }
     }
 
-    func refresh(from item: ShoppingItem) {
+    @discardableResult
+    func refresh(from item: ShoppingItem) -> Bool {
         guard !isCatalogLinked, !isDeletedFromLibrary else {
-            return
+            return false
         }
 
         let nextImageURLString = item.imageURL?.absoluteString
@@ -395,7 +396,7 @@ final class Product {
             packageType != item.packageType ||
             visibleText != item.visibleText ||
             searchKeywordsRawValue != nextSearchKeywordsRawValue else {
-            return
+            return false
         }
 
         legacyShoppingItemID = item.id
@@ -413,6 +414,7 @@ final class Product {
         visibleText = item.visibleText
         searchKeywordsRawValue = nextSearchKeywordsRawValue
         updatedAt = Date()
+        return true
     }
 
     func refresh(from candidate: ProductCandidate, fallbackImageData: Data?) {

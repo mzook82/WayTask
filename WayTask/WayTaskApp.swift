@@ -20,9 +20,14 @@ struct WayTaskApp: App {
     init() {
         SentryReportingService.shared.startIfConfigured()
         do {
-            modelContainer = try WayTaskModelContainer.makeDefault()
+            modelContainer = try WayTaskStartupPersistenceBootstrap
+                .live()
+                .start()
+                .modelContainer
         } catch {
-            fatalError("Unable to open the WayTask data store: \(error.localizedDescription)")
+            fatalError(
+                "WayTask cannot initialize any safe local data store: \(error.localizedDescription)"
+            )
         }
         _appStateManager = StateObject(wrappedValue: AppStateManager())
         _locationManager = StateObject(wrappedValue: LocationManager())

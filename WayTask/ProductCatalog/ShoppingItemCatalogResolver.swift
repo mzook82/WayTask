@@ -131,6 +131,17 @@ nonisolated struct ShoppingItemCatalogResolver: Sendable {
             product.catalogProductIDRawValue = identity.productID
             changed = true
         }
+        if normalizedText(product.catalogDisplayNameSnapshot) == nil {
+            product.catalogDisplayNameSnapshot =
+                identity.canonicalName
+            changed = true
+        }
+        if normalizedIdentifier(
+            product.catalogDisplayLocaleSnapshot
+        ) == nil {
+            product.catalogDisplayLocaleSnapshot = "he"
+            changed = true
+        }
         if product.catalogCategoryIDSnapshotRawValue != identity.categoryID {
             product.catalogCategoryIDSnapshotRawValue = identity.categoryID
             changed = true
@@ -245,5 +256,15 @@ nonisolated struct ShoppingItemCatalogResolver: Sendable {
         }
 
         return value
+    }
+
+    private func normalizedText(_ value: String?) -> String? {
+        guard let value else {
+            return nil
+        }
+        let trimmed = value.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        return trimmed.isEmpty ? nil : trimmed
     }
 }

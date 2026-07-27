@@ -277,6 +277,86 @@ final class SentryStabilityTests: XCTestCase {
         XCTAssertTrue(applicationStartupContinued)
     }
 
+    func testStartupPersistenceDiagnosticsPreserveOnlyActionableSafeMetadata()
+        throws
+    {
+        let underlying = NSError(
+            domain: NSPOSIXErrorDomain,
+            code: Int(EIO)
+        )
+        let error = NSError(
+            domain: "Private Path /user/store",
+            code: 134_110,
+            userInfo: [NSUnderlyingErrorKey: underlying]
+        )
+        let diagnostic = WayTaskStartupPersistenceDiagnostic(
+            stage: .openStore,
+            outcome: .failed,
+            error: error,
+            quarantinedComponentCount: 99
+        )
+
+        XCTAssertEqual(
+            diagnostic.errorDomain,
+            "Private_Path__user_store"
+        )
+        XCTAssertEqual(
+            diagnostic.underlyingErrorDomain,
+            NSPOSIXErrorDomain
+        )
+        let context =
+            SentryStartupPersistenceMetadataPolicy.context(
+                for: diagnostic
+            )
+        XCTAssertEqual(
+            Set(context.keys),
+            SentryStartupPersistenceMetadataPolicy.allowedKeys
+        )
+        XCTAssertEqual(context["stage"] as? String, "open_store")
+        XCTAssertEqual(context["outcome"] as? String, "failed")
+        XCTAssertEqual(context["schema_version"] as? String, "3.0.0")
+        XCTAssertEqual(context["error_code"] as? Int, 134_110)
+        XCTAssertEqual(
+            context["quarantined_component_count"] as? Int,
+            10
+        )
+
+        let event = Event(level: .error)
+        event.tags = [
+            "startup_stage": "open_store",
+            "startup_outcome": "failed",
+            "private_tag": "drop"
+        ]
+        event.context = [
+            SentryStartupPersistenceMetadataPolicy.contextKey:
+                context.merging(
+                    ["product_name": "private product"],
+                    uniquingKeysWith: { _, newValue in newValue }
+                )
+        ]
+
+        let sanitized = try XCTUnwrap(
+            SentryReportingService.sanitize(event)
+        )
+        XCTAssertEqual(
+            sanitized.tags?["startup_stage"],
+            "open_store"
+        )
+        XCTAssertNil(sanitized.tags?["private_tag"])
+        XCTAssertNil(
+            sanitized.context?[
+                SentryStartupPersistenceMetadataPolicy.contextKey
+            ]?["product_name"]
+        )
+        let sanitizedStartupContext = sanitized.context?[
+            SentryStartupPersistenceMetadataPolicy.contextKey
+        ]
+        XCTAssertEqual(
+            Set(sanitizedStartupContext?.keys.map { $0 } ?? []),
+            SentryStartupPersistenceMetadataPolicy.allowedKeys
+        )
+    }
+
     private var validInfoDictionary: [String: Any] {
         [
             "SENTRY_DSN":
