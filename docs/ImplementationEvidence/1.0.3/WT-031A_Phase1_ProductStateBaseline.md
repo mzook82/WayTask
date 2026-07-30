@@ -2,17 +2,20 @@
 
 ## Record status
 
-- Work item: WT-032B, Implementation Execution Step E-01 only.
+- Work item: WT-032B, Implementation Execution Steps E-00 through E-09.
 - Evidence date: 2026-07-30 (Asia/Hebron).
-- Scope: static Product State inventory plus the approved E-00 build/test baseline.
-- Repository snapshot: `main` at `98da1a4c3a0d737ac0d53ad638a6ed21c28cbed4`.
+- Scope: static Product State inventory, current-behavior characterization, migration/recovery, diagnostics/privacy, observational performance, and integrated validation evidence.
+- Approved E-00 repository snapshot: `main` at `98da1a4c3a0d737ac0d53ad638a6ed21c28cbed4`.
+- E-09 execution snapshot: `main` at `837a6f42de6b306e3b5e31aec853af139c6e8052`.
 - This record describes current and legacy behavior found in the repository. It does not redefine the approved architecture or approve any known defect.
-- E-02 and all later execution steps are outside this record and were not executed.
-- No fixture values or private user data were inspected or copied into this document. Property names are recorded where they are part of the source contract; no real barcode, note, store, coordinate, image, credential, or account value is present.
+- E-10 and later execution steps are outside this record and were not executed.
+- All recorded runtime evidence is aggregate or synthetic. No private user data, real Product name, note, barcode, precise coordinate, credential, token, account identifier, raw image, or live store value is included.
 
 ### Evidence labels
 
 - **V-E00** — verified by the completed E-00 command and its result.
+- **V-P1** — verified by committed E-01 through E-08 artifacts and their focused validation.
+- **V-E09** — verified by the E-09 integrated command and result bundle before temporary-artifact cleanup.
 - **V-SRC** — verified directly in repository source at the recorded snapshot.
 - **V-TEST** — verified in existing test source and/or the E-00 full test run.
 - **INTERPRETATION** — a mapping or gap statement derived from verified facts; it is not a new requirement or an approval.
@@ -431,3 +434,358 @@ Final read-only validation produced:
 | Required source paths/lifecycles | All WT-032B Section 4.3 minimums present |
 
 No production file, test, schema, project file, package file, localization, Catalog artifact, or previous WT document was created or modified. E-02 was not executed.
+
+## E-09 integrated Phase 1 validation
+
+This section completes the E-09 evidence record. The earlier E-01 sections remain the static inventory at the E-00 snapshot. Statements below are verified repository or test facts at the E-09 snapshot unless explicitly labeled as interpretation. A passing characterization test records shipped current behavior; it does not approve a known defect or assert that WT-032A target architecture exists.
+
+### Preconditions and committed Phase 1 inventory
+
+E-09 began from a clean worktree on `main` at `837a6f42de6b306e3b5e31aec853af139c6e8052`, tracking `origin/main` with ahead/behind `0/0`. No staged, modified, deleted, or untracked path existed. All E-01 through E-08 artifacts were present in the Git index and committed.
+
+| Step | Commit | Approved artifact |
+|---|---|---|
+| E-01 | `9ee7e2c06079d08dd3d4dd548b9e8df1bece7697` | `docs/ImplementationEvidence/1.0.3/WT-031A_Phase1_ProductStateBaseline.md` |
+| E-02 | `65e57aaa47028add6d640c468918585cf14ab74c` | `WayTaskTests/ProductState/Fixtures/product-state-current-behavior-v1.json` |
+| E-03 | `d60cad9528cf2e7e191a7bd88bdd368c1f2be33b` | `WayTaskTests/ProductState/Support/ProductStateCharacterizationSupport.swift` |
+| E-04 | `3dd0b6fe137b36e5ff693b388098e4eed18943d1` | `WayTaskTests/ProductState/ProductStateDomainCharacterizationTests.swift` |
+| E-05 | `8bbc6df99b407b9ae590b2272eaefed4d1c40f69` | `WayTaskTests/ProductState/ProductStatePersistenceCharacterizationTests.swift` |
+| E-06 | `f7748f4839835a81964cf878980e2d2698f887f2` | `WayTaskTests/ProductState/ProductStateConsumerCharacterizationTests.swift` |
+| E-07 | `3539ef30d2fa90b95fe08a5a013ebac0ac625d2b` | `WayTaskTests/ProductState/ProductStateDiagnosticsCharacterizationTests.swift` |
+| E-08 | `837a6f42de6b306e3b5e31aec853af139c6e8052` | `WayTaskTests/ProductState/ProductStatePerformanceBaselineTests.swift` |
+
+`git diff --name-status 98da1a4c3a0d737ac0d53ad638a6ed21c28cbed4..837a6f42de6b306e3b5e31aec853af139c6e8052` reported exactly these eight additions. The same comparison limited to `WayTask`, `WayTask.xcodeproj`, schemes, and test plans was empty.
+
+### E-09 environment
+
+| Component | Verified value |
+|---|---|
+| Host | macOS 26.6, build 25G72 |
+| Xcode | 26.6, build 17F113 |
+| Swift | 6.3.3; `swiftlang-6.3.3.1.3 clang-2100.1.1.101` |
+| Shell host architecture | `x86_64` |
+| Simulator | iPhone 17 Pro, iOS 26.5 (23F77), UDID `DE30E799-0496-4818-851D-FF613F62FCD3` |
+| Simulator test architecture | `arm64` |
+| Functional test configuration | Debug; parallel testing disabled by command line |
+| Generic application build | Debug, generic iOS destination, code signing disabled |
+
+### Integrated Product State suites
+
+The five committed Product State suites were run together in Debug with their committed selectors and deterministic profiles. The performance class was included to validate its artifact, all seven selectors, fixture generation, finite samples, correctness assertions, and semantic stability in the standard test configuration. The authoritative timing evidence remains the controlled Release evidence recorded below.
+
+| Suite | Passed | Failed | Skipped |
+|---|---:|---:|---:|
+| `ProductStateDomainCharacterizationTests` | 12 | 0 | 0 |
+| `ProductStatePersistenceCharacterizationTests` | 15 | 0 | 0 |
+| `ProductStateConsumerCharacterizationTests` | 6 | 0 | 0 |
+| `ProductStateDiagnosticsCharacterizationTests` | 5 | 0 | 0 |
+| `ProductStatePerformanceBaselineTests` | 7 | 0 | 0 |
+| **Integrated total** | **45** | **0** | **0** |
+
+Result: **PASS** (V-E09). Xcode reported 1,226.397 seconds. The result bundle existed during evidence extraction at `/private/tmp/WayTask-WT032B-E09-Integrated-20260730.xcresult` and was not copied into the repository.
+
+### Named Section 10.3 regressions
+
+Every explicitly named existing class and every available class in the named category directories was run in one serial Debug invocation.
+
+| Non-overlapping group | Classes / boundary | Passed | Failed | Skipped |
+|---|---|---:|---:|---:|
+| Schema/startup/library/catalog persistence/monitoring | `WayTaskSchemaMigrationTests`, `StartupRepairIdempotencyTests`, `ProductLibraryDeletionPersistenceTests`, `CatalogProductPersistenceServiceTests`, `CatalogProductCompatibilityTests`, `StartupPersistenceResilienceTests`, `SentryStabilityTests` | 41 | 0 | 0 |
+| Product Catalog | All nine available XCTest classes, including compatibility, migration, personalization, search, service, and shared-fixture validation | 79 | 0 | 0 |
+| Product Knowledge | All ten available XCTest classes, including `LegacyProductCreationCharacterizationTests` and search performance | 115 | 0 | 0 |
+| Shopping UX / Classification | `CanonicalCatalogSelectionFlowTests`, `OtherItemsClassificationTests`, `ShoppingWorkspaceUXTests` | 18 | 0 | 0 |
+| Map | `MapBottomSheetProductLabelTests` | 2 | 0 | 0 |
+| **Named-regression total** | 30 XCTest classes | **255** | **0** | **0** |
+
+Result: **PASS** (V-E09). Xcode reported 37.386 seconds. The result bundle existed during evidence extraction at `/private/tmp/WayTask-WT032B-E09-NamedRegressions-20260730.xcresult`.
+
+There is no pre-Phase-1 standalone XCTest class named for location, geofence, or notification behavior. A repository class-name scan returned no such class. The nearest executable boundaries are `MapBottomSheetProductLabelTests`, `OtherItemsClassificationTests`, the new saved-location and geofence/notification selectors in `ProductStateConsumerCharacterizationTests`, the saved-location reopen selector in `ProductStatePersistenceCharacterizationTests`, and the privacy/transport selectors in `ProductStateDiagnosticsCharacterizationTests`. All passed in E-09. This absence is a repository fact, not a waiver or invented test result.
+
+### Complete WayTaskTests target
+
+The complete scheme test action was run without `-only-testing`, `-skip-testing`, class exclusions, or test-plan edits.
+
+| Configuration | Simulator | XCTest classes | Passed | Failed | Skipped | Result |
+|---|---|---:|---:|---:|---:|---|
+| Debug; parallel disabled | iPhone 17 Pro, iOS 26.5 (23F77), `arm64` | 39 | 340 | 0 | 0 | **PASS** |
+
+Xcode reported 1,212.961 seconds. The result bundle existed during evidence extraction at `/private/tmp/WayTask-WT032B-E09-CompleteWayTaskTests-20260730.xcresult`.
+
+### Generic unsigned application build
+
+The isolated generic Debug application build passed with exit code 0:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+xcodebuild -quiet \
+  -project WayTask.xcodeproj \
+  -scheme WayTask \
+  -configuration Debug \
+  -destination generic/platform=iOS \
+  -derivedDataPath /private/tmp/WayTask-WT032B-E09-Build-20260730 \
+  CODE_SIGNING_ALLOWED=NO \
+  build
+```
+
+Result: **PASS** (V-E09). The generic `-quiet` invocation emitted no warning line. The preceding complete test-target build emitted one pre-existing Swift warning at `WayTaskTests/ProductCatalog/ProductCatalogMigrationTests.swift:136` for the unused immutable local `legacyByID`, plus the existing note that the Sentry debug-symbol upload build phase runs every build because dependency analysis is disabled. No source or project change was made in response.
+
+### Migration and recovery evidence
+
+All rows are synthetic, test-owned, and verified by the passing persistence suite in both the integrated and complete-target runs.
+
+| Requirement | Integrated evidence |
+|---|---|
+| Manifest contract | Schema version 1 loaded all 19 required unique current-behavior cases; source and bundled bytes matched; deterministic identifiers/timestamps and privacy contract passed. |
+| Four compatibility combinations | `false/false`, `false/true`, `true/false`, and `true/true` for entry checked / compatibility completed persisted and reopened unchanged. No target-state interpretation was applied. |
+| V1 to current | A frozen V1 synthetic source store was fingerprinted, copied with sidecars, migrated only as a working copy, and reopened to a stable current semantic snapshot. |
+| V2 to current | A frozen V2 synthetic source store followed the same working-copy process; Product UUID and supported Catalog snapshot fields remained stable. |
+| V3/current reopen | Current file-backed state closed and reopened with identical canonical semantic JSON and SHA-256 digest. |
+| Product identity and duplicates | Stable Product UUIDs were asserted; duplicate logical `(listID, productID)` entries survived current reopen behavior as characterized. |
+| Repair behavior | Existing-Product references reconnected; missing Products were not fabricated; Completed, Recent, history, and tombstone references were preserved without resurrection. |
+| Session/location persistence | Active and finished Session arrays and saved-location relationships survived reopen. |
+| Repair idempotency | First- and second-pass semantic JSON and SHA-256 digest were identical; the second pass reported zero additional actions for the supported state. |
+| Source immutability | V1 and V2 source store/sidecar fingerprints matched before and after working-copy migration. |
+| Failed working copy | A safe synthetic failed-open scenario reported failure, did not expose an empty replacement as success, did not mutate the source, and cleaned its owned directory. |
+| Schema boundary | The Phase 1 diff adds no schema version, migration stage, model field, recovery hook, or production source. |
+
+These results characterize current shipped migration and repair. They do not introduce a V4 schema or implement target Product State migration.
+
+### Diagnostics and privacy evidence
+
+All five diagnostic selectors passed in the integrated and complete-target runs.
+
+| Requirement | Integrated evidence |
+|---|---|
+| Startup success | Current startup stage and completion ordering, repair outcome, and safe aggregate metadata were asserted. |
+| Startup recovery | Current open/recovery/quarantine/retry reporting order and aggregate recovery metadata were asserted without changing recovery. |
+| Metadata allowlist | Emitted metadata keys were required to be a subset of the production allowlist; disallowed synthetic fields and tags were removed. |
+| Private sentinels | Synthetic sentinel categories for names, notes, barcode-like text, image-like bytes, coordinate-like text, credentials, user/account identifiers, and tokens were absent from sanitized diagnostic text and attachment JSON. No sentinel value is reproduced here. |
+| Attachment safety | Sorted-key JSON, synthetic labeling, allowlisted fields, deterministic bytes, and configured lifetime passed; a deliberately disallowed field produced a privacy-safe rejection. |
+| Diagnostic transport | The characterization path did not start the application lifecycle, initialize Sentry transport, transmit network data, emit telemetry, or add production logging. |
+| Production boundary | No production diagnostic, monitoring, startup, Sentry, or network source differs from the E-00 snapshot. |
+
+No raw attachment or `xcresult` content is embedded in this evidence document.
+
+### Authoritative E-08 performance evidence
+
+E-09 revalidated the committed performance artifact and all seven selectors in the integrated and complete Debug runs. WT-032B E-08 already required and completed the two full controlled Release measurements, so E-09 references those authoritative runs instead of creating a third Release baseline.
+
+#### Controlled environment and protocol
+
+| Item | Authoritative value |
+|---|---|
+| Xcode / Swift / host | Xcode 26.6 (17F113); Swift 6.3.3 (`swiftlang-6.3.3.1.3 clang-2100.1.1.101`); macOS 26.6 (25G72) |
+| Simulator | iPhone 17 Pro, iOS 26.5 (23F77), UDID `DE30E799-0496-4818-851D-FF613F62FCD3` |
+| Runtime architecture / thermal state | `arm64`; nominal during both attachment captures |
+| Test configuration | Release product/test build with Swift `-O` optimization |
+| Command-line-only testability | `ENABLE_TESTABILITY=YES`; no project setting changed |
+| Command-line-only conditions | `SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) DEBUG WT032B_RELEASE_BASELINE` |
+| Release evidence marker | `WT032B_RELEASE_BASELINE`; attachment configuration recorded as `release` |
+| Parallel configuration | Authoritative run 1 used the scheme default because no CLI parallel override was supplied; authoritative run 2 used `-parallel-testing-enabled NO` |
+| Fixture protocol | Reference profile exactly 2,000 Products, 20 lists, 10,000 entries, 2,000 compatibility items, 5,000 history rows, one 500-line Session, 20 locations, 50 location relationships |
+| Samples | Three warm-ups followed by thirty measured samples per operation |
+| Statistics | Minimum, p50, p95, maximum; monotonic timing; no thresholds |
+
+The retained `DEBUG` condition was necessary only because the file-system-synchronized test target also compiles pre-existing debug-only Sentry test APIs in Release. It did not change Release optimization, the production project, fixture sizes, measurement operations, or Product State behavior.
+
+#### Observations
+
+Values are milliseconds in `minimum / p50 / p95 / maximum` order.
+
+| Operation | Authoritative run 1 | Authoritative run 2 |
+|---|---:|---:|
+| Selected List Projection | `6.827 / 6.905 / 6.945 / 7.008` | `6.876 / 7.050 / 7.225 / 7.266` |
+| Product Library Filtering | `33.932 / 35.542 / 45.650 / 50.843` | `29.739 / 32.438 / 34.091 / 34.796` |
+| Shopping Plan Input Projection | `4.554 / 4.642 / 4.831 / 5.065` | `4.071 / 4.107 / 4.299 / 4.304` |
+| Active Session Lookup | `0.819 / 0.834 / 0.935 / 0.980` | `0.818 / 0.824 / 0.864 / 0.918` |
+| Startup Repair | `20,869.713 / 21,362.332 / 21,904.435 / 22,045.673` | `20,606.444 / 20,972.179 / 21,272.959 / 21,404.408` |
+| Canonical Semantic Digest | `7,926.393 / 8,664.185 / 9,921.963 / 10,080.762` | `7,736.649 / 7,893.708 / 8,347.012 / 8,410.305` |
+
+Authoritative run 1 passed 7/7 in 1,121.054 seconds. Authoritative run 2 passed 7/7 in 1,060.957 seconds. Each operation reported finite, non-negative samples with ordered statistics. Timing variation is observational and is not a capacity guarantee or pass/fail performance threshold.
+
+#### Stable semantic evidence
+
+Both runs reported equal entity and relationship counts:
+
+- entities: `Product=2000`, `ShoppingList=20`, `ShoppingListEntry=10000`, `ShoppingItem=2000`, `ProductHistory=5000`, `ShoppingSession=1`, `GeoLocation=20`;
+- relationships: `ShoppingListEntry.product=10000`, `ShoppingSession.itemIDs=500`, `ShoppingSession.collectedItemIDs=125`, `GeoLocation.shoppingItems=50`.
+
+The per-operation semantic digests matched exactly across both runs:
+
+| Operation | SHA-256 semantic digest |
+|---|---|
+| Selected List Projection | `46d70004b24e0cee01bc6c33a61266b5eda16d00da42ceba62957ca6ab614df5` |
+| Product Library Filtering | `8ae495abed961a24d29256a96300dae0d97cadc6c1d69dcde7c56a74740e0bb2` |
+| Shopping Plan Input Projection | `1c58954a80a8c81489758533d6d2d1ce736cb15d188c16c74538fcace916bb4d` |
+| Active Session Lookup | `5ffe9e20ee46a92fc1039bd97ea2822a960760de37b568d63cc0893e91dd93c0` |
+| Startup Repair | `b0bf60f278511b976a6c7a78550e756087dcdc5c7251343141d1580c6d5508db` |
+| Canonical Semantic Digest | `00343938dc04846ff26542fcae708910b8fee7f2a6164f0f5670e7a6a9844d23` |
+
+Startup-repair store footprint was unchanged within each run: `3,076,784` bytes before/after in run 1 and `3,101,504` bytes before/after in run 2. Raw SQLite footprint was not asserted equal between independently created stores; semantic JSON, digest, counts, ordering, and fixture seed were the stability contract.
+
+#### E-08 retries and exclusions
+
+- A plain Release test-target build could not compile existing `@testable` sources because the application module lacked testability. Adding `ENABLE_TESTABILITY=YES` exposed existing test references to debug-only Sentry APIs. The final command-line-only conditions above resolved both constraints without changing the project.
+- A pilot 7/7 run was excluded because its evidence attachment labeled the configuration as Debug before the explicit `WT032B_RELEASE_BASELINE` evidence marker was added. It was not relabeled as authoritative.
+- One subsequent attempt encountered an additional simulator-clone launch denial while another clone executed. Six selectors completed, but the attempt was interrupted before startup repair finished and exited 75. It was excluded because it was incomplete; no partial timing was used.
+- Authoritative run 2 explicitly disabled parallel testing to remove clone-launch variability. It completed 7/7 and matched run 1 semantic counts and digests.
+
+The authoritative result bundles and exported safe attachments were inspected under `/private/tmp/WayTask-WT032B-E08-Tests-20260730` and E-08 export directories, then removed. They were never added to the repository.
+
+### Reproducible E-09 commands
+
+The Debug test bundle was built once:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+xcodebuild -quiet build-for-testing \
+  -project WayTask.xcodeproj \
+  -scheme WayTask \
+  -configuration Debug \
+  -destination 'platform=iOS Simulator,id=DE30E799-0496-4818-851D-FF613F62FCD3' \
+  -derivedDataPath /private/tmp/WayTask-WT032B-E09-Tests-20260730 \
+  CODE_SIGNING_ALLOWED=NO
+```
+
+The integrated run used:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+xcodebuild -quiet test-without-building \
+  -project WayTask.xcodeproj \
+  -scheme WayTask \
+  -configuration Debug \
+  -destination 'platform=iOS Simulator,id=DE30E799-0496-4818-851D-FF613F62FCD3' \
+  -derivedDataPath /private/tmp/WayTask-WT032B-E09-Tests-20260730 \
+  -resultBundlePath /private/tmp/WayTask-WT032B-E09-Integrated-20260730.xcresult \
+  -parallel-testing-enabled NO \
+  -only-testing:WayTaskTests/ProductStateDomainCharacterizationTests \
+  -only-testing:WayTaskTests/ProductStatePersistenceCharacterizationTests \
+  -only-testing:WayTaskTests/ProductStateConsumerCharacterizationTests \
+  -only-testing:WayTaskTests/ProductStateDiagnosticsCharacterizationTests \
+  -only-testing:WayTaskTests/ProductStatePerformanceBaselineTests \
+  CODE_SIGNING_ALLOWED=NO
+```
+
+The named-regression command used the same project, scheme, Debug configuration, simulator, DerivedData, signing, and serial settings, with `-resultBundlePath /private/tmp/WayTask-WT032B-E09-NamedRegressions-20260730.xcresult` and one `-only-testing:WayTaskTests/<Class>` argument for each class in this exact selection:
+
+```text
+WayTaskSchemaMigrationTests
+StartupRepairIdempotencyTests
+ProductLibraryDeletionPersistenceTests
+CatalogProductPersistenceServiceTests
+CatalogProductCompatibilityTests
+LegacyProductCreationCharacterizationTests
+StartupPersistenceResilienceTests
+SentryStabilityTests
+ProductCatalogAutocompleteTests
+ProductCatalogCanonicalValidationTests
+ProductCatalogCompatibilityLayerTests
+ProductCatalogMigrationTests
+ProductCatalogPersonalizationTests
+ProductCatalogPersonalizationHistoryBuilderTests
+ProductCatalogSearchTests
+ProductCatalogServiceTests
+SharedCatalogFixtureTests
+BundledProductKnowledgeLoaderTests
+InMemoryProductKnowledgeRepositoryTests
+ProductAutocompleteViewModelTests
+ProductEntityTests
+ProductKnowledgeCatalogValidatorTests
+ProductKnowledgeIconResolverTests
+ProductKnowledgeResourceConformanceTests
+ProductKnowledgeSearchPerformanceTests
+ProductKnowledgeSearchTests
+CanonicalCatalogSelectionFlowTests
+OtherItemsClassificationTests
+ShoppingWorkspaceUXTests
+MapBottomSheetProductLabelTests
+```
+
+The complete-target command used no test-selection argument:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+xcodebuild -quiet test-without-building \
+  -project WayTask.xcodeproj \
+  -scheme WayTask \
+  -configuration Debug \
+  -destination 'platform=iOS Simulator,id=DE30E799-0496-4818-851D-FF613F62FCD3' \
+  -derivedDataPath /private/tmp/WayTask-WT032B-E09-Tests-20260730 \
+  -resultBundlePath /private/tmp/WayTask-WT032B-E09-CompleteWayTaskTests-20260730.xcresult \
+  -parallel-testing-enabled NO \
+  CODE_SIGNING_ALLOWED=NO
+```
+
+The authoritative E-08 Release template was:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+xcodebuild -quiet test-without-building \
+  -project WayTask.xcodeproj \
+  -scheme WayTask \
+  -configuration Release \
+  -destination 'platform=iOS Simulator,id=DE30E799-0496-4818-851D-FF613F62FCD3' \
+  -derivedDataPath /private/tmp/WayTask-WT032B-E08-Tests-20260730 \
+  -only-testing:WayTaskTests/ProductStatePerformanceBaselineTests \
+  CODE_SIGNING_ALLOWED=NO \
+  ENABLE_TESTABILITY=YES \
+  'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) DEBUG WT032B_RELEASE_BASELINE'
+```
+
+Run 2 added `-parallel-testing-enabled NO`; run 1 supplied no command-line parallel override.
+
+### Repository and protected-hash evidence
+
+The protected governing/source hashes at E-09 entry matched E-00:
+
+| Protected artifact | SHA-256 |
+|---|---|
+| `docs/Audits/1.0.3/WT-030A_ProductStateUXAudit.md` | `752695899449581256e8826b1318b9aa63b7d361a8a4b1bc2de2af0afb8cf032` |
+| `docs/Audits/1.0.3/WT-030_ArchitectureSummary.md` | `21aa18de727ad392dbd3f6b3845c283d45522df2c21022c554dd3a502979e586` |
+| `docs/ImplementationPlans/1.0.3/WT-031A_ProductStateImplementationPlan.md` | `7321482546b6985ace7aee999c1a195ed1b295dda3af1bb57c6e670c5cc6d06a` |
+| `docs/ImplementationSpecifications/1.0.3/WT-032A_ProductState_Phase0DecisionSpecification.md` | `c1d43c3037651f59cb3e8bd680ef3fe4e7e8f3306ed038abf2c710a8462d1abd` |
+| `docs/ImplementationSpecifications/1.0.3/WT-032B_ProductState_Phase1ImplementationSpecification.md` | `25824516c1d0602281fe8000dd1a5c81cc12ddd9b3ba68b3da5d5b82097b1fb7` |
+| `design/v1.0/WayTask_Product_Specification_v1.0.pdf` | `a8ef365c558730dd9aaf9b1544315f5da677e1bfc86cae6b7acd8dd726d4f61b` |
+| `WayTask.xcodeproj/project.pbxproj` | `9b726ac5ef5fa01baf9a5d4789231f377dbc3221599356bd8ac6ec2b3ee2054f` |
+| `WayTask/Persistence/WayTaskSchemaV1.swift` | `a82370847be17b15d15bebfd7aae72c48b98141f1fd2f346bb6afa8b33ff7a56` |
+| `WayTask/Persistence/WayTaskSchema.swift` | `bc9a5cf075275e5b40242b5109d9b2eddc50a49bbe44b3f8b01279db159fe27e` |
+| `WayTask/Persistence/WayTaskStartupPersistence.swift` | `9eaf9dd7f95e96249d117a414084cdbdbb564bfb413a247f036bde29b55a7bd7` |
+| `WayTask.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` | `42ea4be1f9d443ba125cb6f995d4ae0c2b49059ea5c65dfcd34382fb5f29e244` |
+
+Pre-E-09 Phase 1 artifact hashes were:
+
+| Artifact | SHA-256 at E-09 entry |
+|---|---|
+| E-01 evidence document | `a072957f6d7822fa610b0abc1d64587fb0337d07d0f501e44f9f9787b366ca19` |
+| E-02 manifest | `d55771a3a4b422cd63cd2e3ee3ebd8a288defb890be4859b3c5ee263445f3cae` |
+| E-03 support | `1447a27623cff06c2fb06001090a59c2773d788ef2386d25c7912255294b72ab` |
+| E-04 domain suite | `16494a775a4ba2ba4827ad84e20ccac81fb1256821be99df7a1f8403996f3989` |
+| E-05 persistence suite | `1cd006bb3916a931c2a116715acff76afae22f01737069a314a7929fbf846deb` |
+| E-06 consumer suite | `84ba08ff731d51bbbd9cf52ce4bebfd3c7369fd37d4d2b19fb57d5147f935b0a` |
+| E-07 diagnostics suite | `7aabb53572a0eaa8950ece2a07254e9e038ac950c8d87fe15111b0f128882951` |
+| E-08 performance suite | `d5739fab4e09e030118ccebd699fde0358013f888ccc53988f3fc57a9720c8dc` |
+
+E-09 intentionally updates the E-01 evidence path, so its content hash necessarily changes. E-02 through E-08 must remain byte-identical to the table. The complete committed `WayTaskTests` tree aggregate at E-09 entry was `920957649d9b1bfa0e5dd67a3529ab3a9483e8696dee1aee20b3c00457cc4316`.
+
+### Infrastructure retries and environment limitations
+
+- An initial E-09 `simctl list devices` check inside the filesystem sandbox could not connect to CoreSimulatorService or write its simulator log. The same read-only command was retried with simulator-service access and found the recorded simulator in Shutdown state. All Xcode build and test invocations then succeeded on their first execution.
+- E-09 performed no test retry. The integrated, named-regression, complete-target, and generic-build invocations each completed once with exit code 0.
+- E-08 Release build constraints, the excluded pilot, and the interrupted clone attempt are recorded in the performance subsection rather than hidden or relabeled.
+
+### Current behavior, known defects, and pending work
+
+- The executable Phase 1 suites replace many E-01 source-only gaps with deterministic current-behavior evidence, including multi-list compatibility effects, duplicates, tombstones, active-session reuse, finish without reconciliation, migration/reopen, consumer filtering, notification payload construction, diagnostic privacy, and performance observations.
+- Passing CB/KD characterization is not approval. KD-01 through KD-12 remain legacy defects or architectural gaps until an approved later implementation changes them.
+- Phase 1 adds no target Product State authority, command model, V4 schema, migration stage, durable list revision, atomic Finish reconciliation, conflict UI, capacity guarantee, or Phase 2 value.
+- UI paths that cannot be instantiated without production hooks remain source-characterized at the nearest existing pure/service boundary; Phase 1 intentionally added no production injection or monitoring hook.
+- E-10 final repository/rollback audit remains pending and was not executed in E-09.
+
+## E-09 boundary
+
+E-09 modified only:
+
+`docs/ImplementationEvidence/1.0.3/WT-031A_Phase1_ProductStateBaseline.md`
+
+At E-09 entry the repository was clean. After the evidence update, the repository difference is this single tracked documentation path; no new file was created. Final cleanup removed the exact E-09 DerivedData and result-bundle paths. A post-test simulator scan found no `WT032B-ProductState-*` owned directory, and a `/private/tmp` scan found no `WayTask-WT032B-E09-*` path. No temporary store, sidecar, exported attachment, DerivedData, or `xcresult` remains from E-09.
