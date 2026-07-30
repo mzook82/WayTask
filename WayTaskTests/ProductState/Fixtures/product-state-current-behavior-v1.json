@@ -1,0 +1,1780 @@
+{
+  "manifestSchemaVersion": 1,
+  "manifestID": "wt032b-product-state-current-behavior-v1",
+  "expectationKind": "currentBehavior",
+  "syntheticNamespace": "WT032B_SYNTHETIC_V1",
+  "fixedUTCTimestamps": {
+    "baseline": "2001-01-01T00:00:00.000Z",
+    "tombstone": "2001-01-02T00:00:00.000Z",
+    "sessionFinish": "2001-01-03T00:00:00.000Z",
+    "historyEvent": "2001-01-04T00:00:00.000Z"
+  },
+  "optionalFieldEncoding": {
+    "present": "A value is included in the optionalFieldStates entry.",
+    "absent": "The field is intentionally absent and no value key is included."
+  },
+  "cases": [
+    {
+      "caseID": "flags-00",
+      "purpose": "Capture the current legacy behavior when entry checked and compatibility completion flags are both false.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-12"],
+        "knownDefectIDs": ["KD-01", "KD-12"]
+      },
+      "operation": "observe",
+      "records": [
+        {
+          "recordType": "Product",
+          "id": "032B0101-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_FLAGS_00",
+            "legacyShoppingItemID": "032B0101-0000-4000-8000-000000000002"
+          },
+          "optionalFieldStates": [
+            {"field": "deletedAt", "presence": "absent"},
+            {"field": "catalogProductIDRawValue", "presence": "absent"}
+          ]
+        },
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B0101-0000-4000-8000-000000000002",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_FLAGS_00",
+            "isCompleted": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B0101-0000-4000-8000-000000000003",
+          "fields": {
+            "title": "SYNTHETIC_LIST_FLAGS_00",
+            "kindRawValue": "weekly"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B0101-0000-4000-8000-000000000004",
+          "fields": {
+            "shoppingListID": "032B0101-0000-4000-8000-000000000003",
+            "productID": "032B0101-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B0101-0000-4000-8000-000000000002",
+            "isChecked": false
+          },
+          "optionalFieldStates": [
+            {
+              "field": "product",
+              "presence": "present",
+              "value": "032B0101-0000-4000-8000-000000000001"
+            }
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 1,
+          "Product": 1,
+          "ShoppingList": 1,
+          "ShoppingListEntry": 1,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B0101-0000-4000-8000-000000000002",
+            "field": "isCompleted",
+            "value": false
+          },
+          {
+            "recordID": "032B0101-0000-4000-8000-000000000004",
+            "field": "isChecked",
+            "value": false
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B0101-0000-4000-8000-000000000001",
+            "field": "deletedAt",
+            "presence": "absent"
+          }
+        ],
+        "relationshipCounts": []
+      }
+    },
+    {
+      "caseID": "flags-01",
+      "purpose": "Capture the current legacy contradictory state with an unchecked entry and completed compatibility item.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-12"],
+        "knownDefectIDs": ["KD-01", "KD-12"]
+      },
+      "operation": "observe",
+      "records": [
+        {
+          "recordType": "Product",
+          "id": "032B0102-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_FLAGS_01",
+            "legacyShoppingItemID": "032B0102-0000-4000-8000-000000000002"
+          },
+          "optionalFieldStates": [
+            {"field": "deletedAt", "presence": "absent"},
+            {"field": "catalogProductIDRawValue", "presence": "absent"}
+          ]
+        },
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B0102-0000-4000-8000-000000000002",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_FLAGS_01",
+            "isCompleted": true
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B0102-0000-4000-8000-000000000003",
+          "fields": {
+            "title": "SYNTHETIC_LIST_FLAGS_01",
+            "kindRawValue": "weekly"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B0102-0000-4000-8000-000000000004",
+          "fields": {
+            "shoppingListID": "032B0102-0000-4000-8000-000000000003",
+            "productID": "032B0102-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B0102-0000-4000-8000-000000000002",
+            "isChecked": false
+          },
+          "optionalFieldStates": [
+            {
+              "field": "product",
+              "presence": "present",
+              "value": "032B0102-0000-4000-8000-000000000001"
+            }
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 1,
+          "Product": 1,
+          "ShoppingList": 1,
+          "ShoppingListEntry": 1,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B0102-0000-4000-8000-000000000002",
+            "field": "isCompleted",
+            "value": true
+          },
+          {
+            "recordID": "032B0102-0000-4000-8000-000000000004",
+            "field": "isChecked",
+            "value": false
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B0102-0000-4000-8000-000000000001",
+            "field": "deletedAt",
+            "presence": "absent"
+          }
+        ],
+        "relationshipCounts": []
+      }
+    },
+    {
+      "caseID": "flags-10",
+      "purpose": "Capture the current legacy contradictory state with a checked entry and incomplete compatibility item.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-12"],
+        "knownDefectIDs": ["KD-01", "KD-12"]
+      },
+      "operation": "observe",
+      "records": [
+        {
+          "recordType": "Product",
+          "id": "032B0103-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_FLAGS_10",
+            "legacyShoppingItemID": "032B0103-0000-4000-8000-000000000002"
+          },
+          "optionalFieldStates": [
+            {"field": "deletedAt", "presence": "absent"},
+            {"field": "catalogProductIDRawValue", "presence": "absent"}
+          ]
+        },
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B0103-0000-4000-8000-000000000002",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_FLAGS_10",
+            "isCompleted": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B0103-0000-4000-8000-000000000003",
+          "fields": {
+            "title": "SYNTHETIC_LIST_FLAGS_10",
+            "kindRawValue": "weekly"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B0103-0000-4000-8000-000000000004",
+          "fields": {
+            "shoppingListID": "032B0103-0000-4000-8000-000000000003",
+            "productID": "032B0103-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B0103-0000-4000-8000-000000000002",
+            "isChecked": true
+          },
+          "optionalFieldStates": [
+            {
+              "field": "product",
+              "presence": "present",
+              "value": "032B0103-0000-4000-8000-000000000001"
+            }
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 1,
+          "Product": 1,
+          "ShoppingList": 1,
+          "ShoppingListEntry": 1,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B0103-0000-4000-8000-000000000002",
+            "field": "isCompleted",
+            "value": false
+          },
+          {
+            "recordID": "032B0103-0000-4000-8000-000000000004",
+            "field": "isChecked",
+            "value": true
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B0103-0000-4000-8000-000000000001",
+            "field": "deletedAt",
+            "presence": "absent"
+          }
+        ],
+        "relationshipCounts": []
+      }
+    },
+    {
+      "caseID": "flags-11",
+      "purpose": "Capture the current legacy behavior when entry checked and compatibility completion flags are both true.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-12"],
+        "knownDefectIDs": ["KD-01", "KD-12"]
+      },
+      "operation": "observe",
+      "records": [
+        {
+          "recordType": "Product",
+          "id": "032B0104-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_FLAGS_11",
+            "legacyShoppingItemID": "032B0104-0000-4000-8000-000000000002"
+          },
+          "optionalFieldStates": [
+            {"field": "deletedAt", "presence": "absent"},
+            {"field": "catalogProductIDRawValue", "presence": "absent"}
+          ]
+        },
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B0104-0000-4000-8000-000000000002",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_FLAGS_11",
+            "isCompleted": true
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B0104-0000-4000-8000-000000000003",
+          "fields": {
+            "title": "SYNTHETIC_LIST_FLAGS_11",
+            "kindRawValue": "weekly"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B0104-0000-4000-8000-000000000004",
+          "fields": {
+            "shoppingListID": "032B0104-0000-4000-8000-000000000003",
+            "productID": "032B0104-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B0104-0000-4000-8000-000000000002",
+            "isChecked": true
+          },
+          "optionalFieldStates": [
+            {
+              "field": "product",
+              "presence": "present",
+              "value": "032B0104-0000-4000-8000-000000000001"
+            }
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 1,
+          "Product": 1,
+          "ShoppingList": 1,
+          "ShoppingListEntry": 1,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B0104-0000-4000-8000-000000000002",
+            "field": "isCompleted",
+            "value": true
+          },
+          {
+            "recordID": "032B0104-0000-4000-8000-000000000004",
+            "field": "isChecked",
+            "value": true
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B0104-0000-4000-8000-000000000001",
+            "field": "deletedAt",
+            "presence": "absent"
+          }
+        ],
+        "relationshipCounts": []
+      }
+    },
+    {
+      "caseID": "multi-list-shared-compatibility",
+      "purpose": "Capture two current list entries sharing one Product and one compatibility ShoppingItem.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-03"],
+        "knownDefectIDs": ["KD-01", "KD-02"]
+      },
+      "operation": "observe",
+      "records": [
+        {
+          "recordType": "Product",
+          "id": "032B0105-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_SHARED",
+            "legacyShoppingItemID": "032B0105-0000-4000-8000-000000000002"
+          },
+          "optionalFieldStates": [
+            {"field": "deletedAt", "presence": "absent"}
+          ]
+        },
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B0105-0000-4000-8000-000000000002",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_SHARED",
+            "isCompleted": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B0105-0000-4000-8000-000000000003",
+          "fields": {
+            "title": "SYNTHETIC_LIST_SHARED_A",
+            "kindRawValue": "weekly"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B0105-0000-4000-8000-000000000004",
+          "fields": {
+            "title": "SYNTHETIC_LIST_SHARED_B",
+            "kindRawValue": "weekly"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B0105-0000-4000-8000-000000000005",
+          "fields": {
+            "shoppingListID": "032B0105-0000-4000-8000-000000000003",
+            "productID": "032B0105-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B0105-0000-4000-8000-000000000002",
+            "isChecked": false
+          },
+          "optionalFieldStates": [
+            {
+              "field": "product",
+              "presence": "present",
+              "value": "032B0105-0000-4000-8000-000000000001"
+            }
+          ]
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B0105-0000-4000-8000-000000000006",
+          "fields": {
+            "shoppingListID": "032B0105-0000-4000-8000-000000000004",
+            "productID": "032B0105-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B0105-0000-4000-8000-000000000002",
+            "isChecked": false
+          },
+          "optionalFieldStates": [
+            {
+              "field": "product",
+              "presence": "present",
+              "value": "032B0105-0000-4000-8000-000000000001"
+            }
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 1,
+          "Product": 1,
+          "ShoppingList": 2,
+          "ShoppingListEntry": 2,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B0105-0000-4000-8000-000000000002",
+            "field": "isCompleted",
+            "value": false
+          }
+        ],
+        "optionalFieldStates": [],
+        "relationshipCounts": [
+          {
+            "recordID": "032B0105-0000-4000-8000-000000000002",
+            "relationship": "referencingShoppingListEntries",
+            "count": 2
+          }
+        ]
+      }
+    },
+    {
+      "caseID": "duplicate-entry",
+      "purpose": "Capture two current logical entries with the same list and Product identity.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-04"],
+        "knownDefectIDs": ["KD-03"]
+      },
+      "operation": "observe",
+      "records": [
+        {
+          "recordType": "Product",
+          "id": "032B0106-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_DUPLICATE",
+            "legacyShoppingItemID": "032B0106-0000-4000-8000-000000000002"
+          },
+          "optionalFieldStates": [
+            {"field": "deletedAt", "presence": "absent"}
+          ]
+        },
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B0106-0000-4000-8000-000000000002",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_DUPLICATE",
+            "isCompleted": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B0106-0000-4000-8000-000000000003",
+          "fields": {
+            "title": "SYNTHETIC_LIST_DUPLICATE",
+            "kindRawValue": "weekly"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B0106-0000-4000-8000-000000000004",
+          "fields": {
+            "shoppingListID": "032B0106-0000-4000-8000-000000000003",
+            "productID": "032B0106-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B0106-0000-4000-8000-000000000002",
+            "isChecked": false
+          },
+          "optionalFieldStates": [
+            {
+              "field": "product",
+              "presence": "present",
+              "value": "032B0106-0000-4000-8000-000000000001"
+            }
+          ]
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B0106-0000-4000-8000-000000000005",
+          "fields": {
+            "shoppingListID": "032B0106-0000-4000-8000-000000000003",
+            "productID": "032B0106-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B0106-0000-4000-8000-000000000002",
+            "isChecked": true
+          },
+          "optionalFieldStates": [
+            {
+              "field": "product",
+              "presence": "present",
+              "value": "032B0106-0000-4000-8000-000000000001"
+            }
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 1,
+          "Product": 1,
+          "ShoppingList": 1,
+          "ShoppingListEntry": 2,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B0106-0000-4000-8000-000000000004",
+            "field": "isChecked",
+            "value": false
+          },
+          {
+            "recordID": "032B0106-0000-4000-8000-000000000005",
+            "field": "isChecked",
+            "value": true
+          }
+        ],
+        "optionalFieldStates": [],
+        "relationshipCounts": [
+          {
+            "recordID": "032B0106-0000-4000-8000-000000000003",
+            "relationship": "entriesWithSameProductID",
+            "count": 2
+          }
+        ]
+      }
+    },
+    {
+      "caseID": "tombstone-weekly-completed-recent",
+      "purpose": "Capture current startup repair of a tombstoned Product referenced by weekly, completed, recent, and history records.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-05", "CB-13"],
+        "knownDefectIDs": ["KD-11"]
+      },
+      "operation": "runStartupRepair",
+      "records": [
+        {
+          "recordType": "Product",
+          "id": "032B0107-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_TOMBSTONE_LISTS",
+            "legacyShoppingItemID": "032B0107-0000-4000-8000-000000000002"
+          },
+          "optionalFieldStates": [
+            {
+              "field": "deletedAt",
+              "presence": "present",
+              "value": "2001-01-02T00:00:00.000Z"
+            },
+            {"field": "catalogProductIDRawValue", "presence": "absent"}
+          ]
+        },
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B0107-0000-4000-8000-000000000002",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_TOMBSTONE_LISTS",
+            "isCompleted": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B0107-0000-4000-8000-000000000003",
+          "fields": {
+            "title": "SYNTHETIC_LIST_TOMBSTONE_WEEKLY",
+            "kindRawValue": "weekly"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B0107-0000-4000-8000-000000000004",
+          "fields": {
+            "title": "SYNTHETIC_LIST_TOMBSTONE_COMPLETED",
+            "kindRawValue": "completed"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B0107-0000-4000-8000-000000000005",
+          "fields": {
+            "title": "SYNTHETIC_LIST_TOMBSTONE_RECENT",
+            "kindRawValue": "recent"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B0107-0000-4000-8000-000000000006",
+          "fields": {
+            "shoppingListID": "032B0107-0000-4000-8000-000000000003",
+            "productID": "032B0107-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B0107-0000-4000-8000-000000000002",
+            "isChecked": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B0107-0000-4000-8000-000000000007",
+          "fields": {
+            "shoppingListID": "032B0107-0000-4000-8000-000000000004",
+            "productID": "032B0107-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B0107-0000-4000-8000-000000000002",
+            "isChecked": true
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B0107-0000-4000-8000-000000000008",
+          "fields": {
+            "shoppingListID": "032B0107-0000-4000-8000-000000000005",
+            "productID": "032B0107-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B0107-0000-4000-8000-000000000002",
+            "isChecked": true
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ProductHistory",
+          "id": "032B0107-0000-4000-8000-000000000009",
+          "fields": {
+            "productKey": "name:synthetic_product_tombstone_lists",
+            "productName": "SYNTHETIC_PRODUCT_TOMBSTONE_LISTS",
+            "addCount": 1
+          },
+          "optionalFieldStates": [
+            {
+              "field": "lastCompletedDate",
+              "presence": "present",
+              "value": "2001-01-04T00:00:00.000Z"
+            }
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 1,
+          "Product": 1,
+          "ShoppingList": 3,
+          "ShoppingListEntry": 2,
+          "ProductHistory": 1,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B0107-0000-4000-8000-000000000002",
+            "field": "isCompleted",
+            "value": true
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B0107-0000-4000-8000-000000000001",
+            "field": "deletedAt",
+            "presence": "present",
+            "value": "2001-01-02T00:00:00.000Z"
+          }
+        ],
+        "relationshipCounts": [
+          {
+            "recordID": "032B0107-0000-4000-8000-000000000003",
+            "relationship": "shoppingListEntries",
+            "count": 0
+          },
+          {
+            "recordID": "032B0107-0000-4000-8000-000000000004",
+            "relationship": "shoppingListEntries",
+            "count": 1
+          },
+          {
+            "recordID": "032B0107-0000-4000-8000-000000000005",
+            "relationship": "shoppingListEntries",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "caseID": "tombstone-active-session",
+      "purpose": "Capture current Product Library removal while the compatibility item remains referenced by an active session.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-05", "CB-06"],
+        "knownDefectIDs": ["KD-07"]
+      },
+      "operation": "deleteProductFromLibrary",
+      "records": [
+        {
+          "recordType": "Product",
+          "id": "032B0108-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_ACTIVE_SESSION_DELETE",
+            "legacyShoppingItemID": "032B0108-0000-4000-8000-000000000002"
+          },
+          "optionalFieldStates": [
+            {"field": "deletedAt", "presence": "absent"}
+          ]
+        },
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B0108-0000-4000-8000-000000000002",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_ACTIVE_SESSION_DELETE",
+            "isCompleted": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B0108-0000-4000-8000-000000000003",
+          "fields": {
+            "title": "SYNTHETIC_LIST_ACTIVE_SESSION_DELETE",
+            "kindRawValue": "weekly"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B0108-0000-4000-8000-000000000004",
+          "fields": {
+            "shoppingListID": "032B0108-0000-4000-8000-000000000003",
+            "productID": "032B0108-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B0108-0000-4000-8000-000000000002",
+            "isChecked": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingSession",
+          "id": "032B0108-0000-4000-8000-000000000005",
+          "fields": {
+            "isActive": true,
+            "itemIDs": ["032B0108-0000-4000-8000-000000000002"],
+            "collectedItemIDs": []
+          },
+          "optionalFieldStates": [
+            {
+              "field": "shoppingListID",
+              "presence": "present",
+              "value": "032B0108-0000-4000-8000-000000000003"
+            },
+            {"field": "finishedAt", "presence": "absent"}
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 1,
+          "Product": 1,
+          "ShoppingList": 1,
+          "ShoppingListEntry": 0,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 1
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B0108-0000-4000-8000-000000000002",
+            "field": "isCompleted",
+            "value": true
+          },
+          {
+            "recordID": "032B0108-0000-4000-8000-000000000005",
+            "field": "isActive",
+            "value": true
+          },
+          {
+            "recordID": "032B0108-0000-4000-8000-000000000005",
+            "field": "itemIDs",
+            "value": ["032B0108-0000-4000-8000-000000000002"]
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B0108-0000-4000-8000-000000000001",
+            "field": "deletedAt",
+            "presence": "present",
+            "value": "2001-01-02T00:00:00.000Z"
+          },
+          {
+            "recordID": "032B0108-0000-4000-8000-000000000005",
+            "field": "finishedAt",
+            "presence": "absent"
+          }
+        ],
+        "relationshipCounts": []
+      }
+    },
+    {
+      "caseID": "orphan-existing-product-id",
+      "purpose": "Capture startup repair of an entry whose relationship is absent while its Product UUID exists.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-13", "CB-14"],
+        "knownDefectIDs": ["KD-02"]
+      },
+      "operation": "runStartupRepair",
+      "records": [
+        {
+          "recordType": "Product",
+          "id": "032B0109-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_ORPHAN_EXISTING",
+            "legacyShoppingItemID": "032B0109-0000-4000-8000-000000000002"
+          },
+          "optionalFieldStates": [
+            {"field": "deletedAt", "presence": "absent"}
+          ]
+        },
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B0109-0000-4000-8000-000000000002",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_ORPHAN_EXISTING",
+            "isCompleted": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B0109-0000-4000-8000-000000000003",
+          "fields": {
+            "title": "SYNTHETIC_LIST_ORPHAN_EXISTING",
+            "kindRawValue": "weekly"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B0109-0000-4000-8000-000000000004",
+          "fields": {
+            "shoppingListID": "032B0109-0000-4000-8000-000000000003",
+            "productID": "032B0109-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B0109-0000-4000-8000-000000000002",
+            "isChecked": false
+          },
+          "optionalFieldStates": [
+            {"field": "product", "presence": "absent"}
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 1,
+          "Product": 1,
+          "ShoppingList": 3,
+          "ShoppingListEntry": 1,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B0109-0000-4000-8000-000000000004",
+            "field": "productID",
+            "value": "032B0109-0000-4000-8000-000000000001"
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B0109-0000-4000-8000-000000000004",
+            "field": "product",
+            "presence": "present",
+            "value": "032B0109-0000-4000-8000-000000000001"
+          }
+        ],
+        "relationshipCounts": []
+      }
+    },
+    {
+      "caseID": "orphan-missing-product",
+      "purpose": "Capture current startup repair when a weekly entry references a Product UUID that is unavailable.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-13", "CB-14"],
+        "knownDefectIDs": ["KD-02"]
+      },
+      "operation": "runStartupRepair",
+      "records": [
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B010A-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_ORPHAN_MISSING",
+            "isCompleted": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B010A-0000-4000-8000-000000000002",
+          "fields": {
+            "title": "SYNTHETIC_LIST_ORPHAN_MISSING",
+            "kindRawValue": "weekly"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B010A-0000-4000-8000-000000000003",
+          "fields": {
+            "shoppingListID": "032B010A-0000-4000-8000-000000000002",
+            "productID": "032B010A-0000-4000-8000-000000000004",
+            "legacyShoppingItemID": "032B010A-0000-4000-8000-000000000001",
+            "isChecked": false
+          },
+          "optionalFieldStates": [
+            {"field": "product", "presence": "absent"}
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 1,
+          "Product": 1,
+          "ShoppingList": 3,
+          "ShoppingListEntry": 1,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B010A-0000-4000-8000-000000000001",
+            "field": "isCompleted",
+            "value": false
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B010A-0000-4000-8000-000000000003",
+            "field": "product",
+            "presence": "present",
+            "value": "presentReference"
+          }
+        ],
+        "relationshipCounts": []
+      }
+    },
+    {
+      "caseID": "completed-recent-only",
+      "purpose": "Capture current retention when Product references exist only in completed and recent list projections.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-05", "CB-14"],
+        "knownDefectIDs": ["KD-11"]
+      },
+      "operation": "runStartupRepair",
+      "records": [
+        {
+          "recordType": "Product",
+          "id": "032B010B-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_COMPLETED_RECENT",
+            "legacyShoppingItemID": "032B010B-0000-4000-8000-000000000002"
+          },
+          "optionalFieldStates": [
+            {"field": "deletedAt", "presence": "absent"}
+          ]
+        },
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B010B-0000-4000-8000-000000000002",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_COMPLETED_RECENT",
+            "isCompleted": true
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B010B-0000-4000-8000-000000000003",
+          "fields": {
+            "title": "SYNTHETIC_LIST_COMPLETED_ONLY",
+            "kindRawValue": "completed"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B010B-0000-4000-8000-000000000004",
+          "fields": {
+            "title": "SYNTHETIC_LIST_RECENT_ONLY",
+            "kindRawValue": "recent"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B010B-0000-4000-8000-000000000005",
+          "fields": {
+            "shoppingListID": "032B010B-0000-4000-8000-000000000003",
+            "productID": "032B010B-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B010B-0000-4000-8000-000000000002",
+            "isChecked": true
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B010B-0000-4000-8000-000000000006",
+          "fields": {
+            "shoppingListID": "032B010B-0000-4000-8000-000000000004",
+            "productID": "032B010B-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B010B-0000-4000-8000-000000000002",
+            "isChecked": true
+          },
+          "optionalFieldStates": []
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 1,
+          "Product": 1,
+          "ShoppingList": 3,
+          "ShoppingListEntry": 2,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B010B-0000-4000-8000-000000000002",
+            "field": "isCompleted",
+            "value": true
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B010B-0000-4000-8000-000000000001",
+            "field": "deletedAt",
+            "presence": "absent"
+          }
+        ],
+        "relationshipCounts": [
+          {
+            "recordID": "032B010B-0000-4000-8000-000000000001",
+            "relationship": "weeklyEntries",
+            "count": 0
+          },
+          {
+            "recordID": "032B010B-0000-4000-8000-000000000001",
+            "relationship": "completedAndRecentEntries",
+            "count": 2
+          }
+        ]
+      }
+    },
+    {
+      "caseID": "active-session-collected",
+      "purpose": "Capture an active current session with one collected and one remaining compatibility identifier.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-10"],
+        "knownDefectIDs": ["KD-09"]
+      },
+      "operation": "observe",
+      "records": [
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B010C-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_SESSION_COLLECTED",
+            "isCompleted": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B010C-0000-4000-8000-000000000002",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_SESSION_REMAINING",
+            "isCompleted": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingSession",
+          "id": "032B010C-0000-4000-8000-000000000003",
+          "fields": {
+            "isActive": true,
+            "itemIDs": [
+              "032B010C-0000-4000-8000-000000000001",
+              "032B010C-0000-4000-8000-000000000002"
+            ],
+            "collectedItemIDs": [
+              "032B010C-0000-4000-8000-000000000001"
+            ]
+          },
+          "optionalFieldStates": [
+            {"field": "finishedAt", "presence": "absent"},
+            {"field": "shoppingListID", "presence": "absent"}
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 2,
+          "Product": 0,
+          "ShoppingList": 0,
+          "ShoppingListEntry": 0,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 1
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B010C-0000-4000-8000-000000000003",
+            "field": "isActive",
+            "value": true
+          },
+          {
+            "recordID": "032B010C-0000-4000-8000-000000000003",
+            "field": "collectedItemIDs",
+            "value": ["032B010C-0000-4000-8000-000000000001"]
+          },
+          {
+            "recordID": "032B010C-0000-4000-8000-000000000003",
+            "field": "remainingItemCount",
+            "value": 1
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B010C-0000-4000-8000-000000000003",
+            "field": "finishedAt",
+            "presence": "absent"
+          }
+        ],
+        "relationshipCounts": []
+      }
+    },
+    {
+      "caseID": "finished-session-no-reconcile",
+      "purpose": "Capture a finished current session header with unchanged list, compatibility, and history state.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-11"],
+        "knownDefectIDs": ["KD-09"]
+      },
+      "operation": "observe",
+      "records": [
+        {
+          "recordType": "Product",
+          "id": "032B010D-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_FINISHED_SESSION",
+            "legacyShoppingItemID": "032B010D-0000-4000-8000-000000000002"
+          },
+          "optionalFieldStates": [
+            {"field": "deletedAt", "presence": "absent"}
+          ]
+        },
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B010D-0000-4000-8000-000000000002",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_FINISHED_SESSION",
+            "isCompleted": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingList",
+          "id": "032B010D-0000-4000-8000-000000000003",
+          "fields": {
+            "title": "SYNTHETIC_LIST_FINISHED_SESSION",
+            "kindRawValue": "weekly"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingListEntry",
+          "id": "032B010D-0000-4000-8000-000000000004",
+          "fields": {
+            "shoppingListID": "032B010D-0000-4000-8000-000000000003",
+            "productID": "032B010D-0000-4000-8000-000000000001",
+            "legacyShoppingItemID": "032B010D-0000-4000-8000-000000000002",
+            "isChecked": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ProductHistory",
+          "id": "032B010D-0000-4000-8000-000000000005",
+          "fields": {
+            "productKey": "name:synthetic_product_finished_session",
+            "productName": "SYNTHETIC_PRODUCT_FINISHED_SESSION",
+            "addCount": 1
+          },
+          "optionalFieldStates": [
+            {"field": "lastCompletedDate", "presence": "absent"}
+          ]
+        },
+        {
+          "recordType": "ShoppingSession",
+          "id": "032B010D-0000-4000-8000-000000000006",
+          "fields": {
+            "isActive": false,
+            "itemIDs": ["032B010D-0000-4000-8000-000000000002"],
+            "collectedItemIDs": ["032B010D-0000-4000-8000-000000000002"]
+          },
+          "optionalFieldStates": [
+            {
+              "field": "finishedAt",
+              "presence": "present",
+              "value": "2001-01-03T00:00:00.000Z"
+            },
+            {
+              "field": "shoppingListID",
+              "presence": "present",
+              "value": "032B010D-0000-4000-8000-000000000003"
+            }
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 1,
+          "Product": 1,
+          "ShoppingList": 1,
+          "ShoppingListEntry": 1,
+          "ProductHistory": 1,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 1
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B010D-0000-4000-8000-000000000006",
+            "field": "isActive",
+            "value": false
+          },
+          {
+            "recordID": "032B010D-0000-4000-8000-000000000004",
+            "field": "isChecked",
+            "value": false
+          },
+          {
+            "recordID": "032B010D-0000-4000-8000-000000000002",
+            "field": "isCompleted",
+            "value": false
+          },
+          {
+            "recordID": "032B010D-0000-4000-8000-000000000005",
+            "field": "addCount",
+            "value": 1
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B010D-0000-4000-8000-000000000006",
+            "field": "finishedAt",
+            "presence": "present",
+            "value": "2001-01-03T00:00:00.000Z"
+          },
+          {
+            "recordID": "032B010D-0000-4000-8000-000000000005",
+            "field": "lastCompletedDate",
+            "presence": "absent"
+          }
+        ],
+        "relationshipCounts": []
+      }
+    },
+    {
+      "caseID": "session-missing-item",
+      "purpose": "Capture a current active session whose identifier snapshot refers to an unavailable compatibility item.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-09", "CB-10"],
+        "knownDefectIDs": ["KD-06"]
+      },
+      "operation": "observe",
+      "records": [
+        {
+          "recordType": "ShoppingSession",
+          "id": "032B010E-0000-4000-8000-000000000001",
+          "fields": {
+            "isActive": true,
+            "itemIDs": ["032B010E-0000-4000-8000-000000000002"],
+            "collectedItemIDs": []
+          },
+          "optionalFieldStates": [
+            {"field": "finishedAt", "presence": "absent"},
+            {"field": "shoppingListID", "presence": "absent"}
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 0,
+          "Product": 0,
+          "ShoppingList": 0,
+          "ShoppingListEntry": 0,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 1
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B010E-0000-4000-8000-000000000001",
+            "field": "itemIDs",
+            "value": ["032B010E-0000-4000-8000-000000000002"]
+          },
+          {
+            "recordID": "032B010E-0000-4000-8000-000000000001",
+            "field": "remainingItemCount",
+            "value": 1
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B010E-0000-4000-8000-000000000001",
+            "field": "finishedAt",
+            "presence": "absent"
+          }
+        ],
+        "relationshipCounts": [
+          {
+            "recordID": "032B010E-0000-4000-8000-000000000001",
+            "relationship": "unavailableItemIDs",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "caseID": "location-compatibility",
+      "purpose": "Capture a saved location relationship containing one incomplete and one complete compatibility item.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-12"],
+        "knownDefectIDs": ["KD-01", "KD-12"]
+      },
+      "operation": "observe",
+      "records": [
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B010F-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_LOCATION_ACTIVE",
+            "isCompleted": false
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B010F-0000-4000-8000-000000000002",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_LOCATION_COMPLETE",
+            "isCompleted": true
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "GeoLocation",
+          "id": "032B010F-0000-4000-8000-000000000003",
+          "fields": {
+            "title": "SYNTHETIC_LOCATION_COMPATIBILITY",
+            "geometryFixture": "syntheticOrigin",
+            "shoppingItemIDs": [
+              "032B010F-0000-4000-8000-000000000001",
+              "032B010F-0000-4000-8000-000000000002"
+            ]
+          },
+          "optionalFieldStates": []
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 1,
+          "ShoppingItem": 2,
+          "Product": 0,
+          "ShoppingList": 0,
+          "ShoppingListEntry": 0,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B010F-0000-4000-8000-000000000001",
+            "field": "isCompleted",
+            "value": false
+          },
+          {
+            "recordID": "032B010F-0000-4000-8000-000000000002",
+            "field": "isCompleted",
+            "value": true
+          }
+        ],
+        "optionalFieldStates": [],
+        "relationshipCounts": [
+          {
+            "recordID": "032B010F-0000-4000-8000-000000000003",
+            "relationship": "shoppingItems",
+            "count": 2
+          }
+        ]
+      }
+    },
+    {
+      "caseID": "catalog-active",
+      "purpose": "Capture an active current Product with a reserved synthetic catalog identity and all seven catalog snapshot fields.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-01", "CB-07"],
+        "knownDefectIDs": ["KD-08"]
+      },
+      "operation": "observe",
+      "records": [
+        {
+          "recordType": "Product",
+          "id": "032B0110-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_CATALOG_ACTIVE",
+            "catalogProductIDRawValue": "SYNTHETIC_CATALOG_PRODUCT_001",
+            "catalogDisplayNameSnapshot": "SYNTHETIC_CATALOG_DISPLAY_001",
+            "catalogDisplayLocaleSnapshot": "synthetic-locale",
+            "catalogCategoryIDSnapshotRawValue": "SYNTHETIC_CATALOG_CATEGORY_001",
+            "catalogCategoryDisplayNameSnapshot": "SYNTHETIC_CATALOG_CATEGORY_DISPLAY_001",
+            "catalogIconKeySnapshot": "SYNTHETIC_CATALOG_ICON_001",
+            "catalogSnapshotUpdatedAt": "2001-01-01T00:00:00.000Z"
+          },
+          "optionalFieldStates": [
+            {"field": "legacyShoppingItemID", "presence": "absent"},
+            {"field": "deletedAt", "presence": "absent"}
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 0,
+          "Product": 1,
+          "ShoppingList": 0,
+          "ShoppingListEntry": 0,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B0110-0000-4000-8000-000000000001",
+            "field": "catalogSnapshotFieldCount",
+            "value": 7
+          },
+          {
+            "recordID": "032B0110-0000-4000-8000-000000000001",
+            "field": "catalogProductIDRawValue",
+            "value": "SYNTHETIC_CATALOG_PRODUCT_001"
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B0110-0000-4000-8000-000000000001",
+            "field": "deletedAt",
+            "presence": "absent"
+          }
+        ],
+        "relationshipCounts": []
+      }
+    },
+    {
+      "caseID": "catalog-tombstone",
+      "purpose": "Capture a tombstoned current Product that retains its reserved synthetic catalog snapshots.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-05", "CB-07"],
+        "knownDefectIDs": ["KD-08"]
+      },
+      "operation": "observe",
+      "records": [
+        {
+          "recordType": "Product",
+          "id": "032B0111-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_CATALOG_TOMBSTONE",
+            "catalogProductIDRawValue": "SYNTHETIC_CATALOG_PRODUCT_002",
+            "catalogDisplayNameSnapshot": "SYNTHETIC_CATALOG_DISPLAY_002",
+            "catalogDisplayLocaleSnapshot": "synthetic-locale",
+            "catalogCategoryIDSnapshotRawValue": "SYNTHETIC_CATALOG_CATEGORY_002",
+            "catalogCategoryDisplayNameSnapshot": "SYNTHETIC_CATALOG_CATEGORY_DISPLAY_002",
+            "catalogIconKeySnapshot": "SYNTHETIC_CATALOG_ICON_002",
+            "catalogSnapshotUpdatedAt": "2001-01-01T00:00:00.000Z"
+          },
+          "optionalFieldStates": [
+            {"field": "legacyShoppingItemID", "presence": "absent"},
+            {
+              "field": "deletedAt",
+              "presence": "present",
+              "value": "2001-01-02T00:00:00.000Z"
+            }
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 0,
+          "Product": 1,
+          "ShoppingList": 0,
+          "ShoppingListEntry": 0,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B0111-0000-4000-8000-000000000001",
+            "field": "catalogSnapshotFieldCount",
+            "value": 7
+          },
+          {
+            "recordID": "032B0111-0000-4000-8000-000000000001",
+            "field": "catalogProductIDRawValue",
+            "value": "SYNTHETIC_CATALOG_PRODUCT_002"
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B0111-0000-4000-8000-000000000001",
+            "field": "deletedAt",
+            "presence": "present",
+            "value": "2001-01-02T00:00:00.000Z"
+          }
+        ],
+        "relationshipCounts": []
+      }
+    },
+    {
+      "caseID": "custom-product",
+      "purpose": "Capture an active current custom Product with every catalog identity and snapshot field absent.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-01", "CB-14"],
+        "knownDefectIDs": ["KD-01"]
+      },
+      "operation": "observe",
+      "records": [
+        {
+          "recordType": "Product",
+          "id": "032B0112-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_CUSTOM"
+          },
+          "optionalFieldStates": [
+            {"field": "legacyShoppingItemID", "presence": "absent"},
+            {"field": "deletedAt", "presence": "absent"},
+            {"field": "catalogProductIDRawValue", "presence": "absent"},
+            {"field": "catalogDisplayNameSnapshot", "presence": "absent"},
+            {"field": "catalogDisplayLocaleSnapshot", "presence": "absent"},
+            {"field": "catalogCategoryIDSnapshotRawValue", "presence": "absent"},
+            {"field": "catalogCategoryDisplayNameSnapshot", "presence": "absent"},
+            {"field": "catalogIconKeySnapshot", "presence": "absent"},
+            {"field": "catalogSnapshotUpdatedAt", "presence": "absent"}
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 0,
+          "Product": 1,
+          "ShoppingList": 0,
+          "ShoppingListEntry": 0,
+          "ProductHistory": 0,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B0112-0000-4000-8000-000000000001",
+            "field": "catalogSnapshotFieldCount",
+            "value": 0
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B0112-0000-4000-8000-000000000001",
+            "field": "deletedAt",
+            "presence": "absent"
+          },
+          {
+            "recordID": "032B0112-0000-4000-8000-000000000001",
+            "field": "catalogProductIDRawValue",
+            "presence": "absent"
+          }
+        ],
+        "relationshipCounts": []
+      }
+    },
+    {
+      "caseID": "history-compatibility-key",
+      "purpose": "Capture current Product History grouping through synthetic barcode-token and normalized-name compatibility keys.",
+      "traceability": {
+        "currentBehaviorIDs": ["CB-08"],
+        "knownDefectIDs": ["KD-10", "KD-11"]
+      },
+      "operation": "observe",
+      "records": [
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B0113-0000-4000-8000-000000000001",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_HISTORY_A",
+            "isCompleted": true,
+            "barcode": "SYNTHETIC_BARCODE_TOKEN_001"
+          },
+          "optionalFieldStates": []
+        },
+        {
+          "recordType": "ShoppingItem",
+          "id": "032B0113-0000-4000-8000-000000000002",
+          "fields": {
+            "name": "SYNTHETIC_PRODUCT_HISTORY_B",
+            "isCompleted": false
+          },
+          "optionalFieldStates": [
+            {"field": "barcode", "presence": "absent"}
+          ]
+        },
+        {
+          "recordType": "ProductHistory",
+          "id": "032B0113-0000-4000-8000-000000000003",
+          "fields": {
+            "productKey": "barcode:SYNTHETIC_BARCODE_TOKEN_001",
+            "productName": "SYNTHETIC_PRODUCT_HISTORY_A",
+            "barcode": "SYNTHETIC_BARCODE_TOKEN_001",
+            "addCount": 1
+          },
+          "optionalFieldStates": [
+            {
+              "field": "lastCompletedDate",
+              "presence": "present",
+              "value": "2001-01-04T00:00:00.000Z"
+            }
+          ]
+        },
+        {
+          "recordType": "ProductHistory",
+          "id": "032B0113-0000-4000-8000-000000000004",
+          "fields": {
+            "productKey": "name:synthetic_product_history_b",
+            "productName": "SYNTHETIC_PRODUCT_HISTORY_B",
+            "addCount": 1
+          },
+          "optionalFieldStates": [
+            {"field": "barcode", "presence": "absent"},
+            {"field": "lastCompletedDate", "presence": "absent"}
+          ]
+        }
+      ],
+      "expectedCurrentBehavior": {
+        "expectationKind": "currentBehavior",
+        "counts": {
+          "GeoLocation": 0,
+          "ShoppingItem": 2,
+          "Product": 0,
+          "ShoppingList": 0,
+          "ShoppingListEntry": 0,
+          "ProductHistory": 2,
+          "ProductKnowledge": 0,
+          "ShoppingSession": 0
+        },
+        "fieldValues": [
+          {
+            "recordID": "032B0113-0000-4000-8000-000000000003",
+            "field": "productKey",
+            "value": "barcode:SYNTHETIC_BARCODE_TOKEN_001"
+          },
+          {
+            "recordID": "032B0113-0000-4000-8000-000000000004",
+            "field": "productKey",
+            "value": "name:synthetic_product_history_b"
+          }
+        ],
+        "optionalFieldStates": [
+          {
+            "recordID": "032B0113-0000-4000-8000-000000000003",
+            "field": "lastCompletedDate",
+            "presence": "present",
+            "value": "2001-01-04T00:00:00.000Z"
+          },
+          {
+            "recordID": "032B0113-0000-4000-8000-000000000004",
+            "field": "lastCompletedDate",
+            "presence": "absent"
+          }
+        ],
+        "relationshipCounts": []
+      }
+    }
+  ]
+}
