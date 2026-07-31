@@ -160,6 +160,31 @@ enum WayTaskSchemaV3: VersionedSchema {
     }
 }
 
+// T-02 registers the approved target graph without activating it. The live
+// container and migration plan remain on V3 until later authorized steps.
+enum WayTaskSchemaV4: VersionedSchema {
+    static var versionIdentifier: Schema.Version {
+        Schema.Version(4, 0, 0)
+    }
+
+    static var models: [any PersistentModel.Type] {
+        [
+            GeoLocation.self,
+            ShoppingItem.self,
+            WayTaskSchemaV4.Product.self,
+            WayTaskSchemaV4.ShoppingList.self,
+            WayTaskSchemaV4.ShoppingListEntry.self,
+            ProductHistory.self,
+            WayTaskSchemaV4.ProductHistoryEvent.self,
+            ProductKnowledge.self,
+            WayTaskSchemaV4.ShoppingSession.self,
+            WayTaskSchemaV4.ShoppingSessionLine.self,
+            WayTaskSchemaV4.ShoppingSessionStop.self,
+            WayTaskSchemaV4.ProductStateMigrationException.self
+        ]
+    }
+}
+
 enum WayTaskSchemaMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
         [
@@ -186,6 +211,10 @@ enum WayTaskSchemaMigrationPlan: SchemaMigrationPlan {
 enum WayTaskModelContainer {
     static var currentSchema: Schema {
         Schema(versionedSchema: WayTaskSchemaV3.self)
+    }
+
+    static var inactiveTargetProductStateSchema: Schema {
+        Schema(versionedSchema: WayTaskSchemaV4.self)
     }
 
     static var defaultStoreURL: URL {

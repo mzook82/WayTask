@@ -625,3 +625,171 @@ final class ShoppingListEntry {
         self.product = product
     }
 }
+
+// MARK: - Inactive target Product State persistence models
+
+extension WayTaskSchemaV4 {
+    @Model
+    final class Product {
+        var id: UUID
+        var revision: UInt64
+        var libraryLifecycleRawValue: String
+        var libraryRemovedAt: Date?
+        var name: String
+        var imageData: Data?
+        var brand: String?
+        var category: String?
+        var barcode: String?
+        var imageURLString: String?
+        var sourceRawValue: String
+        var catalogProductIDRawValue: String?
+        var catalogDisplayNameSnapshot: String?
+        var catalogDisplayLocaleSnapshot: String?
+        var catalogCategoryIDSnapshotRawValue: String?
+        var catalogCategoryDisplayNameSnapshot: String?
+        var catalogIconKeySnapshot: String?
+        var catalogSnapshotUpdatedAt: Date?
+        var createdAt: Date
+        var updatedAt: Date
+
+        init(
+            id: UUID,
+            revision: UInt64,
+            libraryLifecycleRawValue: String,
+            libraryRemovedAt: Date? = nil,
+            name: String,
+            imageData: Data? = nil,
+            brand: String? = nil,
+            category: String? = nil,
+            barcode: String? = nil,
+            imageURLString: String? = nil,
+            sourceRawValue: String,
+            catalogProductIDRawValue: String? = nil,
+            catalogDisplayNameSnapshot: String? = nil,
+            catalogDisplayLocaleSnapshot: String? = nil,
+            catalogCategoryIDSnapshotRawValue: String? = nil,
+            catalogCategoryDisplayNameSnapshot: String? = nil,
+            catalogIconKeySnapshot: String? = nil,
+            catalogSnapshotUpdatedAt: Date? = nil,
+            createdAt: Date,
+            updatedAt: Date
+        ) {
+            self.id = id
+            self.revision = revision
+            self.libraryLifecycleRawValue = libraryLifecycleRawValue
+            self.libraryRemovedAt = libraryRemovedAt
+            self.name = name
+            self.imageData = imageData
+            self.brand = brand
+            self.category = category
+            self.barcode = barcode
+            self.imageURLString = imageURLString
+            self.sourceRawValue = sourceRawValue
+            self.catalogProductIDRawValue = catalogProductIDRawValue
+            self.catalogDisplayNameSnapshot = catalogDisplayNameSnapshot
+            self.catalogDisplayLocaleSnapshot =
+                catalogDisplayLocaleSnapshot
+            self.catalogCategoryIDSnapshotRawValue =
+                catalogCategoryIDSnapshotRawValue
+            self.catalogCategoryDisplayNameSnapshot =
+                catalogCategoryDisplayNameSnapshot
+            self.catalogIconKeySnapshot = catalogIconKeySnapshot
+            self.catalogSnapshotUpdatedAt = catalogSnapshotUpdatedAt
+            self.createdAt = createdAt
+            self.updatedAt = updatedAt
+        }
+    }
+
+    @Model
+    final class ShoppingList {
+        var id: UUID
+        var revision: UInt64
+        var title: String
+        var purposeRawValue: String?
+        var createdAt: Date
+        var updatedAt: Date
+
+        @Relationship(deleteRule: .cascade)
+        var entries: [ShoppingListEntry]
+
+        init(
+            id: UUID,
+            revision: UInt64,
+            title: String,
+            purposeRawValue: String? = nil,
+            createdAt: Date,
+            updatedAt: Date,
+            entries: [ShoppingListEntry] = []
+        ) {
+            self.id = id
+            self.revision = revision
+            self.title = title
+            self.purposeRawValue = purposeRawValue
+            self.createdAt = createdAt
+            self.updatedAt = updatedAt
+            self.entries = entries
+        }
+    }
+
+    @Model
+    final class ShoppingListEntry {
+        var id: UUID
+        var shoppingListID: UUID
+        var productID: UUID
+        var lifecycleRawValue: String
+        var resolutionReasonRawValue: String?
+        var resolutionEffectiveAt: Date?
+        var resolutionProvenanceRawValue: String?
+        var resolutionCommandID: UUID?
+        var resolutionSessionID: UUID?
+        var resolutionSessionLineID: UUID?
+        var quantity: Double
+        var unitRawValue: String?
+        var note: String?
+        var sortOrder: Double
+        var createdAt: Date
+        var updatedAt: Date
+
+        @Relationship(deleteRule: .nullify)
+        var product: Product?
+
+        init(
+            id: UUID,
+            shoppingListID: UUID,
+            productID: UUID,
+            lifecycleRawValue: String,
+            resolutionReasonRawValue: String? = nil,
+            resolutionEffectiveAt: Date? = nil,
+            resolutionProvenanceRawValue: String? = nil,
+            resolutionCommandID: UUID? = nil,
+            resolutionSessionID: UUID? = nil,
+            resolutionSessionLineID: UUID? = nil,
+            quantity: Double,
+            unitRawValue: String? = nil,
+            note: String? = nil,
+            sortOrder: Double,
+            createdAt: Date,
+            updatedAt: Date,
+            product: Product? = nil
+        ) {
+            self.id = id
+            self.shoppingListID = shoppingListID
+            self.productID = productID
+            self.lifecycleRawValue = lifecycleRawValue
+            self.resolutionReasonRawValue = resolutionReasonRawValue
+            self.resolutionEffectiveAt = resolutionEffectiveAt
+            self.resolutionProvenanceRawValue =
+                resolutionProvenanceRawValue
+            self.resolutionCommandID = resolutionCommandID
+            self.resolutionSessionID = resolutionSessionID
+            self.resolutionSessionLineID = resolutionSessionLineID
+            self.quantity = quantity
+            self.unitRawValue = unitRawValue
+            self.note = note
+            self.sortOrder = sortOrder
+            self.createdAt = createdAt
+            self.updatedAt = updatedAt
+            self.product = product
+        }
+    }
+}
