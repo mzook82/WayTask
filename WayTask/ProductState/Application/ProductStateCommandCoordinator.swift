@@ -1,5 +1,10 @@
 import Foundation
 
+struct ProductStateListRevisionExpectation: Hashable, Sendable {
+    let listID: ProductStateListID
+    let revision: ProductStateListRevision
+}
+
 /// T-04 prepares deterministic repository changes but never commits them.
 /// Durable transaction ownership and idempotent retry remain deferred to T-05.
 @MainActor
@@ -55,6 +60,38 @@ final class ProductStateCommandCoordinator {
 
         do {
             return try prepareValidated(command)
+        } catch {
+            return .unavailable(
+                commandID: command.id,
+                reason: .durableAuthorityUnavailable
+            )
+        }
+    }
+
+    /// T-10's Product command entry preserves T-04's general preparation
+    /// contract while supplying the exact all-list impact summary required
+    /// by Library removal. Other command families continue through `prepare`.
+    func prepareProductCommand(
+        _ command: ProductStateCommand,
+        expectedAffectedListRevisions:
+            [ProductStateListRevisionExpectation] = []
+    ) -> ProductStatePreparedCommandResult {
+        guard case let .removeProductFromLibrary(value) = command.intent else {
+            return prepare(command)
+        }
+
+        let shapeViolations = shapeValidator.validate(command)
+        guard shapeViolations.isEmpty else {
+            return validationFailure(command, shape: shapeViolations)
+        }
+
+        do {
+            return try prepareRemoveProduct(
+                value,
+                expectedAffectedListRevisions:
+                    expectedAffectedListRevisions,
+                command: command
+            )
         } catch {
             return .unavailable(
                 commandID: command.id,
@@ -196,6 +233,200 @@ final class ProductStateCommandCoordinator {
         )
     }
 
+    private func prepareRemoveProduct(
+        _ value: RemoveProductFromLibraryCommand,
+        expectedAffectedListRevisions:
+            [ProductStateListRevisionExpectation],
+        command: ProductStateCommand
+    ) throws -> ProductStatePreparedCommandResult {
+        let stored = try products.products(id: value.productID.rawValue)
+        guard let product = try exactlyOneProduct(
+            stored,
+            id: value.productID,
+            command: command
+        ) else {
+            return identityConflict(
+                count: stored.count,
+                scope: command.scope,
+                command: command
+            )
+        }
+        guard product.libraryLifecycleRawValue
+                == ProductLibraryLifecycle.active.rawValue else {
+            return .conflict(
+                commandID: command.id,
+                conflict: .approved(.removedProduct)
+            )
+        }
+        if let conflict = revisionConflict(
+            command,
+            actual: product.revision
+        ) {
+            return conflict
+        }
+
+        let allEntries = try shopping.shoppingEntries(
+            productID: value.productID.rawValue
+        )
+        let entriesByList = Dictionary(
+            grouping: allEntries,
+            by: \.shoppingListID
+        )
+        var editable: [(
+            list: WayTaskSchemaV4.ShoppingList,
+            entry: WayTaskSchemaV4.ShoppingListEntry
+        )] = []
+        let archivePurposes = Set(["completed", "recent"])
+
+        for listID in entriesByList.keys.sorted(by: uuidLessThan) {
+            let listRows = try shopping.shoppingLists(id: listID)
+            guard listRows.count == 1 else {
+                return identityConflict(
+                    count: listRows.count,
+                    scope: .list(ProductStateListID(rawValue: listID)),
+                    command: command
+                )
+            }
+            let list = listRows[0]
+            if let purpose = list.purposeRawValue,
+               archivePurposes.contains(purpose) {
+                continue
+            }
+            guard let entries = entriesByList[listID],
+                  entries.count == 1 else {
+                return duplicate(
+                    command,
+                    scope: .list(ProductStateListID(rawValue: listID))
+                )
+            }
+            editable.append((list, entries[0]))
+        }
+
+        let expectationGroups = Dictionary(
+            grouping: expectedAffectedListRevisions,
+            by: { $0.listID }
+        )
+        guard expectationGroups.values.allSatisfy({ $0.count == 1 }) else {
+            return invalidRevision(command)
+        }
+        let expectedByList = expectationGroups.mapValues { $0[0].revision }
+        let affectedListIDs = Set(editable.map {
+            ProductStateListID(rawValue: $0.list.id)
+        })
+        guard Set(expectedByList.keys) == affectedListIDs else {
+            return invalidRevision(command)
+        }
+        for impact in editable {
+            let listID = ProductStateListID(rawValue: impact.list.id)
+            guard expectedByList[listID]?.value == impact.list.revision else {
+                return .conflict(
+                    commandID: command.id,
+                    conflict: .approved(.staleRevision)
+                )
+            }
+        }
+
+        let protectedEntryIDs = Set(allEntries.map(\.id))
+        if try isProductProtectedBySession(
+            value.productID,
+            entryIDs: protectedEntryIDs
+        ) {
+            return .conflict(
+                commandID: command.id,
+                conflict: .approved(.activeSession)
+            )
+        }
+
+        guard let productRevision = nextRevision(product.revision) else {
+            return invalidRevision(command)
+        }
+        var listRevisions: [UUID: UInt64] = [:]
+        for impact in editable {
+            guard let revision = nextRevision(impact.list.revision) else {
+                return invalidRevision(command)
+            }
+            listRevisions[impact.list.id] = revision
+        }
+
+        let before = ProductStateProductSnapshot(
+            id: value.productID,
+            catalogID: product.catalogProductIDRawValue.map {
+                ProductStateCatalogID(rawValue: $0)
+            },
+            libraryLifecycle: .active
+        )
+        let after = ProductStateProductSnapshot(
+            id: value.productID,
+            catalogID: before.catalogID,
+            libraryLifecycle: .removed
+        )
+        let invariantViolations = invariantValidator.validate(
+            .init(
+                productTransitions: [
+                    ProductLibraryTransition(
+                        before: before,
+                        after: after,
+                        action: .removeFromLibrary,
+                        hasExplicitUserIntent: value.confirmed
+                    )
+                ]
+            )
+        )
+        guard invariantViolations.isEmpty else {
+            return validationFailure(
+                command,
+                invariants: invariantViolations
+            )
+        }
+
+        let beforeProductRevision = product.revision
+        product.libraryLifecycleRawValue =
+            ProductLibraryLifecycle.removed.rawValue
+        product.libraryRemovedAt = command.effectiveAt
+        product.revision = productRevision
+        product.updatedAt = command.effectiveAt
+
+        var effects: [ProductStateStagedEffect] = [
+            .productEdited(
+                id: value.productID,
+                beforeRevision: beforeProductRevision,
+                afterRevision: productRevision
+            )
+        ]
+        for impact in editable {
+            let revision = listRevisions[impact.list.id]!
+            impact.list.revision = revision
+            impact.list.updatedAt = command.effectiveAt
+            shopping.stageDeletion(of: impact.entry)
+            effects.append(
+                .entryDeleted(
+                    identity: ProductStateListEntryIdentity(
+                        id: ProductStateListEntryID(
+                            rawValue: impact.entry.id
+                        ),
+                        listID: ProductStateListID(
+                            rawValue: impact.list.id
+                        ),
+                        productID: value.productID
+                    ),
+                    listRevision: revision
+                )
+            )
+        }
+
+        history.stageInsertion(
+            of: makeHistoryEvent(
+                id: value.historyEventID,
+                productID: value.productID,
+                meaning: "productRemovedFromLibrary",
+                command: command
+            )
+        )
+        effects.append(.historyEventInserted(value.historyEventID))
+
+        return .staged(commandID: command.id, effects: effects)
+    }
+
     private func prepareRestoreProduct(
         _ value: RestoreProductToLibraryCommand,
         command: ProductStateCommand
@@ -225,6 +456,7 @@ final class ProductStateCommandCoordinator {
         }
         guard product.libraryLifecycleRawValue
                 == ProductLibraryLifecycle.removed.rawValue,
+              product.libraryRemovedAt != nil,
               let nextRevision = nextRevision(product.revision)
         else {
             return invalidProductTransition(command)
@@ -870,6 +1102,28 @@ final class ProductStateCommandCoordinator {
         return false
     }
 
+    private func isProductProtectedBySession(
+        _ productID: ProductStateProductID,
+        entryIDs: Set<UUID>
+    ) throws -> Bool {
+        let nonTerminal = try sessions.shoppingSessions(lifecycle: .active)
+            + sessions.shoppingSessions(lifecycle: .expired)
+        for session in nonTerminal {
+            let lines = try sessions.sessionLines(sessionID: session.id)
+            if lines.contains(where: {
+                $0.productID == productID.rawValue
+                    || $0.sourceEntryID.map(entryIDs.contains) == true
+            }) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func uuidLessThan(_ lhs: UUID, _ rhs: UUID) -> Bool {
+        lhs.uuidString < rhs.uuidString
+    }
+
     private func domainResolution(
         _ entry: WayTaskSchemaV4.ShoppingListEntry
     ) -> ShoppingListResolution? {
@@ -1006,5 +1260,907 @@ final class ProductStateCommandCoordinator {
                 ProductStateInvariantViolation(code: .invalidEntryTransition)
             ]
         )
+    }
+}
+
+// MARK: - T-10 durable Product command authority
+
+enum ProductStateProductCommandWriteState: String, Codable, Sendable {
+    case writableTarget
+    case migrationIncomplete
+    case nonDurable
+}
+
+enum ProductStateProductCommandOperation: String, Codable, Sendable {
+    case acquire
+    case edit
+    case removeFromLibrary
+    case restoreToLibrary
+}
+
+enum ProductStateProductCommandOutcomeKind: String, Codable, Sendable {
+    case created
+    case alreadyActive
+    case restoreRequired
+    case edited
+    case removed
+    case restored
+    case noOp
+    case conflict
+    case validationFailure
+    case unavailable
+}
+
+enum ProductStateProductCommandFailureClassification:
+    String, Codable, Sendable {
+    case migrationIncomplete
+    case nonDurable
+    case invalidRequest
+    case staleRevision
+    case activeSession
+    case ambiguousIdentity
+    case removedProduct
+    case saveFailed
+    case stagedStateMismatch
+    case finalInvariantFailure
+    case reconciliationFailed
+    case outcomeUnknown
+    case durableAuthorityUnavailable
+}
+
+enum ProductStateProductCommandDurability: String, Codable, Sendable {
+    case committed
+    case reconciledCommitted
+    case noCommitRequired
+    case rolledBack
+    case outcomeUnknown
+    case notAttempted
+}
+
+struct ProductStateProductCommandDiagnostic: Equatable, Codable, Sendable {
+    let commandID: UUID
+    let requestedProductID: UUID
+    let authoritativeProductID: UUID?
+    let operation: ProductStateProductCommandOperation
+    let outcome: ProductStateProductCommandOutcomeKind
+    let failure: ProductStateProductCommandFailureClassification?
+    let durability: ProductStateProductCommandDurability
+    let productRevisionBefore: UInt64?
+    let productRevisionAfter: UInt64?
+    let affectedListCount: Int
+    let historyEventCount: Int
+    let claimsDurableSuccess: Bool
+}
+
+struct ProductStateProductAcquisitionRequest: Hashable, Sendable {
+    let commandID: ProductStateCommandID
+    let productID: ProductStateProductID
+    let effectiveAt: Date
+    let reviewed: Bool
+    let name: String
+    let imageData: Data?
+    let brand: String?
+    let category: String?
+    let barcode: String?
+    let imageURLString: String?
+    let sourceRawValue: String
+    let catalogID: ProductStateCatalogID?
+    let catalogDisplayNameSnapshot: String?
+    let catalogDisplayLocaleSnapshot: String?
+    let catalogCategoryIDSnapshotRawValue: String?
+    let catalogCategoryDisplayNameSnapshot: String?
+    let catalogIconKeySnapshot: String?
+    let catalogSnapshotUpdatedAt: Date?
+
+    init(
+        commandID: ProductStateCommandID,
+        productID: ProductStateProductID,
+        effectiveAt: Date,
+        reviewed: Bool,
+        name: String,
+        imageData: Data? = nil,
+        brand: String? = nil,
+        category: String? = nil,
+        barcode: String? = nil,
+        imageURLString: String? = nil,
+        sourceRawValue: String,
+        catalogID: ProductStateCatalogID? = nil,
+        catalogDisplayNameSnapshot: String? = nil,
+        catalogDisplayLocaleSnapshot: String? = nil,
+        catalogCategoryIDSnapshotRawValue: String? = nil,
+        catalogCategoryDisplayNameSnapshot: String? = nil,
+        catalogIconKeySnapshot: String? = nil,
+        catalogSnapshotUpdatedAt: Date? = nil
+    ) {
+        self.commandID = commandID
+        self.productID = productID
+        self.effectiveAt = effectiveAt
+        self.reviewed = reviewed
+        self.name = name
+        self.imageData = imageData
+        self.brand = brand
+        self.category = category
+        self.barcode = barcode
+        self.imageURLString = imageURLString
+        self.sourceRawValue = sourceRawValue
+        self.catalogID = catalogID
+        self.catalogDisplayNameSnapshot = catalogDisplayNameSnapshot
+        self.catalogDisplayLocaleSnapshot = catalogDisplayLocaleSnapshot
+        self.catalogCategoryIDSnapshotRawValue =
+            catalogCategoryIDSnapshotRawValue
+        self.catalogCategoryDisplayNameSnapshot =
+            catalogCategoryDisplayNameSnapshot
+        self.catalogIconKeySnapshot = catalogIconKeySnapshot
+        self.catalogSnapshotUpdatedAt = catalogSnapshotUpdatedAt
+    }
+}
+
+struct ProductStateAffectedListRevision: Equatable, Sendable {
+    let listID: ProductStateListID
+    let before: ProductStateListRevision
+    let after: ProductStateListRevision
+}
+
+struct ProductStateProductCommandCommitSummary: Equatable, Sendable {
+    let commandID: ProductStateCommandID
+    let productID: ProductStateProductID
+    let productRevisionBefore: UInt64
+    let productRevisionAfter: UInt64
+    let affectedLists: [ProductStateAffectedListRevision]
+    let historyEventIDs: [ProductStateHistoryEventID]
+    let durability: ProductStateProductCommandDurability
+}
+
+enum ProductStateProductCommandOutcome: Equatable, Sendable {
+    case created(ProductStateProductCommandCommitSummary)
+    case alreadyActive(productID: ProductStateProductID, revision: UInt64)
+    case restoreRequired(productID: ProductStateProductID, revision: UInt64)
+    case edited(ProductStateProductCommandCommitSummary)
+    case removed(ProductStateProductCommandCommitSummary)
+    case restored(ProductStateProductCommandCommitSummary)
+    case noOp(productID: ProductStateProductID, revision: UInt64)
+    case conflict(ProductStateCommandConflict)
+    case validationFailure
+    case unavailable(ProductStateUnavailableReason)
+}
+
+struct ProductStateProductCommandExecution: Equatable, Sendable {
+    let outcome: ProductStateProductCommandOutcome
+    let diagnostic: ProductStateProductCommandDiagnostic
+
+    var claimsDurableSuccess: Bool {
+        diagnostic.claimsDurableSuccess
+    }
+}
+
+/// The sole T-10 Product mutation entry. It accepts an already composed
+/// repository bundle and T-05 transaction coordinator, so this Application
+/// component neither imports SwiftData nor creates an independent context.
+@MainActor
+final class ProductStateProductCommandAuthority {
+    typealias TransactionCommit = (
+        ProductStatePreparedCommandResult
+    ) -> ProductStateTransactionResult
+
+    private let products: any ProductRepository
+    private let coordinator: ProductStateCommandCoordinator
+    private let commitPrepared: TransactionCommit
+    private let writeState: ProductStateProductCommandWriteState
+
+    init(
+        repositories: ProductStateRepositories,
+        transactionCoordinator: ProductStateTransactionCoordinator,
+        writeState: ProductStateProductCommandWriteState
+    ) {
+        products = repositories.products
+        coordinator = ProductStateCommandCoordinator(
+            repositories: repositories
+        )
+        commitPrepared = { transactionCoordinator.commit($0) }
+        self.writeState = writeState
+    }
+
+    init(
+        products: any ProductRepository,
+        coordinator: ProductStateCommandCoordinator,
+        writeState: ProductStateProductCommandWriteState,
+        commitPrepared: @escaping TransactionCommit
+    ) {
+        self.products = products
+        self.coordinator = coordinator
+        self.writeState = writeState
+        self.commitPrepared = commitPrepared
+    }
+
+    func acquire(
+        _ request: ProductStateProductAcquisitionRequest
+    ) -> ProductStateProductCommandExecution {
+        let operation = ProductStateProductCommandOperation.acquire
+        if let blocked = blockedExecution(
+            commandID: request.commandID,
+            productID: request.productID,
+            operation: operation
+        ) {
+            return blocked
+        }
+        guard isValid(request) else {
+            return rejectedExecution(
+                commandID: request.commandID,
+                productID: request.productID,
+                operation: operation,
+                outcome: .validationFailure,
+                failure: .invalidRequest
+            )
+        }
+
+        let matches: [WayTaskSchemaV4.Product]
+        do {
+            matches = try acquisitionMatches(request)
+        } catch {
+            return unavailableExecution(
+                commandID: request.commandID,
+                productID: request.productID,
+                operation: operation
+            )
+        }
+
+        if matches.count > 1 {
+            return rejectedExecution(
+                commandID: request.commandID,
+                productID: request.productID,
+                operation: operation,
+                outcome: .conflict(.ambiguousIdentity),
+                failure: .ambiguousIdentity
+            )
+        }
+        if let product = matches.first {
+            let id = ProductStateProductID(rawValue: product.id)
+            if product.libraryLifecycleRawValue
+                == ProductLibraryLifecycle.active.rawValue {
+                return semanticExecution(
+                    commandID: request.commandID,
+                    requestedProductID: request.productID,
+                    authoritativeProductID: id,
+                    operation: operation,
+                    outcome: .alreadyActive(
+                        productID: id,
+                        revision: product.revision
+                    ),
+                    outcomeKind: .alreadyActive,
+                    productRevision: product.revision
+                )
+            }
+            if product.libraryLifecycleRawValue
+                == ProductLibraryLifecycle.removed.rawValue,
+               product.libraryRemovedAt != nil {
+                return semanticExecution(
+                    commandID: request.commandID,
+                    requestedProductID: request.productID,
+                    authoritativeProductID: id,
+                    operation: operation,
+                    outcome: .restoreRequired(
+                        productID: id,
+                        revision: product.revision
+                    ),
+                    outcomeKind: .restoreRequired,
+                    failure: .removedProduct,
+                    productRevision: product.revision
+                )
+            }
+            return rejectedExecution(
+                commandID: request.commandID,
+                productID: request.productID,
+                operation: operation,
+                outcome: .validationFailure,
+                failure: .invalidRequest
+            )
+        }
+
+        let command = ProductStateCommand(
+            id: request.commandID,
+            expectedRevision: nil,
+            effectiveAt: request.effectiveAt,
+            intent: .createProduct(
+                CreateProductCommand(
+                    productID: request.productID,
+                    name: request.name,
+                    sourceRawValue: request.sourceRawValue,
+                    catalogID: request.catalogID
+                )
+            )
+        )
+        let prepared = coordinator.prepareProductCommand(command)
+        if case .staged = prepared {
+            do {
+                let rows = try products.products(id: request.productID.rawValue)
+                guard rows.count == 1 else {
+                    return finish(
+                        .unavailable(
+                            commandID: request.commandID,
+                            reason: .durableAuthorityUnavailable
+                        ),
+                        operation: operation,
+                        requestedProductID: request.productID
+                    )
+                }
+                apply(request, to: rows[0])
+            } catch {
+                return finish(
+                    .unavailable(
+                        commandID: request.commandID,
+                        reason: .durableAuthorityUnavailable
+                    ),
+                    operation: operation,
+                    requestedProductID: request.productID
+                )
+            }
+        }
+        return finish(
+            prepared,
+            operation: operation,
+            requestedProductID: request.productID
+        )
+    }
+
+    func edit(
+        _ command: ProductStateCommand
+    ) -> ProductStateProductCommandExecution {
+        execute(
+            command,
+            operation: .edit,
+            expectedAffectedListRevisions: []
+        )
+    }
+
+    func removeFromLibrary(
+        _ command: ProductStateCommand,
+        expectedAffectedListRevisions:
+            [ProductStateListRevisionExpectation]
+    ) -> ProductStateProductCommandExecution {
+        execute(
+            command,
+            operation: .removeFromLibrary,
+            expectedAffectedListRevisions:
+                expectedAffectedListRevisions
+        )
+    }
+
+    func restoreToLibrary(
+        _ command: ProductStateCommand
+    ) -> ProductStateProductCommandExecution {
+        execute(
+            command,
+            operation: .restoreToLibrary,
+            expectedAffectedListRevisions: []
+        )
+    }
+
+    private func execute(
+        _ command: ProductStateCommand,
+        operation: ProductStateProductCommandOperation,
+        expectedAffectedListRevisions:
+            [ProductStateListRevisionExpectation]
+    ) -> ProductStateProductCommandExecution {
+        let requestedProductID = productID(for: command)
+        guard operationMatches(command, operation: operation),
+              let requestedProductID else {
+            return rejectedExecution(
+                commandID: command.id,
+                productID: requestedProductID
+                    ?? ProductStateProductID(rawValue: zeroUUID),
+                operation: operation,
+                outcome: .validationFailure,
+                failure: .invalidRequest
+            )
+        }
+        if let blocked = blockedExecution(
+            commandID: command.id,
+            productID: requestedProductID,
+            operation: operation
+        ) {
+            return blocked
+        }
+        return finish(
+            coordinator.prepareProductCommand(
+                command,
+                expectedAffectedListRevisions:
+                    expectedAffectedListRevisions
+            ),
+            operation: operation,
+            requestedProductID: requestedProductID
+        )
+    }
+
+    private func finish(
+        _ prepared: ProductStatePreparedCommandResult,
+        operation: ProductStateProductCommandOperation,
+        requestedProductID: ProductStateProductID
+    ) -> ProductStateProductCommandExecution {
+        let transaction = commitPrepared(prepared)
+        let durability = durability(for: transaction.disposition)
+
+        if transaction.claimsDurableSuccess,
+           case let .staged(_, effects) = prepared,
+           let summary = commitSummary(
+                commandID: prepared.commandID,
+                productID: requestedProductID,
+                effects: effects,
+                durability: durability
+           ) {
+            let outcome: ProductStateProductCommandOutcome
+            let kind: ProductStateProductCommandOutcomeKind
+            switch operation {
+            case .acquire:
+                outcome = .created(summary)
+                kind = .created
+            case .edit:
+                outcome = .edited(summary)
+                kind = .edited
+            case .removeFromLibrary:
+                outcome = .removed(summary)
+                kind = .removed
+            case .restoreToLibrary:
+                outcome = .restored(summary)
+                kind = .restored
+            }
+            return ProductStateProductCommandExecution(
+                outcome: outcome,
+                diagnostic: diagnostic(
+                    commandID: prepared.commandID,
+                    requestedProductID: requestedProductID,
+                    authoritativeProductID: requestedProductID,
+                    operation: operation,
+                    outcome: kind,
+                    durability: durability,
+                    summary: summary,
+                    claimsDurableSuccess: true
+                )
+            )
+        }
+
+        switch transaction.commandResult {
+        case .noOp:
+            let revision = currentRevision(for: requestedProductID) ?? 0
+            let outcome: ProductStateProductCommandOutcome
+            let kind: ProductStateProductCommandOutcomeKind
+            if operation == .restoreToLibrary || operation == .acquire {
+                outcome = .alreadyActive(
+                    productID: requestedProductID,
+                    revision: revision
+                )
+                kind = .alreadyActive
+            } else {
+                outcome = .noOp(
+                    productID: requestedProductID,
+                    revision: revision
+                )
+                kind = .noOp
+            }
+            return semanticExecution(
+                commandID: prepared.commandID,
+                requestedProductID: requestedProductID,
+                authoritativeProductID: requestedProductID,
+                operation: operation,
+                outcome: outcome,
+                outcomeKind: kind,
+                durability: durability,
+                productRevision: revision
+            )
+
+        case let .conflict(_, conflict):
+            if operation == .acquire && conflict == .removedProduct,
+               let revision = currentRevision(for: requestedProductID) {
+                return semanticExecution(
+                    commandID: prepared.commandID,
+                    requestedProductID: requestedProductID,
+                    authoritativeProductID: requestedProductID,
+                    operation: operation,
+                    outcome: .restoreRequired(
+                        productID: requestedProductID,
+                        revision: revision
+                    ),
+                    outcomeKind: .restoreRequired,
+                    failure: .removedProduct,
+                    durability: durability,
+                    productRevision: revision
+                )
+            }
+            return rejectedExecution(
+                commandID: prepared.commandID,
+                productID: requestedProductID,
+                operation: operation,
+                outcome: .conflict(conflict),
+                failure: failure(for: conflict),
+                durability: durability
+            )
+
+        case .validationFailure:
+            return rejectedExecution(
+                commandID: prepared.commandID,
+                productID: requestedProductID,
+                operation: operation,
+                outcome: .validationFailure,
+                failure: .invalidRequest,
+                durability: durability
+            )
+
+        case let .unavailable(_, reason):
+            return rejectedExecution(
+                commandID: prepared.commandID,
+                productID: requestedProductID,
+                operation: operation,
+                outcome: .unavailable(reason),
+                failure: failure(for: transaction.disposition),
+                durability: durability
+            )
+
+        case .committed:
+            return unavailableExecution(
+                commandID: prepared.commandID,
+                productID: requestedProductID,
+                operation: operation,
+                durability: durability,
+                failure: .stagedStateMismatch
+            )
+        }
+    }
+
+    private func acquisitionMatches(
+        _ request: ProductStateProductAcquisitionRequest
+    ) throws -> [WayTaskSchemaV4.Product] {
+        var matches: [UUID: WayTaskSchemaV4.Product] = [:]
+        for product in try products.products(id: request.productID.rawValue) {
+            matches[product.id] = product
+        }
+        if let catalogID = request.catalogID {
+            for product in try products.products(
+                catalogProductIDRawValue: catalogID.rawValue
+            ) {
+                matches[product.id] = product
+            }
+        }
+        if let barcode = request.barcode {
+            for product in try products.products(barcode: barcode) {
+                matches[product.id] = product
+            }
+        }
+        return matches.values.sorted {
+            $0.id.uuidString < $1.id.uuidString
+        }
+    }
+
+    private func apply(
+        _ request: ProductStateProductAcquisitionRequest,
+        to product: WayTaskSchemaV4.Product
+    ) {
+        product.imageData = request.imageData
+        product.brand = request.brand
+        product.category = request.category
+        product.barcode = request.barcode
+        product.imageURLString = request.imageURLString
+        product.catalogDisplayNameSnapshot =
+            request.catalogDisplayNameSnapshot
+        product.catalogDisplayLocaleSnapshot =
+            request.catalogDisplayLocaleSnapshot
+        product.catalogCategoryIDSnapshotRawValue =
+            request.catalogCategoryIDSnapshotRawValue
+        product.catalogCategoryDisplayNameSnapshot =
+            request.catalogCategoryDisplayNameSnapshot
+        product.catalogIconKeySnapshot = request.catalogIconKeySnapshot
+        product.catalogSnapshotUpdatedAt =
+            request.catalogSnapshotUpdatedAt
+    }
+
+    private func isValid(
+        _ request: ProductStateProductAcquisitionRequest
+    ) -> Bool {
+        guard request.reviewed,
+              request.productID.rawValue != zeroUUID,
+              request.commandID.rawValue != zeroUUID,
+              request.effectiveAt.timeIntervalSince1970.isFinite,
+              !request.name.trimmingCharacters(
+                in: .whitespacesAndNewlines
+              ).isEmpty,
+              !request.sourceRawValue.trimmingCharacters(
+                in: .whitespacesAndNewlines
+              ).isEmpty
+        else { return false }
+        if let catalogID = request.catalogID {
+            let trimmed = catalogID.rawValue.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            if trimmed.isEmpty || trimmed != catalogID.rawValue {
+                return false
+            }
+        }
+        if let barcode = request.barcode {
+            let trimmed = barcode.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            if trimmed.isEmpty || trimmed != barcode {
+                return false
+            }
+        }
+        return true
+    }
+
+    private func operationMatches(
+        _ command: ProductStateCommand,
+        operation: ProductStateProductCommandOperation
+    ) -> Bool {
+        switch (operation, command.intent) {
+        case (.edit, .editProduct),
+             (.removeFromLibrary, .removeProductFromLibrary),
+             (.restoreToLibrary, .restoreProductToLibrary):
+            true
+        default:
+            false
+        }
+    }
+
+    private func productID(
+        for command: ProductStateCommand
+    ) -> ProductStateProductID? {
+        switch command.intent {
+        case let .createProduct(value): value.productID
+        case let .editProduct(value): value.productID
+        case let .removeProductFromLibrary(value): value.productID
+        case let .restoreProductToLibrary(value): value.productID
+        default: nil
+        }
+    }
+
+    private func commitSummary(
+        commandID: ProductStateCommandID,
+        productID: ProductStateProductID,
+        effects: [ProductStateStagedEffect],
+        durability: ProductStateProductCommandDurability
+    ) -> ProductStateProductCommandCommitSummary? {
+        var before: UInt64?
+        var after: UInt64?
+        var affectedLists: [ProductStateAffectedListRevision] = []
+        var history: [ProductStateHistoryEventID] = []
+
+        for effect in effects {
+            switch effect {
+            case let .productInserted(id, revision) where id == productID:
+                before = 0
+                after = revision
+            case let .productEdited(id, prior, next) where id == productID,
+                 let .productRestored(id, prior, next) where id == productID:
+                before = prior
+                after = next
+            case let .entryDeleted(identity, revision):
+                guard revision > 0 else { return nil }
+                affectedLists.append(
+                    ProductStateAffectedListRevision(
+                        listID: identity.listID,
+                        before: ProductStateListRevision(
+                            value: revision - 1
+                        ),
+                        after: ProductStateListRevision(value: revision)
+                    )
+                )
+            case let .historyEventInserted(id):
+                history.append(id)
+            default:
+                break
+            }
+        }
+        guard let before, let after else { return nil }
+        affectedLists.sort {
+            $0.listID.rawValue.uuidString
+                < $1.listID.rawValue.uuidString
+        }
+        history.sort { $0.rawValue.uuidString < $1.rawValue.uuidString }
+        return ProductStateProductCommandCommitSummary(
+            commandID: commandID,
+            productID: productID,
+            productRevisionBefore: before,
+            productRevisionAfter: after,
+            affectedLists: affectedLists,
+            historyEventIDs: history,
+            durability: durability
+        )
+    }
+
+    private func blockedExecution(
+        commandID: ProductStateCommandID,
+        productID: ProductStateProductID,
+        operation: ProductStateProductCommandOperation
+    ) -> ProductStateProductCommandExecution? {
+        switch writeState {
+        case .writableTarget:
+            nil
+        case .migrationIncomplete:
+            rejectedExecution(
+                commandID: commandID,
+                productID: productID,
+                operation: operation,
+                outcome: .unavailable(.migrationIncomplete),
+                failure: .migrationIncomplete
+            )
+        case .nonDurable:
+            rejectedExecution(
+                commandID: commandID,
+                productID: productID,
+                operation: operation,
+                outcome: .unavailable(.durableAuthorityUnavailable),
+                failure: .nonDurable
+            )
+        }
+    }
+
+    private func currentRevision(
+        for productID: ProductStateProductID
+    ) -> UInt64? {
+        try? products.products(id: productID.rawValue).first?.revision
+    }
+
+    private func semanticExecution(
+        commandID: ProductStateCommandID,
+        requestedProductID: ProductStateProductID,
+        authoritativeProductID: ProductStateProductID,
+        operation: ProductStateProductCommandOperation,
+        outcome: ProductStateProductCommandOutcome,
+        outcomeKind: ProductStateProductCommandOutcomeKind,
+        failure: ProductStateProductCommandFailureClassification? = nil,
+        durability: ProductStateProductCommandDurability = .notAttempted,
+        productRevision: UInt64
+    ) -> ProductStateProductCommandExecution {
+        ProductStateProductCommandExecution(
+            outcome: outcome,
+            diagnostic: diagnostic(
+                commandID: commandID,
+                requestedProductID: requestedProductID,
+                authoritativeProductID: authoritativeProductID,
+                operation: operation,
+                outcome: outcomeKind,
+                failure: failure,
+                durability: durability,
+                productRevisionBefore: productRevision,
+                productRevisionAfter: productRevision
+            )
+        )
+    }
+
+    private func rejectedExecution(
+        commandID: ProductStateCommandID,
+        productID: ProductStateProductID,
+        operation: ProductStateProductCommandOperation,
+        outcome: ProductStateProductCommandOutcome,
+        failure: ProductStateProductCommandFailureClassification,
+        durability: ProductStateProductCommandDurability = .notAttempted
+    ) -> ProductStateProductCommandExecution {
+        ProductStateProductCommandExecution(
+            outcome: outcome,
+            diagnostic: diagnostic(
+                commandID: commandID,
+                requestedProductID: productID,
+                authoritativeProductID: nil,
+                operation: operation,
+                outcome: outcomeKind(for: outcome),
+                failure: failure,
+                durability: durability
+            )
+        )
+    }
+
+    private func unavailableExecution(
+        commandID: ProductStateCommandID,
+        productID: ProductStateProductID,
+        operation: ProductStateProductCommandOperation,
+        durability: ProductStateProductCommandDurability = .notAttempted,
+        failure: ProductStateProductCommandFailureClassification =
+            .durableAuthorityUnavailable
+    ) -> ProductStateProductCommandExecution {
+        rejectedExecution(
+            commandID: commandID,
+            productID: productID,
+            operation: operation,
+            outcome: .unavailable(.durableAuthorityUnavailable),
+            failure: failure,
+            durability: durability
+        )
+    }
+
+    private func diagnostic(
+        commandID: ProductStateCommandID,
+        requestedProductID: ProductStateProductID,
+        authoritativeProductID: ProductStateProductID?,
+        operation: ProductStateProductCommandOperation,
+        outcome: ProductStateProductCommandOutcomeKind,
+        failure: ProductStateProductCommandFailureClassification? = nil,
+        durability: ProductStateProductCommandDurability,
+        summary: ProductStateProductCommandCommitSummary? = nil,
+        productRevisionBefore: UInt64? = nil,
+        productRevisionAfter: UInt64? = nil,
+        claimsDurableSuccess: Bool = false
+    ) -> ProductStateProductCommandDiagnostic {
+        ProductStateProductCommandDiagnostic(
+            commandID: commandID.rawValue,
+            requestedProductID: requestedProductID.rawValue,
+            authoritativeProductID: authoritativeProductID?.rawValue,
+            operation: operation,
+            outcome: outcome,
+            failure: failure,
+            durability: durability,
+            productRevisionBefore:
+                summary?.productRevisionBefore ?? productRevisionBefore,
+            productRevisionAfter:
+                summary?.productRevisionAfter ?? productRevisionAfter,
+            affectedListCount: summary?.affectedLists.count ?? 0,
+            historyEventCount: summary?.historyEventIDs.count ?? 0,
+            claimsDurableSuccess: claimsDurableSuccess
+        )
+    }
+
+    private func durability(
+        for disposition: ProductStateTransactionDisposition
+    ) -> ProductStateProductCommandDurability {
+        switch disposition {
+        case .committed: .committed
+        case .reconciledCommitted: .reconciledCommitted
+        case .noCommitRequired: .noCommitRequired
+        case .rolledBack: .rolledBack
+        case .outcomeUnknown: .outcomeUnknown
+        }
+    }
+
+    private func failure(
+        for conflict: ProductStateCommandConflict
+    ) -> ProductStateProductCommandFailureClassification {
+        switch conflict {
+        case .staleRevision: .staleRevision
+        case .activeSession: .activeSession
+        case .removedProduct: .removedProduct
+        case .ambiguousIdentity, .existingNeededEntry, .reopenRequired,
+             .unresolvedMigration:
+            .ambiguousIdentity
+        }
+    }
+
+    private func failure(
+        for disposition: ProductStateTransactionDisposition
+    ) -> ProductStateProductCommandFailureClassification {
+        switch disposition {
+        case .committed, .reconciledCommitted, .noCommitRequired:
+            .durableAuthorityUnavailable
+        case let .rolledBack(reason):
+            switch reason {
+            case .saveFailed: .saveFailed
+            case .stagedStateMismatch: .stagedStateMismatch
+            case .finalInvariantFailure: .finalInvariantFailure
+            case .reconciliationFailed: .reconciliationFailed
+            case .commitOutcomeUnknown: .outcomeUnknown
+            case .preparedResultRejected: .invalidRequest
+            }
+        case .outcomeUnknown:
+            .outcomeUnknown
+        }
+    }
+
+    private func outcomeKind(
+        for outcome: ProductStateProductCommandOutcome
+    ) -> ProductStateProductCommandOutcomeKind {
+        switch outcome {
+        case .created: .created
+        case .alreadyActive: .alreadyActive
+        case .restoreRequired: .restoreRequired
+        case .edited: .edited
+        case .removed: .removed
+        case .restored: .restored
+        case .noOp: .noOp
+        case .conflict: .conflict
+        case .validationFailure: .validationFailure
+        case .unavailable: .unavailable
+        }
+    }
+
+    private var zeroUUID: UUID {
+        UUID(uuid: (
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+        ))
     }
 }

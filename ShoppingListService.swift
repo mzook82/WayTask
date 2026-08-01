@@ -108,6 +108,38 @@ struct ShoppingListService: ShoppingListServicing {
         return product
     }
 
+    /// T-10 target-only recognition route. Exact barcode evidence can locate
+    /// an existing Product, but a tombstone is returned as restore-required;
+    /// this adapter never restores or adds list membership implicitly.
+    func acquireTargetProduct(
+        _ candidate: ProductCandidate,
+        fallbackImageData: Data?,
+        productID: ProductStateProductID,
+        commandID: ProductStateCommandID,
+        effectiveAt: Date,
+        reviewed: Bool,
+        using authority: ProductStateProductCommandAuthority
+    ) -> ProductStateProductCommandExecution {
+        authority.acquire(
+            ProductStateProductAcquisitionRequest(
+                commandID: commandID,
+                productID: productID,
+                effectiveAt: effectiveAt,
+                reviewed: reviewed,
+                name: candidate.name,
+                imageData: productImageData(
+                    for: candidate,
+                    fallbackImageData: fallbackImageData
+                ),
+                brand: candidate.brand,
+                category: candidate.category,
+                barcode: candidate.barcode,
+                imageURLString: candidate.imageURL?.absoluteString,
+                sourceRawValue: source(for: candidate.source).rawValue
+            )
+        )
+    }
+
     @discardableResult
     func upsertRecognizedProduct(
         _ candidate: ProductCandidate,
@@ -452,6 +484,45 @@ struct ProductLibraryDeletionService {
         }
 
         try modelContext.save()
+    }
+
+    /// T-10 target-only adapter. The caller supplies the exact impact summary;
+    /// Product, all editable lists, and the required history event are then
+    /// owned by one Product Command Authority transaction.
+    func removeFromTargetLibrary(
+        productID: ProductStateProductID,
+        commandID: ProductStateCommandID,
+        historyEventID: ProductStateHistoryEventID,
+        expectedProductRevision: UInt64,
+        expectedAffectedListRevisions:
+            [ProductStateListRevisionExpectation],
+        effectiveAt: Date? = nil,
+        confirmed: Bool,
+        using authority: ProductStateProductCommandAuthority
+    ) -> ProductStateProductCommandExecution {
+        let effectiveAt = effectiveAt ?? clock()
+        let command = ProductStateCommand(
+            id: commandID,
+            expectedRevision: ProductStateExpectedRevision(
+                revision: ProductStateRevision(
+                    scope: .product(productID),
+                    value: expectedProductRevision
+                )
+            ),
+            effectiveAt: effectiveAt,
+            intent: .removeProductFromLibrary(
+                RemoveProductFromLibraryCommand(
+                    productID: productID,
+                    historyEventID: historyEventID,
+                    confirmed: confirmed
+                )
+            )
+        )
+        return authority.removeFromLibrary(
+            command,
+            expectedAffectedListRevisions:
+                expectedAffectedListRevisions
+        )
     }
 }
 

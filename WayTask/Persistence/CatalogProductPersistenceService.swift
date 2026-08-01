@@ -194,6 +194,45 @@ struct CatalogProductPersistenceService {
         return .inserted(product)
     }
 
+    /// T-10 target-only acquisition adapter. It performs no persistence and
+    /// has no restore branch; the Product command authority owns exact-match,
+    /// create/already-active/restore-required classification and durability.
+    func acquireTargetProduct(
+        _ request: CatalogProductSaveRequest,
+        productID: ProductStateProductID,
+        commandID: ProductStateCommandID,
+        effectiveAt: Date,
+        reviewed: Bool,
+        using authority: ProductStateProductCommandAuthority
+    ) throws -> ProductStateProductCommandExecution {
+        try validate(request)
+        return authority.acquire(
+            ProductStateProductAcquisitionRequest(
+                commandID: commandID,
+                productID: productID,
+                effectiveAt: effectiveAt,
+                reviewed: reviewed,
+                name: request.displayNameSnapshot,
+                imageData: request.imageData,
+                category: request.categoryDisplayNameSnapshot,
+                sourceRawValue: request.source.rawValue,
+                catalogID: ProductStateCatalogID(
+                    rawValue: request.productID.rawValue
+                ),
+                catalogDisplayNameSnapshot:
+                    request.displayNameSnapshot,
+                catalogDisplayLocaleSnapshot:
+                    request.displayLocaleSnapshot,
+                catalogCategoryIDSnapshotRawValue:
+                    request.categoryIDSnapshot.rawValue,
+                catalogCategoryDisplayNameSnapshot:
+                    request.categoryDisplayNameSnapshot,
+                catalogIconKeySnapshot: request.iconKeySnapshot,
+                catalogSnapshotUpdatedAt: effectiveAt
+            )
+        )
+    }
+
     private func restore(
         _ product: Product,
         from request: CatalogProductSaveRequest,

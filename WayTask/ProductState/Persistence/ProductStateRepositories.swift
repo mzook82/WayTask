@@ -8,10 +8,36 @@ protocol ProductRepository: AnyObject {
     func products(id: UUID) throws -> [WayTaskSchemaV4.Product]
 
     func products(
+        catalogProductIDRawValue: String
+    ) throws -> [WayTaskSchemaV4.Product]
+
+    func products(barcode: String) throws -> [WayTaskSchemaV4.Product]
+
+    func products(
         libraryLifecycle: ProductLibraryLifecycle
     ) throws -> [WayTaskSchemaV4.Product]
 
     func stageInsertion(of product: WayTaskSchemaV4.Product)
+}
+
+extension ProductRepository {
+    func products(
+        catalogProductIDRawValue: String
+    ) throws -> [WayTaskSchemaV4.Product] {
+        try allLibraryProducts().filter {
+            $0.catalogProductIDRawValue == catalogProductIDRawValue
+        }
+    }
+
+    func products(barcode: String) throws -> [WayTaskSchemaV4.Product] {
+        try allLibraryProducts().filter { $0.barcode == barcode }
+    }
+
+    private func allLibraryProducts() throws
+        -> [WayTaskSchemaV4.Product] {
+        try products(libraryLifecycle: .active)
+            + products(libraryLifecycle: .removed)
+    }
 }
 
 @MainActor
@@ -29,6 +55,10 @@ protocol ShoppingRepository: AnyObject {
 
     func shoppingEntries(
         listID: UUID,
+        productID: UUID
+    ) throws -> [WayTaskSchemaV4.ShoppingListEntry]
+
+    func shoppingEntries(
         productID: UUID
     ) throws -> [WayTaskSchemaV4.ShoppingListEntry]
 
@@ -144,6 +174,29 @@ private final class SwiftDataProductRepository: ProductRepository {
     }
 
     func products(
+        catalogProductIDRawValue: String
+    ) throws -> [WayTaskSchemaV4.Product] {
+        let descriptor = FetchDescriptor<WayTaskSchemaV4.Product>(
+            predicate: #Predicate { product in
+                product.catalogProductIDRawValue
+                    == catalogProductIDRawValue
+            },
+            sortBy: productSort
+        )
+        return try access.fetch(descriptor)
+    }
+
+    func products(barcode: String) throws -> [WayTaskSchemaV4.Product] {
+        let descriptor = FetchDescriptor<WayTaskSchemaV4.Product>(
+            predicate: #Predicate { product in
+                product.barcode == barcode
+            },
+            sortBy: productSort
+        )
+        return try access.fetch(descriptor)
+    }
+
+    func products(
         libraryLifecycle: ProductLibraryLifecycle
     ) throws -> [WayTaskSchemaV4.Product] {
         let lifecycleRawValue = libraryLifecycle.rawValue
@@ -226,6 +279,22 @@ private final class SwiftDataShoppingRepository: ShoppingRepository {
                     && entry.productID == productID
             },
             sortBy: entrySort
+        )
+        return try access.fetch(descriptor)
+    }
+
+    func shoppingEntries(
+        productID: UUID
+    ) throws -> [WayTaskSchemaV4.ShoppingListEntry] {
+        let descriptor = FetchDescriptor<WayTaskSchemaV4.ShoppingListEntry>(
+            predicate: #Predicate { entry in
+                entry.productID == productID
+            },
+            sortBy: [
+                SortDescriptor(\.shoppingListID),
+                SortDescriptor(\.sortOrder),
+                SortDescriptor(\.id)
+            ]
         )
         return try access.fetch(descriptor)
     }

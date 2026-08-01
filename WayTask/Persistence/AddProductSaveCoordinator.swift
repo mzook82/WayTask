@@ -135,6 +135,69 @@ struct AddProductSaveCoordinator {
         }
     }
 
+    /// T-10 target-only route. Existing V3 callers remain on `save` until
+    /// their authorized consumer-conversion steps; this route never receives
+    /// a ModelContext and cannot persist or restore outside Command Authority.
+    func acquireTargetProduct(
+        selection: AddProductSelection,
+        imageData: Data?,
+        productID: ProductStateProductID,
+        commandID: ProductStateCommandID,
+        effectiveAt: Date,
+        reviewed: Bool,
+        using authority: ProductStateProductCommandAuthority
+    ) throws -> ProductStateProductCommandExecution {
+        switch selection {
+        case .catalog(let catalogSelection):
+            guard let identity = catalogResolver.resolve(
+                productIDRawValue: catalogSelection.productID.rawValue
+            ) else {
+                throw AddProductSaveCoordinatorError
+                    .unresolvedCatalogIdentity(
+                        sourceProductID:
+                            catalogSelection.productID.rawValue
+                    )
+            }
+            let metadata = catalogResolver.currentCategoryMetadata(
+                for: identity
+            )
+            let request = CatalogProductSaveRequest(
+                productID: ProductID(identity.productID),
+                displayNameSnapshot: catalogSelection.displayName,
+                displayLocaleSnapshot: catalogSelection.displayLocale,
+                categoryIDSnapshot: ProductCategoryID(
+                    identity.categoryID
+                ),
+                categoryDisplayNameSnapshot: metadata.displayName,
+                iconKeySnapshot: metadata.iconKey,
+                imageData: imageData,
+                source: .catalog
+            )
+            return try CatalogProductPersistenceService()
+                .acquireTargetProduct(
+                    request,
+                    productID: productID,
+                    commandID: commandID,
+                    effectiveAt: effectiveAt,
+                    reviewed: reviewed,
+                    using: authority
+                )
+
+        case .custom(let customSelection):
+            return authority.acquire(
+                ProductStateProductAcquisitionRequest(
+                    commandID: commandID,
+                    productID: productID,
+                    effectiveAt: effectiveAt,
+                    reviewed: reviewed,
+                    name: customSelection.name,
+                    imageData: imageData,
+                    sourceRawValue: ProductSource.manual.rawValue
+                )
+            )
+        }
+    }
+
     private func validatePersistedIdentity(
         _ product: Product,
         expected identity: ResolvedShoppingItemCatalogIdentity
