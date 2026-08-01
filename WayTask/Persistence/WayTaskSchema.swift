@@ -208,6 +208,32 @@ enum WayTaskSchemaMigrationPlan: SchemaMigrationPlan {
     }
 }
 
+// T-06 uses a separate, inactive plan for task-owned candidate copies. It
+// deliberately stops at the shipped V3 representation: T-07 and T-08 own the
+// semantic conversion into V4, and T-09 owns production startup activation.
+enum WayTaskProtectedCandidatePhysicalMigrationPlan: SchemaMigrationPlan {
+    static var schemas: [any VersionedSchema.Type] {
+        [
+            WayTaskSchemaV1.self,
+            WayTaskSchemaV2.self,
+            WayTaskSchemaV3.self
+        ]
+    }
+
+    static var stages: [MigrationStage] {
+        [
+            .lightweight(
+                fromVersion: WayTaskSchemaV1.self,
+                toVersion: WayTaskSchemaV2.self
+            ),
+            .lightweight(
+                fromVersion: WayTaskSchemaV2.self,
+                toVersion: WayTaskSchemaV3.self
+            )
+        ]
+    }
+}
+
 enum WayTaskModelContainer {
     static var currentSchema: Schema {
         Schema(versionedSchema: WayTaskSchemaV3.self)
