@@ -1,6 +1,49 @@
 import Foundation
 import SwiftData
 
+struct ProductStateShoppingMemoryProjection: Equatable, Sendable {
+    let productID: ProductStateProductID
+    let nativeHistory: ProductStateProductHistoryProjection
+    let linkedLegacyEvidence: [ProductStateLegacyHistoryAggregateEvidence]
+    let rejectedLegacyEvidenceCount: Int
+
+    var provenances: [ProductStateHistoryNamedProvenance] {
+        var values = nativeHistory.provenanceCounts.map(\.provenance)
+        if !linkedLegacyEvidence.isEmpty {
+            values.append(.retainedLegacyAggregate)
+        }
+        return Array(Set(values)).sorted { $0.rawValue < $1.rawValue }
+    }
+}
+
+enum ProductStateShoppingMemoryQueryOutcomeKind:
+    String, Codable, Sendable {
+    case success
+    case invalidRequest
+    case unavailable
+}
+
+struct ProductStateShoppingMemoryDiagnostic:
+    Equatable, Codable, Sendable {
+    let productID: UUID
+    let outcome: ProductStateShoppingMemoryQueryOutcomeKind
+    let nativeEventCount: Int
+    let linkedLegacyEvidenceCount: Int
+    let rejectedLegacyEvidenceCount: Int
+    let duplicateContributionCount: Int
+    let unsupportedEvidenceCount: Int
+    let provenances: [ProductStateHistoryNamedProvenance]
+}
+
+enum ProductStateShoppingMemoryQueryOutcome: Equatable, Sendable {
+    case success(
+        projection: ProductStateShoppingMemoryProjection,
+        diagnostic: ProductStateShoppingMemoryDiagnostic
+    )
+    case invalidRequest(ProductStateShoppingMemoryDiagnostic)
+    case unavailable(ProductStateShoppingMemoryDiagnostic)
+}
+
 protocol ShoppingMemoryServicing {
     @discardableResult
     func recordProductAdded(_ item: ShoppingItem, in modelContext: ModelContext) throws -> ProductHistory
@@ -10,6 +53,54 @@ protocol ShoppingMemoryServicing {
 }
 
 struct ShoppingMemoryService: ShoppingMemoryServicing {
+    /// T-12 target-only, read-only consumption. Native event authority and
+    /// retained legacy aggregate evidence remain separately represented.
+    @MainActor
+    func targetHistoryMemory(
+        _ request: ProductStateHistoryQueryRequest,
+        using queries: any ProductStateHistoryQuerying,
+        legacyEvidence: [ProductStateLegacyHistoryAggregateEvidence] = []
+    ) -> ProductStateShoppingMemoryQueryOutcome {
+        switch queries.history(request) {
+        case let .success(history, _):
+            let linked = legacyEvidence.filter {
+                $0.provenProductID == request.productID
+            }.sorted(by: legacyEvidenceLessThan)
+            let rejectedCount = legacyEvidence.count - linked.count
+            let projection = ProductStateShoppingMemoryProjection(
+                productID: request.productID,
+                nativeHistory: history,
+                linkedLegacyEvidence: linked,
+                rejectedLegacyEvidenceCount: rejectedCount
+            )
+            return .success(
+                projection: projection,
+                diagnostic: targetDiagnostic(
+                    projection: projection,
+                    outcome: .success
+                )
+            )
+
+        case .invalidRequest:
+            return .invalidRequest(
+                emptyTargetDiagnostic(
+                    productID: request.productID,
+                    outcome: .invalidRequest,
+                    rejectedLegacyEvidenceCount: legacyEvidence.count
+                )
+            )
+
+        case .unavailable:
+            return .unavailable(
+                emptyTargetDiagnostic(
+                    productID: request.productID,
+                    outcome: .unavailable,
+                    rejectedLegacyEvidenceCount: legacyEvidence.count
+                )
+            )
+        }
+    }
+
     @discardableResult
     func recordProductAdded(_ item: ShoppingItem, in modelContext: ModelContext) throws -> ProductHistory {
         let key = productKey(for: item)
@@ -100,5 +191,53 @@ struct ShoppingMemoryService: ShoppingMemoryServicing {
         }
 
         return normalized
+    }
+
+    private func legacyEvidenceLessThan(
+        _ lhs: ProductStateLegacyHistoryAggregateEvidence,
+        _ rhs: ProductStateLegacyHistoryAggregateEvidence
+    ) -> Bool {
+        if lhs.lastObservedAt != rhs.lastObservedAt {
+            return lhs.lastObservedAt > rhs.lastObservedAt
+        }
+        return lhs.legacyRecordID.uuidString < rhs.legacyRecordID.uuidString
+    }
+
+    private func targetDiagnostic(
+        projection: ProductStateShoppingMemoryProjection,
+        outcome: ProductStateShoppingMemoryQueryOutcomeKind
+    ) -> ProductStateShoppingMemoryDiagnostic {
+        ProductStateShoppingMemoryDiagnostic(
+            productID: projection.productID.rawValue,
+            outcome: outcome,
+            nativeEventCount: projection.nativeHistory.retainedEventCount,
+            linkedLegacyEvidenceCount:
+                projection.linkedLegacyEvidence.count,
+            rejectedLegacyEvidenceCount:
+                projection.rejectedLegacyEvidenceCount,
+            duplicateContributionCount:
+                projection.nativeHistory.aggregate
+                    .duplicateContributionCount,
+            unsupportedEvidenceCount:
+                projection.nativeHistory.aggregate.unsupportedEvidenceCount,
+            provenances: projection.provenances
+        )
+    }
+
+    private func emptyTargetDiagnostic(
+        productID: ProductStateProductID,
+        outcome: ProductStateShoppingMemoryQueryOutcomeKind,
+        rejectedLegacyEvidenceCount: Int
+    ) -> ProductStateShoppingMemoryDiagnostic {
+        ProductStateShoppingMemoryDiagnostic(
+            productID: productID.rawValue,
+            outcome: outcome,
+            nativeEventCount: 0,
+            linkedLegacyEvidenceCount: 0,
+            rejectedLegacyEvidenceCount: rejectedLegacyEvidenceCount,
+            duplicateContributionCount: 0,
+            unsupportedEvidenceCount: 0,
+            provenances: []
+        )
     }
 }
