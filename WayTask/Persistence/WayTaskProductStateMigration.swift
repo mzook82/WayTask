@@ -143,6 +143,15 @@ enum WayTaskMigrationExceptionCategory: String, CaseIterable, Codable,
     case legacyArchiveUnresolved = "legacy_archive_unresolved"
     case legacyHistoryUnlinked = "legacy_history_unlinked"
     case savedLocationUnresolved = "saved_location_unresolved"
+    case invalidSessionToken = "invalid_session_token"
+    case duplicateSessionToken = "duplicate_session_token"
+    case foreignCollectedToken = "foreign_collected_token"
+    case missingSessionSourceList = "missing_session_source_list"
+    case ambiguousSessionItem = "ambiguous_session_item"
+    case sessionLifecycleContradiction =
+        "session_lifecycle_contradiction"
+    case invalidSessionStore = "invalid_session_store"
+    case sessionExceptionOverflow = "session_exception_overflow"
 }
 
 struct WayTaskMigrationSafeDigest: Hashable, Codable, Sendable {
@@ -150,6 +159,14 @@ struct WayTaskMigrationSafeDigest: Hashable, Codable, Sendable {
 
     init(hashing evidenceBytes: Data) {
         rawValue = WayTaskMigrationDigest.hex(hashing: evidenceBytes)
+    }
+
+    init(keyed evidenceBytes: Data, keyBytes: Data) {
+        let authentication = HMAC<SHA256>.authenticationCode(
+            for: evidenceBytes,
+            using: SymmetricKey(data: keyBytes)
+        )
+        rawValue = WayTaskMigrationDigest.hex(authentication)
     }
 }
 
@@ -199,6 +216,49 @@ struct WayTaskMigrationExceptionLedger: Equatable, Sendable {
 
     init(capacity: Int) {
         self.capacity = max(capacity, 0)
+    }
+
+    init(encodedData: Data) throws {
+        let payload = try JSONDecoder().decode(
+            PersistedLedger.self,
+            from: encodedData
+        )
+        guard payload.formatVersion == Self.formatVersion,
+              payload.capacity >= 0,
+              payload.totalOccurrenceCount >= 0,
+              payload.overflowOccurrenceCount >= 0,
+              payload.entries.count <= payload.capacity,
+              payload.entries.allSatisfy({ entry in
+                  entry.ordinal > 0 && entry.occurrenceCount > 0 &&
+                      entry.id == WayTaskMigrationDigest.stableUUID(
+                          category: entry.category,
+                          digest: entry.safeEvidenceDigest,
+                          ordinal: entry.ordinal
+                      )
+              }),
+              Set(payload.entries.map {
+                  "\($0.category.rawValue)|\($0.safeEvidenceDigest.rawValue)"
+              }).count == payload.entries.count
+        else {
+            throw LedgerDecodingError.invalidPayload
+        }
+        let categoryCounts = try Self.decodedCounts(payload.categoryCounts)
+        let overflowCounts = try Self.decodedCounts(
+            payload.overflowCategoryCounts
+        )
+        guard categoryCounts.values.reduce(0, +) ==
+                payload.totalOccurrenceCount,
+              overflowCounts.values.reduce(0, +) ==
+                payload.overflowOccurrenceCount
+        else {
+            throw LedgerDecodingError.invalidPayload
+        }
+        capacity = payload.capacity
+        entries = payload.entries
+        self.categoryCounts = categoryCounts
+        overflowCategoryCounts = overflowCounts
+        totalOccurrenceCount = payload.totalOccurrenceCount
+        overflowOccurrenceCount = payload.overflowOccurrenceCount
     }
 
     mutating func record(
@@ -251,6 +311,8 @@ struct WayTaskMigrationExceptionLedger: Equatable, Sendable {
         )
     }
 
+    var persistedEntries: [WayTaskMigrationExceptionEntry] { entries }
+
     func encodedData() throws -> Data {
         let payload = PersistedLedger(
             formatVersion: Self.formatVersion,
@@ -282,6 +344,23 @@ struct WayTaskMigrationExceptionLedger: Equatable, Sendable {
         }
     }
 
+    private static func decodedCounts(
+        _ values: [WayTaskMigrationExceptionCategoryCount]
+    ) throws -> [WayTaskMigrationExceptionCategory: Int] {
+        var result: [WayTaskMigrationExceptionCategory: Int] = [:]
+        for value in values {
+            guard value.count > 0, result[value.category] == nil else {
+                throw LedgerDecodingError.invalidPayload
+            }
+            result[value.category] = value.count
+        }
+        return result
+    }
+
+    private enum LedgerDecodingError: Error {
+        case invalidPayload
+    }
+
     private struct PersistedLedger: Codable {
         let formatVersion: Int
         let capacity: Int
@@ -304,6 +383,8 @@ enum WayTaskMigrationStageStatus: String, Codable, Sendable {
     case foundationValidated = "foundation_validated"
     case productListSemanticMigrationComplete =
         "product_list_semantic_migration_complete"
+    case sessionHistoryArchiveLocationSemanticMigrationComplete =
+        "session_history_archive_location_semantic_migration_complete"
     case failedBeforePromotion = "failed_before_promotion"
 }
 
@@ -312,6 +393,8 @@ enum WayTaskMigrationCompletionClassification: String, Codable, Sendable {
         "candidate_ready_for_semantic_migration"
     case productListSemanticMigrationComplete =
         "product_list_semantic_migration_complete"
+    case sessionHistoryArchiveLocationSemanticMigrationComplete =
+        "session_history_archive_location_semantic_migration_complete"
     case failedBeforePromotion = "failed_before_promotion"
 }
 
@@ -340,6 +423,18 @@ enum WayTaskMigrationFailureClassification: String, Codable, Sendable {
     case semanticTargetReopenFailed = "semantic_target_reopen_failed"
     case semanticValidationFailed = "semantic_validation_failed"
     case semanticFingerprintMismatch = "semantic_fingerprint_mismatch"
+    case sessionHistoryCandidateReadFailed =
+        "session_history_candidate_read_failed"
+    case sessionHistoryNormalizationFailed =
+        "session_history_normalization_failed"
+    case sessionHistoryTargetWriteFailed =
+        "session_history_target_write_failed"
+    case sessionHistoryTargetReopenFailed =
+        "session_history_target_reopen_failed"
+    case sessionHistoryValidationFailed =
+        "session_history_validation_failed"
+    case sessionHistoryFingerprintMismatch =
+        "session_history_fingerprint_mismatch"
 }
 
 enum WayTaskMigrationRollbackClassification: String, Codable, Sendable {
@@ -747,6 +842,251 @@ struct WayTaskProductListSemanticReceipt: Sendable {
 
 enum WayTaskProductListSemanticMigrationResult: Sendable {
     case complete(WayTaskProductListSemanticReceipt)
+    case failed(WayTaskMigrationFailure)
+}
+
+// MARK: - T-08 Session/history/archive/location semantic records
+
+struct WayTaskLegacySessionRecord: Equatable, Sendable {
+    let id: UUID
+    let startedAt: Date
+    let finishedAt: Date?
+    let isActive: Bool
+    let itemIDListRawValue: String
+    let collectedItemIDListRawValue: String
+    let shoppingListID: UUID?
+    let selectedStoreID: UUID?
+    let selectedStoreName: String?
+    let selectedStoreLatitude: Double?
+    let selectedStoreLongitude: Double?
+}
+
+struct WayTaskLegacyHistoryAggregateRecord: Equatable, Codable, Sendable {
+    let id: UUID
+    let productKey: String
+    let productName: String
+    let barcode: String?
+    let firstAddedDate: Date
+    let lastAddedDate: Date
+    let addCount: Int
+    let lastSourceRawValue: String
+    let averageInterval: TimeInterval?
+    let lastCompletedDate: Date?
+}
+
+struct WayTaskLegacyCompatibilityEvidenceRecord: Equatable, Codable, Sendable {
+    let id: UUID
+    let name: String
+    let isCompleted: Bool
+    let imageData: Data?
+    let brand: String?
+    let category: String?
+    let barcode: String?
+    let imageURLString: String?
+    let dateAdded: Date
+    let sourceRawValue: String
+    let productType: String?
+    let flavor: String?
+    let packageSize: String?
+    let packageType: String?
+    let visibleText: String?
+    let searchKeywordsRawValue: String?
+}
+
+struct WayTaskLegacySavedLocationRecord: Equatable, Codable, Sendable {
+    let id: UUID
+    let title: String
+    let latitude: Double
+    let longitude: Double
+    let radius: Double
+    let storeCategoryRawValue: String?
+    let addressText: String?
+    let notes: String?
+    let sourceTypeRawValue: String?
+    let shoppingItemIDs: [UUID]
+}
+
+struct WayTaskSessionHistoryArchiveSourceSnapshot: Equatable, Sendable {
+    let productList: WayTaskLegacyProductListSnapshot
+    let sessions: [WayTaskLegacySessionRecord]
+    let historyAggregates: [WayTaskLegacyHistoryAggregateRecord]
+    let compatibilityItems: [WayTaskLegacyCompatibilityEvidenceRecord]
+    let savedLocations: [WayTaskLegacySavedLocationRecord]
+}
+
+struct WayTaskMigratedSessionExceptionRecord: Equatable, Codable, Sendable {
+    let id: UUID
+    let sessionID: UUID?
+    let sessionLineID: UUID?
+    let categoryRawValue: String
+    let safeEvidenceDigest: String
+    let ordinal: Int
+    let occurrenceCount: Int
+    let recordedAt: Date
+    let sourceCollectionRawValue: String?
+    let sourceOrdinals: [Int]
+    let sourceByteLength: Int?
+    let normalizedTokenID: UUID?
+}
+
+struct WayTaskSessionExceptionEvidenceArtifact: Equatable, Codable, Sendable {
+    let formatVersion: Int
+    let records: [WayTaskMigratedSessionExceptionRecord]
+}
+
+struct WayTaskMigratedSessionStopRecord: Equatable, Codable, Sendable {
+    let id: UUID
+    let sessionID: UUID
+    let snapshotID: UUID
+    let sortOrder: Int
+    let storeReferenceIDRawValue: String?
+    let storeReferenceProvenanceRawValue: String
+    let displayNameSnapshot: String
+    let latitudeSnapshot: Double?
+    let longitudeSnapshot: Double?
+    let evidenceAt: Date?
+    let isSessionScopedTransient: Bool
+}
+
+struct WayTaskMigratedSessionLineRecord: Equatable, Codable, Sendable {
+    let id: UUID
+    let sessionID: UUID
+    let snapshotID: UUID
+    let snapshotVersion: Int
+    let snapshotProvenanceRawValue: String
+    let sourceListID: UUID?
+    let sourceEntryID: UUID?
+    let productID: UUID?
+    let globalProductConceptIDRawValue: String?
+    let stopID: UUID?
+    let sortOrder: Int
+    let productNameSnapshot: String
+    let productBrandSnapshot: String?
+    let productCategorySnapshot: String?
+    let quantitySnapshot: Double
+    let unitSnapshotRawValue: String?
+    let noteSnapshot: String?
+    let executionStateRawValue: String
+    let executionChangedAt: Date?
+    let finalOutcomeRawValue: String?
+    let finalOutcomeAt: Date?
+    let finalOutcomeCommandID: UUID?
+    let legacyDispositionRawValue: String?
+}
+
+struct WayTaskMigratedSessionRecord: Equatable, Codable, Sendable {
+    let id: UUID
+    let sourceListID: UUID?
+    let sourceRevision: UInt64?
+    let sourceRevisionProvenanceRawValue: String
+    let revision: UInt64
+    let lifecycleRawValue: String
+    let migrationConditionRawValue: String
+    let snapshotID: UUID
+    let snapshotVersion: Int
+    let snapshotGeneration: Int
+    let snapshotContentSignature: String
+    let sourcePlanID: UUID?
+    let sourcePlanSignature: String?
+    let sourcePlanEvidenceAt: Date?
+    let startedAt: Date
+    let activationStartedAt: Date
+    let lastActivityAt: Date
+    let expiredAt: Date?
+    let endedAt: Date?
+    let expirationReasonRawValue: String?
+    let expirationPolicyVersion: Int
+    let lines: [WayTaskMigratedSessionLineRecord]
+    let stops: [WayTaskMigratedSessionStopRecord]
+    let exceptions: [WayTaskMigratedSessionExceptionRecord]
+}
+
+struct WayTaskSessionHistoryArchiveSemanticSnapshot: Equatable, Codable,
+    Sendable
+{
+    let productListBase: WayTaskProductListSemanticSnapshot
+    let sessions: [WayTaskMigratedSessionRecord]
+    let historyAggregates: [WayTaskLegacyHistoryAggregateRecord]
+    let historyEvents: [UUID]
+    let archiveLists: [WayTaskMigratedShoppingListRecord]
+    let archiveEntries: [WayTaskMigratedShoppingEntryRecord]
+    let compatibilityItems: [WayTaskLegacyCompatibilityEvidenceRecord]
+    let savedLocations: [WayTaskLegacySavedLocationRecord]
+    let globalExceptions: [WayTaskMigratedSessionExceptionRecord]
+}
+
+struct WayTaskSessionHistoryArchiveExceptionFact: Equatable, Sendable {
+    let sessionID: UUID?
+    let sessionLineID: UUID?
+    let category: WayTaskMigrationExceptionCategory
+    let safeEvidenceDigest: WayTaskMigrationSafeDigest
+    let sourceCollectionRawValue: String?
+    let sourceOrdinal: Int?
+    let sourceByteLength: Int?
+    let normalizedTokenID: UUID?
+}
+
+struct WayTaskSessionHistoryArchiveSemanticPlan: Equatable, Sendable {
+    static let initialSessionRevision: UInt64 = 1
+    static let snapshotVersion = 1
+    static let snapshotGeneration = 1
+    static let expirationPolicyVersion = 1
+    static let perSessionExceptionCapacity = 100
+
+    let target: WayTaskSessionHistoryArchiveSemanticSnapshot
+    let exceptionFacts: [WayTaskSessionHistoryArchiveExceptionFact]
+    let blockingAmbiguityCount: Int
+    let semanticDigest: WayTaskMigrationFingerprint
+}
+
+struct WayTaskSessionHistoryArchiveStageIdentity: Hashable, Codable, Sendable {
+    static let version =
+        "wt033a.tc13.t08.session-history-archive-location.v1"
+
+    let productListStageIdentity: WayTaskProductListSemanticStageIdentity
+    let sourceSchemaIdentity: WayTaskMigrationSchemaIdentity
+    let candidateSchemaIdentity: WayTaskMigrationSchemaIdentity
+    let rawValue: String
+
+    init(productListReceipt: WayTaskProductListSemanticReceipt) {
+        productListStageIdentity = productListReceipt.semanticStageIdentity
+        sourceSchemaIdentity = .v3
+        candidateSchemaIdentity = .v4
+        rawValue = WayTaskMigrationDigest.hex(
+            hashing: Data(
+                [
+                    Self.version,
+                    productListReceipt.semanticStageIdentity.rawValue,
+                    productListReceipt.semanticDigest.rawValue,
+                    sourceSchemaIdentity.rawValue,
+                    candidateSchemaIdentity.rawValue
+                ].joined(separator: "|").utf8
+            )
+        )
+    }
+}
+
+struct WayTaskSessionHistoryArchiveMigrationReceipt: Sendable {
+    let productListReceipt: WayTaskProductListSemanticReceipt
+    let semanticStageIdentity: WayTaskSessionHistoryArchiveStageIdentity
+    let targetStoreURL: URL
+    let targetFingerprint: WayTaskMigrationFingerprint
+    let semanticDigest: WayTaskMigrationFingerprint
+    let targetValidation: WayTaskSessionHistoryArchiveSemanticSnapshot
+    let exceptionSummary: WayTaskMigrationExceptionSummary
+    let ownedArtifactNames: [String]
+    let status: WayTaskMigrationStageStatus
+    let completion: WayTaskMigrationCompletionClassification
+
+    var semanticConversionCompleted: Bool { true }
+    var productListSemanticConversionCompleted: Bool { true }
+    var sessionHistoryLocationSemanticConversionCompleted: Bool { true }
+    var promotionAuthorized: Bool { false }
+    var startupActivationAuthorized: Bool { false }
+}
+
+enum WayTaskSessionHistoryArchiveMigrationResult: Sendable {
+    case complete(WayTaskSessionHistoryArchiveMigrationReceipt)
     case failed(WayTaskMigrationFailure)
 }
 
@@ -1303,6 +1643,1205 @@ enum WayTaskProductListSemanticNormalizer {
     }
 }
 
+enum WayTaskSessionHistoryArchiveSemanticNormalizer {
+    static func normalize(
+        _ source: WayTaskSessionHistoryArchiveSourceSnapshot,
+        productListTarget: WayTaskProductListSemanticSnapshot,
+        aliases: [WayTaskProductListAliasRecord],
+        recordingTime: Date,
+        digestKey: Data
+    ) throws -> WayTaskSessionHistoryArchiveSemanticPlan {
+        var facts: [WayTaskSessionHistoryArchiveExceptionFact] = []
+        var blockingAmbiguityCount = 0
+
+        let productByID = Dictionary(
+            uniqueKeysWithValues: productListTarget.products.map { ($0.id, $0) }
+        )
+        let currentListIDs = Set(productListTarget.lists.map(\.id))
+        let targetEntryByID = Dictionary(
+            uniqueKeysWithValues: productListTarget.entries.map { ($0.id, $0) }
+        )
+        var entryAliases: [UUID: UUID] = [:]
+        for alias in aliases where alias.kind == .shoppingEntry {
+            if let existing = entryAliases[alias.sourceIdentity],
+               existing != alias.canonicalIdentity
+            {
+                blockingAmbiguityCount += 1
+                facts.append(
+                    fact(
+                        .ambiguousSessionItem,
+                        components: [
+                            "entry-alias", alias.sourceIdentity.uuidString
+                        ],
+                        digestKey: digestKey
+                    )
+                )
+            } else {
+                entryAliases[alias.sourceIdentity] = alias.canonicalIdentity
+            }
+        }
+
+        let archiveKinds = Set([
+            ShoppingListKind.completed.rawValue,
+            ShoppingListKind.recent.rawValue
+        ])
+        var archiveLists: [WayTaskMigratedShoppingListRecord] = []
+        var archiveListIDs = Set<UUID>()
+        let archiveSourceLists = source.productList.lists.filter {
+            archiveKinds.contains($0.kindRawValue)
+        }
+        let archiveGroups = Dictionary(
+            grouping: archiveSourceLists.compactMap { row in
+                row.listID.map { ($0, row) }
+            },
+            by: { $0.0 }
+        )
+        for row in archiveSourceLists where row.listID == nil {
+            blockingAmbiguityCount += 1
+            facts.append(
+                fact(
+                    .legacyArchiveUnresolved,
+                    components: ["archive-list", row.sourceRecordID.uuidString],
+                    digestKey: digestKey
+                )
+            )
+        }
+        for listID in archiveGroups.keys.sorted(by: uuidLess) {
+            let rows = archiveGroups[listID]!.map(\.1).sorted(by: listLess)
+            let canonical = rows[0]
+            guard rows.allSatisfy({
+                $0.title == canonical.title &&
+                    $0.kindRawValue == canonical.kindRawValue
+            }), !currentListIDs.contains(listID) else {
+                blockingAmbiguityCount += 1
+                facts.append(
+                    fact(
+                        .legacyArchiveUnresolved,
+                        components: ["archive-list-collision", listID.uuidString],
+                        digestKey: digestKey
+                    )
+                )
+                continue
+            }
+            archiveListIDs.insert(listID)
+            archiveLists.append(
+                WayTaskMigratedShoppingListRecord(
+                    id: listID,
+                    revision:
+                        WayTaskProductListSemanticPlan.initialListRevision,
+                    title: canonical.title,
+                    purposeRawValue: canonical.kindRawValue,
+                    createdAt: rows.map(\.createdAt).min()!,
+                    updatedAt: rows.map(\.updatedAt).max()!
+                )
+            )
+        }
+
+        var archiveEntries: [WayTaskMigratedShoppingEntryRecord] = []
+        var archiveEntryIDs = Set<UUID>()
+        for row in source.productList.entries.sorted(by: entryLess) {
+            guard let listID = row.listID,
+                  archiveListIDs.contains(listID)
+            else { continue }
+            guard let entryID = row.entryID, let productID = row.productID else {
+                blockingAmbiguityCount += 1
+                facts.append(
+                    fact(
+                        .legacyArchiveUnresolved,
+                        components: [
+                            "archive-entry", row.sourceRecordID.uuidString
+                        ],
+                        digestKey: digestKey
+                    )
+                )
+                continue
+            }
+            guard archiveEntryIDs.insert(entryID).inserted,
+                  targetEntryByID[entryID] == nil
+            else {
+                blockingAmbiguityCount += 1
+                facts.append(
+                    fact(
+                        .legacyArchiveUnresolved,
+                        components: [
+                            "archive-entry-collision", entryID.uuidString
+                        ],
+                        digestKey: digestKey
+                    )
+                )
+                continue
+            }
+            if productByID[productID] == nil {
+                facts.append(
+                    fact(
+                        .legacyArchiveUnresolved,
+                        components: [
+                            "archive-product", entryID.uuidString,
+                            productID.uuidString
+                        ],
+                        digestKey: digestKey
+                    )
+                )
+            }
+            let isNeeded = !row.isChecked
+            archiveEntries.append(
+                WayTaskMigratedShoppingEntryRecord(
+                    id: entryID,
+                    shoppingListID: listID,
+                    productID: productID,
+                    lifecycleRawValue: isNeeded ? "needed" : "resolved",
+                    resolutionReasonRawValue: isNeeded
+                        ? nil : ShoppingListResolutionReason
+                            .legacyUnknown.rawValue,
+                    resolutionEffectiveAt: isNeeded ? nil : recordingTime,
+                    resolutionProvenanceRawValue: isNeeded
+                        ? nil : "legacyMigration",
+                    quantity: validQuantity(row.quantity),
+                    sortOrder: row.sortOrder.isFinite ? row.sortOrder : 0,
+                    createdAt: row.createdAt,
+                    updatedAt: row.createdAt
+                )
+            )
+        }
+
+        var historyIDs = Set<UUID>()
+        var historyAggregates: [WayTaskLegacyHistoryAggregateRecord] = []
+        for history in source.historyAggregates.sorted(by: {
+            uuidLess($0.id, $1.id)
+        }) {
+            guard historyIDs.insert(history.id).inserted else {
+                blockingAmbiguityCount += 1
+                facts.append(
+                    fact(
+                        .legacyHistoryUnlinked,
+                        components: ["history-collision", history.id.uuidString],
+                        digestKey: digestKey
+                    )
+                )
+                continue
+            }
+            historyAggregates.append(history)
+            facts.append(
+                fact(
+                    .legacyHistoryUnlinked,
+                    components: ["legacy-aggregate", history.id.uuidString],
+                    digestKey: digestKey
+                )
+            )
+        }
+
+        var compatibilityIDs = Set<UUID>()
+        var compatibilityItems: [WayTaskLegacyCompatibilityEvidenceRecord] = []
+        for item in source.compatibilityItems.sorted(by: {
+            uuidLess($0.id, $1.id)
+        }) {
+            guard compatibilityIDs.insert(item.id).inserted else {
+                blockingAmbiguityCount += 1
+                facts.append(
+                    fact(
+                        .ambiguousRecord,
+                        components: [
+                            "compatibility-collision", item.id.uuidString
+                        ],
+                        digestKey: digestKey
+                    )
+                )
+                continue
+            }
+            compatibilityItems.append(item)
+        }
+        let itemByID = Dictionary(
+            uniqueKeysWithValues: compatibilityItems.map { ($0.id, $0) }
+        )
+        var productIDsByCompatibilityID: [UUID: Set<UUID>] = [:]
+        for product in source.productList.products {
+            guard let compatibilityID = product.legacyShoppingItemID,
+                  let productID = product.productID
+            else { continue }
+            productIDsByCompatibilityID[compatibilityID, default: []]
+                .insert(productID)
+        }
+
+        var locationIDs = Set<UUID>()
+        var savedLocations: [WayTaskLegacySavedLocationRecord] = []
+        for location in source.savedLocations.sorted(by: {
+            uuidLess($0.id, $1.id)
+        }) {
+            guard locationIDs.insert(location.id).inserted else {
+                blockingAmbiguityCount += 1
+                facts.append(
+                    fact(
+                        .savedLocationUnresolved,
+                        components: [
+                            "location-collision", location.id.uuidString
+                        ],
+                        digestKey: digestKey
+                    )
+                )
+                continue
+            }
+            let itemIDs = Array(Set(location.shoppingItemIDs)).sorted(
+                by: uuidLess
+            )
+            if itemIDs.count != location.shoppingItemIDs.count {
+                facts.append(
+                    fact(
+                        .savedLocationUnresolved,
+                        components: [
+                            "location-duplicate-edge", location.id.uuidString
+                        ],
+                        digestKey: digestKey
+                    )
+                )
+            }
+            for itemID in itemIDs {
+                if itemByID[itemID] == nil ||
+                    productIDsByCompatibilityID[itemID]?.count != 1
+                {
+                    facts.append(
+                        fact(
+                            .savedLocationUnresolved,
+                            components: [
+                                "location-item", location.id.uuidString,
+                                itemID.uuidString
+                            ],
+                            digestKey: digestKey
+                        )
+                    )
+                }
+            }
+            savedLocations.append(
+                WayTaskLegacySavedLocationRecord(
+                    id: location.id,
+                    title: location.title,
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    radius: location.radius,
+                    storeCategoryRawValue: location.storeCategoryRawValue,
+                    addressText: location.addressText,
+                    notes: location.notes,
+                    sourceTypeRawValue: location.sourceTypeRawValue,
+                    shoppingItemIDs: itemIDs
+                )
+            )
+        }
+
+        let legacyEntries = source.productList.entries
+        var sessions: [WayTaskMigratedSessionRecord] = []
+        var sessionIDs = Set<UUID>()
+        for session in source.sessions.sorted(by: {
+            uuidLess($0.id, $1.id)
+        }) {
+            guard sessionIDs.insert(session.id).inserted else {
+                blockingAmbiguityCount += 1
+                facts.append(
+                    fact(
+                        .ambiguousRecord,
+                        sessionID: session.id,
+                        components: ["session-collision", session.id.uuidString],
+                        digestKey: digestKey
+                    )
+                )
+                continue
+            }
+            sessions.append(
+                migrateSession(
+                    session,
+                    legacyEntries: legacyEntries,
+                    itemByID: itemByID,
+                    targetEntryByID: targetEntryByID,
+                    productByID: productByID,
+                    entryAliases: entryAliases,
+                    recordingTime: recordingTime,
+                    digestKey: digestKey,
+                    facts: &facts
+                )
+            )
+        }
+
+        let activeClaims = source.sessions.filter(\.isActive)
+        if activeClaims.count > 1 {
+            for session in activeClaims.sorted(by: {
+                uuidLess($0.id, $1.id)
+            }) {
+                facts.append(
+                    fact(
+                        .multipleSessionCandidates,
+                        sessionID: session.id,
+                        components: [
+                            "active-candidate", session.id.uuidString,
+                            String(activeClaims.count)
+                        ],
+                        digestKey: digestKey
+                    )
+                )
+            }
+        }
+
+        let projection = projectExceptions(
+            facts,
+            recordingTime: recordingTime,
+            digestKey: digestKey
+        )
+        facts.append(contentsOf: projection.overflowFacts)
+        sessions = sessions.map { session in
+            attaching(
+                projection.sessionRecords[session.id] ?? [],
+                to: session
+            )
+        }
+
+        archiveLists.sort { uuidLess($0.id, $1.id) }
+        archiveEntries.sort(by: migratedEntryLess)
+        sessions.sort { uuidLess($0.id, $1.id) }
+        facts.sort(by: factLess)
+        let target = WayTaskSessionHistoryArchiveSemanticSnapshot(
+            productListBase: productListTarget,
+            sessions: sessions,
+            historyAggregates: historyAggregates,
+            historyEvents: [],
+            archiveLists: archiveLists,
+            archiveEntries: archiveEntries,
+            compatibilityItems: compatibilityItems,
+            savedLocations: savedLocations,
+            globalExceptions: projection.globalRecords
+        )
+        return WayTaskSessionHistoryArchiveSemanticPlan(
+            target: target,
+            exceptionFacts: facts,
+            blockingAmbiguityCount: blockingAmbiguityCount,
+            semanticDigest: try semanticDigest(target)
+        )
+    }
+
+    static func semanticDigest(
+        _ snapshot: WayTaskSessionHistoryArchiveSemanticSnapshot
+    ) throws -> WayTaskMigrationFingerprint {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        encoder.dateEncodingStrategy = .millisecondsSince1970
+        return WayTaskMigrationFingerprint(
+            rawValue: WayTaskMigrationDigest.hex(
+                hashing: try encoder.encode(snapshot)
+            )
+        )
+    }
+
+    private static func migrateSession(
+        _ source: WayTaskLegacySessionRecord,
+        legacyEntries: [WayTaskLegacyShoppingEntryRecord],
+        itemByID: [UUID: WayTaskLegacyCompatibilityEvidenceRecord],
+        targetEntryByID: [UUID: WayTaskMigratedShoppingEntryRecord],
+        productByID: [UUID: WayTaskMigratedProductRecord],
+        entryAliases: [UUID: UUID],
+        recordingTime: Date,
+        digestKey: Data,
+        facts: inout [WayTaskSessionHistoryArchiveExceptionFact]
+    ) -> WayTaskMigratedSessionRecord {
+        let snapshotID = stableUUID(
+            "session-snapshot",
+            [source.id.uuidString]
+        )
+        let parsedItems = parseTokens(
+            source.itemIDListRawValue,
+            collection: "item_ids",
+            sessionID: source.id,
+            digestKey: digestKey,
+            facts: &facts
+        )
+        let parsedCollected = parseTokens(
+            source.collectedItemIDListRawValue,
+            collection: "collected_item_ids",
+            sessionID: source.id,
+            digestKey: digestKey,
+            facts: &facts
+        )
+
+        let collectedUUIDs = Set(parsedCollected.compactMap(\.normalizedID))
+        let collectedInvalidDigests = Set(
+            parsedCollected.filter { $0.normalizedID == nil }
+                .map(\.groupingDigest)
+        )
+        let itemUUIDs = Set(parsedItems.compactMap(\.normalizedID))
+        var seenCollectedTokens: [String: ParsedToken] = [:]
+        var startedCollectedDuplicateGroups = Set<String>()
+        for token in parsedCollected {
+            let collectedKey = token.normalizedID?.uuidString.lowercased() ??
+                token.groupingDigest.rawValue
+            if let first = seenCollectedTokens[collectedKey] {
+                if startedCollectedDuplicateGroups.insert(collectedKey).inserted {
+                    facts.append(
+                        duplicateTokenFact(
+                            first,
+                            sessionID: source.id
+                        )
+                    )
+                }
+                facts.append(
+                    duplicateTokenFact(
+                        token,
+                        sessionID: source.id
+                    )
+                )
+            } else {
+                seenCollectedTokens[collectedKey] = token
+            }
+            if let tokenID = token.normalizedID,
+               !itemUUIDs.contains(tokenID)
+            {
+                facts.append(
+                    tokenFact(
+                        .foreignCollectedToken,
+                        token: token,
+                        sessionID: source.id
+                    )
+                )
+            }
+        }
+
+        var stops: [WayTaskMigratedSessionStopRecord] = []
+        let hasStoreEvidence = source.selectedStoreID != nil ||
+            source.selectedStoreName != nil ||
+            source.selectedStoreLatitude != nil ||
+            source.selectedStoreLongitude != nil
+        if hasStoreEvidence {
+            let coordinatesAreValid = validCoordinates(
+                latitude: source.selectedStoreLatitude,
+                longitude: source.selectedStoreLongitude
+            )
+            if !coordinatesAreValid {
+                facts.append(
+                    fact(
+                        .invalidSessionStore,
+                        sessionID: source.id,
+                        components: ["store-coordinate", source.id.uuidString],
+                        digestKey: digestKey
+                    )
+                )
+            }
+            stops.append(
+                WayTaskMigratedSessionStopRecord(
+                    id: stableUUID("session-stop", [source.id.uuidString]),
+                    sessionID: source.id,
+                    snapshotID: snapshotID,
+                    sortOrder: 0,
+                    storeReferenceIDRawValue:
+                        source.selectedStoreID?.uuidString.lowercased(),
+                    storeReferenceProvenanceRawValue:
+                        source.selectedStoreID == nil
+                            ? "legacyTransient" : "legacyExact",
+                    displayNameSnapshot: source.selectedStoreName ?? "",
+                    latitudeSnapshot: coordinatesAreValid
+                        ? source.selectedStoreLatitude : nil,
+                    longitudeSnapshot: coordinatesAreValid
+                        ? source.selectedStoreLongitude : nil,
+                    evidenceAt: nil,
+                    isSessionScopedTransient: source.selectedStoreID == nil
+                )
+            )
+        } else {
+            facts.append(
+                fact(
+                    .invalidSessionStore,
+                    sessionID: source.id,
+                    components: ["missing-store", source.id.uuidString],
+                    digestKey: digestKey
+                )
+            )
+        }
+
+        if source.shoppingListID == nil {
+            facts.append(
+                fact(
+                    .missingSessionSourceList,
+                    sessionID: source.id,
+                    components: ["source-list", source.id.uuidString],
+                    digestKey: digestKey
+                )
+            )
+        }
+
+        var lines: [WayTaskMigratedSessionLineRecord] = []
+        var seenLineTokens: [String: ParsedToken] = [:]
+        var startedItemDuplicateGroups = Set<String>()
+        var hasUnresolvedLine = false
+        for token in parsedItems {
+            let lineKey = token.normalizedID?.uuidString.lowercased() ??
+                token.groupingDigest.rawValue
+            if let first = seenLineTokens[lineKey] {
+                if startedItemDuplicateGroups.insert(lineKey).inserted {
+                    facts.append(
+                        duplicateTokenFact(
+                            first,
+                            sessionID: source.id
+                        )
+                    )
+                }
+                facts.append(
+                    duplicateTokenFact(
+                        token,
+                        sessionID: source.id
+                    )
+                )
+                continue
+            }
+            seenLineTokens[lineKey] = token
+            let lineID = stableUUID(
+                "session-line",
+                [source.id.uuidString, lineKey]
+            )
+            let item = token.normalizedID.flatMap { itemByID[$0] }
+            let sourceEntries: [WayTaskLegacyShoppingEntryRecord]
+            if let tokenID = token.normalizedID,
+               let listID = source.shoppingListID
+            {
+                sourceEntries = legacyEntries.filter {
+                    $0.legacyShoppingItemID == tokenID && $0.listID == listID
+                }
+            } else {
+                sourceEntries = []
+            }
+            let canonicalEntryIDs: Set<UUID> = Set(
+                sourceEntries.compactMap { entry -> UUID? in
+                guard let entryID = entry.entryID else { return nil }
+                return entryAliases[entryID] ?? entryID
+                }
+            )
+            let targetEntries = canonicalEntryIDs.compactMap {
+                targetEntryByID[$0]
+            }.filter { $0.shoppingListID == source.shoppingListID }
+            let exactEntry = targetEntries.count == 1
+                ? targetEntries[0] : nil
+            if exactEntry == nil || item == nil {
+                hasUnresolvedLine = true
+                facts.append(
+                    tokenFact(
+                        targetEntries.count > 1
+                            ? .ambiguousSessionItem : .unresolvedSessionLine,
+                        token: token,
+                        sessionID: source.id,
+                        sessionLineID: lineID
+                    )
+                )
+            }
+            let isCollected: Bool
+            if let tokenID = token.normalizedID {
+                isCollected = collectedUUIDs.contains(tokenID)
+            } else {
+                isCollected = collectedInvalidDigests.contains(
+                    token.groupingDigest
+                )
+            }
+            let productID = exactEntry?.productID
+            if let productID,
+               productByID[productID]?.libraryLifecycleRawValue ==
+                    ProductLibraryLifecycle.removed.rawValue,
+               source.isActive || source.finishedAt == nil
+            {
+                facts.append(
+                    fact(
+                        .tombstoneActiveReference,
+                        sessionID: source.id,
+                        sessionLineID: lineID,
+                        components: [
+                            "session-product", source.id.uuidString,
+                            lineID.uuidString, productID.uuidString
+                        ],
+                        digestKey: digestKey
+                    )
+                )
+            }
+            let sortOrder = safeSortOrder(
+                exactEntry?.sortOrder,
+                fallback: token.ordinal - 1
+            )
+            lines.append(
+                WayTaskMigratedSessionLineRecord(
+                    id: lineID,
+                    sessionID: source.id,
+                    snapshotID: snapshotID,
+                    snapshotVersion:
+                        WayTaskSessionHistoryArchiveSemanticPlan
+                            .snapshotVersion,
+                    snapshotProvenanceRawValue: exactEntry == nil
+                        ? "legacyUnresolved" : "legacyExact",
+                    sourceListID: source.shoppingListID,
+                    sourceEntryID: exactEntry?.id,
+                    productID: productID,
+                    globalProductConceptIDRawValue: nil,
+                    stopID: stops.first?.id,
+                    sortOrder: sortOrder,
+                    productNameSnapshot: item?.name ?? "",
+                    productBrandSnapshot: item?.brand,
+                    productCategorySnapshot: item?.category,
+                    quantitySnapshot: validQuantity(
+                        exactEntry?.quantity ?? 1
+                    ),
+                    unitSnapshotRawValue: nil,
+                    noteSnapshot: nil,
+                    executionStateRawValue: isCollected
+                        ? ShoppingSessionExecutionState.collected.rawValue
+                        : ShoppingSessionExecutionState.remaining.rawValue,
+                    executionChangedAt: nil,
+                    finalOutcomeRawValue: nil,
+                    finalOutcomeAt: nil,
+                    finalOutcomeCommandID: nil,
+                    legacyDispositionRawValue:
+                        !source.isActive && source.finishedAt != nil
+                            ? ShoppingSessionLegacyDisposition
+                                .legacyUnknown.rawValue : nil
+                )
+            )
+        }
+        lines.sort { $0.sortOrder == $1.sortOrder
+            ? uuidLess($0.id, $1.id) : $0.sortOrder < $1.sortOrder }
+
+        var lifecycle: String
+        var migrationCondition: String
+        var expiredAt: Date?
+        var expirationReason: String?
+        if source.isActive && source.finishedAt != nil {
+            lifecycle = ShoppingSessionLifecycle.active.rawValue
+            migrationCondition =
+                ShoppingSessionMigrationCondition.legacyUnresolved.rawValue
+            facts.append(
+                fact(
+                    .sessionLifecycleContradiction,
+                    sessionID: source.id,
+                    components: ["active-finished", source.id.uuidString],
+                    digestKey: digestKey
+                )
+            )
+        } else if source.isActive {
+            let inactivityBoundary = source.startedAt.addingTimeInterval(
+                12 * 60 * 60
+            )
+            let maximumBoundary = source.startedAt.addingTimeInterval(
+                72 * 60 * 60
+            )
+            let dueBoundary = min(inactivityBoundary, maximumBoundary)
+            if recordingTime >= dueBoundary {
+                lifecycle = ShoppingSessionLifecycle.expired.rawValue
+                expiredAt = dueBoundary
+                expirationReason = "legacyInactivity"
+            } else {
+                lifecycle = ShoppingSessionLifecycle.active.rawValue
+            }
+            migrationCondition = hasUnresolvedLine ||
+                source.shoppingListID == nil
+                    ? ShoppingSessionMigrationCondition
+                        .legacyUnresolved.rawValue
+                    : ShoppingSessionMigrationCondition.legacyMapped.rawValue
+        } else if source.finishedAt != nil {
+            lifecycle = ShoppingSessionLifecycle.finished.rawValue
+            migrationCondition =
+                ShoppingSessionMigrationCondition.legacyIncomplete.rawValue
+        } else {
+            lifecycle = "legacyInactive"
+            migrationCondition =
+                ShoppingSessionMigrationCondition.legacyUnresolved.rawValue
+            facts.append(
+                fact(
+                    .sessionLifecycleContradiction,
+                    sessionID: source.id,
+                    components: ["inactive-unterminated", source.id.uuidString],
+                    digestKey: digestKey
+                )
+            )
+        }
+
+        let signaturePayload = [
+            source.id.uuidString.lowercased(),
+            source.shoppingListID?.uuidString.lowercased() ?? "missing",
+            parsedItems.map(\.digest.rawValue).joined(separator: ","),
+            parsedCollected.map(\.digest.rawValue).joined(separator: ","),
+            lifecycle,
+            migrationCondition
+        ].joined(separator: "|")
+        return WayTaskMigratedSessionRecord(
+            id: source.id,
+            sourceListID: source.shoppingListID,
+            sourceRevision: nil,
+            sourceRevisionProvenanceRawValue: "legacyUnknown",
+            revision:
+                WayTaskSessionHistoryArchiveSemanticPlan.initialSessionRevision,
+            lifecycleRawValue: lifecycle,
+            migrationConditionRawValue: migrationCondition,
+            snapshotID: snapshotID,
+            snapshotVersion:
+                WayTaskSessionHistoryArchiveSemanticPlan.snapshotVersion,
+            snapshotGeneration:
+                WayTaskSessionHistoryArchiveSemanticPlan.snapshotGeneration,
+            snapshotContentSignature: WayTaskMigrationDigest.hex(
+                hashing: Data(signaturePayload.utf8)
+            ),
+            sourcePlanID: nil,
+            sourcePlanSignature: nil,
+            sourcePlanEvidenceAt: nil,
+            startedAt: source.startedAt,
+            activationStartedAt: source.startedAt,
+            lastActivityAt: source.startedAt,
+            expiredAt: expiredAt,
+            endedAt: source.finishedAt,
+            expirationReasonRawValue: expirationReason,
+            expirationPolicyVersion:
+                WayTaskSessionHistoryArchiveSemanticPlan
+                    .expirationPolicyVersion,
+            lines: lines,
+            stops: stops,
+            exceptions: []
+        )
+    }
+
+    private static func parseTokens(
+        _ rawValue: String,
+        collection: String,
+        sessionID: UUID,
+        digestKey: Data,
+        facts: inout [WayTaskSessionHistoryArchiveExceptionFact]
+    ) -> [ParsedToken] {
+        guard !rawValue.isEmpty else { return [] }
+        let values = rawValue.split(
+            separator: ",",
+            omittingEmptySubsequences: false
+        )
+        return values.enumerated().map { index, value in
+            let raw = String(value)
+            let normalizedID: UUID?
+            if !raw.isEmpty,
+               raw == raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            {
+                normalizedID = UUID(uuidString: raw)
+            } else {
+                normalizedID = nil
+            }
+            let digest = WayTaskMigrationSafeDigest(
+                keyed: Data(
+                    [
+                        sessionID.uuidString.lowercased(), collection,
+                        String(index + 1), raw
+                    ].joined(separator: "|").utf8
+                ),
+                keyBytes: digestKey
+            )
+            let groupingDigest = WayTaskMigrationSafeDigest(
+                keyed: Data(
+                    [sessionID.uuidString.lowercased(), raw]
+                        .joined(separator: "|").utf8
+                ),
+                keyBytes: digestKey
+            )
+            let token = ParsedToken(
+                ordinal: index + 1,
+                byteLength: raw.lengthOfBytes(using: .utf8),
+                collection: collection,
+                normalizedID: normalizedID,
+                digest: digest,
+                groupingDigest: groupingDigest
+            )
+            if normalizedID == nil {
+                facts.append(
+                    tokenFact(
+                        .invalidSessionToken,
+                        token: token,
+                        sessionID: sessionID
+                    )
+                )
+            }
+            return token
+        }
+    }
+
+    private static func projectExceptions(
+        _ facts: [WayTaskSessionHistoryArchiveExceptionFact],
+        recordingTime: Date,
+        digestKey: Data
+    ) -> ExceptionProjection {
+        let grouped = Dictionary(grouping: facts, by: ExceptionGroupKey.init)
+        let groups = grouped.keys.sorted()
+        var bySession: [UUID: [ExceptionGroupKey]] = [:]
+        var global: [ExceptionGroupKey] = []
+        for key in groups {
+            if let sessionID = key.sessionID {
+                bySession[sessionID, default: []].append(key)
+            } else {
+                global.append(key)
+            }
+        }
+        var sessionRecords: [UUID: [WayTaskMigratedSessionExceptionRecord]] = [:]
+        var overflowFacts: [WayTaskSessionHistoryArchiveExceptionFact] = []
+        for sessionID in bySession.keys.sorted(by: uuidLess) {
+            let values = bySession[sessionID]!
+            let retained = values.prefix(
+                WayTaskSessionHistoryArchiveSemanticPlan
+                    .perSessionExceptionCapacity
+            )
+            var records = retained.enumerated().map { index, key in
+                exceptionRecord(
+                    key,
+                    facts: grouped[key]!,
+                    ordinal: index + 1,
+                    recordingTime: recordingTime
+                )
+            }
+            let overflow = values.dropFirst(
+                WayTaskSessionHistoryArchiveSemanticPlan
+                    .perSessionExceptionCapacity
+            ).reduce(0) { $0 + grouped[$1]!.count }
+            if overflow > 0 {
+                let digest = WayTaskMigrationSafeDigest(
+                    keyed: Data(
+                        [
+                            "session-overflow", sessionID.uuidString,
+                            String(overflow)
+                        ].joined(separator: "|").utf8
+                    ),
+                    keyBytes: digestKey
+                )
+                records.append(
+                    WayTaskMigratedSessionExceptionRecord(
+                        id: stableUUID(
+                            "session-exception-overflow",
+                            [sessionID.uuidString, digest.rawValue]
+                        ),
+                        sessionID: sessionID,
+                        sessionLineID: nil,
+                        categoryRawValue:
+                            WayTaskMigrationExceptionCategory
+                                .sessionExceptionOverflow.rawValue,
+                        safeEvidenceDigest: digest.rawValue,
+                        ordinal:
+                            WayTaskSessionHistoryArchiveSemanticPlan
+                                .perSessionExceptionCapacity + 1,
+                        occurrenceCount: overflow,
+                        recordedAt: recordingTime,
+                        sourceCollectionRawValue: nil,
+                        sourceOrdinals: [],
+                        sourceByteLength: nil,
+                        normalizedTokenID: nil
+                    )
+                )
+                for _ in 0..<overflow {
+                    overflowFacts.append(
+                        WayTaskSessionHistoryArchiveExceptionFact(
+                            sessionID: sessionID,
+                            sessionLineID: nil,
+                            category: .sessionExceptionOverflow,
+                            safeEvidenceDigest: digest,
+                            sourceCollectionRawValue: nil,
+                            sourceOrdinal: nil,
+                            sourceByteLength: nil,
+                            normalizedTokenID: nil
+                        )
+                    )
+                }
+            }
+            sessionRecords[sessionID] = records
+        }
+        let globalRecords = global.enumerated().map { index, key in
+            exceptionRecord(
+                key,
+                facts: grouped[key]!,
+                ordinal: index + 1,
+                recordingTime: recordingTime
+            )
+        }
+        return ExceptionProjection(
+            sessionRecords: sessionRecords,
+            globalRecords: globalRecords,
+            overflowFacts: overflowFacts
+        )
+    }
+
+    private static func exceptionRecord(
+        _ key: ExceptionGroupKey,
+        facts: [WayTaskSessionHistoryArchiveExceptionFact],
+        ordinal: Int,
+        recordingTime: Date
+    ) -> WayTaskMigratedSessionExceptionRecord {
+        let ordinals = facts.compactMap(\.sourceOrdinal).sorted()
+        return WayTaskMigratedSessionExceptionRecord(
+            id: stableUUID(
+                "migration-exception",
+                [
+                    key.sessionID?.uuidString ?? "global",
+                    key.category.rawValue,
+                    key.digest.rawValue,
+                    String(ordinal)
+                ]
+            ),
+            sessionID: key.sessionID,
+            sessionLineID: key.sessionLineID,
+            categoryRawValue: key.category.rawValue,
+            safeEvidenceDigest: key.digest.rawValue,
+            ordinal: ordinal,
+            occurrenceCount: facts.count,
+            recordedAt: recordingTime,
+            sourceCollectionRawValue: key.sourceCollectionRawValue,
+            sourceOrdinals: ordinals,
+            sourceByteLength: key.sourceByteLength,
+            normalizedTokenID: key.normalizedTokenID
+        )
+    }
+
+    private static func attaching(
+        _ exceptions: [WayTaskMigratedSessionExceptionRecord],
+        to session: WayTaskMigratedSessionRecord
+    ) -> WayTaskMigratedSessionRecord {
+        WayTaskMigratedSessionRecord(
+            id: session.id,
+            sourceListID: session.sourceListID,
+            sourceRevision: session.sourceRevision,
+            sourceRevisionProvenanceRawValue:
+                session.sourceRevisionProvenanceRawValue,
+            revision: session.revision,
+            lifecycleRawValue: session.lifecycleRawValue,
+            migrationConditionRawValue: session.migrationConditionRawValue,
+            snapshotID: session.snapshotID,
+            snapshotVersion: session.snapshotVersion,
+            snapshotGeneration: session.snapshotGeneration,
+            snapshotContentSignature: session.snapshotContentSignature,
+            sourcePlanID: session.sourcePlanID,
+            sourcePlanSignature: session.sourcePlanSignature,
+            sourcePlanEvidenceAt: session.sourcePlanEvidenceAt,
+            startedAt: session.startedAt,
+            activationStartedAt: session.activationStartedAt,
+            lastActivityAt: session.lastActivityAt,
+            expiredAt: session.expiredAt,
+            endedAt: session.endedAt,
+            expirationReasonRawValue: session.expirationReasonRawValue,
+            expirationPolicyVersion: session.expirationPolicyVersion,
+            lines: session.lines,
+            stops: session.stops,
+            exceptions: exceptions
+        )
+    }
+
+    private static func fact(
+        _ category: WayTaskMigrationExceptionCategory,
+        sessionID: UUID? = nil,
+        sessionLineID: UUID? = nil,
+        components: [String],
+        digestKey: Data
+    ) -> WayTaskSessionHistoryArchiveExceptionFact {
+        WayTaskSessionHistoryArchiveExceptionFact(
+            sessionID: sessionID,
+            sessionLineID: sessionLineID,
+            category: category,
+            safeEvidenceDigest: WayTaskMigrationSafeDigest(
+                keyed: Data(
+                    ([category.rawValue] + components)
+                        .joined(separator: "|").lowercased().utf8
+                ),
+                keyBytes: digestKey
+            ),
+            sourceCollectionRawValue: nil,
+            sourceOrdinal: nil,
+            sourceByteLength: nil,
+            normalizedTokenID: nil
+        )
+    }
+
+    private static func tokenFact(
+        _ category: WayTaskMigrationExceptionCategory,
+        token: ParsedToken,
+        sessionID: UUID,
+        sessionLineID: UUID? = nil
+    ) -> WayTaskSessionHistoryArchiveExceptionFact {
+        WayTaskSessionHistoryArchiveExceptionFact(
+            sessionID: sessionID,
+            sessionLineID: sessionLineID,
+            category: category,
+            safeEvidenceDigest: token.digest,
+            sourceCollectionRawValue: token.collection,
+            sourceOrdinal: token.ordinal,
+            sourceByteLength: token.byteLength,
+            normalizedTokenID: token.normalizedID
+        )
+    }
+
+    private static func duplicateTokenFact(
+        _ token: ParsedToken,
+        sessionID: UUID
+    ) -> WayTaskSessionHistoryArchiveExceptionFact {
+        WayTaskSessionHistoryArchiveExceptionFact(
+            sessionID: sessionID,
+            sessionLineID: nil,
+            category: .duplicateSessionToken,
+            safeEvidenceDigest: token.groupingDigest,
+            sourceCollectionRawValue: token.collection,
+            sourceOrdinal: token.ordinal,
+            sourceByteLength: token.byteLength,
+            normalizedTokenID: token.normalizedID
+        )
+    }
+
+    private static func stableUUID(
+        _ namespace: String,
+        _ components: [String]
+    ) -> UUID {
+        var bytes = Array(
+            SHA256.hash(
+                data: Data(
+                    ([namespace] + components)
+                        .joined(separator: "|").lowercased().utf8
+                )
+            ).prefix(16)
+        )
+        bytes[6] = (bytes[6] & 0x0f) | 0x50
+        bytes[8] = (bytes[8] & 0x3f) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
+
+    nonisolated private static func uuidLess(_ lhs: UUID, _ rhs: UUID) -> Bool {
+        lhs.uuidString.lowercased() < rhs.uuidString.lowercased()
+    }
+
+    nonisolated private static func listLess(
+        _ lhs: WayTaskLegacyShoppingListRecord,
+        _ rhs: WayTaskLegacyShoppingListRecord
+    ) -> Bool {
+        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        return uuidLess(lhs.sourceRecordID, rhs.sourceRecordID)
+    }
+
+    nonisolated private static func entryLess(
+        _ lhs: WayTaskLegacyShoppingEntryRecord,
+        _ rhs: WayTaskLegacyShoppingEntryRecord
+    ) -> Bool {
+        if lhs.sourceRecordID != rhs.sourceRecordID {
+            return uuidLess(lhs.sourceRecordID, rhs.sourceRecordID)
+        }
+        return (lhs.entryID?.uuidString ?? "") <
+            (rhs.entryID?.uuidString ?? "")
+    }
+
+    nonisolated private static func migratedEntryLess(
+        _ lhs: WayTaskMigratedShoppingEntryRecord,
+        _ rhs: WayTaskMigratedShoppingEntryRecord
+    ) -> Bool {
+        if lhs.shoppingListID != rhs.shoppingListID {
+            return uuidLess(lhs.shoppingListID, rhs.shoppingListID)
+        }
+        if lhs.productID != rhs.productID {
+            return uuidLess(lhs.productID, rhs.productID)
+        }
+        return uuidLess(lhs.id, rhs.id)
+    }
+
+    nonisolated private static func factLess(
+        _ lhs: WayTaskSessionHistoryArchiveExceptionFact,
+        _ rhs: WayTaskSessionHistoryArchiveExceptionFact
+    ) -> Bool {
+        if lhs.sessionID != rhs.sessionID {
+            return (lhs.sessionID?.uuidString.lowercased() ?? "") <
+                (rhs.sessionID?.uuidString.lowercased() ?? "")
+        }
+        if lhs.category.rawValue != rhs.category.rawValue {
+            return lhs.category.rawValue < rhs.category.rawValue
+        }
+        if lhs.sourceCollectionRawValue != rhs.sourceCollectionRawValue {
+            return (lhs.sourceCollectionRawValue ?? "") <
+                (rhs.sourceCollectionRawValue ?? "")
+        }
+        if lhs.sourceOrdinal != rhs.sourceOrdinal {
+            return (lhs.sourceOrdinal ?? 0) < (rhs.sourceOrdinal ?? 0)
+        }
+        return lhs.safeEvidenceDigest.rawValue <
+            rhs.safeEvidenceDigest.rawValue
+    }
+
+    private static func validQuantity(_ value: Double) -> Double {
+        value.isFinite && value > 0 ? value : 1
+    }
+
+    private static func safeSortOrder(
+        _ value: Double?,
+        fallback: Int
+    ) -> Int {
+        guard let value, value.isFinite,
+              value >= Double(Int.min), value <= Double(Int.max)
+        else { return fallback }
+        return Int(value.rounded(.towardZero))
+    }
+
+    private static func validCoordinates(
+        latitude: Double?,
+        longitude: Double?
+    ) -> Bool {
+        guard let latitude, let longitude,
+              latitude.isFinite, longitude.isFinite
+        else { return false }
+        return (-90...90).contains(latitude) &&
+            (-180...180).contains(longitude)
+    }
+
+    private struct ParsedToken {
+        let ordinal: Int
+        let byteLength: Int
+        let collection: String
+        let normalizedID: UUID?
+        let digest: WayTaskMigrationSafeDigest
+        let groupingDigest: WayTaskMigrationSafeDigest
+    }
+
+    private struct ExceptionGroupKey: Hashable, Comparable {
+        let sessionID: UUID?
+        let sessionLineID: UUID?
+        let category: WayTaskMigrationExceptionCategory
+        let digest: WayTaskMigrationSafeDigest
+        let sourceCollectionRawValue: String?
+        let sourceByteLength: Int?
+        let normalizedTokenID: UUID?
+
+        nonisolated init(
+            _ fact: WayTaskSessionHistoryArchiveExceptionFact
+        ) {
+            sessionID = fact.sessionID
+            sessionLineID = fact.sessionLineID
+            category = fact.category
+            digest = fact.safeEvidenceDigest
+            sourceCollectionRawValue = fact.sourceCollectionRawValue
+            sourceByteLength = fact.sourceByteLength
+            normalizedTokenID = fact.normalizedTokenID
+        }
+
+        static func < (lhs: Self, rhs: Self) -> Bool {
+            let left = [
+                lhs.sessionID?.uuidString.lowercased() ?? "",
+                lhs.sessionLineID?.uuidString.lowercased() ?? "",
+                lhs.category.rawValue,
+                lhs.sourceCollectionRawValue ?? "",
+                lhs.normalizedTokenID?.uuidString.lowercased() ?? "",
+                String(lhs.sourceByteLength ?? -1),
+                lhs.digest.rawValue
+            ].joined(separator: "|")
+            let right = [
+                rhs.sessionID?.uuidString.lowercased() ?? "",
+                rhs.sessionLineID?.uuidString.lowercased() ?? "",
+                rhs.category.rawValue,
+                rhs.sourceCollectionRawValue ?? "",
+                rhs.normalizedTokenID?.uuidString.lowercased() ?? "",
+                String(rhs.sourceByteLength ?? -1),
+                rhs.digest.rawValue
+            ].joined(separator: "|")
+            return left < right
+        }
+    }
+
+    private struct ExceptionProjection {
+        let sessionRecords:
+            [UUID: [WayTaskMigratedSessionExceptionRecord]]
+        let globalRecords: [WayTaskMigratedSessionExceptionRecord]
+        let overflowFacts: [WayTaskSessionHistoryArchiveExceptionFact]
+    }
+}
+
 // MARK: - Injected capabilities
 
 @MainActor
@@ -1415,6 +2954,38 @@ struct WayTaskProductListSemanticMigrationDependencies {
     }
 }
 
+@MainActor
+struct WayTaskSessionHistoryArchiveMigrationDependencies {
+    var readPhysicalCandidate:
+        (URL) throws -> WayTaskSessionHistoryArchiveSourceSnapshot
+    var extendTargetStore:
+        (WayTaskSessionHistoryArchiveSemanticSnapshot, URL) throws -> Void
+    var reopenTargetStore:
+        (URL) throws -> WayTaskSessionHistoryArchiveSemanticSnapshot
+    var recordingTime: (WayTaskMigrationAttemptIdentity) -> Date
+
+    static var live: Self {
+        Self(
+            readPhysicalCandidate:
+                WayTaskSessionHistoryArchiveStoreBoundary.readPhysicalCandidate,
+            extendTargetStore:
+                WayTaskSessionHistoryArchiveStoreBoundary.extendTargetStore,
+            reopenTargetStore:
+                WayTaskSessionHistoryArchiveStoreBoundary.reopenTargetStore,
+            recordingTime: { attempt in
+                let value = UInt64(
+                    attempt.rawValue.suffix(12),
+                    radix: 16
+                ) ?? 0
+                return Date(
+                    timeIntervalSinceReferenceDate:
+                        TimeInterval(value % 1_577_836_800)
+                )
+            }
+        )
+    }
+}
+
 // MARK: - Semantic migration owner
 
 @MainActor
@@ -1428,20 +2999,28 @@ struct WayTaskProductStateMigration {
     static let productListAliasFilename = "product-list-aliases.json"
     static let productListSummaryFilename =
         "product-list-semantic-summary.json"
+    static let sessionHistoryArchiveSummaryFilename =
+        "session-history-archive-location-summary.json"
+    static let sessionExceptionEvidenceFilename =
+        "session-migration-exception-evidence.json"
     static let attemptDirectoryPrefix = "wt033a-tc13-"
 
     private let dependencies: WayTaskProductStateMigrationDependencies
     private let semanticDependencies:
         WayTaskProductListSemanticMigrationDependencies
+    private let sessionHistoryDependencies:
+        WayTaskSessionHistoryArchiveMigrationDependencies
 
     init() {
         dependencies = .live
         semanticDependencies = .live
+        sessionHistoryDependencies = .live
     }
 
     init(dependencies: WayTaskProductStateMigrationDependencies) {
         self.dependencies = dependencies
         semanticDependencies = .live
+        sessionHistoryDependencies = .live
     }
 
     init(
@@ -1451,6 +3030,19 @@ struct WayTaskProductStateMigration {
     ) {
         self.dependencies = dependencies
         self.semanticDependencies = semanticDependencies
+        sessionHistoryDependencies = .live
+    }
+
+    init(
+        dependencies: WayTaskProductStateMigrationDependencies,
+        semanticDependencies:
+            WayTaskProductListSemanticMigrationDependencies,
+        sessionHistoryDependencies:
+            WayTaskSessionHistoryArchiveMigrationDependencies
+    ) {
+        self.dependencies = dependencies
+        self.semanticDependencies = semanticDependencies
+        self.sessionHistoryDependencies = sessionHistoryDependencies
     }
 
     func prepareCandidate(
@@ -1950,7 +3542,10 @@ struct WayTaskProductStateMigration {
         exceptionSummary: WayTaskMigrationExceptionSummary,
         semanticStageIdentity: String? = nil,
         semanticTargetFingerprint: String? = nil,
-        semanticDigest: String? = nil
+        semanticDigest: String? = nil,
+        sessionHistoryArchiveStageIdentity: String? = nil,
+        completeSemanticTargetFingerprint: String? = nil,
+        completeSemanticDigest: String? = nil
     ) throws {
         let manifest = CandidateManifest(
             formatVersion: 1,
@@ -1970,7 +3565,12 @@ struct WayTaskProductStateMigration {
             exceptionSummary: exceptionSummary,
             semanticStageIdentity: semanticStageIdentity,
             semanticTargetFingerprint: semanticTargetFingerprint,
-            semanticDigest: semanticDigest
+            semanticDigest: semanticDigest,
+            sessionHistoryArchiveStageIdentity:
+                sessionHistoryArchiveStageIdentity,
+            completeSemanticTargetFingerprint:
+                completeSemanticTargetFingerprint,
+            completeSemanticDigest: completeSemanticDigest
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
@@ -2191,6 +3791,9 @@ struct WayTaskProductStateMigration {
         let semanticStageIdentity: String?
         let semanticTargetFingerprint: String?
         let semanticDigest: String?
+        let sessionHistoryArchiveStageIdentity: String?
+        let completeSemanticTargetFingerprint: String?
+        let completeSemanticDigest: String?
     }
 
     private struct ClassifiedFailure: Error {
@@ -2554,6 +4157,389 @@ extension WayTaskProductStateMigration {
         let deferredArchiveListCount: Int
         let deferredArchiveEntryCount: Int
         let compatibilityEvidenceCount: Int
+        let productListSemanticMigrationComplete: Bool
+        let sessionHistoryLocationSemanticMigrationComplete: Bool
+        let promotionAuthorized: Bool
+        let startupActivationAuthorized: Bool
+    }
+}
+
+// MARK: - T-08 Session/history/archive/location candidate stage
+
+extension WayTaskProductStateMigration {
+    func migrateSessionHistoryArchiveSemantics(
+        _ receipt: WayTaskProductListSemanticReceipt
+    ) -> WayTaskSessionHistoryArchiveMigrationResult {
+        let foundation = receipt.foundationReceipt
+        let sourceURL = foundation.sourceInventory.components.first {
+            $0.role == .database
+        }?.url
+        var ledger: WayTaskMigrationExceptionLedger
+        var ledgerReadFailed = false
+        do {
+            ledger = try WayTaskMigrationExceptionLedger(
+                encodedData: dependencies.readOwnedArtifact(
+                    foundation.candidateAttemptDirectoryURL
+                        .appendingPathComponent(Self.exceptionLedgerFilename)
+                )
+            )
+        } catch {
+            ledgerReadFailed = true
+            ledger = WayTaskMigrationExceptionLedger(
+                capacity: receipt.exceptionSummary.capacity
+            )
+        }
+
+        func fail(
+            _ classification: WayTaskMigrationFailureClassification
+        ) -> WayTaskSessionHistoryArchiveMigrationResult {
+            guard let sourceURL else {
+                return .failed(
+                    WayTaskMigrationFailure(
+                        classification: classification,
+                        triggeringClassification: classification,
+                        precedingClassification: nil,
+                        rollbackClassification: .notRequired,
+                        stageIdentity: foundation.stageIdentity,
+                        attemptIdentity: foundation.attemptIdentity,
+                        sourceSchemaIdentity:
+                            foundation.sourceSchemaIdentity,
+                        sourceFingerprint: foundation.sourceFingerprint,
+                        finalSourceFingerprint: nil,
+                        sourceBytesVerifiedUnchanged: false,
+                        candidateArtifactsRemain: true,
+                        exceptionSummary: ledger.summary
+                    )
+                )
+            }
+            return .failed(
+                makeFailure(
+                    triggering: classification,
+                    sourceStoreURL: sourceURL,
+                    candidateRootURL: foundation.candidateRootURL,
+                    sourceInventory: foundation.sourceInventory,
+                    sourceSchema: foundation.sourceSchemaIdentity,
+                    stageIdentity: foundation.stageIdentity,
+                    attemptIdentity: foundation.attemptIdentity,
+                    attemptDirectoryURL:
+                        foundation.candidateAttemptDirectoryURL,
+                    attemptCreatedByThisInvocation: false,
+                    exceptionSummary: ledger.summary
+                )
+            )
+        }
+
+        guard receipt.status == .productListSemanticMigrationComplete,
+              receipt.completion == .productListSemanticMigrationComplete,
+              receipt.productListSemanticConversionCompleted,
+              !receipt.sessionHistoryLocationSemanticConversionCompleted,
+              !receipt.promotionAuthorized,
+              !receipt.startupActivationAuthorized,
+              sourceURL != nil,
+              (try? ownsAttemptDirectory(
+                  foundation.candidateAttemptDirectoryURL,
+                  candidateRootURL: foundation.candidateRootURL,
+                  stageIdentity: foundation.stageIdentity,
+                  attemptIdentity: foundation.attemptIdentity
+              )) == true
+        else {
+            return fail(.candidateOwnershipConflict)
+        }
+        guard !ledgerReadFailed,
+              ledger.summary == receipt.exceptionSummary
+        else {
+            return fail(.exceptionLedgerWriteFailed)
+        }
+
+        do {
+            try verifySource(sourceURL!, expected: foundation.sourceFingerprint)
+        } catch let error as ClassifiedFailure {
+            return fail(error.classification)
+        } catch {
+            return fail(.sourceRevalidationFailed)
+        }
+
+        do {
+            let physicalInventory = try dependencies.inspectStore(
+                foundation.candidateStoreURL
+            )
+            guard physicalInventory.fingerprint ==
+                    foundation.candidateFingerprint
+            else { return fail(.candidateFingerprintMismatch) }
+            let semanticInventory = try dependencies.inspectStore(
+                receipt.targetStoreURL
+            )
+            guard semanticInventory.fingerprint == receipt.targetFingerprint
+            else { return fail(.semanticFingerprintMismatch) }
+        } catch {
+            return fail(.sessionHistoryCandidateReadFailed)
+        }
+
+        let sourceSnapshot: WayTaskSessionHistoryArchiveSourceSnapshot
+        do {
+            sourceSnapshot = try sessionHistoryDependencies
+                .readPhysicalCandidate(foundation.candidateStoreURL)
+        } catch {
+            return fail(.sessionHistoryCandidateReadFailed)
+        }
+
+        let recordingTime = sessionHistoryDependencies.recordingTime(
+            foundation.attemptIdentity
+        )
+        let plan: WayTaskSessionHistoryArchiveSemanticPlan
+        do {
+            plan = try WayTaskSessionHistoryArchiveSemanticNormalizer.normalize(
+                sourceSnapshot,
+                productListTarget: receipt.targetValidation,
+                aliases: receipt.aliases,
+                recordingTime: recordingTime,
+                digestKey: Data(foundation.attemptIdentity.rawValue.utf8)
+            )
+        } catch {
+            return fail(.sessionHistoryNormalizationFailed)
+        }
+
+        for fact in plan.exceptionFacts {
+            ledger.record(
+                category: fact.category,
+                safeEvidenceDigest: fact.safeEvidenceDigest
+            )
+        }
+        do {
+            try dependencies.writeOwnedArtifact(
+                ledger.encodedData(),
+                foundation.candidateAttemptDirectoryURL
+                    .appendingPathComponent(Self.exceptionLedgerFilename)
+            )
+        } catch {
+            return fail(.exceptionLedgerWriteFailed)
+        }
+        guard plan.blockingAmbiguityCount == 0 else {
+            return fail(.sessionHistoryNormalizationFailed)
+        }
+
+        do {
+            let records = plan.target.sessions.flatMap { $0.exceptions } +
+                plan.target.globalExceptions
+            let artifact = WayTaskSessionExceptionEvidenceArtifact(
+                formatVersion: 1,
+                records: records.sorted { $0.id.uuidString < $1.id.uuidString }
+            )
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            try dependencies.writeOwnedArtifact(
+                encoder.encode(artifact),
+                foundation.candidateAttemptDirectoryURL
+                    .appendingPathComponent(
+                        Self.sessionExceptionEvidenceFilename
+                    )
+            )
+        } catch {
+            return fail(.exceptionLedgerWriteFailed)
+        }
+
+        do {
+            try sessionHistoryDependencies.extendTargetStore(
+                plan.target,
+                receipt.targetStoreURL
+            )
+        } catch {
+            return fail(.sessionHistoryTargetWriteFailed)
+        }
+
+        let reopened: WayTaskSessionHistoryArchiveSemanticSnapshot
+        do {
+            reopened = try sessionHistoryDependencies.reopenTargetStore(
+                receipt.targetStoreURL
+            )
+        } catch {
+            return fail(.sessionHistoryTargetReopenFailed)
+        }
+        let reopenedDigest: WayTaskMigrationFingerprint
+        do {
+            reopenedDigest = try
+                WayTaskSessionHistoryArchiveSemanticNormalizer.semanticDigest(
+                    reopened
+                )
+        } catch {
+            return fail(.sessionHistoryValidationFailed)
+        }
+        guard reopened == plan.target,
+              reopenedDigest == plan.semanticDigest,
+              Set(reopened.sessions.map(\.id)).count ==
+                reopened.sessions.count,
+              Set(reopened.sessions.flatMap { $0.lines }.map(\.id)).count ==
+                reopened.sessions.flatMap({ $0.lines }).count,
+              Set(reopened.sessions.flatMap { $0.stops }.map(\.id)).count ==
+                reopened.sessions.flatMap({ $0.stops }).count,
+              reopened.sessions.allSatisfy({ session in
+                  session.revision ==
+                    WayTaskSessionHistoryArchiveSemanticPlan
+                        .initialSessionRevision &&
+                  session.lines.allSatisfy { $0.sessionID == session.id } &&
+                  session.stops.allSatisfy { $0.sessionID == session.id } &&
+                  session.exceptions.allSatisfy {
+                      $0.sessionID == session.id
+                  }
+              }),
+              Set(reopened.historyAggregates.map(\.id)).count ==
+                reopened.historyAggregates.count,
+              reopened.historyEvents.isEmpty,
+              Set(reopened.archiveLists.map(\.id)).count ==
+                reopened.archiveLists.count,
+              Set(reopened.archiveEntries.map(\.id)).count ==
+                reopened.archiveEntries.count,
+              reopened.archiveEntries.allSatisfy({ entry in
+                  reopened.archiveLists.contains {
+                      $0.id == entry.shoppingListID
+                  }
+              }),
+              Set(reopened.compatibilityItems.map(\.id)).count ==
+                reopened.compatibilityItems.count,
+              Set(reopened.savedLocations.map(\.id)).count ==
+                reopened.savedLocations.count
+        else {
+            return fail(.sessionHistoryValidationFailed)
+        }
+
+        let secondInventory: WayTaskMigrationStoreInventory
+        let stableInventory: WayTaskMigrationStoreInventory
+        do {
+            secondInventory = try dependencies.inspectStore(
+                receipt.targetStoreURL
+            )
+            stableInventory = try dependencies.inspectStore(
+                receipt.targetStoreURL
+            )
+        } catch {
+            return fail(.sessionHistoryTargetReopenFailed)
+        }
+        guard secondInventory.fingerprint == stableInventory.fingerprint else {
+            return fail(.sessionHistoryFingerprintMismatch)
+        }
+
+        let stage = WayTaskSessionHistoryArchiveStageIdentity(
+            productListReceipt: receipt
+        )
+        do {
+            try writeSessionHistoryArchiveSummary(
+                plan: plan,
+                ledger: ledger,
+                stageIdentity: stage,
+                attemptIdentity: foundation.attemptIdentity,
+                targetFingerprint: stableInventory.fingerprint,
+                at: foundation.candidateAttemptDirectoryURL
+                    .appendingPathComponent(
+                        Self.sessionHistoryArchiveSummaryFilename
+                    )
+            )
+            try writeManifest(
+                at: foundation.candidateAttemptDirectoryURL,
+                stageIdentity: foundation.stageIdentity,
+                attemptIdentity: foundation.attemptIdentity,
+                sourceFingerprint: foundation.sourceFingerprint,
+                candidateFingerprint: foundation.candidateFingerprint,
+                status:
+                    .sessionHistoryArchiveLocationSemanticMigrationComplete,
+                completion:
+                    .sessionHistoryArchiveLocationSemanticMigrationComplete,
+                failure: nil,
+                exceptionSummary: ledger.summary,
+                semanticStageIdentity: receipt.semanticStageIdentity.rawValue,
+                semanticTargetFingerprint: receipt.targetFingerprint.rawValue,
+                semanticDigest: receipt.semanticDigest.rawValue,
+                sessionHistoryArchiveStageIdentity: stage.rawValue,
+                completeSemanticTargetFingerprint:
+                    stableInventory.fingerprint.rawValue,
+                completeSemanticDigest: plan.semanticDigest.rawValue
+            )
+            try verifySource(sourceURL!, expected: foundation.sourceFingerprint)
+        } catch let error as ClassifiedFailure {
+            return fail(error.classification)
+        } catch {
+            return fail(.sessionHistoryValidationFailed)
+        }
+
+        let ownedArtifactNames: [String]
+        do {
+            ownedArtifactNames = try dependencies.enumerateOwnedArtifacts(
+                foundation.candidateAttemptDirectoryURL
+            )
+        } catch {
+            return fail(.sessionHistoryValidationFailed)
+        }
+        return .complete(
+            WayTaskSessionHistoryArchiveMigrationReceipt(
+                productListReceipt: receipt,
+                semanticStageIdentity: stage,
+                targetStoreURL: receipt.targetStoreURL,
+                targetFingerprint: stableInventory.fingerprint,
+                semanticDigest: plan.semanticDigest,
+                targetValidation: reopened,
+                exceptionSummary: ledger.summary,
+                ownedArtifactNames: ownedArtifactNames,
+                status:
+                    .sessionHistoryArchiveLocationSemanticMigrationComplete,
+                completion:
+                    .sessionHistoryArchiveLocationSemanticMigrationComplete
+            )
+        )
+    }
+
+    private func writeSessionHistoryArchiveSummary(
+        plan: WayTaskSessionHistoryArchiveSemanticPlan,
+        ledger: WayTaskMigrationExceptionLedger,
+        stageIdentity: WayTaskSessionHistoryArchiveStageIdentity,
+        attemptIdentity: WayTaskMigrationAttemptIdentity,
+        targetFingerprint: WayTaskMigrationFingerprint,
+        at url: URL
+    ) throws {
+        let artifact = SessionHistoryArchiveSummaryArtifact(
+            formatVersion: 1,
+            semanticStageIdentity: stageIdentity.rawValue,
+            attemptIdentity: attemptIdentity.rawValue,
+            semanticDigest: plan.semanticDigest.rawValue,
+            targetFingerprint: targetFingerprint.rawValue,
+            sessionCount: plan.target.sessions.count,
+            sessionLineCount: plan.target.sessions.flatMap { $0.lines }.count,
+            sessionStopCount: plan.target.sessions.flatMap { $0.stops }.count,
+            legacyHistoryAggregateCount:
+                plan.target.historyAggregates.count,
+            targetHistoryEventCount: plan.target.historyEvents.count,
+            archiveListCount: plan.target.archiveLists.count,
+            archiveEntryCount: plan.target.archiveEntries.count,
+            savedLocationCount: plan.target.savedLocations.count,
+            compatibilityEvidenceCount:
+                plan.target.compatibilityItems.count,
+            exceptionCount: ledger.summary.totalOccurrenceCount,
+            exceptionOverflowCount: ledger.summary.overflowOccurrenceCount,
+            productListSemanticMigrationComplete: true,
+            sessionHistoryLocationSemanticMigrationComplete: true,
+            promotionAuthorized: false,
+            startupActivationAuthorized: false
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try dependencies.writeOwnedArtifact(try encoder.encode(artifact), url)
+    }
+
+    private struct SessionHistoryArchiveSummaryArtifact: Codable {
+        let formatVersion: Int
+        let semanticStageIdentity: String
+        let attemptIdentity: String
+        let semanticDigest: String
+        let targetFingerprint: String
+        let sessionCount: Int
+        let sessionLineCount: Int
+        let sessionStopCount: Int
+        let legacyHistoryAggregateCount: Int
+        let targetHistoryEventCount: Int
+        let archiveListCount: Int
+        let archiveEntryCount: Int
+        let savedLocationCount: Int
+        let compatibilityEvidenceCount: Int
+        let exceptionCount: Int
+        let exceptionOverflowCount: Int
         let productListSemanticMigrationComplete: Bool
         let sessionHistoryLocationSemanticMigrationComplete: Bool
         let promotionAuthorized: Bool
@@ -3124,10 +5110,22 @@ private enum WayTaskProductListSemanticStoreBoundary {
                     updatedAt: list.updatedAt
                 )
             }
+            let archiveKinds = Set([
+                ShoppingListKind.completed.rawValue,
+                ShoppingListKind.recent.rawValue
+            ])
+            let archiveListIDs = Set(lists.filter {
+                guard let purpose = $0.purposeRawValue else { return false }
+                return archiveKinds.contains(purpose)
+            }.map(\.id))
             var entries = try context.fetch(
                 FetchDescriptor<WayTaskSchemaV4.ShoppingListEntry>()
             ).map { entry in
-                guard entry.product?.id == entry.productID else {
+                let relationshipID = entry.product?.id
+                guard archiveListIDs.contains(entry.shoppingListID)
+                    ? relationshipID == nil || relationshipID == entry.productID
+                    : relationshipID == entry.productID
+                else {
                     throw StoreError.invalidRelationship
                 }
                 return WayTaskMigratedShoppingEntryRecord(
@@ -3171,6 +5169,681 @@ private enum WayTaskProductListSemanticStoreBoundary {
 
     private enum StoreError: Error {
         case invalidRelationship
+    }
+}
+
+@MainActor
+private enum WayTaskSessionHistoryArchiveStoreBoundary {
+    static func readPhysicalCandidate(
+        storeURL: URL
+    ) throws -> WayTaskSessionHistoryArchiveSourceSnapshot {
+        let productList = try WayTaskProductListSemanticStoreBoundary
+            .readPhysicalCandidate(storeURL: storeURL)
+        return try autoreleasepool {
+            let schema = Schema(versionedSchema: WayTaskSchemaV3.self)
+            let configuration = ModelConfiguration(
+                "WT033A-T08-Physical-Candidate-Read",
+                schema: schema,
+                url: storeURL,
+                allowsSave: false,
+                cloudKitDatabase: .none
+            )
+            let container = try ModelContainer(
+                for: schema,
+                migrationPlan:
+                    WayTaskProtectedCandidatePhysicalMigrationPlan.self,
+                configurations: [configuration]
+            )
+            let context = ModelContext(container)
+            context.autosaveEnabled = false
+            let sessions = try context.fetch(
+                FetchDescriptor<ShoppingSession>()
+            ).map { session in
+                WayTaskLegacySessionRecord(
+                    id: session.id,
+                    startedAt: session.startedAt,
+                    finishedAt: session.finishedAt,
+                    isActive: session.isActive,
+                    itemIDListRawValue: session.itemIDListRawValue,
+                    collectedItemIDListRawValue:
+                        session.collectedItemIDListRawValue,
+                    shoppingListID: session.shoppingListID,
+                    selectedStoreID: session.selectedStoreID,
+                    selectedStoreName: session.selectedStoreName,
+                    selectedStoreLatitude:
+                        session.selectedStoreLatitude,
+                    selectedStoreLongitude:
+                        session.selectedStoreLongitude
+                )
+            }
+            let histories = try context.fetch(
+                FetchDescriptor<ProductHistory>()
+            ).map { history in
+                WayTaskLegacyHistoryAggregateRecord(
+                    id: history.id,
+                    productKey: history.productKey,
+                    productName: history.productName,
+                    barcode: history.barcode,
+                    firstAddedDate: history.firstAddedDate,
+                    lastAddedDate: history.lastAddedDate,
+                    addCount: history.addCount,
+                    lastSourceRawValue: history.lastSourceRawValue,
+                    averageInterval: history.averageInterval,
+                    lastCompletedDate: history.lastCompletedDate
+                )
+            }
+            let items = try context.fetch(
+                FetchDescriptor<ShoppingItem>()
+            ).map { item in
+                WayTaskLegacyCompatibilityEvidenceRecord(
+                    id: item.id,
+                    name: item.name,
+                    isCompleted: item.isCompleted,
+                    imageData: item.imageData,
+                    brand: item.brand,
+                    category: item.category,
+                    barcode: item.barcode,
+                    imageURLString: item.imageURLString,
+                    dateAdded: item.dateAdded,
+                    sourceRawValue: item.sourceRawValue,
+                    productType: item.productType,
+                    flavor: item.flavor,
+                    packageSize: item.packageSize,
+                    packageType: item.packageType,
+                    visibleText: item.visibleText,
+                    searchKeywordsRawValue: item.searchKeywordsRawValue
+                )
+            }
+            let locations = try context.fetch(
+                FetchDescriptor<GeoLocation>()
+            ).map { location in
+                WayTaskLegacySavedLocationRecord(
+                    id: location.id,
+                    title: location.title,
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    radius: location.radius,
+                    storeCategoryRawValue:
+                        location.storeCategoryRawValue,
+                    addressText: location.addressText,
+                    notes: location.notes,
+                    sourceTypeRawValue: location.sourceTypeRawValue,
+                    shoppingItemIDs: location.shoppingItems.map(\.id)
+                )
+            }
+            return WayTaskSessionHistoryArchiveSourceSnapshot(
+                productList: productList,
+                sessions: sessions,
+                historyAggregates: histories,
+                compatibilityItems: items,
+                savedLocations: locations
+            )
+        }
+    }
+
+    static func extendTargetStore(
+        snapshot: WayTaskSessionHistoryArchiveSemanticSnapshot,
+        storeURL: URL
+    ) throws {
+        try autoreleasepool {
+            let schema = Schema(versionedSchema: WayTaskSchemaV4.self)
+            let configuration = ModelConfiguration(
+                "WT033A-T08-Inactive-V4-Target",
+                schema: schema,
+                url: storeURL,
+                allowsSave: true,
+                cloudKitDatabase: .none
+            )
+            let container = try ModelContainer(
+                for: schema,
+                configurations: [configuration]
+            )
+            let context = ModelContext(container)
+            context.autosaveEnabled = false
+            guard try context.fetchCount(
+                FetchDescriptor<WayTaskSchemaV4.ShoppingSession>()
+            ) == 0,
+            try context.fetchCount(FetchDescriptor<ProductHistory>()) == 0,
+            try context.fetchCount(FetchDescriptor<ShoppingItem>()) == 0,
+            try context.fetchCount(FetchDescriptor<GeoLocation>()) == 0,
+            try context.fetchCount(
+                FetchDescriptor<WayTaskSchemaV4.ProductHistoryEvent>()
+            ) == 0,
+            try context.fetchCount(
+                FetchDescriptor<WayTaskSchemaV4.ProductStateMigrationException>()
+            ) == 0
+            else { throw StoreError.targetAlreadyContainsT08Data }
+
+            let products = try context.fetch(
+                FetchDescriptor<WayTaskSchemaV4.Product>()
+            )
+            let productsByID = Dictionary(
+                uniqueKeysWithValues: products.map { ($0.id, $0) }
+            )
+            let currentLists = try context.fetch(
+                FetchDescriptor<WayTaskSchemaV4.ShoppingList>()
+            )
+            var listsByID = Dictionary(
+                uniqueKeysWithValues: currentLists.map { ($0.id, $0) }
+            )
+            let currentEntries = try context.fetch(
+                FetchDescriptor<WayTaskSchemaV4.ShoppingListEntry>()
+            )
+            var entriesByID = Dictionary(
+                uniqueKeysWithValues: currentEntries.map { ($0.id, $0) }
+            )
+
+            var compatibilityItemsByID: [UUID: ShoppingItem] = [:]
+            for record in snapshot.compatibilityItems {
+                let item = ShoppingItem(
+                    id: record.id,
+                    name: record.name,
+                    isCompleted: record.isCompleted,
+                    imageData: record.imageData,
+                    brand: record.brand,
+                    category: record.category,
+                    barcode: record.barcode,
+                    imageURL: record.imageURLString.flatMap(URL.init(string:)),
+                    dateAdded: record.dateAdded,
+                    source: ProductSource(rawValue: record.sourceRawValue) ??
+                        .manual,
+                    productType: record.productType,
+                    flavor: record.flavor,
+                    packageSize: record.packageSize,
+                    packageType: record.packageType,
+                    visibleText: record.visibleText
+                )
+                item.imageURLString = record.imageURLString
+                item.sourceRawValue = record.sourceRawValue
+                item.searchKeywordsRawValue = record.searchKeywordsRawValue
+                context.insert(item)
+                compatibilityItemsByID[record.id] = item
+            }
+
+            for record in snapshot.savedLocations {
+                let location = GeoLocation(
+                    id: record.id,
+                    title: record.title,
+                    latitude: record.latitude,
+                    longitude: record.longitude,
+                    radius: record.radius,
+                    storeCategory: record.storeCategoryRawValue.flatMap(
+                        ShoppingStoreCategory.init(rawValue:)
+                    ),
+                    addressText: record.addressText,
+                    notes: record.notes,
+                    sourceType: record.sourceTypeRawValue.flatMap(
+                        DataSourceType.init(rawValue:)
+                    ) ?? .userGenerated,
+                    shoppingItems: record.shoppingItemIDs.compactMap {
+                        compatibilityItemsByID[$0]
+                    }
+                )
+                location.storeCategoryRawValue = record.storeCategoryRawValue
+                location.sourceTypeRawValue = record.sourceTypeRawValue
+                context.insert(location)
+            }
+
+            for record in snapshot.historyAggregates {
+                let history = ProductHistory(
+                    id: record.id,
+                    productKey: record.productKey,
+                    productName: record.productName,
+                    barcode: record.barcode,
+                    firstAddedDate: record.firstAddedDate,
+                    lastAddedDate: record.lastAddedDate,
+                    addCount: record.addCount,
+                    lastSource:
+                        ProductSource(rawValue: record.lastSourceRawValue) ??
+                            .manual,
+                    averageInterval: record.averageInterval,
+                    lastCompletedDate: record.lastCompletedDate
+                )
+                history.lastSourceRawValue = record.lastSourceRawValue
+                context.insert(history)
+            }
+
+            let archiveEntriesByList = Dictionary(
+                grouping: snapshot.archiveEntries,
+                by: \.shoppingListID
+            )
+            for record in snapshot.archiveLists {
+                let entries = (archiveEntriesByList[record.id] ?? []).map {
+                    entry in
+                    WayTaskSchemaV4.ShoppingListEntry(
+                        id: entry.id,
+                        shoppingListID: entry.shoppingListID,
+                        productID: entry.productID,
+                        lifecycleRawValue: entry.lifecycleRawValue,
+                        resolutionReasonRawValue:
+                            entry.resolutionReasonRawValue,
+                        resolutionEffectiveAt:
+                            entry.resolutionEffectiveAt,
+                        resolutionProvenanceRawValue:
+                            entry.resolutionProvenanceRawValue,
+                        quantity: entry.quantity,
+                        sortOrder: entry.sortOrder,
+                        createdAt: entry.createdAt,
+                        updatedAt: entry.updatedAt,
+                        product: productsByID[entry.productID]
+                    )
+                }
+                let list = WayTaskSchemaV4.ShoppingList(
+                    id: record.id,
+                    revision: record.revision,
+                    title: record.title,
+                    purposeRawValue: record.purposeRawValue,
+                    createdAt: record.createdAt,
+                    updatedAt: record.updatedAt,
+                    entries: entries
+                )
+                context.insert(list)
+                listsByID[record.id] = list
+                for entry in entries { entriesByID[entry.id] = entry }
+            }
+
+            for record in snapshot.sessions {
+                let stops = record.stops.map { stop in
+                    WayTaskSchemaV4.ShoppingSessionStop(
+                        id: stop.id,
+                        sessionID: stop.sessionID,
+                        snapshotID: stop.snapshotID,
+                        sortOrder: stop.sortOrder,
+                        storeReferenceIDRawValue:
+                            stop.storeReferenceIDRawValue,
+                        storeReferenceProvenanceRawValue:
+                            stop.storeReferenceProvenanceRawValue,
+                        displayNameSnapshot: stop.displayNameSnapshot,
+                        latitudeSnapshot: stop.latitudeSnapshot,
+                        longitudeSnapshot: stop.longitudeSnapshot,
+                        evidenceAt: stop.evidenceAt,
+                        isSessionScopedTransient:
+                            stop.isSessionScopedTransient
+                    )
+                }
+                let stopsByID = Dictionary(
+                    uniqueKeysWithValues: stops.map { ($0.id, $0) }
+                )
+                let lines = record.lines.map { line in
+                    WayTaskSchemaV4.ShoppingSessionLine(
+                        id: line.id,
+                        sessionID: line.sessionID,
+                        snapshotID: line.snapshotID,
+                        snapshotVersion: line.snapshotVersion,
+                        snapshotProvenanceRawValue:
+                            line.snapshotProvenanceRawValue,
+                        sourceListID: line.sourceListID,
+                        sourceEntryID: line.sourceEntryID,
+                        productID: line.productID,
+                        globalProductConceptIDRawValue:
+                            line.globalProductConceptIDRawValue,
+                        stopID: line.stopID,
+                        sortOrder: line.sortOrder,
+                        productNameSnapshot: line.productNameSnapshot,
+                        productBrandSnapshot: line.productBrandSnapshot,
+                        productCategorySnapshot:
+                            line.productCategorySnapshot,
+                        quantitySnapshot: line.quantitySnapshot,
+                        unitSnapshotRawValue: line.unitSnapshotRawValue,
+                        noteSnapshot: line.noteSnapshot,
+                        executionStateRawValue:
+                            line.executionStateRawValue,
+                        executionChangedAt: line.executionChangedAt,
+                        finalOutcomeRawValue: line.finalOutcomeRawValue,
+                        finalOutcomeAt: line.finalOutcomeAt,
+                        finalOutcomeCommandID: line.finalOutcomeCommandID,
+                        legacyDispositionRawValue:
+                            line.legacyDispositionRawValue,
+                        sourceEntry: line.sourceEntryID.flatMap {
+                            entriesByID[$0]
+                        },
+                        product: line.productID.flatMap { productsByID[$0] },
+                        stop: line.stopID.flatMap { stopsByID[$0] }
+                    )
+                }
+                let exceptions = record.exceptions.map {
+                    makeException($0)
+                }
+                let session = WayTaskSchemaV4.ShoppingSession(
+                    id: record.id,
+                    sourceListID: record.sourceListID,
+                    sourceRevision: record.sourceRevision,
+                    sourceRevisionProvenanceRawValue:
+                        record.sourceRevisionProvenanceRawValue,
+                    revision: record.revision,
+                    lifecycleRawValue: record.lifecycleRawValue,
+                    migrationConditionRawValue:
+                        record.migrationConditionRawValue,
+                    snapshotID: record.snapshotID,
+                    snapshotVersion: record.snapshotVersion,
+                    snapshotGeneration: record.snapshotGeneration,
+                    snapshotContentSignature:
+                        record.snapshotContentSignature,
+                    sourcePlanID: record.sourcePlanID,
+                    sourcePlanSignature: record.sourcePlanSignature,
+                    sourcePlanEvidenceAt: record.sourcePlanEvidenceAt,
+                    startedAt: record.startedAt,
+                    activationStartedAt: record.activationStartedAt,
+                    lastActivityAt: record.lastActivityAt,
+                    expiredAt: record.expiredAt,
+                    endedAt: record.endedAt,
+                    expirationReasonRawValue:
+                        record.expirationReasonRawValue,
+                    expirationPolicyVersion:
+                        record.expirationPolicyVersion,
+                    sourceList: record.sourceListID.flatMap { listsByID[$0] },
+                    lines: lines,
+                    stops: stops,
+                    migrationExceptions: exceptions
+                )
+                context.insert(session)
+            }
+            for record in snapshot.globalExceptions {
+                context.insert(makeException(record))
+            }
+            try context.save()
+        }
+    }
+
+    static func reopenTargetStore(
+        storeURL: URL
+    ) throws -> WayTaskSessionHistoryArchiveSemanticSnapshot {
+        let completeProductList = try WayTaskProductListSemanticStoreBoundary
+            .reopenTargetStore(storeURL: storeURL)
+        let archiveKinds = Set([
+            ShoppingListKind.completed.rawValue,
+            ShoppingListKind.recent.rawValue
+        ])
+        let archiveListIDs = Set(
+            completeProductList.lists.filter {
+                guard let purpose = $0.purposeRawValue else { return false }
+                return archiveKinds.contains(purpose)
+            }.map(\.id)
+        )
+        let productListBase = WayTaskProductListSemanticSnapshot(
+            products: completeProductList.products,
+            lists: completeProductList.lists.filter {
+                !archiveListIDs.contains($0.id)
+            },
+            entries: completeProductList.entries.filter {
+                !archiveListIDs.contains($0.shoppingListID)
+            }
+        )
+        let archiveLists = completeProductList.lists.filter {
+            archiveListIDs.contains($0.id)
+        }
+        let archiveEntries = completeProductList.entries.filter {
+            archiveListIDs.contains($0.shoppingListID)
+        }
+        let evidenceURL = storeURL.deletingLastPathComponent()
+            .appendingPathComponent(
+                WayTaskProductStateMigration.sessionExceptionEvidenceFilename
+            )
+        let evidenceArtifact = try JSONDecoder().decode(
+            WayTaskSessionExceptionEvidenceArtifact.self,
+            from: Data(contentsOf: evidenceURL, options: [.mappedIfSafe])
+        )
+        guard evidenceArtifact.formatVersion == 1,
+              Set(evidenceArtifact.records.map(\.id)).count ==
+                evidenceArtifact.records.count
+        else { throw StoreError.invalidExceptionEvidence }
+        let evidenceByID = Dictionary(
+            uniqueKeysWithValues: evidenceArtifact.records.map { ($0.id, $0) }
+        )
+
+        return try autoreleasepool {
+            let schema = Schema(versionedSchema: WayTaskSchemaV4.self)
+            let configuration = ModelConfiguration(
+                "WT033A-T08-Inactive-V4-Reopen",
+                schema: schema,
+                url: storeURL,
+                allowsSave: false,
+                cloudKitDatabase: .none
+            )
+            let container = try ModelContainer(
+                for: schema,
+                configurations: [configuration]
+            )
+            let context = ModelContext(container)
+            context.autosaveEnabled = false
+            var histories = try context.fetch(
+                FetchDescriptor<ProductHistory>()
+            ).map { history in
+                WayTaskLegacyHistoryAggregateRecord(
+                    id: history.id,
+                    productKey: history.productKey,
+                    productName: history.productName,
+                    barcode: history.barcode,
+                    firstAddedDate: history.firstAddedDate,
+                    lastAddedDate: history.lastAddedDate,
+                    addCount: history.addCount,
+                    lastSourceRawValue: history.lastSourceRawValue,
+                    averageInterval: history.averageInterval,
+                    lastCompletedDate: history.lastCompletedDate
+                )
+            }
+            var items = try context.fetch(
+                FetchDescriptor<ShoppingItem>()
+            ).map { item in
+                WayTaskLegacyCompatibilityEvidenceRecord(
+                    id: item.id,
+                    name: item.name,
+                    isCompleted: item.isCompleted,
+                    imageData: item.imageData,
+                    brand: item.brand,
+                    category: item.category,
+                    barcode: item.barcode,
+                    imageURLString: item.imageURLString,
+                    dateAdded: item.dateAdded,
+                    sourceRawValue: item.sourceRawValue,
+                    productType: item.productType,
+                    flavor: item.flavor,
+                    packageSize: item.packageSize,
+                    packageType: item.packageType,
+                    visibleText: item.visibleText,
+                    searchKeywordsRawValue: item.searchKeywordsRawValue
+                )
+            }
+            var locations = try context.fetch(
+                FetchDescriptor<GeoLocation>()
+            ).map { location in
+                WayTaskLegacySavedLocationRecord(
+                    id: location.id,
+                    title: location.title,
+                    latitude: location.latitude,
+                    longitude: location.longitude,
+                    radius: location.radius,
+                    storeCategoryRawValue:
+                        location.storeCategoryRawValue,
+                    addressText: location.addressText,
+                    notes: location.notes,
+                    sourceTypeRawValue: location.sourceTypeRawValue,
+                    shoppingItemIDs: location.shoppingItems.map(\.id)
+                        .sorted(by: uuidLess)
+                )
+            }
+            let historyEvents = try context.fetch(
+                FetchDescriptor<WayTaskSchemaV4.ProductHistoryEvent>()
+            ).map(\.id).sorted(by: uuidLess)
+            var sessions = try context.fetch(
+                FetchDescriptor<WayTaskSchemaV4.ShoppingSession>()
+            ).map { session in
+                let lines = session.lines.map { line in
+                    WayTaskMigratedSessionLineRecord(
+                        id: line.id,
+                        sessionID: line.sessionID,
+                        snapshotID: line.snapshotID,
+                        snapshotVersion: line.snapshotVersion,
+                        snapshotProvenanceRawValue:
+                            line.snapshotProvenanceRawValue,
+                        sourceListID: line.sourceListID,
+                        sourceEntryID: line.sourceEntryID,
+                        productID: line.productID,
+                        globalProductConceptIDRawValue:
+                            line.globalProductConceptIDRawValue,
+                        stopID: line.stopID,
+                        sortOrder: line.sortOrder,
+                        productNameSnapshot: line.productNameSnapshot,
+                        productBrandSnapshot: line.productBrandSnapshot,
+                        productCategorySnapshot:
+                            line.productCategorySnapshot,
+                        quantitySnapshot: line.quantitySnapshot,
+                        unitSnapshotRawValue: line.unitSnapshotRawValue,
+                        noteSnapshot: line.noteSnapshot,
+                        executionStateRawValue:
+                            line.executionStateRawValue,
+                        executionChangedAt: line.executionChangedAt,
+                        finalOutcomeRawValue: line.finalOutcomeRawValue,
+                        finalOutcomeAt: line.finalOutcomeAt,
+                        finalOutcomeCommandID: line.finalOutcomeCommandID,
+                        legacyDispositionRawValue:
+                            line.legacyDispositionRawValue
+                    )
+                }.sorted(by: lineLess)
+                let stops = session.stops.map { stop in
+                    WayTaskMigratedSessionStopRecord(
+                        id: stop.id,
+                        sessionID: stop.sessionID,
+                        snapshotID: stop.snapshotID,
+                        sortOrder: stop.sortOrder,
+                        storeReferenceIDRawValue:
+                            stop.storeReferenceIDRawValue,
+                        storeReferenceProvenanceRawValue:
+                            stop.storeReferenceProvenanceRawValue,
+                        displayNameSnapshot: stop.displayNameSnapshot,
+                        latitudeSnapshot: stop.latitudeSnapshot,
+                        longitudeSnapshot: stop.longitudeSnapshot,
+                        evidenceAt: stop.evidenceAt,
+                        isSessionScopedTransient:
+                            stop.isSessionScopedTransient
+                    )
+                }.sorted(by: stopLess)
+                let exceptions = session.migrationExceptions.map {
+                    projectException($0, evidenceByID: evidenceByID)
+                }.sorted { $0.ordinal < $1.ordinal }
+                return WayTaskMigratedSessionRecord(
+                    id: session.id,
+                    sourceListID: session.sourceListID,
+                    sourceRevision: session.sourceRevision,
+                    sourceRevisionProvenanceRawValue:
+                        session.sourceRevisionProvenanceRawValue,
+                    revision: session.revision,
+                    lifecycleRawValue: session.lifecycleRawValue,
+                    migrationConditionRawValue:
+                        session.migrationConditionRawValue,
+                    snapshotID: session.snapshotID,
+                    snapshotVersion: session.snapshotVersion,
+                    snapshotGeneration: session.snapshotGeneration,
+                    snapshotContentSignature:
+                        session.snapshotContentSignature,
+                    sourcePlanID: session.sourcePlanID,
+                    sourcePlanSignature: session.sourcePlanSignature,
+                    sourcePlanEvidenceAt: session.sourcePlanEvidenceAt,
+                    startedAt: session.startedAt,
+                    activationStartedAt: session.activationStartedAt,
+                    lastActivityAt: session.lastActivityAt,
+                    expiredAt: session.expiredAt,
+                    endedAt: session.endedAt,
+                    expirationReasonRawValue:
+                        session.expirationReasonRawValue,
+                    expirationPolicyVersion:
+                        session.expirationPolicyVersion,
+                    lines: lines,
+                    stops: stops,
+                    exceptions: exceptions
+                )
+            }
+            var globalExceptions = try context.fetch(
+                FetchDescriptor<WayTaskSchemaV4.ProductStateMigrationException>()
+            ).filter { $0.sessionID == nil }.map {
+                projectException($0, evidenceByID: evidenceByID)
+            }.sorted {
+                if $0.categoryRawValue != $1.categoryRawValue {
+                    return $0.categoryRawValue < $1.categoryRawValue
+                }
+                return $0.safeEvidenceDigest < $1.safeEvidenceDigest
+            }
+            histories.sort { uuidLess($0.id, $1.id) }
+            items.sort { uuidLess($0.id, $1.id) }
+            locations.sort { uuidLess($0.id, $1.id) }
+            sessions.sort { uuidLess($0.id, $1.id) }
+            globalExceptions.sort { $0.ordinal < $1.ordinal }
+            return WayTaskSessionHistoryArchiveSemanticSnapshot(
+                productListBase: productListBase,
+                sessions: sessions,
+                historyAggregates: histories,
+                historyEvents: historyEvents,
+                archiveLists: archiveLists,
+                archiveEntries: archiveEntries,
+                compatibilityItems: items,
+                savedLocations: locations,
+                globalExceptions: globalExceptions
+            )
+        }
+    }
+
+    private static func makeException(
+        _ record: WayTaskMigratedSessionExceptionRecord
+    ) -> WayTaskSchemaV4.ProductStateMigrationException {
+        WayTaskSchemaV4.ProductStateMigrationException(
+            id: record.id,
+            sessionID: record.sessionID,
+            sessionLineID: record.sessionLineID,
+            categoryRawValue: record.categoryRawValue,
+            safeEvidenceDigest: record.safeEvidenceDigest,
+            ordinal: record.ordinal,
+            occurrenceCount: record.occurrenceCount,
+            recordedAt: record.recordedAt
+        )
+    }
+
+    private static func projectException(
+        _ exception: WayTaskSchemaV4.ProductStateMigrationException,
+        evidenceByID: [UUID: WayTaskMigratedSessionExceptionRecord]
+    ) -> WayTaskMigratedSessionExceptionRecord {
+        let evidence = evidenceByID[exception.id]
+        return WayTaskMigratedSessionExceptionRecord(
+            id: exception.id,
+            sessionID: exception.sessionID,
+            sessionLineID: exception.sessionLineID,
+            categoryRawValue: exception.categoryRawValue,
+            safeEvidenceDigest: exception.safeEvidenceDigest,
+            ordinal: exception.ordinal,
+            occurrenceCount: exception.occurrenceCount,
+            recordedAt: exception.recordedAt,
+            sourceCollectionRawValue: evidence?.sourceCollectionRawValue,
+            sourceOrdinals: evidence?.sourceOrdinals ?? [],
+            sourceByteLength: evidence?.sourceByteLength,
+            normalizedTokenID: evidence?.normalizedTokenID
+        )
+    }
+
+    nonisolated private static func uuidLess(
+        _ lhs: UUID,
+        _ rhs: UUID
+    ) -> Bool {
+        lhs.uuidString.lowercased() < rhs.uuidString.lowercased()
+    }
+
+    nonisolated private static func lineLess(
+        _ lhs: WayTaskMigratedSessionLineRecord,
+        _ rhs: WayTaskMigratedSessionLineRecord
+    ) -> Bool {
+        if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+        return uuidLess(lhs.id, rhs.id)
+    }
+
+    nonisolated private static func stopLess(
+        _ lhs: WayTaskMigratedSessionStopRecord,
+        _ rhs: WayTaskMigratedSessionStopRecord
+    ) -> Bool {
+        if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+        return uuidLess(lhs.id, rhs.id)
+    }
+
+    private enum StoreError: Error {
+        case targetAlreadyContainsT08Data
+        case invalidExceptionEvidence
     }
 }
 

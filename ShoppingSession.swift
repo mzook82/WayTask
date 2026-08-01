@@ -80,7 +80,7 @@ extension WayTaskSchemaV4 {
     @Model
     final class ShoppingSession {
         var id: UUID
-        var sourceListID: UUID
+        var sourceListID: UUID?
         var sourceRevision: UInt64?
         var sourceRevisionProvenanceRawValue: String
         var revision: UInt64
@@ -115,7 +115,7 @@ extension WayTaskSchemaV4 {
 
         init(
             id: UUID,
-            sourceListID: UUID,
+            sourceListID: UUID?,
             sourceRevision: UInt64?,
             sourceRevisionProvenanceRawValue: String,
             revision: UInt64,
