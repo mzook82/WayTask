@@ -7,6 +7,10 @@ enum WayTaskStartupPersistenceStage: String {
     case quarantineStore = "quarantine_store"
     case recreatePersistentStore = "recreate_persistent_store"
     case inMemoryFallback = "in_memory_fallback"
+    case migrationGate = "migration_gate"
+    case migrationValidation = "migration_validation"
+    case migrationRecovery = "migration_recovery"
+    case migrationComplete = "migration_complete"
     case unrecoverable
 }
 
@@ -80,14 +84,17 @@ enum WayTaskStartupPersistenceMode: Equatable {
     case persistent
     case recreatedPersistentStore
     case inMemoryFallback
+    case startupGate
 }
 
 struct WayTaskStartupPersistenceResult {
     let modelContainer: ModelContainer
     let mode: WayTaskStartupPersistenceMode
+    let migrationGateDecision: WayTaskStartupMigrationGateDecision
 }
 
 enum WayTaskStartupPersistenceError: LocalizedError {
+    case migrationGateUnavailable(Error)
     case unrecoverable(
         initial: Error,
         persistentRecovery: Error,
@@ -96,9 +103,415 @@ enum WayTaskStartupPersistenceError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
+        case .migrationGateUnavailable:
+            return "WayTask could not initialize the isolated startup gate."
         case .unrecoverable:
             return "WayTask could not initialize persistent or temporary local storage."
         }
+    }
+}
+
+// MARK: - T-09 pre-promotion startup migration gate
+
+enum WayTaskStartupMigrationState: String, CaseIterable, Codable, Sendable {
+    case startupReady = "startup_ready"
+    case migrationRequired = "migration_required"
+    case migrationRunning = "migration_running"
+    case migrationInterrupted = "migration_interrupted"
+    case migrationFailed = "migration_failed"
+    case recoveryRequired = "recovery_required"
+    case degradedMode = "degraded_mode"
+    case migrationSucceeded = "migration_succeeded"
+}
+
+enum WayTaskStartupDurabilityMode: String, Codable, Sendable {
+    case persistentV3 = "persistent_v3"
+    case protectedStoreNotOpened = "protected_store_not_opened"
+    case recreatedStoreBlocked = "recreated_store_blocked"
+    case inMemoryBlocked = "in_memory_blocked"
+    case unavailable = "unavailable"
+}
+
+enum WayTaskStartupMigrationFailureClassification: String, Codable,
+    Sendable
+{
+    case migrationIncomplete = "migration_incomplete"
+    case candidateIntegrityFailed = "candidate_integrity_failed"
+    case fingerprintMismatch = "fingerprint_mismatch"
+    case candidateReopenFailed = "candidate_reopen_failed"
+    case migrationValidationFailed = "migration_validation_failed"
+    case insufficientDestinationSpace = "insufficient_destination_space"
+    case protectedOriginalUnavailable = "protected_original_unavailable"
+    case rollbackUnverified = "rollback_unverified"
+    case recreatedStoreRequiresRecovery =
+        "recreated_store_requires_recovery"
+    case inMemoryIsNotDurable = "in_memory_is_not_durable"
+    case recoveryDecisionRequired = "recovery_decision_required"
+    case unauthorizedPromotion = "unauthorized_promotion"
+    case unauthorizedTargetActivation = "unauthorized_target_activation"
+    case gatePresentationUnavailable = "gate_presentation_unavailable"
+}
+
+struct WayTaskStartupMigrationRecoveryEvidence: Equatable, Sendable {
+    let protectedOriginalVerified: Bool
+    let rollbackVerified: Bool
+    let candidateArtifactsRemain: Bool
+}
+
+struct WayTaskStartupMigrationCompletionEvidence: Equatable, Sendable {
+    let migrationComplete: Bool
+    let candidateIntegrityVerified: Bool
+    let sourceFingerprintVerified: Bool
+    let candidateFingerprintVerified: Bool
+    let candidateReopenVerified: Bool
+    let protectedOriginalVerified: Bool
+    let rollbackStateVerified: Bool
+    let recoveryRequiredCount: Int
+    let exceptionCount: Int
+    let exceptionOverflowCount: Int
+    let candidateArtifactCount: Int
+    let promotionAuthorized: Bool
+    let targetSchemaActivated: Bool
+
+    init(
+        migrationComplete: Bool,
+        candidateIntegrityVerified: Bool,
+        sourceFingerprintVerified: Bool,
+        candidateFingerprintVerified: Bool,
+        candidateReopenVerified: Bool,
+        protectedOriginalVerified: Bool,
+        rollbackStateVerified: Bool,
+        recoveryRequiredCount: Int,
+        exceptionCount: Int,
+        exceptionOverflowCount: Int,
+        candidateArtifactCount: Int,
+        promotionAuthorized: Bool = false,
+        targetSchemaActivated: Bool = false
+    ) {
+        self.migrationComplete = migrationComplete
+        self.candidateIntegrityVerified = candidateIntegrityVerified
+        self.sourceFingerprintVerified = sourceFingerprintVerified
+        self.candidateFingerprintVerified = candidateFingerprintVerified
+        self.candidateReopenVerified = candidateReopenVerified
+        self.protectedOriginalVerified = protectedOriginalVerified
+        self.rollbackStateVerified = rollbackStateVerified
+        self.recoveryRequiredCount = max(recoveryRequiredCount, 0)
+        self.exceptionCount = max(exceptionCount, 0)
+        self.exceptionOverflowCount = max(exceptionOverflowCount, 0)
+        self.candidateArtifactCount = max(candidateArtifactCount, 0)
+        self.promotionAuthorized = promotionAuthorized
+        self.targetSchemaActivated = targetSchemaActivated
+    }
+}
+
+enum WayTaskStartupMigrationTrace: Equatable, Sendable {
+    case targetInactive
+    case migrationRequired
+    case migrationRunning
+    case migrationInterrupted(WayTaskStartupMigrationRecoveryEvidence)
+    case migrationFailed(
+        WayTaskStartupMigrationFailureClassification,
+        WayTaskStartupMigrationRecoveryEvidence
+    )
+    case recoveryRequired(WayTaskStartupMigrationFailureClassification)
+    case recoveryCompleted(WayTaskStartupMigrationRecoveryEvidence)
+    case migrationCompleted(WayTaskStartupMigrationCompletionEvidence)
+
+    var isExplicitTargetTrace: Bool {
+        self != .targetInactive
+    }
+}
+
+struct WayTaskStartupMigrationGateDiagnostic: Equatable, Codable, Sendable {
+    let state: WayTaskStartupMigrationState
+    let durabilityMode: WayTaskStartupDurabilityMode
+    let failureClassification:
+        WayTaskStartupMigrationFailureClassification?
+    let migrationCompletionVerified: Bool
+    let candidateIntegrityVerified: Bool
+    let fingerprintsVerified: Bool
+    let candidateReopenVerified: Bool
+    let protectedOriginalVerified: Bool
+    let rollbackVerified: Bool
+    let recoveryRequiredCount: Int
+    let exceptionCount: Int
+    let exceptionOverflowCount: Int
+    let candidateArtifactCount: Int
+}
+
+struct WayTaskStartupMigrationGateDecision: Equatable, Sendable {
+    let diagnostic: WayTaskStartupMigrationGateDiagnostic
+
+    var state: WayTaskStartupMigrationState { diagnostic.state }
+    var durabilityMode: WayTaskStartupDurabilityMode {
+        diagnostic.durabilityMode
+    }
+
+    var allowsLegacyV3ApplicationContent: Bool {
+        state == .startupReady && durabilityMode == .persistentV3
+    }
+
+    // T-09 is deliberately pre-promotion. A later cutover must add a separate
+    // authorization after every consumer and writer has converted together.
+    var writableTargetAccessAuthorized: Bool { false }
+    var targetUIActivationAuthorized: Bool { false }
+    var candidatePromotionAuthorized: Bool { false }
+}
+
+struct WayTaskStartupMigrationGate {
+    func evaluate(
+        persistenceMode: WayTaskStartupPersistenceMode,
+        trace: WayTaskStartupMigrationTrace
+    ) -> WayTaskStartupMigrationGateDecision {
+        switch persistenceMode {
+        case .recreatedPersistentStore:
+            return decision(
+                state: .recoveryRequired,
+                durability: .recreatedStoreBlocked,
+                failure: .recreatedStoreRequiresRecovery
+            )
+        case .inMemoryFallback:
+            return decision(
+                state: .degradedMode,
+                durability: .inMemoryBlocked,
+                failure: .inMemoryIsNotDurable
+            )
+        case .persistent, .startupGate:
+            break
+        }
+
+        let durability: WayTaskStartupDurabilityMode =
+            persistenceMode == .persistent
+                ? .persistentV3 : .protectedStoreNotOpened
+
+        switch trace {
+        case .targetInactive:
+            return decision(
+                state: .startupReady,
+                durability: durability
+            )
+        case .migrationRequired:
+            return decision(
+                state: .migrationRequired,
+                durability: durability,
+                failure: .migrationIncomplete
+            )
+        case .migrationRunning:
+            return decision(
+                state: .migrationRunning,
+                durability: durability
+            )
+        case .migrationInterrupted(let recovery):
+            guard recovery.protectedOriginalVerified else {
+                return decision(
+                    state: .recoveryRequired,
+                    durability: durability,
+                    failure: .protectedOriginalUnavailable,
+                    recovery: recovery
+                )
+            }
+            guard recovery.rollbackVerified else {
+                return decision(
+                    state: .recoveryRequired,
+                    durability: durability,
+                    failure: .rollbackUnverified,
+                    recovery: recovery
+                )
+            }
+            return decision(
+                state: .migrationInterrupted,
+                durability: durability,
+                failure: .migrationIncomplete,
+                recovery: recovery
+            )
+        case .migrationFailed(let failure, let recovery):
+            guard recovery.protectedOriginalVerified else {
+                return decision(
+                    state: .recoveryRequired,
+                    durability: durability,
+                    failure: .protectedOriginalUnavailable,
+                    recovery: recovery
+                )
+            }
+            guard recovery.rollbackVerified else {
+                return decision(
+                    state: .recoveryRequired,
+                    durability: durability,
+                    failure: .rollbackUnverified,
+                    recovery: recovery
+                )
+            }
+            return decision(
+                state: .migrationFailed,
+                durability: durability,
+                failure: failure,
+                recovery: recovery
+            )
+        case .recoveryRequired(let failure):
+            return decision(
+                state: .recoveryRequired,
+                durability: durability,
+                failure: failure
+            )
+        case .recoveryCompleted(let recovery):
+            guard recovery.protectedOriginalVerified else {
+                return decision(
+                    state: .recoveryRequired,
+                    durability: durability,
+                    failure: .protectedOriginalUnavailable,
+                    recovery: recovery
+                )
+            }
+            guard recovery.rollbackVerified,
+                  !recovery.candidateArtifactsRemain else {
+                return decision(
+                    state: .recoveryRequired,
+                    durability: durability,
+                    failure: .rollbackUnverified,
+                    recovery: recovery
+                )
+            }
+            return decision(
+                state: .startupReady,
+                durability: durability,
+                recovery: recovery
+            )
+        case .migrationCompleted(let evidence):
+            return completedDecision(
+                evidence,
+                durability: durability
+            )
+        }
+    }
+
+    func unavailableDecision() -> WayTaskStartupMigrationGateDecision {
+        decision(
+            state: .degradedMode,
+            durability: .unavailable,
+            failure: .gatePresentationUnavailable
+        )
+    }
+
+    private func completedDecision(
+        _ evidence: WayTaskStartupMigrationCompletionEvidence,
+        durability: WayTaskStartupDurabilityMode
+    ) -> WayTaskStartupMigrationGateDecision {
+        if evidence.promotionAuthorized {
+            return decision(
+                state: .recoveryRequired,
+                durability: durability,
+                failure: .unauthorizedPromotion,
+                completion: evidence
+            )
+        }
+        if evidence.targetSchemaActivated {
+            return decision(
+                state: .recoveryRequired,
+                durability: durability,
+                failure: .unauthorizedTargetActivation,
+                completion: evidence
+            )
+        }
+        guard evidence.protectedOriginalVerified else {
+            return decision(
+                state: .recoveryRequired,
+                durability: durability,
+                failure: .protectedOriginalUnavailable,
+                completion: evidence
+            )
+        }
+        guard evidence.rollbackStateVerified else {
+            return decision(
+                state: .recoveryRequired,
+                durability: durability,
+                failure: .rollbackUnverified,
+                completion: evidence
+            )
+        }
+        guard evidence.migrationComplete else {
+            return decision(
+                state: .migrationRequired,
+                durability: durability,
+                failure: .migrationIncomplete,
+                completion: evidence
+            )
+        }
+        guard evidence.candidateIntegrityVerified else {
+            return decision(
+                state: .migrationFailed,
+                durability: durability,
+                failure: .candidateIntegrityFailed,
+                completion: evidence
+            )
+        }
+        guard evidence.sourceFingerprintVerified,
+              evidence.candidateFingerprintVerified else {
+            return decision(
+                state: .migrationFailed,
+                durability: durability,
+                failure: .fingerprintMismatch,
+                completion: evidence
+            )
+        }
+        guard evidence.candidateReopenVerified else {
+            return decision(
+                state: .migrationFailed,
+                durability: durability,
+                failure: .candidateReopenFailed,
+                completion: evidence
+            )
+        }
+        guard evidence.recoveryRequiredCount == 0 else {
+            return decision(
+                state: .recoveryRequired,
+                durability: durability,
+                failure: .recoveryDecisionRequired,
+                completion: evidence
+            )
+        }
+        return decision(
+            state: .migrationSucceeded,
+            durability: durability,
+            completion: evidence
+        )
+    }
+
+    private func decision(
+        state: WayTaskStartupMigrationState,
+        durability: WayTaskStartupDurabilityMode,
+        failure: WayTaskStartupMigrationFailureClassification? = nil,
+        recovery: WayTaskStartupMigrationRecoveryEvidence? = nil,
+        completion: WayTaskStartupMigrationCompletionEvidence? = nil
+    ) -> WayTaskStartupMigrationGateDecision {
+        WayTaskStartupMigrationGateDecision(
+            diagnostic: WayTaskStartupMigrationGateDiagnostic(
+                state: state,
+                durabilityMode: durability,
+                failureClassification: failure,
+                migrationCompletionVerified:
+                    completion?.migrationComplete ?? false,
+                candidateIntegrityVerified:
+                    completion?.candidateIntegrityVerified ?? false,
+                fingerprintsVerified:
+                    (completion?.sourceFingerprintVerified ?? false) &&
+                        (completion?.candidateFingerprintVerified ?? false),
+                candidateReopenVerified:
+                    completion?.candidateReopenVerified ?? false,
+                protectedOriginalVerified:
+                    completion?.protectedOriginalVerified ??
+                        recovery?.protectedOriginalVerified ?? false,
+                rollbackVerified:
+                    completion?.rollbackStateVerified ??
+                        recovery?.rollbackVerified ?? false,
+                recoveryRequiredCount:
+                    completion?.recoveryRequiredCount ?? 0,
+                exceptionCount: completion?.exceptionCount ?? 0,
+                exceptionOverflowCount:
+                    completion?.exceptionOverflowCount ?? 0,
+                candidateArtifactCount:
+                    completion?.candidateArtifactCount ?? 0
+            )
+        )
     }
 }
 
@@ -110,6 +523,7 @@ struct WayTaskStartupPersistenceBootstrap {
     typealias DiagnosticReporter =
         (WayTaskStartupPersistenceDiagnostic) -> Void
     typealias DeveloperAssertion = (String) -> Void
+    typealias MigrationTraceProvider = () -> WayTaskStartupMigrationTrace
 
     private let openDefaultStore: ContainerFactory
     private let openInMemoryStore: ContainerFactory
@@ -117,6 +531,8 @@ struct WayTaskStartupPersistenceBootstrap {
     private let quarantineStore: StoreQuarantine
     private let reportDiagnostic: DiagnosticReporter
     private let developerAssertion: DeveloperAssertion
+    private let migrationTraceProvider: MigrationTraceProvider
+    private let migrationGate = WayTaskStartupMigrationGate()
 
     private struct InitialStoreFailure: Error {
         let stage: WayTaskStartupPersistenceStage
@@ -129,7 +545,10 @@ struct WayTaskStartupPersistenceBootstrap {
         repairStore: @escaping StoreRepair,
         quarantineStore: @escaping StoreQuarantine,
         reportDiagnostic: @escaping DiagnosticReporter,
-        developerAssertion: @escaping DeveloperAssertion
+        developerAssertion: @escaping DeveloperAssertion,
+        migrationTraceProvider: @escaping MigrationTraceProvider = {
+            .targetInactive
+        }
     ) {
         self.openDefaultStore = openDefaultStore
         self.openInMemoryStore = openInMemoryStore
@@ -137,6 +556,7 @@ struct WayTaskStartupPersistenceBootstrap {
         self.quarantineStore = quarantineStore
         self.reportDiagnostic = reportDiagnostic
         self.developerAssertion = developerAssertion
+        self.migrationTraceProvider = migrationTraceProvider
     }
 
     static func live() -> WayTaskStartupPersistenceBootstrap {
@@ -172,6 +592,25 @@ struct WayTaskStartupPersistenceBootstrap {
     }
 
     func start() throws -> WayTaskStartupPersistenceResult {
+        let migrationTrace = migrationTraceProvider()
+        if migrationTrace.isExplicitTargetTrace {
+            if case .recoveryCompleted = migrationTrace {
+                let decision = migrationGate.evaluate(
+                    persistenceMode: .persistent,
+                    trace: migrationTrace
+                )
+                if decision.allowsLegacyV3ApplicationContent {
+                    reportDiagnostic(
+                        WayTaskStartupPersistenceDiagnostic(
+                            stage: .migrationRecovery,
+                            outcome: .recovered
+                        )
+                    )
+                    return try openAndRepairInitialStore()
+                }
+            }
+            return try startMigrationGateOnly(trace: migrationTrace)
+        }
         do {
             return try openAndRepairInitialStore()
         } catch let failure as InitialStoreFailure {
@@ -215,7 +654,11 @@ struct WayTaskStartupPersistenceBootstrap {
         }
         return WayTaskStartupPersistenceResult(
             modelContainer: initialContainer,
-            mode: .persistent
+            mode: .persistent,
+            migrationGateDecision: migrationGate.evaluate(
+                persistenceMode: .persistent,
+                trace: .targetInactive
+            )
         )
     }
 
@@ -270,7 +713,11 @@ struct WayTaskStartupPersistenceBootstrap {
             )
             return WayTaskStartupPersistenceResult(
                 modelContainer: recoveredContainer,
-                mode: .recreatedPersistentStore
+                mode: .recreatedPersistentStore,
+                migrationGateDecision: migrationGate.evaluate(
+                    persistenceMode: .recreatedPersistentStore,
+                    trace: .targetInactive
+                )
             )
         } catch {
             persistentRecoveryError = error
@@ -313,7 +760,11 @@ struct WayTaskStartupPersistenceBootstrap {
             )
             return WayTaskStartupPersistenceResult(
                 modelContainer: fallbackContainer,
-                mode: .inMemoryFallback
+                mode: .inMemoryFallback,
+                migrationGateDecision: migrationGate.evaluate(
+                    persistenceMode: .inMemoryFallback,
+                    trace: .targetInactive
+                )
             )
         } catch {
             reportDiagnostic(
@@ -331,6 +782,64 @@ struct WayTaskStartupPersistenceBootstrap {
                 inMemoryFallback: error
             )
         }
+    }
+
+    private func startMigrationGateOnly(
+        trace: WayTaskStartupMigrationTrace
+    ) throws -> WayTaskStartupPersistenceResult {
+        let decision = migrationGate.evaluate(
+            persistenceMode: .startupGate,
+            trace: trace
+        )
+        reportDiagnostic(decision.persistenceDiagnostic)
+        do {
+            return WayTaskStartupPersistenceResult(
+                modelContainer: try openInMemoryStore(),
+                mode: .startupGate,
+                migrationGateDecision: decision
+            )
+        } catch {
+            reportDiagnostic(
+                WayTaskStartupPersistenceDiagnostic(
+                    stage: .migrationGate,
+                    outcome: .fatal,
+                    error: error
+                )
+            )
+            throw WayTaskStartupPersistenceError
+                .migrationGateUnavailable(error)
+        }
+    }
+}
+
+private extension WayTaskStartupMigrationGateDecision {
+    var persistenceDiagnostic: WayTaskStartupPersistenceDiagnostic {
+        let stage: WayTaskStartupPersistenceStage
+        let outcome: WayTaskStartupPersistenceOutcome
+        switch state {
+        case .startupReady:
+            stage = .migrationGate
+            outcome = .recovered
+        case .migrationRequired, .migrationRunning:
+            stage = .migrationGate
+            outcome = .degraded
+        case .migrationInterrupted, .recoveryRequired:
+            stage = .migrationRecovery
+            outcome = .degraded
+        case .migrationFailed:
+            stage = .migrationValidation
+            outcome = .failed
+        case .degradedMode:
+            stage = .migrationGate
+            outcome = .degraded
+        case .migrationSucceeded:
+            stage = .migrationComplete
+            outcome = .recovered
+        }
+        return WayTaskStartupPersistenceDiagnostic(
+            stage: stage,
+            outcome: outcome
+        )
     }
 }
 

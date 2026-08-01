@@ -35,9 +35,6 @@ struct ContentView: View {
     @State private var startupSheet: ShoppingStartupSheet?
     @State private var hasCompletedActiveSessionLaunchRecovery = false
     @State private var isCheckingActiveSessionLaunchRecovery = false
-    private let shoppingListBackfillService = ShoppingListBackfillService()
-    private let shoppingItemCatalogResolver =
-        ShoppingItemCatalogResolver()
     private let productKnowledgeSearchAvailability: ProductKnowledgeSearchAvailability
 
     init(productKnowledgeSearchAvailability: ProductKnowledgeSearchAvailability) {
@@ -83,7 +80,6 @@ struct ContentView: View {
         .onAppear {
             synchronizeFeatureTourNavigation()
             updateSentryArea(appStateManager.selectedTab)
-            ensureShoppingListArchitecture()
             syncShoppingArchitectureState()
             presentShoppingStartupSheetIfNeeded()
             recoverActiveShoppingSessionIfNeeded()
@@ -92,7 +88,6 @@ struct ContentView: View {
             refreshNearbyOpportunities()
         }
         .onChange(of: legacyShoppingItemSignature) {
-            ensureShoppingListArchitecture()
             syncShoppingArchitectureState()
         }
         .onChange(of: shoppingArchitectureSignature) {
@@ -141,7 +136,6 @@ struct ContentView: View {
             }
 
             seedDebugStoreIfNeeded()
-            ensureShoppingListArchitecture()
             syncShoppingArchitectureState()
             refreshShoppingGeofences()
             refreshNearbyOpportunities()
@@ -231,27 +225,6 @@ struct ContentView: View {
         }
 
         return shoppingListEntries.filter { $0.shoppingListID == weeklyShoppingListID }
-    }
-
-    private func ensureShoppingListArchitecture() {
-        do {
-            let result = try shoppingListBackfillService.ensureDefaultListsAndBackfill(in: modelContext)
-            shoppingItemCatalogResolver.hydrate(
-                items,
-                products: products,
-                entries: shoppingListEntries
-            )
-            appStateManager.setCurrentShoppingList(result.weeklyListID)
-        } catch {
-            SentryReportingService.shared.capture(
-                error: error,
-                message: .persistenceFailed,
-                operation: .persistence,
-                category: .persistence,
-                area: .shopping
-            )
-            assertionFailure("Failed to prepare shopping list architecture: \(error.localizedDescription)")
-        }
     }
 
     private func updateSentryArea(_ tab: AppTab) {
@@ -482,6 +455,98 @@ struct ContentView: View {
             in: modelContext
         )
         #endif
+    }
+}
+
+struct WayTaskStartupMigrationGateView: View {
+    let decision: WayTaskStartupMigrationGateDecision
+
+    var body: some View {
+        ZStack {
+            WayTaskDesign.background.ignoresSafeArea()
+
+            VStack(spacing: WayTaskDesign.Spacing.lg) {
+                Image(systemName: decision.state.systemImageName)
+                    .font(.system(size: 44, weight: .semibold))
+                    .foregroundStyle(WayTaskDesign.accent)
+
+                Text(decision.state.displayTitle)
+                    .font(WayTaskDesign.Typography.title)
+                    .foregroundStyle(WayTaskDesign.primaryText)
+                    .multilineTextAlignment(.center)
+
+                Text(decision.state.displayMessage)
+                    .font(WayTaskDesign.Typography.body)
+                    .foregroundStyle(WayTaskDesign.secondaryText)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(WayTaskDesign.Spacing.xl)
+            .frame(maxWidth: 520)
+        }
+        .preferredColorScheme(.dark)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(
+            "startup-migration-gate-\(decision.state.rawValue)"
+        )
+    }
+}
+
+private extension WayTaskStartupMigrationState {
+    var displayTitle: String {
+        switch self {
+        case .startupReady:
+            return "WayTask is ready"
+        case .migrationRequired:
+            return "Update required"
+        case .migrationRunning:
+            return "Preparing your data"
+        case .migrationInterrupted:
+            return "Preparation was interrupted"
+        case .migrationFailed:
+            return "Preparation could not finish"
+        case .recoveryRequired:
+            return "Recovery required"
+        case .degradedMode:
+            return "Local data is unavailable"
+        case .migrationSucceeded:
+            return "Preparation complete"
+        }
+    }
+
+    var displayMessage: String {
+        switch self {
+        case .startupReady:
+            return "Your current local data is available."
+        case .migrationRequired:
+            return "Writable access remains disabled until data preparation is complete."
+        case .migrationRunning:
+            return "Keep WayTask open while the protected migration finishes."
+        case .migrationInterrupted:
+            return "Your original data remains protected. A safe retry is required."
+        case .migrationFailed:
+            return "Your original data remains protected and writable access is disabled."
+        case .recoveryRequired:
+            return "WayTask will not guess, replace, or report an empty store as recovered data."
+        case .degradedMode:
+            return "Temporary storage is not durable, so Product State actions are disabled."
+        case .migrationSucceeded:
+            return "The candidate was validated. Activation remains disabled in this build."
+        }
+    }
+
+    var systemImageName: String {
+        switch self {
+        case .startupReady:
+            return "checkmark.shield"
+        case .migrationRunning:
+            return "arrow.triangle.2.circlepath"
+        case .migrationSucceeded:
+            return "checkmark.circle"
+        case .migrationRequired, .migrationInterrupted:
+            return "clock.arrow.circlepath"
+        case .migrationFailed, .recoveryRequired, .degradedMode:
+            return "exclamationmark.shield"
+        }
     }
 }
 

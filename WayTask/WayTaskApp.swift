@@ -14,20 +14,23 @@ struct WayTaskApp: App {
     @StateObject private var locationManager: LocationManager
     @StateObject private var onboardingCoordinator: OnboardingCoordinator
     @StateObject private var featureTourCoordinator: FeatureTourCoordinator
-    private let modelContainer: ModelContainer
+    private let modelContainer: ModelContainer?
+    private let startupMigrationDecision:
+        WayTaskStartupMigrationGateDecision
     private let productKnowledgeSearchAvailability: ProductKnowledgeSearchAvailability
 
     init() {
         SentryReportingService.shared.startIfConfigured()
         do {
-            modelContainer = try WayTaskStartupPersistenceBootstrap
+            let result = try WayTaskStartupPersistenceBootstrap
                 .live()
                 .start()
-                .modelContainer
+            modelContainer = result.modelContainer
+            startupMigrationDecision = result.migrationGateDecision
         } catch {
-            fatalError(
-                "WayTask cannot initialize any safe local data store: \(error.localizedDescription)"
-            )
+            modelContainer = nil
+            startupMigrationDecision = WayTaskStartupMigrationGate()
+                .unavailableDecision()
         }
         _appStateManager = StateObject(wrappedValue: AppStateManager())
         _locationManager = StateObject(wrappedValue: LocationManager())
@@ -59,6 +62,20 @@ struct WayTaskApp: App {
 
     var body: some Scene {
         WindowGroup {
+            if let modelContainer {
+                startupRoot
+                    .modelContainer(modelContainer)
+            } else {
+                WayTaskStartupMigrationGateView(
+                    decision: startupMigrationDecision
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var startupRoot: some View {
+        if startupMigrationDecision.allowsLegacyV3ApplicationContent {
             Group {
                 if onboardingCoordinator.isPresented {
                     OnboardingFlowView(
@@ -78,10 +95,13 @@ struct WayTaskApp: App {
                     )
                 }
             }
-                .environmentObject(appStateManager)
-                .environmentObject(locationManager)
-                .environmentObject(featureTourCoordinator)
+            .environmentObject(appStateManager)
+            .environmentObject(locationManager)
+            .environmentObject(featureTourCoordinator)
+        } else {
+            WayTaskStartupMigrationGateView(
+                decision: startupMigrationDecision
+            )
         }
-        .modelContainer(modelContainer)
     }
 }
