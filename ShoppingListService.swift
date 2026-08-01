@@ -58,6 +58,11 @@ protocol ShoppingListServicing {
     func makeShoppingItem(from candidate: ProductCandidate, fallbackImageData: Data?) -> ShoppingItem
 }
 
+struct ProductStateNamedListServiceExecution: Equatable, Sendable {
+    let command: ProductStateNamedListCommandExecution
+    let compatibilityOutput: ProductStateLegacyEntryCompatibilityOutput?
+}
+
 struct ShoppingListService: ShoppingListServicing {
     private let shoppingMemoryService = ShoppingMemoryService()
     private let productKnowledgeService = ProductKnowledgeService()
@@ -136,6 +141,95 @@ struct ShoppingListService: ShoppingListServicing {
                 barcode: candidate.barcode,
                 imageURLString: candidate.imageURL?.absoluteString,
                 sourceRawValue: source(for: candidate.source).rawValue
+            )
+        )
+    }
+
+    /// T-11 target-only command adapters. No existing production caller is
+    /// converted here; these methods neither receive nor create ModelContext.
+    func createTargetNamedList(
+        _ command: ProductStateCommand,
+        using authority: ProductStateNamedListCommandAuthority
+    ) -> ProductStateNamedListServiceExecution {
+        ProductStateNamedListServiceExecution(
+            command: authority.createNamedList(command),
+            compatibilityOutput: nil
+        )
+    }
+
+    func renameTargetNamedList(
+        _ command: ProductStateCommand,
+        using authority: ProductStateNamedListCommandAuthority
+    ) -> ProductStateNamedListServiceExecution {
+        ProductStateNamedListServiceExecution(
+            command: authority.renameNamedList(command),
+            compatibilityOutput: nil
+        )
+    }
+
+    func addTargetEntry(
+        _ command: ProductStateCommand,
+        using authority: ProductStateNamedListCommandAuthority,
+        compatibility: ProductStateCompatibilityAdapter
+    ) -> ProductStateNamedListServiceExecution {
+        targetEntryExecution(
+            authority.addEntry(command),
+            compatibility: compatibility
+        )
+    }
+
+    func updateTargetEntry(
+        _ command: ProductStateCommand,
+        using authority: ProductStateNamedListCommandAuthority,
+        compatibility: ProductStateCompatibilityAdapter
+    ) -> ProductStateNamedListServiceExecution {
+        targetEntryExecution(
+            authority.updateEntry(command),
+            compatibility: compatibility
+        )
+    }
+
+    func resolveTargetEntry(
+        _ command: ProductStateCommand,
+        using authority: ProductStateNamedListCommandAuthority,
+        compatibility: ProductStateCompatibilityAdapter
+    ) -> ProductStateNamedListServiceExecution {
+        targetEntryExecution(
+            authority.resolveEntry(command),
+            compatibility: compatibility
+        )
+    }
+
+    func reopenTargetEntry(
+        _ command: ProductStateCommand,
+        using authority: ProductStateNamedListCommandAuthority,
+        compatibility: ProductStateCompatibilityAdapter
+    ) -> ProductStateNamedListServiceExecution {
+        targetEntryExecution(
+            authority.reopenEntry(command),
+            compatibility: compatibility
+        )
+    }
+
+    func removeTargetEntry(
+        _ command: ProductStateCommand,
+        using authority: ProductStateNamedListCommandAuthority,
+        compatibility: ProductStateCompatibilityAdapter
+    ) -> ProductStateNamedListServiceExecution {
+        targetEntryExecution(
+            authority.removeEntry(command),
+            compatibility: compatibility
+        )
+    }
+
+    private func targetEntryExecution(
+        _ execution: ProductStateNamedListCommandExecution,
+        compatibility: ProductStateCompatibilityAdapter
+    ) -> ProductStateNamedListServiceExecution {
+        ProductStateNamedListServiceExecution(
+            command: execution,
+            compatibilityOutput: compatibility.deriveEntryOutput(
+                from: execution
             )
         )
     }

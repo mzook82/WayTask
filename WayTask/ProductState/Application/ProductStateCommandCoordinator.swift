@@ -2164,3 +2164,887 @@ final class ProductStateProductCommandAuthority {
         ))
     }
 }
+
+// MARK: - T-11 durable Named List and Entry command authority
+
+enum ProductStateNamedListCommandWriteState: String, Codable, Sendable {
+    case writableTarget
+    case migrationIncomplete
+    case nonDurable
+}
+
+enum ProductStateNamedListCommandOperation: String, Codable, Sendable {
+    case createNamedList
+    case renameNamedList
+    case addEntry
+    case updateEntry
+    case resolveEntry
+    case reopenEntry
+    case removeEntry
+}
+
+enum ProductStateNamedListCommandOutcomeKind: String, Codable, Sendable {
+    case listCreated
+    case listRenamed
+    case entryAdded
+    case existingNeeded
+    case reopenRequired
+    case entryUpdated
+    case entryResolved
+    case entryReopened
+    case entryRemoved
+    case noOp
+    case conflict
+    case validationFailure
+    case unavailable
+}
+
+enum ProductStateNamedListCommandFailureClassification:
+    String, Codable, Sendable {
+    case migrationIncomplete
+    case nonDurable
+    case invalidRequest
+    case staleRevision
+    case activeSession
+    case ambiguousIdentity
+    case removedProduct
+    case reopenRequired
+    case unresolvedMigration
+    case saveFailed
+    case stagedStateMismatch
+    case finalInvariantFailure
+    case reconciliationFailed
+    case outcomeUnknown
+    case durableAuthorityUnavailable
+}
+
+enum ProductStateNamedListCommandDurability: String, Codable, Sendable {
+    case committed
+    case reconciledCommitted
+    case noCommitRequired
+    case rolledBack
+    case outcomeUnknown
+    case notAttempted
+}
+
+struct ProductStateNamedListCommandDiagnostic:
+    Equatable, Codable, Sendable {
+    let commandID: UUID
+    let listID: UUID
+    let requestedEntryID: UUID?
+    let authoritativeEntryID: UUID?
+    let productID: UUID?
+    let operation: ProductStateNamedListCommandOperation
+    let outcome: ProductStateNamedListCommandOutcomeKind
+    let failure: ProductStateNamedListCommandFailureClassification?
+    let durability: ProductStateNamedListCommandDurability
+    let listRevisionBefore: UInt64?
+    let listRevisionAfter: UInt64?
+    let historyEventCount: Int
+    let claimsDurableSuccess: Bool
+}
+
+struct ProductStateNamedListCommandCommitSummary: Equatable, Sendable {
+    let commandID: ProductStateCommandID
+    let listID: ProductStateListID
+    let entry: ProductStateListEntryIdentity?
+    let listRevisionBefore: ProductStateListRevision
+    let listRevisionAfter: ProductStateListRevision
+    let historyEventIDs: [ProductStateHistoryEventID]
+    let durability: ProductStateNamedListCommandDurability
+}
+
+enum ProductStateNamedListCommandOutcome: Equatable, Sendable {
+    case listCreated(ProductStateNamedListCommandCommitSummary)
+    case listRenamed(ProductStateNamedListCommandCommitSummary)
+    case entryAdded(ProductStateNamedListCommandCommitSummary)
+    case existingNeeded(
+        identity: ProductStateListEntryIdentity,
+        listRevision: ProductStateListRevision
+    )
+    case reopenRequired(
+        identity: ProductStateListEntryIdentity,
+        listRevision: ProductStateListRevision
+    )
+    case entryUpdated(ProductStateNamedListCommandCommitSummary)
+    case entryResolved(
+        ProductStateNamedListCommandCommitSummary,
+        reason: ShoppingListResolutionReason
+    )
+    case entryReopened(ProductStateNamedListCommandCommitSummary)
+    case entryRemoved(ProductStateNamedListCommandCommitSummary)
+    case noOp(
+        listID: ProductStateListID,
+        entry: ProductStateListEntryIdentity?,
+        listRevision: ProductStateListRevision
+    )
+    case conflict(ProductStateCommandConflict)
+    case validationFailure
+    case unavailable(ProductStateUnavailableReason)
+}
+
+struct ProductStateNamedListCommandExecution: Equatable, Sendable {
+    let outcome: ProductStateNamedListCommandOutcome
+    let diagnostic: ProductStateNamedListCommandDiagnostic
+
+    var claimsDurableSuccess: Bool {
+        diagnostic.claimsDurableSuccess
+    }
+}
+
+/// The sole T-11 mutation entry for Named Lists and their exact entries.
+/// It composes T-04 preparation with the T-05 transaction owner and exposes
+/// no SwiftData context, compatibility write, or list lifecycle operation.
+@MainActor
+final class ProductStateNamedListCommandAuthority {
+    typealias TransactionCommit = (
+        ProductStatePreparedCommandResult
+    ) -> ProductStateTransactionResult
+
+    private let shopping: any ShoppingRepository
+    private let coordinator: ProductStateCommandCoordinator
+    private let commitPrepared: TransactionCommit
+    private let writeState: ProductStateNamedListCommandWriteState
+
+    init(
+        repositories: ProductStateRepositories,
+        transactionCoordinator: ProductStateTransactionCoordinator,
+        writeState: ProductStateNamedListCommandWriteState
+    ) {
+        shopping = repositories.shopping
+        coordinator = ProductStateCommandCoordinator(
+            repositories: repositories
+        )
+        commitPrepared = { transactionCoordinator.commit($0) }
+        self.writeState = writeState
+    }
+
+    init(
+        shopping: any ShoppingRepository,
+        coordinator: ProductStateCommandCoordinator,
+        writeState: ProductStateNamedListCommandWriteState,
+        commitPrepared: @escaping TransactionCommit
+    ) {
+        self.shopping = shopping
+        self.coordinator = coordinator
+        self.writeState = writeState
+        self.commitPrepared = commitPrepared
+    }
+
+    func createNamedList(
+        _ command: ProductStateCommand
+    ) -> ProductStateNamedListCommandExecution {
+        execute(command, operation: .createNamedList)
+    }
+
+    func renameNamedList(
+        _ command: ProductStateCommand
+    ) -> ProductStateNamedListCommandExecution {
+        execute(command, operation: .renameNamedList)
+    }
+
+    func addEntry(
+        _ command: ProductStateCommand
+    ) -> ProductStateNamedListCommandExecution {
+        execute(command, operation: .addEntry)
+    }
+
+    func updateEntry(
+        _ command: ProductStateCommand
+    ) -> ProductStateNamedListCommandExecution {
+        execute(command, operation: .updateEntry)
+    }
+
+    func resolveEntry(
+        _ command: ProductStateCommand
+    ) -> ProductStateNamedListCommandExecution {
+        execute(command, operation: .resolveEntry)
+    }
+
+    func reopenEntry(
+        _ command: ProductStateCommand
+    ) -> ProductStateNamedListCommandExecution {
+        execute(command, operation: .reopenEntry)
+    }
+
+    func removeEntry(
+        _ command: ProductStateCommand
+    ) -> ProductStateNamedListCommandExecution {
+        execute(command, operation: .removeEntry)
+    }
+
+    private func execute(
+        _ command: ProductStateCommand,
+        operation: ProductStateNamedListCommandOperation
+    ) -> ProductStateNamedListCommandExecution {
+        guard operationMatches(command, operation: operation),
+              let listID = listID(for: command)
+        else {
+            return rejectedExecution(
+                command: command,
+                operation: operation,
+                listID: listID(for: command) ?? zeroListID,
+                outcome: .validationFailure,
+                failure: .invalidRequest
+            )
+        }
+        if let blocked = blockedExecution(
+            command: command,
+            operation: operation,
+            listID: listID
+        ) {
+            return blocked
+        }
+
+        switch namedListAuthorization(
+            command: command,
+            operation: operation,
+            listID: listID
+        ) {
+        case .authorized:
+            break
+        case .invalid:
+            return rejectedExecution(
+                command: command,
+                operation: operation,
+                listID: listID,
+                outcome: .validationFailure,
+                failure: .invalidRequest
+            )
+        case .unavailable:
+            return rejectedExecution(
+                command: command,
+                operation: operation,
+                listID: listID,
+                outcome: .unavailable(.durableAuthorityUnavailable),
+                failure: .durableAuthorityUnavailable
+            )
+        }
+
+        let prepared = coordinator.prepare(command)
+        if case let .staged(commandID, effects) = prepared,
+           !hasExactEffects(effects, for: operation) {
+            let rejected = ProductStatePreparedCommandResult.unavailable(
+                commandID: commandID,
+                reason: .durableAuthorityUnavailable
+            )
+            _ = commitPrepared(rejected)
+            return rejectedExecution(
+                command: command,
+                operation: operation,
+                listID: listID,
+                outcome: .unavailable(.durableAuthorityUnavailable),
+                failure: .stagedStateMismatch,
+                durability: .rolledBack
+            )
+        }
+        return finish(
+            prepared,
+            command: command,
+            operation: operation,
+            listID: listID
+        )
+    }
+
+    private func finish(
+        _ prepared: ProductStatePreparedCommandResult,
+        command: ProductStateCommand,
+        operation: ProductStateNamedListCommandOperation,
+        listID: ProductStateListID
+    ) -> ProductStateNamedListCommandExecution {
+        let transaction = commitPrepared(prepared)
+        let durability = durability(for: transaction.disposition)
+
+        if transaction.claimsDurableSuccess,
+           case let .staged(_, effects) = prepared,
+           let summary = commitSummary(
+                commandID: command.id,
+                listID: listID,
+                effects: effects,
+                durability: durability
+           ) {
+            return committedExecution(
+                command: command,
+                operation: operation,
+                summary: summary
+            )
+        }
+
+        switch transaction.commandResult {
+        case .noOp:
+            return noOpExecution(
+                command: command,
+                operation: operation,
+                listID: listID,
+                durability: durability
+            )
+
+        case let .conflict(_, conflict):
+            if operation == .addEntry,
+               conflict == .reopenRequired,
+               let identity = entryIdentity(for: command),
+               let state = exactMembership(
+                    listID: identity.listID,
+                    productID: identity.productID
+               ),
+               state.entry.lifecycleRawValue == "resolved" {
+                return semanticExecution(
+                    command: command,
+                    operation: operation,
+                    listID: listID,
+                    authoritativeEntry: state.identity,
+                    outcome: .reopenRequired(
+                        identity: state.identity,
+                        listRevision: state.revision
+                    ),
+                    outcomeKind: .reopenRequired,
+                    failure: .reopenRequired,
+                    durability: durability,
+                    listRevision: state.revision
+                )
+            }
+            return rejectedExecution(
+                command: command,
+                operation: operation,
+                listID: listID,
+                outcome: .conflict(conflict),
+                failure: failure(for: conflict),
+                durability: durability
+            )
+
+        case .validationFailure:
+            return rejectedExecution(
+                command: command,
+                operation: operation,
+                listID: listID,
+                outcome: .validationFailure,
+                failure: .invalidRequest,
+                durability: durability
+            )
+
+        case let .unavailable(_, reason):
+            return rejectedExecution(
+                command: command,
+                operation: operation,
+                listID: listID,
+                outcome: .unavailable(reason),
+                failure: failure(for: transaction.disposition),
+                durability: durability
+            )
+
+        case .committed:
+            return rejectedExecution(
+                command: command,
+                operation: operation,
+                listID: listID,
+                outcome: .unavailable(.durableAuthorityUnavailable),
+                failure: .stagedStateMismatch,
+                durability: durability
+            )
+        }
+    }
+
+    private func committedExecution(
+        command: ProductStateCommand,
+        operation: ProductStateNamedListCommandOperation,
+        summary: ProductStateNamedListCommandCommitSummary
+    ) -> ProductStateNamedListCommandExecution {
+        let outcome: ProductStateNamedListCommandOutcome
+        let kind: ProductStateNamedListCommandOutcomeKind
+        switch operation {
+        case .createNamedList:
+            outcome = .listCreated(summary)
+            kind = .listCreated
+        case .renameNamedList:
+            outcome = .listRenamed(summary)
+            kind = .listRenamed
+        case .addEntry:
+            outcome = .entryAdded(summary)
+            kind = .entryAdded
+        case .updateEntry:
+            outcome = .entryUpdated(summary)
+            kind = .entryUpdated
+        case .resolveEntry:
+            guard case let .resolveListNeed(value) = command.intent else {
+                return rejectedExecution(
+                    command: command,
+                    operation: operation,
+                    listID: summary.listID,
+                    outcome: .unavailable(.durableAuthorityUnavailable),
+                    failure: .stagedStateMismatch,
+                    durability: summary.durability
+                )
+            }
+            outcome = .entryResolved(summary, reason: value.reason)
+            kind = .entryResolved
+        case .reopenEntry:
+            outcome = .entryReopened(summary)
+            kind = .entryReopened
+        case .removeEntry:
+            outcome = .entryRemoved(summary)
+            kind = .entryRemoved
+        }
+
+        return ProductStateNamedListCommandExecution(
+            outcome: outcome,
+            diagnostic: diagnostic(
+                command: command,
+                operation: operation,
+                listID: summary.listID,
+                authoritativeEntry: summary.entry,
+                outcome: kind,
+                durability: summary.durability,
+                summary: summary,
+                claimsDurableSuccess: true
+            )
+        )
+    }
+
+    private func noOpExecution(
+        command: ProductStateCommand,
+        operation: ProductStateNamedListCommandOperation,
+        listID: ProductStateListID,
+        durability: ProductStateNamedListCommandDurability
+    ) -> ProductStateNamedListCommandExecution {
+        guard let revision = currentListRevision(listID) else {
+            return rejectedExecution(
+                command: command,
+                operation: operation,
+                listID: listID,
+                outcome: .unavailable(.durableAuthorityUnavailable),
+                failure: .durableAuthorityUnavailable,
+                durability: durability
+            )
+        }
+
+        if operation == .addEntry,
+           let requested = entryIdentity(for: command),
+           let state = exactMembership(
+                listID: requested.listID,
+                productID: requested.productID
+           ),
+           state.entry.lifecycleRawValue == "needed" {
+            return semanticExecution(
+                command: command,
+                operation: operation,
+                listID: listID,
+                authoritativeEntry: state.identity,
+                outcome: .existingNeeded(
+                    identity: state.identity,
+                    listRevision: state.revision
+                ),
+                outcomeKind: .existingNeeded,
+                durability: durability,
+                listRevision: state.revision
+            )
+        }
+
+        return semanticExecution(
+            command: command,
+            operation: operation,
+            listID: listID,
+            authoritativeEntry: entryIdentity(for: command),
+            outcome: .noOp(
+                listID: listID,
+                entry: entryIdentity(for: command),
+                listRevision: revision
+            ),
+            outcomeKind: .noOp,
+            durability: durability,
+            listRevision: revision
+        )
+    }
+
+    private func hasExactEffects(
+        _ effects: [ProductStateStagedEffect],
+        for operation: ProductStateNamedListCommandOperation
+    ) -> Bool {
+        let stateEffects = effects.filter {
+            switch $0 {
+            case .listInserted, .listRenamed, .entryInserted,
+                 .entryUpdated, .entryResolved, .entryReopened,
+                 .entryDeleted:
+                true
+            default:
+                false
+            }
+        }
+        let historyCount = effects.reduce(into: 0) { count, effect in
+            if case .historyEventInserted = effect { count += 1 }
+        }
+        guard stateEffects.count == 1 else { return false }
+        switch (operation, stateEffects[0]) {
+        case (.createNamedList, .listInserted),
+             (.renameNamedList, .listRenamed),
+             (.updateEntry, .entryUpdated):
+            return historyCount == 0 && effects.count == 1
+        case (.addEntry, .entryInserted),
+             (.resolveEntry, .entryResolved),
+             (.reopenEntry, .entryReopened),
+             (.removeEntry, .entryDeleted):
+            return historyCount == 1 && effects.count == 2
+        default:
+            return false
+        }
+    }
+
+    private func commitSummary(
+        commandID: ProductStateCommandID,
+        listID: ProductStateListID,
+        effects: [ProductStateStagedEffect],
+        durability: ProductStateNamedListCommandDurability
+    ) -> ProductStateNamedListCommandCommitSummary? {
+        var entry: ProductStateListEntryIdentity?
+        var before: UInt64?
+        var after: UInt64?
+        var history: [ProductStateHistoryEventID] = []
+
+        for effect in effects {
+            switch effect {
+            case let .listInserted(id, revision) where id == listID:
+                before = 0
+                after = revision
+            case let .listRenamed(id, prior, next) where id == listID:
+                before = prior
+                after = next
+            case let .entryInserted(identity, revision),
+                 let .entryUpdated(identity, revision),
+                 let .entryReopened(identity, revision),
+                 let .entryDeleted(identity, revision)
+                where identity.listID == listID && revision > 0:
+                entry = identity
+                before = revision - 1
+                after = revision
+            case let .entryResolved(identity, _, revision)
+                where identity.listID == listID && revision > 0:
+                entry = identity
+                before = revision - 1
+                after = revision
+            case let .historyEventInserted(id):
+                history.append(id)
+            default:
+                break
+            }
+        }
+        guard let before, let after else { return nil }
+        history.sort { $0.rawValue.uuidString < $1.rawValue.uuidString }
+        return ProductStateNamedListCommandCommitSummary(
+            commandID: commandID,
+            listID: listID,
+            entry: entry,
+            listRevisionBefore: ProductStateListRevision(value: before),
+            listRevisionAfter: ProductStateListRevision(value: after),
+            historyEventIDs: history,
+            durability: durability
+        )
+    }
+
+    private struct ExactMembership {
+        let entry: WayTaskSchemaV4.ShoppingListEntry
+        let identity: ProductStateListEntryIdentity
+        let revision: ProductStateListRevision
+    }
+
+    private func exactMembership(
+        listID: ProductStateListID,
+        productID: ProductStateProductID
+    ) -> ExactMembership? {
+        do {
+            let lists = try shopping.shoppingLists(id: listID.rawValue)
+            let entries = try shopping.shoppingEntries(
+                listID: listID.rawValue,
+                productID: productID.rawValue
+            )
+            guard lists.count == 1, entries.count == 1 else { return nil }
+            let entry = entries[0]
+            return ExactMembership(
+                entry: entry,
+                identity: ProductStateListEntryIdentity(
+                    id: ProductStateListEntryID(rawValue: entry.id),
+                    listID: listID,
+                    productID: productID
+                ),
+                revision: ProductStateListRevision(
+                    value: lists[0].revision
+                )
+            )
+        } catch {
+            return nil
+        }
+    }
+
+    private func currentListRevision(
+        _ listID: ProductStateListID
+    ) -> ProductStateListRevision? {
+        do {
+            let rows = try shopping.shoppingLists(id: listID.rawValue)
+            guard rows.count == 1 else { return nil }
+            return ProductStateListRevision(value: rows[0].revision)
+        } catch {
+            return nil
+        }
+    }
+
+    private func operationMatches(
+        _ command: ProductStateCommand,
+        operation: ProductStateNamedListCommandOperation
+    ) -> Bool {
+        switch (operation, command.intent) {
+        case (.createNamedList, .createNamedList),
+             (.renameNamedList, .renameNamedList),
+             (.addEntry, .addProductToList),
+             (.updateEntry, .updateListEntry),
+             (.resolveEntry, .resolveListNeed),
+             (.reopenEntry, .reopenListNeed),
+             (.removeEntry, .removeProductFromNamedList):
+            true
+        default:
+            false
+        }
+    }
+
+    private enum NamedListAuthorization {
+        case authorized
+        case invalid
+        case unavailable
+    }
+
+    private func namedListAuthorization(
+        command: ProductStateCommand,
+        operation: ProductStateNamedListCommandOperation,
+        listID: ProductStateListID
+    ) -> NamedListAuthorization {
+        if case let .createNamedList(value) = command.intent {
+            return isAuthorizedPurpose(value.purposeRawValue)
+                ? .authorized : .invalid
+        }
+        do {
+            let rows = try shopping.shoppingLists(id: listID.rawValue)
+            guard rows.count == 1 else { return .authorized }
+            return isAuthorizedPurpose(rows[0].purposeRawValue)
+                ? .authorized : .invalid
+        } catch {
+            return .unavailable
+        }
+    }
+
+    private func isAuthorizedPurpose(_ purpose: String?) -> Bool {
+        guard let purpose else { return true }
+        let trimmed = purpose.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        guard !trimmed.isEmpty, trimmed == purpose else { return false }
+        return purpose != "completed" && purpose != "recent"
+    }
+
+    private func listID(
+        for command: ProductStateCommand
+    ) -> ProductStateListID? {
+        switch command.intent {
+        case let .createNamedList(value): value.listID
+        case let .renameNamedList(value): value.listID
+        case let .addProductToList(value): value.entry.listID
+        case let .updateListEntry(value): value.entry.listID
+        case let .resolveListNeed(value): value.entry.listID
+        case let .reopenListNeed(value): value.entry.listID
+        case let .removeProductFromNamedList(value): value.entry.listID
+        default: nil
+        }
+    }
+
+    private func entryIdentity(
+        for command: ProductStateCommand
+    ) -> ProductStateListEntryIdentity? {
+        switch command.intent {
+        case let .addProductToList(value): value.entry
+        case let .updateListEntry(value): value.entry
+        case let .resolveListNeed(value): value.entry
+        case let .reopenListNeed(value): value.entry
+        case let .removeProductFromNamedList(value): value.entry
+        default: nil
+        }
+    }
+
+    private func blockedExecution(
+        command: ProductStateCommand,
+        operation: ProductStateNamedListCommandOperation,
+        listID: ProductStateListID
+    ) -> ProductStateNamedListCommandExecution? {
+        switch writeState {
+        case .writableTarget:
+            nil
+        case .migrationIncomplete:
+            rejectedExecution(
+                command: command,
+                operation: operation,
+                listID: listID,
+                outcome: .unavailable(.migrationIncomplete),
+                failure: .migrationIncomplete
+            )
+        case .nonDurable:
+            rejectedExecution(
+                command: command,
+                operation: operation,
+                listID: listID,
+                outcome: .unavailable(.durableAuthorityUnavailable),
+                failure: .nonDurable
+            )
+        }
+    }
+
+    private func semanticExecution(
+        command: ProductStateCommand,
+        operation: ProductStateNamedListCommandOperation,
+        listID: ProductStateListID,
+        authoritativeEntry: ProductStateListEntryIdentity?,
+        outcome: ProductStateNamedListCommandOutcome,
+        outcomeKind: ProductStateNamedListCommandOutcomeKind,
+        failure: ProductStateNamedListCommandFailureClassification? = nil,
+        durability: ProductStateNamedListCommandDurability,
+        listRevision: ProductStateListRevision
+    ) -> ProductStateNamedListCommandExecution {
+        ProductStateNamedListCommandExecution(
+            outcome: outcome,
+            diagnostic: diagnostic(
+                command: command,
+                operation: operation,
+                listID: listID,
+                authoritativeEntry: authoritativeEntry,
+                outcome: outcomeKind,
+                failure: failure,
+                durability: durability,
+                listRevisionBefore: listRevision.value,
+                listRevisionAfter: listRevision.value
+            )
+        )
+    }
+
+    private func rejectedExecution(
+        command: ProductStateCommand,
+        operation: ProductStateNamedListCommandOperation,
+        listID: ProductStateListID,
+        outcome: ProductStateNamedListCommandOutcome,
+        failure: ProductStateNamedListCommandFailureClassification,
+        durability: ProductStateNamedListCommandDurability = .notAttempted
+    ) -> ProductStateNamedListCommandExecution {
+        ProductStateNamedListCommandExecution(
+            outcome: outcome,
+            diagnostic: diagnostic(
+                command: command,
+                operation: operation,
+                listID: listID,
+                authoritativeEntry: nil,
+                outcome: outcomeKind(for: outcome),
+                failure: failure,
+                durability: durability
+            )
+        )
+    }
+
+    private func diagnostic(
+        command: ProductStateCommand,
+        operation: ProductStateNamedListCommandOperation,
+        listID: ProductStateListID,
+        authoritativeEntry: ProductStateListEntryIdentity?,
+        outcome: ProductStateNamedListCommandOutcomeKind,
+        failure: ProductStateNamedListCommandFailureClassification? = nil,
+        durability: ProductStateNamedListCommandDurability,
+        summary: ProductStateNamedListCommandCommitSummary? = nil,
+        listRevisionBefore: UInt64? = nil,
+        listRevisionAfter: UInt64? = nil,
+        claimsDurableSuccess: Bool = false
+    ) -> ProductStateNamedListCommandDiagnostic {
+        let requestedEntry = entryIdentity(for: command)
+        return ProductStateNamedListCommandDiagnostic(
+            commandID: command.id.rawValue,
+            listID: listID.rawValue,
+            requestedEntryID: requestedEntry?.id.rawValue,
+            authoritativeEntryID: authoritativeEntry?.id.rawValue,
+            productID: requestedEntry?.productID.rawValue,
+            operation: operation,
+            outcome: outcome,
+            failure: failure,
+            durability: durability,
+            listRevisionBefore:
+                summary?.listRevisionBefore.value ?? listRevisionBefore,
+            listRevisionAfter:
+                summary?.listRevisionAfter.value ?? listRevisionAfter,
+            historyEventCount: summary?.historyEventIDs.count ?? 0,
+            claimsDurableSuccess: claimsDurableSuccess
+        )
+    }
+
+    private func durability(
+        for disposition: ProductStateTransactionDisposition
+    ) -> ProductStateNamedListCommandDurability {
+        switch disposition {
+        case .committed: .committed
+        case .reconciledCommitted: .reconciledCommitted
+        case .noCommitRequired: .noCommitRequired
+        case .rolledBack: .rolledBack
+        case .outcomeUnknown: .outcomeUnknown
+        }
+    }
+
+    private func failure(
+        for conflict: ProductStateCommandConflict
+    ) -> ProductStateNamedListCommandFailureClassification {
+        switch conflict {
+        case .staleRevision: .staleRevision
+        case .activeSession: .activeSession
+        case .removedProduct: .removedProduct
+        case .reopenRequired: .reopenRequired
+        case .unresolvedMigration: .unresolvedMigration
+        case .ambiguousIdentity, .existingNeededEntry: .ambiguousIdentity
+        }
+    }
+
+    private func failure(
+        for disposition: ProductStateTransactionDisposition
+    ) -> ProductStateNamedListCommandFailureClassification {
+        switch disposition {
+        case .committed, .reconciledCommitted, .noCommitRequired:
+            .durableAuthorityUnavailable
+        case let .rolledBack(reason):
+            switch reason {
+            case .saveFailed: .saveFailed
+            case .stagedStateMismatch: .stagedStateMismatch
+            case .finalInvariantFailure: .finalInvariantFailure
+            case .reconciliationFailed: .reconciliationFailed
+            case .commitOutcomeUnknown: .outcomeUnknown
+            case .preparedResultRejected: .invalidRequest
+            }
+        case .outcomeUnknown:
+            .outcomeUnknown
+        }
+    }
+
+    private func outcomeKind(
+        for outcome: ProductStateNamedListCommandOutcome
+    ) -> ProductStateNamedListCommandOutcomeKind {
+        switch outcome {
+        case .listCreated: .listCreated
+        case .listRenamed: .listRenamed
+        case .entryAdded: .entryAdded
+        case .existingNeeded: .existingNeeded
+        case .reopenRequired: .reopenRequired
+        case .entryUpdated: .entryUpdated
+        case .entryResolved: .entryResolved
+        case .entryReopened: .entryReopened
+        case .entryRemoved: .entryRemoved
+        case .noOp: .noOp
+        case .conflict: .conflict
+        case .validationFailure: .validationFailure
+        case .unavailable: .unavailable
+        }
+    }
+
+    private var zeroListID: ProductStateListID {
+        ProductStateListID(
+            rawValue: UUID(uuid: (
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0
+            ))
+        )
+    }
+}
