@@ -302,12 +302,16 @@ enum WayTaskMigrationStageStatus: String, Codable, Sendable {
     case physicalMigrationCompleted = "physical_migration_completed"
     case candidateReopened = "candidate_reopened"
     case foundationValidated = "foundation_validated"
+    case productListSemanticMigrationComplete =
+        "product_list_semantic_migration_complete"
     case failedBeforePromotion = "failed_before_promotion"
 }
 
 enum WayTaskMigrationCompletionClassification: String, Codable, Sendable {
     case candidateReadyForSemanticMigration =
         "candidate_ready_for_semantic_migration"
+    case productListSemanticMigrationComplete =
+        "product_list_semantic_migration_complete"
     case failedBeforePromotion = "failed_before_promotion"
 }
 
@@ -330,6 +334,12 @@ enum WayTaskMigrationFailureClassification: String, Codable, Sendable {
     case interruptedAttemptCleanupFailed =
         "interrupted_attempt_cleanup_failed"
     case cleanupFailed = "cleanup_failed"
+    case semanticCandidateReadFailed = "semantic_candidate_read_failed"
+    case semanticNormalizationFailed = "semantic_normalization_failed"
+    case semanticTargetCreationFailed = "semantic_target_creation_failed"
+    case semanticTargetReopenFailed = "semantic_target_reopen_failed"
+    case semanticValidationFailed = "semantic_validation_failed"
+    case semanticFingerprintMismatch = "semantic_fingerprint_mismatch"
 }
 
 enum WayTaskMigrationRollbackClassification: String, Codable, Sendable {
@@ -476,6 +486,823 @@ struct WayTaskMigrationCleanupResult: Equatable, Sendable {
     let succeeded: Bool
 }
 
+// MARK: - T-07 Product/list semantic records
+
+struct WayTaskLegacyProductRecord: Equatable, Sendable {
+    let sourceRecordID: UUID
+    let productID: UUID?
+    let legacyShoppingItemID: UUID?
+    let name: String
+    let imageData: Data?
+    let brand: String?
+    let category: String?
+    let barcode: String?
+    let imageURLString: String?
+    let sourceRawValue: String
+    let productType: String?
+    let flavor: String?
+    let packageSize: String?
+    let packageType: String?
+    let visibleText: String?
+    let searchKeywordsRawValue: String?
+    let catalogProductIDRawValue: String?
+    let catalogDisplayNameSnapshot: String?
+    let catalogDisplayLocaleSnapshot: String?
+    let catalogCategoryIDSnapshotRawValue: String?
+    let catalogCategoryDisplayNameSnapshot: String?
+    let catalogIconKeySnapshot: String?
+    let catalogSnapshotUpdatedAt: Date?
+    let createdAt: Date
+    let updatedAt: Date
+    let removedAt: Date?
+
+    init(
+        sourceRecordID: UUID,
+        productID: UUID?,
+        legacyShoppingItemID: UUID? = nil,
+        name: String,
+        imageData: Data? = nil,
+        brand: String? = nil,
+        category: String? = nil,
+        barcode: String? = nil,
+        imageURLString: String? = nil,
+        sourceRawValue: String = ProductSource.manual.rawValue,
+        productType: String? = nil,
+        flavor: String? = nil,
+        packageSize: String? = nil,
+        packageType: String? = nil,
+        visibleText: String? = nil,
+        searchKeywordsRawValue: String? = nil,
+        catalogProductIDRawValue: String? = nil,
+        catalogDisplayNameSnapshot: String? = nil,
+        catalogDisplayLocaleSnapshot: String? = nil,
+        catalogCategoryIDSnapshotRawValue: String? = nil,
+        catalogCategoryDisplayNameSnapshot: String? = nil,
+        catalogIconKeySnapshot: String? = nil,
+        catalogSnapshotUpdatedAt: Date? = nil,
+        createdAt: Date,
+        updatedAt: Date,
+        removedAt: Date? = nil
+    ) {
+        self.sourceRecordID = sourceRecordID
+        self.productID = productID
+        self.legacyShoppingItemID = legacyShoppingItemID
+        self.name = name
+        self.imageData = imageData
+        self.brand = brand
+        self.category = category
+        self.barcode = barcode
+        self.imageURLString = imageURLString
+        self.sourceRawValue = sourceRawValue
+        self.productType = productType
+        self.flavor = flavor
+        self.packageSize = packageSize
+        self.packageType = packageType
+        self.visibleText = visibleText
+        self.searchKeywordsRawValue = searchKeywordsRawValue
+        self.catalogProductIDRawValue = catalogProductIDRawValue
+        self.catalogDisplayNameSnapshot = catalogDisplayNameSnapshot
+        self.catalogDisplayLocaleSnapshot = catalogDisplayLocaleSnapshot
+        self.catalogCategoryIDSnapshotRawValue =
+            catalogCategoryIDSnapshotRawValue
+        self.catalogCategoryDisplayNameSnapshot =
+            catalogCategoryDisplayNameSnapshot
+        self.catalogIconKeySnapshot = catalogIconKeySnapshot
+        self.catalogSnapshotUpdatedAt = catalogSnapshotUpdatedAt
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.removedAt = removedAt
+    }
+}
+
+struct WayTaskLegacyShoppingListRecord: Equatable, Sendable {
+    let sourceRecordID: UUID
+    let listID: UUID?
+    let title: String
+    let kindRawValue: String
+    let createdAt: Date
+    let updatedAt: Date
+    let isDefault: Bool
+}
+
+struct WayTaskLegacyShoppingEntryRecord: Equatable, Sendable {
+    let sourceRecordID: UUID
+    let entryID: UUID?
+    let listID: UUID?
+    let productID: UUID?
+    let relationshipProductID: UUID?
+    let legacyShoppingItemID: UUID?
+    let quantity: Double
+    let isChecked: Bool
+    let createdAt: Date
+    let sortOrder: Double
+}
+
+struct WayTaskLegacyCompatibilityRecord: Equatable, Sendable {
+    let sourceRecordID: UUID
+    let compatibilityID: UUID
+    let isCompleted: Bool
+}
+
+struct WayTaskLegacyProductListSnapshot: Equatable, Sendable {
+    let products: [WayTaskLegacyProductRecord]
+    let lists: [WayTaskLegacyShoppingListRecord]
+    let entries: [WayTaskLegacyShoppingEntryRecord]
+    let compatibilityRecords: [WayTaskLegacyCompatibilityRecord]
+}
+
+struct WayTaskMigratedProductRecord: Equatable, Codable, Sendable {
+    let id: UUID
+    let revision: UInt64
+    let libraryLifecycleRawValue: String
+    let libraryRemovedAt: Date?
+    let name: String
+    let imageData: Data?
+    let brand: String?
+    let category: String?
+    let barcode: String?
+    let imageURLString: String?
+    let sourceRawValue: String
+    let catalogProductIDRawValue: String?
+    let catalogDisplayNameSnapshot: String?
+    let catalogDisplayLocaleSnapshot: String?
+    let catalogCategoryIDSnapshotRawValue: String?
+    let catalogCategoryDisplayNameSnapshot: String?
+    let catalogIconKeySnapshot: String?
+    let catalogSnapshotUpdatedAt: Date?
+    let createdAt: Date
+    let updatedAt: Date
+}
+
+struct WayTaskMigratedShoppingListRecord: Equatable, Codable, Sendable {
+    let id: UUID
+    let revision: UInt64
+    let title: String
+    let purposeRawValue: String?
+    let createdAt: Date
+    let updatedAt: Date
+}
+
+struct WayTaskMigratedShoppingEntryRecord: Equatable, Codable, Sendable {
+    let id: UUID
+    let shoppingListID: UUID
+    let productID: UUID
+    let lifecycleRawValue: String
+    let resolutionReasonRawValue: String?
+    let resolutionEffectiveAt: Date?
+    let resolutionProvenanceRawValue: String?
+    let quantity: Double
+    let sortOrder: Double
+    let createdAt: Date
+    let updatedAt: Date
+}
+
+enum WayTaskProductListAliasKind: String, Codable, Sendable {
+    case product
+    case shoppingList = "shopping_list"
+    case shoppingEntry = "shopping_entry"
+    case compatibilityEvidence = "compatibility_evidence"
+}
+
+struct WayTaskProductListAliasRecord: Equatable, Codable, Sendable {
+    let kind: WayTaskProductListAliasKind
+    let sourceIdentity: UUID
+    let canonicalIdentity: UUID
+    let sourceEvidenceDigest: WayTaskMigrationSafeDigest
+    let ordinal: Int
+}
+
+struct WayTaskProductListSemanticSnapshot: Equatable, Codable, Sendable {
+    let products: [WayTaskMigratedProductRecord]
+    let lists: [WayTaskMigratedShoppingListRecord]
+    let entries: [WayTaskMigratedShoppingEntryRecord]
+}
+
+struct WayTaskProductListSemanticPlan: Equatable, Sendable {
+    static let initialProductRevision: UInt64 = 1
+    static let initialListRevision: UInt64 = 1
+
+    let target: WayTaskProductListSemanticSnapshot
+    let aliases: [WayTaskProductListAliasRecord]
+    let exceptionFacts: [WayTaskProductListSemanticExceptionFact]
+    let deferredArchiveListCount: Int
+    let deferredArchiveEntryCount: Int
+    let compatibilityEvidenceCount: Int
+    let blockingAmbiguityCount: Int
+    let semanticDigest: WayTaskMigrationFingerprint
+}
+
+struct WayTaskProductListSemanticExceptionFact: Equatable, Sendable {
+    let category: WayTaskMigrationExceptionCategory
+    let safeEvidenceDigest: WayTaskMigrationSafeDigest
+}
+
+struct WayTaskProductListSemanticStageIdentity: Hashable, Codable, Sendable {
+    static let version = "wt033a.tc13.t07.product-list.v1"
+
+    let foundationStageIdentity: WayTaskMigrationStageIdentity
+    let sourceSchemaIdentity: WayTaskMigrationSchemaIdentity
+    let candidateSchemaIdentity: WayTaskMigrationSchemaIdentity
+    let rawValue: String
+
+    init(foundationStageIdentity: WayTaskMigrationStageIdentity) {
+        self.foundationStageIdentity = foundationStageIdentity
+        sourceSchemaIdentity = .v3
+        candidateSchemaIdentity = .v4
+        rawValue = WayTaskMigrationDigest.hex(
+            hashing: Data(
+                [
+                    Self.version,
+                    foundationStageIdentity.rawValue,
+                    sourceSchemaIdentity.rawValue,
+                    candidateSchemaIdentity.rawValue
+                ].joined(separator: "|").utf8
+            )
+        )
+    }
+}
+
+struct WayTaskProductListSemanticReceipt: Sendable {
+    let foundationReceipt: WayTaskMigrationCandidateReceipt
+    let semanticStageIdentity: WayTaskProductListSemanticStageIdentity
+    let targetStoreURL: URL
+    let targetFingerprint: WayTaskMigrationFingerprint
+    let semanticDigest: WayTaskMigrationFingerprint
+    let targetValidation: WayTaskProductListSemanticSnapshot
+    let aliases: [WayTaskProductListAliasRecord]
+    let exceptionSummary: WayTaskMigrationExceptionSummary
+    let ownedArtifactNames: [String]
+    let status: WayTaskMigrationStageStatus
+    let completion: WayTaskMigrationCompletionClassification
+    let deferredArchiveListCount: Int
+    let deferredArchiveEntryCount: Int
+    let compatibilityEvidenceCount: Int
+
+    var semanticConversionCompleted: Bool { true }
+    var productListSemanticConversionCompleted: Bool { true }
+    var sessionHistoryLocationSemanticConversionCompleted: Bool { false }
+    var promotionAuthorized: Bool { false }
+    var startupActivationAuthorized: Bool { false }
+}
+
+enum WayTaskProductListSemanticMigrationResult: Sendable {
+    case complete(WayTaskProductListSemanticReceipt)
+    case failed(WayTaskMigrationFailure)
+}
+
+enum WayTaskProductListSemanticNormalizer {
+    static func normalize(
+        _ source: WayTaskLegacyProductListSnapshot,
+        recordingTime: Date
+    ) throws -> WayTaskProductListSemanticPlan {
+        var facts: [WayTaskProductListSemanticExceptionFact] = []
+        var pendingAliases: [PendingAlias] = []
+        var blockingAmbiguityCount = 0
+
+        let compatibilityGroups = Dictionary(
+            grouping: source.compatibilityRecords,
+            by: \.compatibilityID
+        )
+        var compatibilityStates: [UUID: Set<Bool>] = [:]
+        for compatibilityID in compatibilityGroups.keys.sorted(by: uuidLess) {
+            let rows = compatibilityGroups[compatibilityID]!.sorted {
+                uuidLess($0.sourceRecordID, $1.sourceRecordID)
+            }
+            compatibilityStates[compatibilityID] = Set(rows.map(\.isCompleted))
+            if rows.count > 1 {
+                for row in rows.dropFirst() {
+                    pendingAliases.append(
+                        PendingAlias(
+                            kind: .compatibilityEvidence,
+                            sourceIdentity: row.compatibilityID,
+                            canonicalIdentity: rows[0].compatibilityID,
+                            evidenceID: row.sourceRecordID
+                        )
+                    )
+                    facts.append(fact(.duplicateMerge, [
+                        "compatibility", compatibilityID.uuidString,
+                        row.sourceRecordID.uuidString
+                    ]))
+                }
+            }
+            if compatibilityStates[compatibilityID]?.count != 1 {
+                facts.append(fact(.ambiguousRecord, [
+                    "compatibility-state", compatibilityID.uuidString
+                ]))
+            }
+        }
+
+        var validProducts: [WayTaskLegacyProductRecord] = []
+        for row in source.products.sorted(by: productSourceLess) {
+            guard row.productID != nil else {
+                facts.append(fact(.missingProductIdentity, [
+                    "product", row.sourceRecordID.uuidString
+                ]))
+                continue
+            }
+            validProducts.append(row)
+        }
+
+        var migratedProducts: [WayTaskMigratedProductRecord] = []
+        let productGroups = Dictionary(
+            grouping: validProducts,
+            by: { $0.productID! }
+        )
+        for productID in productGroups.keys.sorted(by: uuidLess) {
+            let rows = productGroups[productID]!.sorted(by: productSourceLess)
+            let canonical = rows[0]
+            if !rows.allSatisfy({ compatibleProductSnapshot($0, canonical) }) {
+                blockingAmbiguityCount += 1
+                facts.append(fact(.ambiguousRecord, [
+                    "product-snapshot", productID.uuidString
+                ]))
+            }
+            if rows.count > 1 {
+                for row in rows.dropFirst() {
+                    pendingAliases.append(
+                        PendingAlias(
+                            kind: .product,
+                            sourceIdentity: productID,
+                            canonicalIdentity: productID,
+                            evidenceID: row.sourceRecordID
+                        )
+                    )
+                    facts.append(fact(.duplicateMerge, [
+                        "product", productID.uuidString,
+                        row.sourceRecordID.uuidString
+                    ]))
+                }
+            }
+
+            let removalDates = rows.compactMap(\.removedAt).sorted()
+            if !removalDates.isEmpty && removalDates.count != rows.count {
+                facts.append(fact(.ambiguousRecord, [
+                    "product-tombstone", productID.uuidString
+                ]))
+            }
+            if rows.contains(where: hasUnrepresentedProductEvidence) {
+                facts.append(fact(.unsupportedRecord, [
+                    "product-extra-evidence", productID.uuidString
+                ]))
+            }
+
+            let exactCatalogID: String?
+            if let rawValue = canonical.catalogProductIDRawValue {
+                let trimmed = rawValue.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                if !trimmed.isEmpty && trimmed == rawValue {
+                    exactCatalogID = rawValue
+                } else {
+                    exactCatalogID = nil
+                    facts.append(fact(.ambiguousRecord, [
+                        "catalog-identity", productID.uuidString
+                    ]))
+                }
+            } else {
+                exactCatalogID = nil
+            }
+
+            migratedProducts.append(
+                WayTaskMigratedProductRecord(
+                    id: productID,
+                    revision:
+                        WayTaskProductListSemanticPlan.initialProductRevision,
+                    libraryLifecycleRawValue: removalDates.isEmpty
+                        ? ProductLibraryLifecycle.active.rawValue
+                        : ProductLibraryLifecycle.removed.rawValue,
+                    libraryRemovedAt: removalDates.first,
+                    name: canonical.name,
+                    imageData: canonical.imageData,
+                    brand: canonical.brand,
+                    category: canonical.category,
+                    barcode: canonical.barcode,
+                    imageURLString: canonical.imageURLString,
+                    sourceRawValue: canonical.sourceRawValue,
+                    catalogProductIDRawValue: exactCatalogID,
+                    catalogDisplayNameSnapshot:
+                        canonical.catalogDisplayNameSnapshot,
+                    catalogDisplayLocaleSnapshot:
+                        canonical.catalogDisplayLocaleSnapshot,
+                    catalogCategoryIDSnapshotRawValue:
+                        canonical.catalogCategoryIDSnapshotRawValue,
+                    catalogCategoryDisplayNameSnapshot:
+                        canonical.catalogCategoryDisplayNameSnapshot,
+                    catalogIconKeySnapshot:
+                        canonical.catalogIconKeySnapshot,
+                    catalogSnapshotUpdatedAt:
+                        canonical.catalogSnapshotUpdatedAt,
+                    createdAt: rows.map(\.createdAt).min()!,
+                    updatedAt: rows.map(\.updatedAt).max()!
+                )
+            )
+        }
+
+        var validLists: [WayTaskLegacyShoppingListRecord] = []
+        for row in source.lists.sorted(by: listSourceLess) {
+            guard row.listID != nil else {
+                facts.append(fact(.missingListIdentity, [
+                    "list", row.sourceRecordID.uuidString
+                ]))
+                continue
+            }
+            validLists.append(row)
+        }
+
+        var migratedLists: [WayTaskMigratedShoppingListRecord] = []
+        var deferredListIDs = Set<UUID>()
+        let listGroups = Dictionary(grouping: validLists, by: { $0.listID! })
+        for listID in listGroups.keys.sorted(by: uuidLess) {
+            let rows = listGroups[listID]!.sorted(by: listSourceLess)
+            let canonical = rows[0]
+            if !rows.allSatisfy({
+                $0.title == canonical.title &&
+                    $0.kindRawValue == canonical.kindRawValue
+            }) {
+                blockingAmbiguityCount += 1
+                facts.append(fact(.ambiguousRecord, [
+                    "list-snapshot", listID.uuidString
+                ]))
+            }
+            if rows.count > 1 {
+                for row in rows.dropFirst() {
+                    pendingAliases.append(
+                        PendingAlias(
+                            kind: .shoppingList,
+                            sourceIdentity: listID,
+                            canonicalIdentity: listID,
+                            evidenceID: row.sourceRecordID
+                        )
+                    )
+                    facts.append(fact(.duplicateMerge, [
+                        "list", listID.uuidString,
+                        row.sourceRecordID.uuidString
+                    ]))
+                }
+            }
+
+            if canonical.kindRawValue == ShoppingListKind.completed.rawValue ||
+                canonical.kindRawValue == ShoppingListKind.recent.rawValue
+            {
+                deferredListIDs.insert(listID)
+                continue
+            }
+            guard canonical.kindRawValue == ShoppingListKind.weekly.rawValue
+            else {
+                blockingAmbiguityCount += 1
+                facts.append(fact(.unsupportedRecord, [
+                    "list-kind", listID.uuidString
+                ]))
+                continue
+            }
+            if rows.contains(where: \.isDefault) {
+                facts.append(fact(.unsupportedRecord, [
+                    "list-default-evidence", listID.uuidString
+                ]))
+            }
+            migratedLists.append(
+                WayTaskMigratedShoppingListRecord(
+                    id: listID,
+                    revision:
+                        WayTaskProductListSemanticPlan.initialListRevision,
+                    title: canonical.title,
+                    purposeRawValue: canonical.kindRawValue,
+                    createdAt: rows.map(\.createdAt).min()!,
+                    updatedAt: rows.map(\.updatedAt).max()!
+                )
+            )
+        }
+
+        let migratedProductIDs = Set(migratedProducts.map(\.id))
+        let migratedListIDs = Set(migratedLists.map(\.id))
+        var eligibleEntries: [WayTaskLegacyShoppingEntryRecord] = []
+        var deferredArchiveEntryCount = 0
+        for row in source.entries.sorted(by: entrySourceLess) {
+            if let listID = row.listID, deferredListIDs.contains(listID) {
+                deferredArchiveEntryCount += 1
+                continue
+            }
+            guard let entryID = row.entryID else {
+                facts.append(fact(.ambiguousRecord, [
+                    "entry-identity", row.sourceRecordID.uuidString
+                ]))
+                continue
+            }
+            guard let listID = row.listID else {
+                facts.append(fact(.missingListIdentity, [
+                    "entry", entryID.uuidString
+                ]))
+                continue
+            }
+            guard migratedListIDs.contains(listID) else {
+                facts.append(fact(.ambiguousRelationship, [
+                    "entry-list", entryID.uuidString, listID.uuidString
+                ]))
+                continue
+            }
+            guard let productID = row.productID else {
+                facts.append(fact(.missingProductIdentity, [
+                    "entry", entryID.uuidString
+                ]))
+                continue
+            }
+            guard migratedProductIDs.contains(productID) else {
+                facts.append(fact(.ambiguousRelationship, [
+                    "entry-product", entryID.uuidString,
+                    productID.uuidString
+                ]))
+                continue
+            }
+            if row.relationshipProductID != productID {
+                facts.append(fact(.ambiguousRelationship, [
+                    "relationship-repair", entryID.uuidString,
+                    productID.uuidString
+                ]))
+            }
+            eligibleEntries.append(row)
+        }
+
+        let entryGroups = Dictionary(
+            grouping: eligibleEntries,
+            by: { EntryGroupKey(listID: $0.listID!, productID: $0.productID!) }
+        )
+        var migratedEntries: [WayTaskMigratedShoppingEntryRecord] = []
+        for key in entryGroups.keys.sorted() {
+            let rows = entryGroups[key]!.sorted(by: entrySurvivorLess)
+            let canonical = rows[0]
+            if rows.count > 1 {
+                for row in rows.dropFirst() {
+                    pendingAliases.append(
+                        PendingAlias(
+                            kind: .shoppingEntry,
+                            sourceIdentity: row.entryID!,
+                            canonicalIdentity: canonical.entryID!,
+                            evidenceID: row.sourceRecordID
+                        )
+                    )
+                    facts.append(fact(.duplicateMerge, [
+                        "entry", row.entryID!.uuidString,
+                        canonical.entryID!.uuidString
+                    ]))
+                }
+            }
+
+            let validQuantities = rows.map(\.quantity).filter {
+                $0.isFinite && $0 > 0
+            }
+            if validQuantities.count != rows.count {
+                facts.append(fact(.unsupportedRecord, [
+                    "entry-quantity", canonical.entryID!.uuidString
+                ]))
+            }
+            let validSortOrders = rows.map(\.sortOrder).filter(\.isFinite)
+            if validSortOrders.count != rows.count {
+                facts.append(fact(.unsupportedRecord, [
+                    "entry-sort", canonical.entryID!.uuidString
+                ]))
+            }
+
+            for row in rows where !row.isChecked {
+                if let legacyID = row.legacyShoppingItemID,
+                   compatibilityStates[legacyID]?.contains(true) == true
+                {
+                    facts.append(fact(.legacyFlagContradiction, [
+                        "flag", row.entryID!.uuidString,
+                        legacyID.uuidString
+                    ]))
+                }
+            }
+
+            let isNeeded = rows.contains { !$0.isChecked }
+            migratedEntries.append(
+                WayTaskMigratedShoppingEntryRecord(
+                    id: canonical.entryID!,
+                    shoppingListID: key.listID,
+                    productID: key.productID,
+                    lifecycleRawValue: isNeeded ? "needed" : "resolved",
+                    resolutionReasonRawValue: isNeeded
+                        ? nil : ShoppingListResolutionReason
+                            .legacyUnknown.rawValue,
+                    resolutionEffectiveAt: isNeeded ? nil : recordingTime,
+                    resolutionProvenanceRawValue: isNeeded
+                        ? nil : "legacyMigration",
+                    quantity: validQuantities.max() ?? 1,
+                    sortOrder: validSortOrders.min() ?? 0,
+                    createdAt: rows.map(\.createdAt).min()!,
+                    updatedAt: rows.map(\.createdAt).min()!
+                )
+            )
+        }
+
+        let duplicateEntryIdentities = Dictionary(
+            grouping: migratedEntries,
+            by: \.id
+        ).filter { $0.value.count > 1 }
+        for entryID in duplicateEntryIdentities.keys.sorted(by: uuidLess) {
+            blockingAmbiguityCount += 1
+            facts.append(fact(.ambiguousRecord, [
+                "entry-id-collision", entryID.uuidString
+            ]))
+        }
+
+        let productLifecycle = Dictionary(
+            uniqueKeysWithValues: migratedProducts.map {
+                ($0.id, $0.libraryLifecycleRawValue)
+            }
+        )
+        for entry in migratedEntries
+        where productLifecycle[entry.productID] ==
+            ProductLibraryLifecycle.removed.rawValue
+        {
+            facts.append(fact(.tombstoneActiveReference, [
+                "entry", entry.id.uuidString, entry.productID.uuidString
+            ]))
+        }
+
+        migratedProducts.sort { uuidLess($0.id, $1.id) }
+        migratedLists.sort { uuidLess($0.id, $1.id) }
+        migratedEntries.sort {
+            if $0.shoppingListID != $1.shoppingListID {
+                return uuidLess($0.shoppingListID, $1.shoppingListID)
+            }
+            if $0.productID != $1.productID {
+                return uuidLess($0.productID, $1.productID)
+            }
+            return uuidLess($0.id, $1.id)
+        }
+        facts.sort {
+            if $0.category.rawValue != $1.category.rawValue {
+                return $0.category.rawValue < $1.category.rawValue
+            }
+            return $0.safeEvidenceDigest.rawValue <
+                $1.safeEvidenceDigest.rawValue
+        }
+        pendingAliases.sort()
+        let aliases = pendingAliases.enumerated().map { index, alias in
+            WayTaskProductListAliasRecord(
+                kind: alias.kind,
+                sourceIdentity: alias.sourceIdentity,
+                canonicalIdentity: alias.canonicalIdentity,
+                sourceEvidenceDigest: WayTaskMigrationSafeDigest(
+                    hashing: Data(alias.evidenceID.uuidString.lowercased().utf8)
+                ),
+                ordinal: index + 1
+            )
+        }
+        let target = WayTaskProductListSemanticSnapshot(
+            products: migratedProducts,
+            lists: migratedLists,
+            entries: migratedEntries
+        )
+        return WayTaskProductListSemanticPlan(
+            target: target,
+            aliases: aliases,
+            exceptionFacts: facts,
+            deferredArchiveListCount: deferredListIDs.count,
+            deferredArchiveEntryCount: deferredArchiveEntryCount,
+            compatibilityEvidenceCount: source.compatibilityRecords.count,
+            blockingAmbiguityCount: blockingAmbiguityCount,
+            semanticDigest: try semanticDigest(target)
+        )
+    }
+
+    static func semanticDigest(
+        _ snapshot: WayTaskProductListSemanticSnapshot
+    ) throws -> WayTaskMigrationFingerprint {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        encoder.dateEncodingStrategy = .millisecondsSince1970
+        return WayTaskMigrationFingerprint(
+            rawValue: WayTaskMigrationDigest.hex(
+                hashing: try encoder.encode(snapshot)
+            )
+        )
+    }
+
+    private static func compatibleProductSnapshot(
+        _ lhs: WayTaskLegacyProductRecord,
+        _ rhs: WayTaskLegacyProductRecord
+    ) -> Bool {
+        lhs.name == rhs.name && lhs.imageData == rhs.imageData &&
+            lhs.brand == rhs.brand && lhs.category == rhs.category &&
+            lhs.barcode == rhs.barcode &&
+            lhs.imageURLString == rhs.imageURLString &&
+            lhs.sourceRawValue == rhs.sourceRawValue &&
+            lhs.catalogProductIDRawValue == rhs.catalogProductIDRawValue &&
+            lhs.catalogDisplayNameSnapshot ==
+                rhs.catalogDisplayNameSnapshot &&
+            lhs.catalogDisplayLocaleSnapshot ==
+                rhs.catalogDisplayLocaleSnapshot &&
+            lhs.catalogCategoryIDSnapshotRawValue ==
+                rhs.catalogCategoryIDSnapshotRawValue &&
+            lhs.catalogCategoryDisplayNameSnapshot ==
+                rhs.catalogCategoryDisplayNameSnapshot &&
+            lhs.catalogIconKeySnapshot == rhs.catalogIconKeySnapshot &&
+            lhs.catalogSnapshotUpdatedAt == rhs.catalogSnapshotUpdatedAt
+    }
+
+    nonisolated private static func hasUnrepresentedProductEvidence(
+        _ row: WayTaskLegacyProductRecord
+    ) -> Bool {
+        row.productType != nil || row.flavor != nil ||
+            row.packageSize != nil || row.packageType != nil ||
+            row.visibleText != nil || row.searchKeywordsRawValue != nil
+    }
+
+    private static func fact(
+        _ category: WayTaskMigrationExceptionCategory,
+        _ components: [String]
+    ) -> WayTaskProductListSemanticExceptionFact {
+        WayTaskProductListSemanticExceptionFact(
+            category: category,
+            safeEvidenceDigest: WayTaskMigrationSafeDigest(
+                hashing: Data(
+                    ([category.rawValue] + components)
+                        .joined(separator: "|").lowercased().utf8
+                )
+            )
+        )
+    }
+
+    nonisolated private static func uuidLess(
+        _ lhs: UUID,
+        _ rhs: UUID
+    ) -> Bool {
+        lhs.uuidString.lowercased() < rhs.uuidString.lowercased()
+    }
+
+    nonisolated private static func productSourceLess(
+        _ lhs: WayTaskLegacyProductRecord,
+        _ rhs: WayTaskLegacyProductRecord
+    ) -> Bool {
+        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        return uuidLess(lhs.sourceRecordID, rhs.sourceRecordID)
+    }
+
+    nonisolated private static func listSourceLess(
+        _ lhs: WayTaskLegacyShoppingListRecord,
+        _ rhs: WayTaskLegacyShoppingListRecord
+    ) -> Bool {
+        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        return uuidLess(lhs.sourceRecordID, rhs.sourceRecordID)
+    }
+
+    nonisolated private static func entrySourceLess(
+        _ lhs: WayTaskLegacyShoppingEntryRecord,
+        _ rhs: WayTaskLegacyShoppingEntryRecord
+    ) -> Bool {
+        if lhs.sourceRecordID != rhs.sourceRecordID {
+            return uuidLess(lhs.sourceRecordID, rhs.sourceRecordID)
+        }
+        return (lhs.entryID?.uuidString ?? "") <
+            (rhs.entryID?.uuidString ?? "")
+    }
+
+    nonisolated private static func entrySurvivorLess(
+        _ lhs: WayTaskLegacyShoppingEntryRecord,
+        _ rhs: WayTaskLegacyShoppingEntryRecord
+    ) -> Bool {
+        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        if lhs.entryID != rhs.entryID {
+            return (lhs.entryID?.uuidString.lowercased() ?? "") <
+                (rhs.entryID?.uuidString.lowercased() ?? "")
+        }
+        return uuidLess(lhs.sourceRecordID, rhs.sourceRecordID)
+    }
+
+    private struct EntryGroupKey: Hashable, Comparable {
+        let listID: UUID
+        let productID: UUID
+
+        static func < (lhs: Self, rhs: Self) -> Bool {
+            if lhs.listID != rhs.listID {
+                return uuidLess(lhs.listID, rhs.listID)
+            }
+            return uuidLess(lhs.productID, rhs.productID)
+        }
+    }
+
+    private struct PendingAlias: Comparable {
+        let kind: WayTaskProductListAliasKind
+        let sourceIdentity: UUID
+        let canonicalIdentity: UUID
+        let evidenceID: UUID
+
+        static func < (lhs: Self, rhs: Self) -> Bool {
+            if lhs.kind.rawValue != rhs.kind.rawValue {
+                return lhs.kind.rawValue < rhs.kind.rawValue
+            }
+            if lhs.sourceIdentity != rhs.sourceIdentity {
+                return uuidLess(lhs.sourceIdentity, rhs.sourceIdentity)
+            }
+            if lhs.canonicalIdentity != rhs.canonicalIdentity {
+                return uuidLess(lhs.canonicalIdentity, rhs.canonicalIdentity)
+            }
+            return uuidLess(lhs.evidenceID, rhs.evidenceID)
+        }
+    }
+}
+
 // MARK: - Injected capabilities
 
 @MainActor
@@ -556,6 +1383,38 @@ struct WayTaskProductStateMigrationDependencies {
     }
 }
 
+@MainActor
+struct WayTaskProductListSemanticMigrationDependencies {
+    var readPhysicalCandidate:
+        (URL) throws -> WayTaskLegacyProductListSnapshot
+    var createTargetStore:
+        (WayTaskProductListSemanticSnapshot, URL) throws -> Void
+    var reopenTargetStore:
+        (URL) throws -> WayTaskProductListSemanticSnapshot
+    var recordingTime: (WayTaskMigrationAttemptIdentity) -> Date
+
+    static var live: Self {
+        Self(
+            readPhysicalCandidate:
+                WayTaskProductListSemanticStoreBoundary.readPhysicalCandidate,
+            createTargetStore:
+                WayTaskProductListSemanticStoreBoundary.createTargetStore,
+            reopenTargetStore:
+                WayTaskProductListSemanticStoreBoundary.reopenTargetStore,
+            recordingTime: { attempt in
+                let value = UInt64(
+                    attempt.rawValue.prefix(12),
+                    radix: 16
+                ) ?? 0
+                return Date(
+                    timeIntervalSinceReferenceDate:
+                        TimeInterval(value % 1_577_836_800)
+                )
+            }
+        )
+    }
+}
+
 // MARK: - Semantic migration owner
 
 @MainActor
@@ -564,16 +1423,34 @@ struct WayTaskProductStateMigration {
     static let manifestFilename = "migration-manifest.json"
     static let exceptionLedgerFilename = "migration-exceptions.json"
     static let candidateStoreFilename = "candidate.store"
+    static let productListTargetStoreFilename =
+        "product-list-semantic-v4.store"
+    static let productListAliasFilename = "product-list-aliases.json"
+    static let productListSummaryFilename =
+        "product-list-semantic-summary.json"
     static let attemptDirectoryPrefix = "wt033a-tc13-"
 
     private let dependencies: WayTaskProductStateMigrationDependencies
+    private let semanticDependencies:
+        WayTaskProductListSemanticMigrationDependencies
 
     init() {
         dependencies = .live
+        semanticDependencies = .live
     }
 
     init(dependencies: WayTaskProductStateMigrationDependencies) {
         self.dependencies = dependencies
+        semanticDependencies = .live
+    }
+
+    init(
+        dependencies: WayTaskProductStateMigrationDependencies,
+        semanticDependencies:
+            WayTaskProductListSemanticMigrationDependencies
+    ) {
+        self.dependencies = dependencies
+        self.semanticDependencies = semanticDependencies
     }
 
     func prepareCandidate(
@@ -1070,7 +1947,10 @@ struct WayTaskProductStateMigration {
         status: WayTaskMigrationStageStatus,
         completion: WayTaskMigrationCompletionClassification?,
         failure: WayTaskMigrationFailureClassification?,
-        exceptionSummary: WayTaskMigrationExceptionSummary
+        exceptionSummary: WayTaskMigrationExceptionSummary,
+        semanticStageIdentity: String? = nil,
+        semanticTargetFingerprint: String? = nil,
+        semanticDigest: String? = nil
     ) throws {
         let manifest = CandidateManifest(
             formatVersion: 1,
@@ -1087,7 +1967,10 @@ struct WayTaskProductStateMigration {
             status: status,
             completion: completion,
             failure: failure,
-            exceptionSummary: exceptionSummary
+            exceptionSummary: exceptionSummary,
+            semanticStageIdentity: semanticStageIdentity,
+            semanticTargetFingerprint: semanticTargetFingerprint,
+            semanticDigest: semanticDigest
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
@@ -1305,6 +2188,9 @@ struct WayTaskProductStateMigration {
         let completion: WayTaskMigrationCompletionClassification?
         let failure: WayTaskMigrationFailureClassification?
         let exceptionSummary: WayTaskMigrationExceptionSummary
+        let semanticStageIdentity: String?
+        let semanticTargetFingerprint: String?
+        let semanticDigest: String?
     }
 
     private struct ClassifiedFailure: Error {
@@ -1313,6 +2199,365 @@ struct WayTaskProductStateMigration {
         init(_ classification: WayTaskMigrationFailureClassification) {
             self.classification = classification
         }
+    }
+}
+
+// MARK: - T-07 Product/list semantic candidate stage
+
+extension WayTaskProductStateMigration {
+    func migrateProductListSemantics(
+        _ receipt: WayTaskMigrationCandidateReceipt
+    ) -> WayTaskProductListSemanticMigrationResult {
+        let sourceURL = receipt.sourceInventory.components.first {
+            $0.role == .database
+        }?.url
+        var ledger = WayTaskMigrationExceptionLedger(
+            capacity: receipt.exceptionSummary.capacity
+        )
+
+        func fail(
+            _ classification: WayTaskMigrationFailureClassification
+        ) -> WayTaskProductListSemanticMigrationResult {
+            guard let sourceURL else {
+                return .failed(
+                    WayTaskMigrationFailure(
+                        classification: classification,
+                        triggeringClassification: classification,
+                        precedingClassification: nil,
+                        rollbackClassification: .notRequired,
+                        stageIdentity: receipt.stageIdentity,
+                        attemptIdentity: receipt.attemptIdentity,
+                        sourceSchemaIdentity:
+                            receipt.sourceSchemaIdentity,
+                        sourceFingerprint: receipt.sourceFingerprint,
+                        finalSourceFingerprint: nil,
+                        sourceBytesVerifiedUnchanged: false,
+                        candidateArtifactsRemain: true,
+                        exceptionSummary: ledger.summary
+                    )
+                )
+            }
+            return .failed(
+                makeFailure(
+                    triggering: classification,
+                    sourceStoreURL: sourceURL,
+                    candidateRootURL: receipt.candidateRootURL,
+                    sourceInventory: receipt.sourceInventory,
+                    sourceSchema: receipt.sourceSchemaIdentity,
+                    stageIdentity: receipt.stageIdentity,
+                    attemptIdentity: receipt.attemptIdentity,
+                    attemptDirectoryURL:
+                        receipt.candidateAttemptDirectoryURL,
+                    attemptCreatedByThisInvocation: false,
+                    exceptionSummary: ledger.summary
+                )
+            )
+        }
+
+        guard receipt.status == .foundationValidated,
+              receipt.completion == .candidateReadyForSemanticMigration,
+              receipt.candidateSchemaIdentity == .v3,
+              receipt.inactiveSemanticTargetSchemaIdentity == .v4,
+              sourceURL != nil,
+              (try? ownsAttemptDirectory(
+                  receipt.candidateAttemptDirectoryURL,
+                  candidateRootURL: receipt.candidateRootURL,
+                  stageIdentity: receipt.stageIdentity,
+                  attemptIdentity: receipt.attemptIdentity
+              )) == true
+        else {
+            return fail(.candidateOwnershipConflict)
+        }
+
+        do {
+            try verifySource(
+                sourceURL!,
+                expected: receipt.sourceFingerprint
+            )
+        } catch let error as ClassifiedFailure {
+            return fail(error.classification)
+        } catch {
+            return fail(.sourceRevalidationFailed)
+        }
+
+        let physicalCandidateInventory: WayTaskMigrationStoreInventory
+        do {
+            physicalCandidateInventory = try dependencies.inspectStore(
+                receipt.candidateStoreURL
+            )
+        } catch {
+            return fail(.semanticCandidateReadFailed)
+        }
+        guard physicalCandidateInventory.fingerprint ==
+            receipt.candidateFingerprint
+        else {
+            return fail(.candidateFingerprintMismatch)
+        }
+
+        let sourceSnapshot: WayTaskLegacyProductListSnapshot
+        do {
+            sourceSnapshot = try semanticDependencies
+                .readPhysicalCandidate(receipt.candidateStoreURL)
+        } catch {
+            return fail(.semanticCandidateReadFailed)
+        }
+
+        let plan: WayTaskProductListSemanticPlan
+        do {
+            plan = try WayTaskProductListSemanticNormalizer.normalize(
+                sourceSnapshot,
+                recordingTime: semanticDependencies.recordingTime(
+                    receipt.attemptIdentity
+                )
+            )
+        } catch {
+            return fail(.semanticNormalizationFailed)
+        }
+
+        for fact in plan.exceptionFacts {
+            ledger.record(
+                category: fact.category,
+                safeEvidenceDigest: fact.safeEvidenceDigest
+            )
+        }
+        do {
+            try dependencies.writeOwnedArtifact(
+                ledger.encodedData(),
+                receipt.candidateAttemptDirectoryURL.appendingPathComponent(
+                    Self.exceptionLedgerFilename
+                )
+            )
+        } catch {
+            return fail(.exceptionLedgerWriteFailed)
+        }
+        guard plan.blockingAmbiguityCount == 0 else {
+            return fail(.semanticNormalizationFailed)
+        }
+
+        let targetStoreURL = receipt.candidateAttemptDirectoryURL
+            .appendingPathComponent(Self.productListTargetStoreFilename)
+        guard !dependencies.fileExists(targetStoreURL) else {
+            return fail(.semanticTargetCreationFailed)
+        }
+        do {
+            try semanticDependencies.createTargetStore(
+                plan.target,
+                targetStoreURL
+            )
+        } catch {
+            return fail(.semanticTargetCreationFailed)
+        }
+
+        do {
+            _ = try dependencies.inspectStore(targetStoreURL)
+        } catch {
+            return fail(.semanticTargetCreationFailed)
+        }
+
+        let reopened: WayTaskProductListSemanticSnapshot
+        do {
+            reopened = try semanticDependencies.reopenTargetStore(
+                targetStoreURL
+            )
+        } catch {
+            return fail(.semanticTargetReopenFailed)
+        }
+        let reopenedDigest: WayTaskMigrationFingerprint
+        do {
+            reopenedDigest = try WayTaskProductListSemanticNormalizer
+                .semanticDigest(reopened)
+        } catch {
+            return fail(.semanticValidationFailed)
+        }
+        guard reopened == plan.target,
+              reopenedDigest == plan.semanticDigest,
+              Set(reopened.products.map(\.id)).count ==
+                reopened.products.count,
+              Set(reopened.lists.map(\.id)).count == reopened.lists.count,
+              Set(reopened.entries.map(\.id)).count ==
+                reopened.entries.count,
+              Set(reopened.entries.map {
+                  "\($0.shoppingListID.uuidString)|\($0.productID.uuidString)"
+              }).count == reopened.entries.count,
+              reopened.entries.allSatisfy({ entry in
+                  reopened.products.contains { $0.id == entry.productID } &&
+                      reopened.lists.contains {
+                          $0.id == entry.shoppingListID
+                      }
+              }),
+              reopened.lists.allSatisfy({
+                  $0.revision ==
+                      WayTaskProductListSemanticPlan.initialListRevision
+              })
+        else {
+            return fail(.semanticValidationFailed)
+        }
+
+        let secondTargetInventory: WayTaskMigrationStoreInventory
+        do {
+            secondTargetInventory = try dependencies.inspectStore(
+                targetStoreURL
+            )
+        } catch {
+            return fail(.semanticTargetReopenFailed)
+        }
+        let stableTargetInventory: WayTaskMigrationStoreInventory
+        do {
+            stableTargetInventory = try dependencies.inspectStore(
+                targetStoreURL
+            )
+        } catch {
+            return fail(.semanticTargetReopenFailed)
+        }
+        guard secondTargetInventory.fingerprint ==
+            stableTargetInventory.fingerprint
+        else {
+            return fail(.semanticFingerprintMismatch)
+        }
+
+        let semanticStage = WayTaskProductListSemanticStageIdentity(
+            foundationStageIdentity: receipt.stageIdentity
+        )
+        do {
+            try writeAliases(
+                plan.aliases,
+                at: receipt.candidateAttemptDirectoryURL
+                    .appendingPathComponent(Self.productListAliasFilename)
+            )
+            try writeSemanticSummary(
+                plan: plan,
+                ledger: ledger,
+                stageIdentity: semanticStage,
+                attemptIdentity: receipt.attemptIdentity,
+                targetFingerprint: stableTargetInventory.fingerprint,
+                at: receipt.candidateAttemptDirectoryURL
+                    .appendingPathComponent(Self.productListSummaryFilename)
+            )
+            try writeManifest(
+                at: receipt.candidateAttemptDirectoryURL,
+                stageIdentity: receipt.stageIdentity,
+                attemptIdentity: receipt.attemptIdentity,
+                sourceFingerprint: receipt.sourceFingerprint,
+                candidateFingerprint: receipt.candidateFingerprint,
+                status: .productListSemanticMigrationComplete,
+                completion: .productListSemanticMigrationComplete,
+                failure: nil,
+                exceptionSummary: ledger.summary,
+                semanticStageIdentity: semanticStage.rawValue,
+                semanticTargetFingerprint:
+                    stableTargetInventory.fingerprint.rawValue,
+                semanticDigest: plan.semanticDigest.rawValue
+            )
+            try verifySource(
+                sourceURL!,
+                expected: receipt.sourceFingerprint
+            )
+        } catch let error as ClassifiedFailure {
+            return fail(error.classification)
+        } catch {
+            return fail(.semanticValidationFailed)
+        }
+
+        let ownedArtifactNames: [String]
+        do {
+            ownedArtifactNames = try dependencies.enumerateOwnedArtifacts(
+                receipt.candidateAttemptDirectoryURL
+            )
+        } catch {
+            return fail(.semanticValidationFailed)
+        }
+
+        return .complete(
+            WayTaskProductListSemanticReceipt(
+                foundationReceipt: receipt,
+                semanticStageIdentity: semanticStage,
+                targetStoreURL: targetStoreURL,
+                targetFingerprint: stableTargetInventory.fingerprint,
+                semanticDigest: plan.semanticDigest,
+                targetValidation: reopened,
+                aliases: plan.aliases,
+                exceptionSummary: ledger.summary,
+                ownedArtifactNames: ownedArtifactNames,
+                status: .productListSemanticMigrationComplete,
+                completion: .productListSemanticMigrationComplete,
+                deferredArchiveListCount: plan.deferredArchiveListCount,
+                deferredArchiveEntryCount:
+                    plan.deferredArchiveEntryCount,
+                compatibilityEvidenceCount:
+                    plan.compatibilityEvidenceCount
+            )
+        )
+    }
+
+    private func writeAliases(
+        _ aliases: [WayTaskProductListAliasRecord],
+        at url: URL
+    ) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try dependencies.writeOwnedArtifact(
+            encoder.encode(AliasArtifact(formatVersion: 1, aliases: aliases)),
+            url
+        )
+    }
+
+    private func writeSemanticSummary(
+        plan: WayTaskProductListSemanticPlan,
+        ledger: WayTaskMigrationExceptionLedger,
+        stageIdentity: WayTaskProductListSemanticStageIdentity,
+        attemptIdentity: WayTaskMigrationAttemptIdentity,
+        targetFingerprint: WayTaskMigrationFingerprint,
+        at url: URL
+    ) throws {
+        let artifact = SemanticSummaryArtifact(
+            formatVersion: 1,
+            semanticStageIdentity: stageIdentity.rawValue,
+            attemptIdentity: attemptIdentity.rawValue,
+            semanticDigest: plan.semanticDigest.rawValue,
+            targetFingerprint: targetFingerprint.rawValue,
+            productCount: plan.target.products.count,
+            listCount: plan.target.lists.count,
+            entryCount: plan.target.entries.count,
+            aliasCount: plan.aliases.count,
+            exceptionCount: ledger.summary.totalOccurrenceCount,
+            exceptionOverflowCount: ledger.summary.overflowOccurrenceCount,
+            deferredArchiveListCount: plan.deferredArchiveListCount,
+            deferredArchiveEntryCount: plan.deferredArchiveEntryCount,
+            compatibilityEvidenceCount: plan.compatibilityEvidenceCount,
+            productListSemanticMigrationComplete: true,
+            sessionHistoryLocationSemanticMigrationComplete: false,
+            promotionAuthorized: false,
+            startupActivationAuthorized: false
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        try dependencies.writeOwnedArtifact(try encoder.encode(artifact), url)
+    }
+
+    private struct AliasArtifact: Codable {
+        let formatVersion: Int
+        let aliases: [WayTaskProductListAliasRecord]
+    }
+
+    private struct SemanticSummaryArtifact: Codable {
+        let formatVersion: Int
+        let semanticStageIdentity: String
+        let attemptIdentity: String
+        let semanticDigest: String
+        let targetFingerprint: String
+        let productCount: Int
+        let listCount: Int
+        let entryCount: Int
+        let aliasCount: Int
+        let exceptionCount: Int
+        let exceptionOverflowCount: Int
+        let deferredArchiveListCount: Int
+        let deferredArchiveEntryCount: Int
+        let compatibilityEvidenceCount: Int
+        let productListSemanticMigrationComplete: Bool
+        let sessionHistoryLocationSemanticMigrationComplete: Bool
+        let promotionAuthorized: Bool
+        let startupActivationAuthorized: Bool
     }
 }
 
@@ -1610,6 +2855,325 @@ private enum WayTaskProtectedStoreSchemaReader {
 // MARK: - Candidate-only physical boundary
 
 @MainActor
+private enum WayTaskProductListSemanticStoreBoundary {
+    static func readPhysicalCandidate(
+        storeURL: URL
+    ) throws -> WayTaskLegacyProductListSnapshot {
+        try autoreleasepool {
+            let schema = Schema(versionedSchema: WayTaskSchemaV3.self)
+            let configuration = ModelConfiguration(
+                "WT033A-T07-Physical-Candidate-Read",
+                schema: schema,
+                url: storeURL,
+                allowsSave: false,
+                cloudKitDatabase: .none
+            )
+            let container = try ModelContainer(
+                for: schema,
+                migrationPlan:
+                    WayTaskProtectedCandidatePhysicalMigrationPlan.self,
+                configurations: [configuration]
+            )
+            let context = ModelContext(container)
+            context.autosaveEnabled = false
+
+            let products = try context.fetch(FetchDescriptor<Product>()).map {
+                product in
+                WayTaskLegacyProductRecord(
+                    sourceRecordID: product.id,
+                    productID: product.id,
+                    legacyShoppingItemID: product.legacyShoppingItemID,
+                    name: product.name,
+                    imageData: product.imageData,
+                    brand: product.brand,
+                    category: product.category,
+                    barcode: product.barcode,
+                    imageURLString: product.imageURLString,
+                    sourceRawValue: product.sourceRawValue,
+                    productType: product.productType,
+                    flavor: product.flavor,
+                    packageSize: product.packageSize,
+                    packageType: product.packageType,
+                    visibleText: product.visibleText,
+                    searchKeywordsRawValue: product.searchKeywordsRawValue,
+                    catalogProductIDRawValue:
+                        product.catalogProductIDRawValue,
+                    catalogDisplayNameSnapshot:
+                        product.catalogDisplayNameSnapshot,
+                    catalogDisplayLocaleSnapshot:
+                        product.catalogDisplayLocaleSnapshot,
+                    catalogCategoryIDSnapshotRawValue:
+                        product.catalogCategoryIDSnapshotRawValue,
+                    catalogCategoryDisplayNameSnapshot:
+                        product.catalogCategoryDisplayNameSnapshot,
+                    catalogIconKeySnapshot:
+                        product.catalogIconKeySnapshot,
+                    catalogSnapshotUpdatedAt:
+                        product.catalogSnapshotUpdatedAt,
+                    createdAt: product.dateAdded,
+                    updatedAt: product.updatedAt,
+                    removedAt: product.deletedAt
+                )
+            }
+            let lists = try context.fetch(
+                FetchDescriptor<ShoppingList>()
+            ).map { list in
+                WayTaskLegacyShoppingListRecord(
+                    sourceRecordID: list.id,
+                    listID: list.id,
+                    title: list.title,
+                    kindRawValue: list.kindRawValue,
+                    createdAt: list.createdAt,
+                    updatedAt: list.updatedAt,
+                    isDefault: list.isDefault
+                )
+            }
+            let entries = try context.fetch(
+                FetchDescriptor<ShoppingListEntry>()
+            ).map { entry in
+                WayTaskLegacyShoppingEntryRecord(
+                    sourceRecordID: entry.id,
+                    entryID: entry.id,
+                    listID: entry.shoppingListID,
+                    productID: entry.productID,
+                    relationshipProductID: entry.product?.id,
+                    legacyShoppingItemID: entry.legacyShoppingItemID,
+                    quantity: entry.quantity,
+                    isChecked: entry.isChecked,
+                    createdAt: entry.createdAt,
+                    sortOrder: entry.sortOrder
+                )
+            }
+            let compatibilityRecords = try context.fetch(
+                FetchDescriptor<ShoppingItem>()
+            ).map { item in
+                WayTaskLegacyCompatibilityRecord(
+                    sourceRecordID: item.id,
+                    compatibilityID: item.id,
+                    isCompleted: item.isCompleted
+                )
+            }
+            return WayTaskLegacyProductListSnapshot(
+                products: products,
+                lists: lists,
+                entries: entries,
+                compatibilityRecords: compatibilityRecords
+            )
+        }
+    }
+
+    static func createTargetStore(
+        snapshot: WayTaskProductListSemanticSnapshot,
+        storeURL: URL
+    ) throws {
+        try autoreleasepool {
+            let schema = Schema(versionedSchema: WayTaskSchemaV4.self)
+            let configuration = ModelConfiguration(
+                "WT033A-T07-Inactive-V4-Target",
+                schema: schema,
+                url: storeURL,
+                allowsSave: true,
+                cloudKitDatabase: .none
+            )
+            let container = try ModelContainer(
+                for: schema,
+                configurations: [configuration]
+            )
+            let context = ModelContext(container)
+            context.autosaveEnabled = false
+            var productsByID: [UUID: WayTaskSchemaV4.Product] = [:]
+            for record in snapshot.products {
+                let product = WayTaskSchemaV4.Product(
+                    id: record.id,
+                    revision: record.revision,
+                    libraryLifecycleRawValue:
+                        record.libraryLifecycleRawValue,
+                    libraryRemovedAt: record.libraryRemovedAt,
+                    name: record.name,
+                    imageData: record.imageData,
+                    brand: record.brand,
+                    category: record.category,
+                    barcode: record.barcode,
+                    imageURLString: record.imageURLString,
+                    sourceRawValue: record.sourceRawValue,
+                    catalogProductIDRawValue:
+                        record.catalogProductIDRawValue,
+                    catalogDisplayNameSnapshot:
+                        record.catalogDisplayNameSnapshot,
+                    catalogDisplayLocaleSnapshot:
+                        record.catalogDisplayLocaleSnapshot,
+                    catalogCategoryIDSnapshotRawValue:
+                        record.catalogCategoryIDSnapshotRawValue,
+                    catalogCategoryDisplayNameSnapshot:
+                        record.catalogCategoryDisplayNameSnapshot,
+                    catalogIconKeySnapshot:
+                        record.catalogIconKeySnapshot,
+                    catalogSnapshotUpdatedAt:
+                        record.catalogSnapshotUpdatedAt,
+                    createdAt: record.createdAt,
+                    updatedAt: record.updatedAt
+                )
+                context.insert(product)
+                productsByID[record.id] = product
+            }
+
+            let entriesByList = Dictionary(
+                grouping: snapshot.entries,
+                by: \.shoppingListID
+            )
+            for record in snapshot.lists {
+                let entries = try (entriesByList[record.id] ?? []).map {
+                    entry -> WayTaskSchemaV4.ShoppingListEntry in
+                    guard let product = productsByID[entry.productID] else {
+                        throw StoreError.invalidRelationship
+                    }
+                    return WayTaskSchemaV4.ShoppingListEntry(
+                        id: entry.id,
+                        shoppingListID: entry.shoppingListID,
+                        productID: entry.productID,
+                        lifecycleRawValue: entry.lifecycleRawValue,
+                        resolutionReasonRawValue:
+                            entry.resolutionReasonRawValue,
+                        resolutionEffectiveAt:
+                            entry.resolutionEffectiveAt,
+                        resolutionProvenanceRawValue:
+                            entry.resolutionProvenanceRawValue,
+                        quantity: entry.quantity,
+                        sortOrder: entry.sortOrder,
+                        createdAt: entry.createdAt,
+                        updatedAt: entry.updatedAt,
+                        product: product
+                    )
+                }
+                let list = WayTaskSchemaV4.ShoppingList(
+                    id: record.id,
+                    revision: record.revision,
+                    title: record.title,
+                    purposeRawValue: record.purposeRawValue,
+                    createdAt: record.createdAt,
+                    updatedAt: record.updatedAt,
+                    entries: entries
+                )
+                context.insert(list)
+            }
+            try context.save()
+        }
+    }
+
+    static func reopenTargetStore(
+        storeURL: URL
+    ) throws -> WayTaskProductListSemanticSnapshot {
+        try autoreleasepool {
+            let schema = Schema(versionedSchema: WayTaskSchemaV4.self)
+            let configuration = ModelConfiguration(
+                "WT033A-T07-Inactive-V4-Reopen",
+                schema: schema,
+                url: storeURL,
+                allowsSave: false,
+                cloudKitDatabase: .none
+            )
+            let container = try ModelContainer(
+                for: schema,
+                configurations: [configuration]
+            )
+            let context = ModelContext(container)
+            context.autosaveEnabled = false
+            var products = try context.fetch(
+                FetchDescriptor<WayTaskSchemaV4.Product>()
+            ).map { product in
+                WayTaskMigratedProductRecord(
+                    id: product.id,
+                    revision: product.revision,
+                    libraryLifecycleRawValue:
+                        product.libraryLifecycleRawValue,
+                    libraryRemovedAt: product.libraryRemovedAt,
+                    name: product.name,
+                    imageData: product.imageData,
+                    brand: product.brand,
+                    category: product.category,
+                    barcode: product.barcode,
+                    imageURLString: product.imageURLString,
+                    sourceRawValue: product.sourceRawValue,
+                    catalogProductIDRawValue:
+                        product.catalogProductIDRawValue,
+                    catalogDisplayNameSnapshot:
+                        product.catalogDisplayNameSnapshot,
+                    catalogDisplayLocaleSnapshot:
+                        product.catalogDisplayLocaleSnapshot,
+                    catalogCategoryIDSnapshotRawValue:
+                        product.catalogCategoryIDSnapshotRawValue,
+                    catalogCategoryDisplayNameSnapshot:
+                        product.catalogCategoryDisplayNameSnapshot,
+                    catalogIconKeySnapshot:
+                        product.catalogIconKeySnapshot,
+                    catalogSnapshotUpdatedAt:
+                        product.catalogSnapshotUpdatedAt,
+                    createdAt: product.createdAt,
+                    updatedAt: product.updatedAt
+                )
+            }
+            var lists = try context.fetch(
+                FetchDescriptor<WayTaskSchemaV4.ShoppingList>()
+            ).map { list in
+                WayTaskMigratedShoppingListRecord(
+                    id: list.id,
+                    revision: list.revision,
+                    title: list.title,
+                    purposeRawValue: list.purposeRawValue,
+                    createdAt: list.createdAt,
+                    updatedAt: list.updatedAt
+                )
+            }
+            var entries = try context.fetch(
+                FetchDescriptor<WayTaskSchemaV4.ShoppingListEntry>()
+            ).map { entry in
+                guard entry.product?.id == entry.productID else {
+                    throw StoreError.invalidRelationship
+                }
+                return WayTaskMigratedShoppingEntryRecord(
+                    id: entry.id,
+                    shoppingListID: entry.shoppingListID,
+                    productID: entry.productID,
+                    lifecycleRawValue: entry.lifecycleRawValue,
+                    resolutionReasonRawValue:
+                        entry.resolutionReasonRawValue,
+                    resolutionEffectiveAt: entry.resolutionEffectiveAt,
+                    resolutionProvenanceRawValue:
+                        entry.resolutionProvenanceRawValue,
+                    quantity: entry.quantity,
+                    sortOrder: entry.sortOrder,
+                    createdAt: entry.createdAt,
+                    updatedAt: entry.updatedAt
+                )
+            }
+            products.sort { uuidLess($0.id, $1.id) }
+            lists.sort { uuidLess($0.id, $1.id) }
+            entries.sort {
+                if $0.shoppingListID != $1.shoppingListID {
+                    return uuidLess($0.shoppingListID, $1.shoppingListID)
+                }
+                if $0.productID != $1.productID {
+                    return uuidLess($0.productID, $1.productID)
+                }
+                return uuidLess($0.id, $1.id)
+            }
+            return WayTaskProductListSemanticSnapshot(
+                products: products,
+                lists: lists,
+                entries: entries
+            )
+        }
+    }
+
+    private static func uuidLess(_ lhs: UUID, _ rhs: UUID) -> Bool {
+        lhs.uuidString.lowercased() < rhs.uuidString.lowercased()
+    }
+
+    private enum StoreError: Error {
+        case invalidRelationship
+    }
+}
+
 private enum WayTaskCandidatePhysicalStoreBoundary {
     private static let expectedCountKeys: Set<String> = [
         "GeoLocation",
