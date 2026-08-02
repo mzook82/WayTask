@@ -10,6 +10,26 @@ protocol ShoppingTripServicing {
     ) -> [StoreCoverage]
 }
 
+enum ShoppingPlanStoreAvailabilityClaim:
+    String, Equatable, Sendable {
+    case estimatedOnly
+}
+
+struct ShoppingPlanStoreCoverage {
+    let store: MapStore
+    let group: ShoppingIntentGroup
+    let matchedEntryIDs: [ProductStateListEntryID]
+    let matchedProductIDs: [ProductStateProductID]
+    let missingEntryIDs: [ProductStateListEntryID]
+    let missingProductIDs: [ProductStateProductID]
+    let coverageScore: Double
+    let distance: CLLocationDistance?
+    let ranking: StoreScore
+    let availabilityClaim: ShoppingPlanStoreAvailabilityClaim
+    let namedExclusions: [ShoppingPlanConsumerExclusion]
+    let classificationUnresolvedEntryIDs: [ProductStateListEntryID]
+}
+
 struct ShoppingTripService: ShoppingTripServicing {
     private let rankingService: StoreRankingService
     private let intentMatcher: ShoppingIntentMatcher
@@ -53,6 +73,144 @@ struct ShoppingTripService: ShoppingTripServicing {
 
                 return lhs.ranking.score > rhs.ranking.score
             }
+    }
+
+    /// T-14 trip preparation is a read-only estimate for one exact Plan Input.
+    /// It neither starts a Session nor interprets compatibility completion.
+    func coverage(
+        for authority: ShoppingPlanInputAuthority,
+        classification: ShoppingPlanIntentClassification,
+        stores: [MapStore],
+        userCoordinate: CLLocationCoordinate2D? = nil
+    ) -> [ShoppingPlanStoreCoverage] {
+        guard classification.accountedEntryIDs ==
+            authority.items.map(\.identity.id).sorted(by: entryIDLessThan)
+        else {
+            return []
+        }
+
+        let orderedStores = stores.sorted {
+            $0.id.uuidString < $1.id.uuidString
+        }
+        return classification.groups.flatMap { group in
+            orderedStores.compactMap { store in
+                makePlanCoverage(
+                    store: store,
+                    group: group,
+                    authority: authority,
+                    classification: classification,
+                    userCoordinate: userCoordinate
+                )
+            }
+        }.sorted(by: planCoverageLessThan)
+    }
+
+    private func makePlanCoverage(
+        store: MapStore,
+        group: ShoppingPlanIntentGroupResult,
+        authority: ShoppingPlanInputAuthority,
+        classification: ShoppingPlanIntentClassification,
+        userCoordinate: CLLocationCoordinate2D?
+    ) -> ShoppingPlanStoreCoverage? {
+        let relevantStore = storeWithRelevantPlanItems(store, group: group)
+        guard rankingService.isRelevant(
+            store: relevantStore,
+            request: group.request,
+            userCoordinate: userCoordinate
+        ) else {
+            return nil
+        }
+
+        let matched = intentMatcher.relevantPlanItems(
+            from: group.items,
+            for: relevantStore
+        )
+        guard !matched.isEmpty else { return nil }
+        let matchedIDs = Set(matched.map(\.identity.id))
+        let missing = group.items.filter {
+            !matchedIDs.contains($0.identity.id)
+        }
+        let score = Double(matched.count) /
+            Double(max(group.items.count, 1))
+        let distance = userCoordinate.map {
+            self.distance(from: $0, to: store.coordinate)
+        }
+        let ranking = rankingService.score(
+            store: relevantStore,
+            request: group.request,
+            userCoordinate: userCoordinate,
+            coverage: StoreRealityCoverage(
+                matchedItemCount: matched.count,
+                totalItemCount: group.items.count
+            )
+        )
+        return ShoppingPlanStoreCoverage(
+            store: relevantStore,
+            group: group.group,
+            matchedEntryIDs: matched.map(\.identity.id),
+            matchedProductIDs: matched.map(\.identity.productID),
+            missingEntryIDs: missing.map(\.identity.id),
+            missingProductIDs: missing.map(\.identity.productID),
+            coverageScore: score,
+            distance: distance,
+            ranking: ranking,
+            availabilityClaim: .estimatedOnly,
+            namedExclusions: authority.exclusions,
+            classificationUnresolvedEntryIDs:
+                classification.unresolvedItems.map(\.identity.id)
+        )
+    }
+
+    private func storeWithRelevantPlanItems(
+        _ store: MapStore,
+        group: ShoppingPlanIntentGroupResult
+    ) -> MapStore {
+        MapStore(
+            id: store.id,
+            locationID: store.locationID,
+            title: store.title,
+            coordinate: store.coordinate,
+            radius: store.radius,
+            itemNames: group.itemNames,
+            completedItemNames: store.completedItemNames,
+            isOpen: store.isOpen,
+            rating: store.rating,
+            storeCategories: store.storeCategories,
+            queryEvidenceCategories: store.queryEvidenceCategories,
+            websiteURL: store.websiteURL,
+            sourceType: store.sourceType
+        )
+    }
+
+    private func planCoverageLessThan(
+        _ lhs: ShoppingPlanStoreCoverage,
+        _ rhs: ShoppingPlanStoreCoverage
+    ) -> Bool {
+        if lhs.ranking.score != rhs.ranking.score {
+            return lhs.ranking.score > rhs.ranking.score
+        }
+        let lhsDistance = lhs.distance ?? .greatestFiniteMagnitude
+        let rhsDistance = rhs.distance ?? .greatestFiniteMagnitude
+        if lhsDistance != rhsDistance {
+            return lhsDistance < rhsDistance
+        }
+        if lhs.store.id != rhs.store.id {
+            return lhs.store.id.uuidString < rhs.store.id.uuidString
+        }
+        if lhs.group != rhs.group {
+            return lhs.group.rawValue < rhs.group.rawValue
+        }
+        return lhs.matchedEntryIDs.map { $0.rawValue.uuidString }
+            .joined(separator: "|") <
+            rhs.matchedEntryIDs.map { $0.rawValue.uuidString }
+                .joined(separator: "|")
+    }
+
+    private func entryIDLessThan(
+        _ lhs: ProductStateListEntryID,
+        _ rhs: ProductStateListEntryID
+    ) -> Bool {
+        lhs.rawValue.uuidString < rhs.rawValue.uuidString
     }
 
     private func makeCoverage(

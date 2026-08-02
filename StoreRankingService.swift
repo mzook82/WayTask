@@ -87,6 +87,19 @@ struct StoreScore: Equatable {
     }
 }
 
+struct ShoppingPlanRankedStore {
+    let store: MapStore
+    let ranking: StoreScore
+    let sourceListID: ProductStateListID
+    let sourceRevision: ProductStateListRevision
+    let inputFingerprint: String
+    let entryIDs: [ProductStateListEntryID]
+    let productIDs: [ProductStateProductID]
+    let availabilityClaim: ShoppingPlanStoreAvailabilityClaim
+    let namedExclusions: [ShoppingPlanConsumerExclusion]
+    let classificationUnresolvedEntryIDs: [ProductStateListEntryID]
+}
+
 struct StoreRankingService {
     func score(
         store: MapStore,
@@ -227,6 +240,64 @@ struct StoreRankingService {
 
                 return lhs.ranking.score > rhs.ranking.score
             }
+    }
+
+    func rankedStoresForPlan(
+        _ stores: [MapStore],
+        request: ShoppingStoreSuggestionRequest,
+        intent: StoreResolutionIntent,
+        userCoordinate: CLLocationCoordinate2D? = nil
+    ) -> [ShoppingPlanRankedStore] {
+        guard let sourceListID = intent.sourceListID,
+              let sourceRevision = intent.sourceRevision,
+              let inputFingerprint = intent.inputFingerprint else {
+            return []
+        }
+        return stores.filter {
+            isRelevant(
+                store: $0,
+                request: request,
+                userCoordinate: userCoordinate
+            )
+        }.map { store in
+            ShoppingPlanRankedStore(
+                store: store,
+                ranking: score(
+                    store: store,
+                    request: request,
+                    userCoordinate: userCoordinate,
+                    coverage: StoreRealityCoverage(
+                        matchedItemCount: intent.entryIDs.count,
+                        totalItemCount: intent.entryIDs.count
+                    )
+                ),
+                sourceListID: sourceListID,
+                sourceRevision: sourceRevision,
+                inputFingerprint: inputFingerprint,
+                entryIDs: intent.entryIDs,
+                productIDs: intent.productIDs,
+                availabilityClaim: .estimatedOnly,
+                namedExclusions: intent.namedExclusions,
+                classificationUnresolvedEntryIDs:
+                    intent.classificationUnresolvedEntryIDs
+            )
+        }.sorted { lhs, rhs in
+            if lhs.ranking.score != rhs.ranking.score {
+                return lhs.ranking.score > rhs.ranking.score
+            }
+            let lhsDistance = distanceForSort(
+                from: userCoordinate,
+                to: lhs.store.coordinate
+            )
+            let rhsDistance = distanceForSort(
+                from: userCoordinate,
+                to: rhs.store.coordinate
+            )
+            if lhsDistance != rhsDistance {
+                return lhsDistance < rhsDistance
+            }
+            return lhs.store.id.uuidString < rhs.store.id.uuidString
+        }
     }
 
     private var activeSignals: [StoreRealitySignal] {

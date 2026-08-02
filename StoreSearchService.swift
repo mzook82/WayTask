@@ -16,13 +16,45 @@ protocol StoreSearchService {
     ) -> [MapStore]
 }
 
-struct StoreResolutionIntent: Hashable {
+struct StoreResolutionIntent {
     let itemNames: [String]
     let storeCategories: [ShoppingStoreCategory]
+    let sourceListID: ProductStateListID?
+    let sourceRevision: ProductStateListRevision?
+    let inputFingerprint: String?
+    let entryIDs: [ProductStateListEntryID]
+    let productIDs: [ProductStateProductID]
+    let explicitlyExcludedEntryIDs: [ProductStateListEntryID]
+    let unresolvedEntryIDs: [ProductStateListEntryID]
+    let namedExclusions: [ShoppingPlanConsumerExclusion]
+    let classificationUnresolvedEntryIDs: [ProductStateListEntryID]
 
-    init(itemNames: [String], storeCategories: [ShoppingStoreCategory]) {
+    init(
+        itemNames: [String],
+        storeCategories: [ShoppingStoreCategory],
+        sourceListID: ProductStateListID? = nil,
+        sourceRevision: ProductStateListRevision? = nil,
+        inputFingerprint: String? = nil,
+        entryIDs: [ProductStateListEntryID] = [],
+        productIDs: [ProductStateProductID] = [],
+        explicitlyExcludedEntryIDs: [ProductStateListEntryID] = [],
+        unresolvedEntryIDs: [ProductStateListEntryID] = [],
+        namedExclusions: [ShoppingPlanConsumerExclusion] = [],
+        classificationUnresolvedEntryIDs:
+            [ProductStateListEntryID] = []
+    ) {
         self.itemNames = itemNames.deduplicatedCaseInsensitive()
         self.storeCategories = storeCategories.deduplicated()
+        self.sourceListID = sourceListID
+        self.sourceRevision = sourceRevision
+        self.inputFingerprint = inputFingerprint
+        self.entryIDs = entryIDs
+        self.productIDs = productIDs
+        self.explicitlyExcludedEntryIDs = explicitlyExcludedEntryIDs
+        self.unresolvedEntryIDs = unresolvedEntryIDs
+        self.namedExclusions = namedExclusions
+        self.classificationUnresolvedEntryIDs =
+            classificationUnresolvedEntryIDs
     }
 }
 
@@ -95,6 +127,40 @@ final class StoreResolutionEngine {
             itemNames: request.searchTerms.isEmpty ? [request.itemName] : request.searchTerms,
             storeCategories: request.storeCategories
         )]
+    }
+
+    func intents(
+        for authority: ShoppingPlanInputAuthority,
+        classification: ShoppingPlanIntentClassification
+    ) -> [StoreResolutionIntent] {
+        guard classification.accountedEntryIDs ==
+            authority.items.map(\.identity.id).sorted(by: {
+                $0.rawValue.uuidString < $1.rawValue.uuidString
+            })
+        else {
+            return []
+        }
+        let explicit = authority.explicitExclusions.map(\.identity.id)
+        let unresolved = (
+            authority.unresolvedEntries.map(\.identity.id) +
+            classification.unresolvedItems.map(\.identity.id)
+        ).sorted { $0.rawValue.uuidString < $1.rawValue.uuidString }
+        return classification.groups.map { group in
+            StoreResolutionIntent(
+                itemNames: group.itemNames,
+                storeCategories: group.request.storeCategories,
+                sourceListID: authority.projection.listID,
+                sourceRevision: authority.projection.revision,
+                inputFingerprint: authority.inputFingerprint,
+                entryIDs: group.entryIDs,
+                productIDs: group.productIDs,
+                explicitlyExcludedEntryIDs: explicit,
+                unresolvedEntryIDs: unresolved,
+                namedExclusions: authority.exclusions,
+                classificationUnresolvedEntryIDs:
+                    classification.unresolvedItems.map(\.identity.id)
+            )
+        }
     }
 
     func resolve(

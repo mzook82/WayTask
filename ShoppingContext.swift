@@ -25,18 +25,42 @@ struct ShoppingContextItem: Identifiable, Codable, Equatable, Sendable {
     let name: String
     let isCompleted: Bool
     let productHints: [String]
+    let entryID: UUID?
+    let productID: UUID?
+    let quantity: Double?
+    let unitRawValue: String?
 
     init(
         id: UUID = UUID(),
         name: String,
         isCompleted: Bool = false,
-        productHints: [String] = []
+        productHints: [String] = [],
+        entryID: UUID? = nil,
+        productID: UUID? = nil,
+        quantity: Double? = nil,
+        unitRawValue: String? = nil
     ) {
         self.id = id
         self.name = name
         self.isCompleted = isCompleted
         self.productHints = productHints
+        self.entryID = entryID
+        self.productID = productID
+        self.quantity = quantity
+        self.unitRawValue = unitRawValue
     }
+}
+
+enum ShoppingContextAuthority: String, Codable, Equatable, Sendable {
+    case legacyCompatibility
+    case exactPlanInput
+}
+
+struct ShoppingContextAccountedEntry:
+    Codable, Equatable, Sendable {
+    let entryID: UUID
+    let productID: UUID
+    let reason: String
 }
 
 struct ShoppingContextStore: Identifiable, Codable, Equatable, Sendable {
@@ -65,6 +89,10 @@ struct ShoppingContextStore: Identifiable, Codable, Equatable, Sendable {
 }
 
 struct ShoppingContext: Codable, Equatable, Sendable {
+    let authority: ShoppingContextAuthority
+    let sourceListID: UUID?
+    let sourceListRevision: UInt64?
+    let inputFingerprint: String?
     let currentLocation: ShoppingCoordinate?
     let activeShoppingListItems: [ShoppingContextItem]
     let nearbyStores: [ShoppingContextStore]
@@ -74,8 +102,14 @@ struct ShoppingContext: Codable, Equatable, Sendable {
     let recentSearches: [String]
     let favoriteStores: [ShoppingContextStore]
     let availableProductHints: [String]
+    let explicitExclusions: [ShoppingContextAccountedEntry]
+    let unresolvedEntries: [ShoppingContextAccountedEntry]
 
     init(
+        authority: ShoppingContextAuthority = .legacyCompatibility,
+        sourceListID: UUID? = nil,
+        sourceListRevision: UInt64? = nil,
+        inputFingerprint: String? = nil,
         currentLocation: ShoppingCoordinate? = nil,
         activeShoppingListItems: [ShoppingContextItem] = [],
         nearbyStores: [ShoppingContextStore] = [],
@@ -84,8 +118,14 @@ struct ShoppingContext: Codable, Equatable, Sendable {
         dayOfWeek: Int? = nil,
         recentSearches: [String] = [],
         favoriteStores: [ShoppingContextStore] = [],
-        availableProductHints: [String] = []
+        availableProductHints: [String] = [],
+        explicitExclusions: [ShoppingContextAccountedEntry] = [],
+        unresolvedEntries: [ShoppingContextAccountedEntry] = []
     ) {
+        self.authority = authority
+        self.sourceListID = sourceListID
+        self.sourceListRevision = sourceListRevision
+        self.inputFingerprint = inputFingerprint
         self.currentLocation = currentLocation
         self.activeShoppingListItems = activeShoppingListItems
         self.nearbyStores = nearbyStores
@@ -95,10 +135,64 @@ struct ShoppingContext: Codable, Equatable, Sendable {
         self.recentSearches = recentSearches
         self.favoriteStores = favoriteStores
         self.availableProductHints = availableProductHints
+        self.explicitExclusions = explicitExclusions
+        self.unresolvedEntries = unresolvedEntries
+    }
+
+    static func exactPlanInput(
+        _ input: ShoppingPlanInputAuthority,
+        nearbyStores: [ShoppingContextStore] = [],
+        currentLocation: ShoppingCoordinate? = nil,
+        observedAt: Date? = nil
+    ) -> ShoppingContext {
+        let items = input.items.map { item in
+            ShoppingContextItem(
+                id: item.identity.id.rawValue,
+                name: item.displayName,
+                productHints: [item.brand, item.category]
+                    .compactMap { $0 }
+                    .sorted(),
+                entryID: item.identity.id.rawValue,
+                productID: item.identity.productID.rawValue,
+                quantity: item.quantity,
+                unitRawValue: item.unitRawValue
+            )
+        }
+        let explicit = input.explicitExclusions.map {
+            ShoppingContextAccountedEntry(
+                entryID: $0.identity.id.rawValue,
+                productID: $0.identity.productID.rawValue,
+                reason: $0.reason.rawValue
+            )
+        }
+        let unresolved = input.unresolvedEntries.map {
+            ShoppingContextAccountedEntry(
+                entryID: $0.identity.id.rawValue,
+                productID: $0.identity.productID.rawValue,
+                reason: $0.reason.rawValue
+            )
+        }
+        return ShoppingContext(
+            authority: .exactPlanInput,
+            sourceListID: input.projection.listID.rawValue,
+            sourceListRevision: input.projection.revision.value,
+            inputFingerprint: input.inputFingerprint,
+            currentLocation: currentLocation,
+            activeShoppingListItems: items,
+            nearbyStores: nearbyStores.sorted {
+                $0.id.uuidString < $1.id.uuidString
+            },
+            timeOfDay: observedAt,
+            explicitExclusions: explicit,
+            unresolvedEntries: unresolved
+        )
     }
 
     var hasActiveShoppingItems: Bool {
-        activeShoppingListItems.contains { !$0.isCompleted }
+        if authority == .exactPlanInput {
+            return !activeShoppingListItems.isEmpty
+        }
+        return activeShoppingListItems.contains { !$0.isCompleted }
     }
 
     var hasNearbyStores: Bool {

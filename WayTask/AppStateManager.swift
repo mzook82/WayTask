@@ -116,6 +116,625 @@ struct StoreNavigationContext: Equatable {
     }
 }
 
+// MARK: - T-14 exact Shopping Plan consumer authority
+
+enum ShoppingPlanConsumerReadiness: String, Equatable, Sendable {
+    case noUsablePlan
+    case generating
+    case currentReady
+    case stale
+    case unavailable
+    case invalidOrIncomplete
+}
+
+enum ShoppingPlanConsumerAttention: String, Equatable, Sendable {
+    case none
+    case explicitExclusions
+    case unresolvedEntries
+    case exclusionsAndUnresolvedEntries
+}
+
+enum ShoppingPlanConsumerInvalidReason:
+    String, CaseIterable, Equatable, Sendable {
+    case invalidScope
+    case duplicateEntryIdentity
+    case incompleteNeededEntryAccounting
+    case invalidEligibleEntry
+    case invalidExclusion
+    case mismatchedPlanStatus
+    case mismatchedDerivedProjection
+    case unclassifiedPlanningIntent
+}
+
+struct ShoppingPlanConsumerStatus {
+    let readiness: ShoppingPlanConsumerReadiness
+    let attention: ShoppingPlanConsumerAttention
+    let staleReasons: [ShoppingPlanStaleReason]
+    let invalidReasons: [ShoppingPlanConsumerInvalidReason]
+    let unavailableReason: ProductStateProjectionUnavailableReason?
+    let sourceListID: ProductStateListID?
+    let sourceRevision: ProductStateListRevision?
+    let inputFingerprint: String?
+    let includedEntryIDs: [ProductStateListEntryID]
+    let explicitlyExcludedEntryIDs: [ProductStateListEntryID]
+    let unresolvedEntryIDs: [ProductStateListEntryID]
+}
+
+struct ShoppingPlanInputItem {
+    let identity: ProductStateListEntryIdentity
+    let quantity: Double
+    let unitRawValue: String?
+    let sortOrder: Double
+    let displayName: String
+    let brand: String?
+    let category: String?
+    let catalogID: ProductStateCatalogID?
+    let catalogCategoryID: String?
+    let productLifecycle: ProductLibraryLifecycle
+}
+
+struct ShoppingPlanConsumerExclusion {
+    let identity: ProductStateListEntryIdentity
+    let reason: ProductStatePlanInputExclusionReason
+
+    var isExplicitUserExclusion: Bool {
+        reason == .explicitUserExclusion
+    }
+}
+
+struct ShoppingPlanInputAuthority {
+    let projection: ProductStatePlanInputProjection
+    let items: [ShoppingPlanInputItem]
+    let exclusions: [ShoppingPlanConsumerExclusion]
+    let inputFingerprint: String
+
+    var explicitExclusions: [ShoppingPlanConsumerExclusion] {
+        exclusions.filter(\.isExplicitUserExclusion)
+    }
+
+    var unresolvedEntries: [ShoppingPlanConsumerExclusion] {
+        exclusions.filter { !$0.isExplicitUserExclusion }
+    }
+
+    var attention: ShoppingPlanConsumerAttention {
+        switch (explicitExclusions.isEmpty, unresolvedEntries.isEmpty) {
+        case (true, true): .none
+        case (false, true): .explicitExclusions
+        case (true, false): .unresolvedEntries
+        case (false, false): .exclusionsAndUnresolvedEntries
+        }
+    }
+}
+
+struct ShoppingPlanConsumerPlan {
+    let plan: ProductStateShoppingPlan
+    let input: ShoppingPlanInputAuthority
+    let planStatus: ProductStatePlanStatusProjection
+    let status: ShoppingPlanConsumerStatus
+    let generatedAt: Date
+    let intentClassification: ShoppingPlanIntentClassification
+    let storeResolutionIntents: [StoreResolutionIntent]
+    let shoppingContext: ShoppingContext
+    let decision: DecisionResult
+    let tripCoverages: [ShoppingPlanStoreCoverage]
+    let buyingOptions: [ShoppingPlanBuyingOption]
+    let discoveryContext: ProductStateDiscoveryContextProjection
+    let storeRecommendations: ProductStateStoreRecommendationsProjection
+}
+
+enum ShoppingPlanInputAuthorityOutcome {
+    case success(ShoppingPlanInputAuthority)
+    case failure(ShoppingPlanConsumerStatus)
+}
+
+enum ShoppingPlanBuildOutcome {
+    case success(
+        ProductStateShoppingPlan,
+        ShoppingPlanInputAuthority,
+        ShoppingPlanConsumerStatus
+    )
+    case failure(ShoppingPlanConsumerStatus)
+}
+
+enum ShoppingPlanConsumerBoundary {
+    static func emptyConsumerStatus() -> ShoppingPlanConsumerStatus {
+        emptyStatus(.noUsablePlan)
+    }
+
+    static func invalidStatus(
+        input: ProductStatePlanInputProjection,
+        reason: ShoppingPlanConsumerInvalidReason
+    ) -> ShoppingPlanConsumerStatus {
+        status(
+            readiness: .invalidOrIncomplete,
+            attention: .none,
+            input: input,
+            invalidReasons: [reason]
+        )
+    }
+
+    static func includingClassificationUncertainty(
+        _ status: ShoppingPlanConsumerStatus,
+        classification: ShoppingPlanIntentClassification
+    ) -> ShoppingPlanConsumerStatus {
+        let classificationIDs = classification.unresolvedItems
+            .map(\.identity.id)
+        guard !classificationIDs.isEmpty else { return status }
+        let unresolved = Array(
+            Set(status.unresolvedEntryIDs + classificationIDs)
+        ).sorted { $0.rawValue.uuidString < $1.rawValue.uuidString }
+        let attention: ShoppingPlanConsumerAttention =
+            status.explicitlyExcludedEntryIDs.isEmpty
+                ? .unresolvedEntries
+                : .exclusionsAndUnresolvedEntries
+        let readiness: ShoppingPlanConsumerReadiness
+        switch status.readiness {
+        case .stale, .unavailable:
+            readiness = status.readiness
+        default:
+            readiness = .invalidOrIncomplete
+        }
+        return ShoppingPlanConsumerStatus(
+            readiness: readiness,
+            attention: attention,
+            staleReasons: status.staleReasons,
+            invalidReasons: Array(
+                Set(
+                    status.invalidReasons +
+                        [.unclassifiedPlanningIntent]
+                )
+            ).sorted { $0.rawValue < $1.rawValue },
+            unavailableReason: status.unavailableReason,
+            sourceListID: status.sourceListID,
+            sourceRevision: status.sourceRevision,
+            inputFingerprint: status.inputFingerprint,
+            includedEntryIDs: status.includedEntryIDs,
+            explicitlyExcludedEntryIDs:
+                status.explicitlyExcludedEntryIDs,
+            unresolvedEntryIDs: unresolved
+        )
+    }
+
+    static func inputAuthority(
+        _ input: ProductStatePlanInputProjection
+    ) -> ShoppingPlanInputAuthorityOutcome {
+        let validation = validate(input)
+        let exclusions = input.exclusions.map {
+            ShoppingPlanConsumerExclusion(
+                identity: $0.entry.identity,
+                reason: $0.reason
+            )
+        }
+        let attention = attention(for: exclusions)
+        guard validation.isEmpty else {
+            return .failure(
+                status(
+                    readiness: .invalidOrIncomplete,
+                    attention: attention,
+                    input: input,
+                    invalidReasons: validation
+                )
+            )
+        }
+
+        let items = input.eligibleEntries.compactMap { entry in
+            entry.product.map { product in
+                ShoppingPlanInputItem(
+                    identity: entry.identity,
+                    quantity: entry.quantity,
+                    unitRawValue: entry.unitRawValue,
+                    sortOrder: entry.sortOrder,
+                    displayName: product.displayName,
+                    brand: product.brand,
+                    category: product.category,
+                    catalogID: product.catalogID,
+                    catalogCategoryID:
+                        product.catalogCategoryIDSnapshot,
+                    productLifecycle: product.libraryLifecycle
+                )
+            }
+        }
+        let authority = ShoppingPlanInputAuthority(
+            projection: input,
+            items: items,
+            exclusions: exclusions,
+            inputFingerprint: fingerprint(input)
+        )
+        return .success(authority)
+    }
+
+    static func makePlan(
+        input: ProductStatePlanInputProjection,
+        planStatus: ProductStatePlanStatusProjection,
+        generatedAt: Date
+    ) -> ShoppingPlanBuildOutcome {
+        let authority: ShoppingPlanInputAuthority
+        switch inputAuthority(input) {
+        case let .success(value):
+            authority = value
+        case let .failure(value):
+            return .failure(value)
+        }
+
+        let included = authority.items.map(\.identity)
+        let exclusions = authority.exclusions.map {
+            ShoppingPlanExclusion(
+                entry: $0.identity,
+                reason: domainExclusionReason($0.reason)
+            )
+        }
+        let plan = ProductStateShoppingPlan(
+            id: planStatus.planID,
+            sourceListID: input.listID,
+            sourceRevision: input.revision,
+            includedEntries: included,
+            exclusions: exclusions,
+            status: planStatus.status
+        )
+
+        let mismatch = statusMismatch(
+            plan: plan,
+            input: authority,
+            planStatus: planStatus
+        )
+        guard mismatch.isEmpty else {
+            return .failure(
+                status(
+                    readiness: .invalidOrIncomplete,
+                    attention: authority.attention,
+                    input: input,
+                    invalidReasons: mismatch
+                )
+            )
+        }
+
+        let evaluated = evaluate(
+            plan: plan,
+            storedInput: authority,
+            currentInput: input,
+            currentPlanStatus: planStatus
+        )
+        return .success(plan, authority, evaluated)
+    }
+
+    static func evaluate(
+        publishedPlan: ShoppingPlanConsumerPlan?,
+        currentInput: ProductStateProjectionOutcome<
+            ProductStatePlanInputProjection
+        >?,
+        currentPlanStatus: ProductStatePlanStatusProjection?
+    ) -> ShoppingPlanConsumerStatus {
+        guard let publishedPlan else {
+            return emptyStatus(.noUsablePlan)
+        }
+        guard let currentInput else {
+            return emptyStatus(
+                .unavailable,
+                unavailableReason: .notFound,
+                sourceListID: publishedPlan.input.projection.listID,
+                sourceRevision: publishedPlan.input.projection.revision,
+                fingerprint: publishedPlan.input.inputFingerprint
+            )
+        }
+        switch currentInput {
+        case let .unavailable(metadata):
+            let reason: ProductStateProjectionUnavailableReason
+            if case let .unavailable(value) = metadata.freshness {
+                reason = value
+            } else {
+                reason = .repositoryReadFailed
+            }
+            return emptyStatus(
+                .unavailable,
+                unavailableReason: reason,
+                sourceListID: publishedPlan.input.projection.listID,
+                sourceRevision: publishedPlan.input.projection.revision,
+                fingerprint: publishedPlan.input.inputFingerprint
+            )
+        case let .projection(input):
+            guard let currentPlanStatus else {
+                return emptyStatus(
+                    .unavailable,
+                    unavailableReason: .notFound,
+                    sourceListID: input.listID,
+                    sourceRevision: input.revision,
+                    fingerprint: fingerprint(input)
+                )
+            }
+            return evaluate(
+                plan: publishedPlan.plan,
+                storedInput: publishedPlan.input,
+                currentInput: input,
+                currentPlanStatus: currentPlanStatus
+            )
+        }
+    }
+
+    static func fingerprint(
+        _ input: ProductStatePlanInputProjection
+    ) -> String {
+        var fields: [String] = [
+            "t14-plan-input-v1",
+            input.listID.rawValue.uuidString,
+            String(input.revision.value),
+            input.declaredInputFingerprint
+        ]
+        fields.append(contentsOf: input.eligibleEntries.flatMap { entry in
+            let product = entry.product
+            return [
+                "included",
+                entry.identity.id.rawValue.uuidString,
+                entry.identity.productID.rawValue.uuidString,
+                String(entry.quantity.bitPattern, radix: 16),
+                entry.unitRawValue ?? "",
+                String(entry.sortOrder.bitPattern, radix: 16),
+                product?.displayName ?? "",
+                product?.brand ?? "",
+                product?.category ?? "",
+                product?.catalogID?.rawValue ?? "",
+                product?.catalogCategoryIDSnapshot ?? "",
+                product?.libraryLifecycle.rawValue ?? "missing"
+            ]
+        })
+        fields.append(contentsOf: input.exclusions.flatMap {
+            [
+                "excluded",
+                $0.entry.identity.id.rawValue.uuidString,
+                $0.entry.identity.productID.rawValue.uuidString,
+                $0.reason.rawValue
+            ]
+        })
+        fields.append(contentsOf: input.allNeededEntryIDs.flatMap {
+            ["needed", $0.rawValue.uuidString]
+        })
+        let canonical = fields.map(lengthPrefixed).joined(separator: "|")
+        var hash: UInt64 = 0xcbf29ce484222325
+        for byte in canonical.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100000001b3
+        }
+        return String(format: "t14-%016llx", hash)
+    }
+
+    private static func evaluate(
+        plan: ProductStateShoppingPlan,
+        storedInput: ShoppingPlanInputAuthority,
+        currentInput: ProductStatePlanInputProjection,
+        currentPlanStatus: ProductStatePlanStatusProjection
+    ) -> ShoppingPlanConsumerStatus {
+        let currentAuthority: ShoppingPlanInputAuthority
+        switch inputAuthority(currentInput) {
+        case let .success(value):
+            currentAuthority = value
+        case let .failure(value):
+            return value
+        }
+
+        let mismatch = statusMismatch(
+            plan: plan,
+            input: currentAuthority,
+            planStatus: currentPlanStatus
+        )
+        guard mismatch.isEmpty else {
+            return status(
+                readiness: .invalidOrIncomplete,
+                attention: currentAuthority.attention,
+                input: currentInput,
+                fingerprint: currentAuthority.inputFingerprint,
+                invalidReasons: mismatch
+            )
+        }
+
+        var staleReasons = currentPlanStatus.staleReasons
+        if plan.sourceListID != currentInput.listID ||
+            plan.sourceRevision != currentInput.revision {
+            staleReasons.append(.sourceRevisionChanged)
+        }
+        if plan.includedEntries.map(\.id) !=
+            currentAuthority.items.map(\.identity.id) {
+            staleReasons.append(.includedEntriesChanged)
+        }
+        if storedInput.inputFingerprint !=
+            currentAuthority.inputFingerprint {
+            staleReasons.append(.planningInputChanged)
+        }
+        if case let .stale(reasons) = currentInput.metadata.freshness {
+            staleReasons.append(contentsOf: reasons.map(staleReason))
+        }
+        if case let .stale(reason) = currentPlanStatus.status {
+            staleReasons.append(reason)
+        }
+        staleReasons = Array(Set(staleReasons)).sorted {
+            $0.rawValue < $1.rawValue
+        }
+
+        let readiness: ShoppingPlanConsumerReadiness
+        if !staleReasons.isEmpty {
+            readiness = .stale
+        } else if !currentAuthority.unresolvedEntries.isEmpty {
+            readiness = .invalidOrIncomplete
+        } else if currentAuthority.items.isEmpty {
+            readiness = .noUsablePlan
+        } else {
+            switch currentPlanStatus.status {
+            case .ready:
+                readiness = .currentReady
+            case .generating:
+                readiness = .generating
+            case .idle:
+                readiness = .noUsablePlan
+            case .failed:
+                readiness = .invalidOrIncomplete
+            case .stale:
+                readiness = .stale
+            }
+        }
+
+        return status(
+            readiness: readiness,
+            attention: currentAuthority.attention,
+            input: currentInput,
+            fingerprint: currentAuthority.inputFingerprint,
+            staleReasons: staleReasons
+        )
+    }
+
+    private static func validate(
+        _ input: ProductStatePlanInputProjection
+    ) -> [ShoppingPlanConsumerInvalidReason] {
+        var reasons: Set<ShoppingPlanConsumerInvalidReason> = []
+        guard input.metadata.scope == .list(input.listID),
+              input.metadata.listRevision == input.revision else {
+            reasons.insert(.invalidScope)
+            return reasons.sorted { $0.rawValue < $1.rawValue }
+        }
+
+        let included = input.eligibleEntries.map(\.identity.id)
+        let excluded = input.exclusions.map(\.entry.identity.id)
+        let needed = input.allNeededEntryIDs
+        if Set(included).count != included.count ||
+            Set(excluded).count != excluded.count ||
+            Set(needed).count != needed.count {
+            reasons.insert(.duplicateEntryIdentity)
+        }
+        if !Set(included).isDisjoint(with: Set(excluded)) ||
+            Set(included + excluded) != Set(needed) {
+            reasons.insert(.incompleteNeededEntryAccounting)
+        }
+        if input.eligibleEntries.contains(where: {
+            $0.identity.listID != input.listID ||
+                $0.product == nil ||
+                !$0.issues.isEmpty ||
+                $0.product?.libraryLifecycle != .active
+        }) {
+            reasons.insert(.invalidEligibleEntry)
+        }
+        if input.exclusions.contains(where: {
+            $0.entry.identity.listID != input.listID
+        }) {
+            reasons.insert(.invalidExclusion)
+        }
+        return reasons.sorted { $0.rawValue < $1.rawValue }
+    }
+
+    private static func statusMismatch(
+        plan: ProductStateShoppingPlan,
+        input: ShoppingPlanInputAuthority,
+        planStatus: ProductStatePlanStatusProjection
+    ) -> [ShoppingPlanConsumerInvalidReason] {
+        guard planStatus.planID == plan.id,
+              planStatus.sourceListID == plan.sourceListID,
+              planStatus.sourceRevision == plan.sourceRevision,
+              planStatus.includedEntryIDs == plan.includedEntries.map(\.id),
+              planStatus.excludedEntryIDs == plan.exclusions.map(\.entry.id),
+              planStatus.metadata.scope ==
+                .plan(plan.id, plan.sourceListID),
+              planStatus.metadata.listRevision == input.projection.revision
+        else {
+            return [.mismatchedPlanStatus]
+        }
+        return []
+    }
+
+    private static func status(
+        readiness: ShoppingPlanConsumerReadiness,
+        attention: ShoppingPlanConsumerAttention,
+        input: ProductStatePlanInputProjection,
+        fingerprint: String? = nil,
+        staleReasons: [ShoppingPlanStaleReason] = [],
+        invalidReasons: [ShoppingPlanConsumerInvalidReason] = []
+    ) -> ShoppingPlanConsumerStatus {
+        ShoppingPlanConsumerStatus(
+            readiness: readiness,
+            attention: attention,
+            staleReasons: staleReasons,
+            invalidReasons: invalidReasons,
+            unavailableReason: nil,
+            sourceListID: input.listID,
+            sourceRevision: input.revision,
+            inputFingerprint: fingerprint ?? self.fingerprint(input),
+            includedEntryIDs: input.eligibleEntries.map(\.identity.id),
+            explicitlyExcludedEntryIDs: input.exclusions.filter {
+                $0.reason == .explicitUserExclusion
+            }.map(\.entry.identity.id),
+            unresolvedEntryIDs: input.exclusions.filter {
+                $0.reason != .explicitUserExclusion
+            }.map(\.entry.identity.id)
+        )
+    }
+
+    private static func emptyStatus(
+        _ readiness: ShoppingPlanConsumerReadiness,
+        unavailableReason: ProductStateProjectionUnavailableReason? = nil,
+        sourceListID: ProductStateListID? = nil,
+        sourceRevision: ProductStateListRevision? = nil,
+        fingerprint: String? = nil
+    ) -> ShoppingPlanConsumerStatus {
+        ShoppingPlanConsumerStatus(
+            readiness: readiness,
+            attention: .none,
+            staleReasons: [],
+            invalidReasons: [],
+            unavailableReason: unavailableReason,
+            sourceListID: sourceListID,
+            sourceRevision: sourceRevision,
+            inputFingerprint: fingerprint,
+            includedEntryIDs: [],
+            explicitlyExcludedEntryIDs: [],
+            unresolvedEntryIDs: []
+        )
+    }
+
+    private static func attention(
+        for exclusions: [ShoppingPlanConsumerExclusion]
+    ) -> ShoppingPlanConsumerAttention {
+        let explicit = exclusions.contains {
+            $0.isExplicitUserExclusion
+        }
+        let unresolved = exclusions.contains { !$0.isExplicitUserExclusion }
+        switch (explicit, unresolved) {
+        case (false, false): return .none
+        case (true, false): return .explicitExclusions
+        case (false, true): return .unresolvedEntries
+        case (true, true): return .exclusionsAndUnresolvedEntries
+        }
+    }
+
+    private static func domainExclusionReason(
+        _ reason: ProductStatePlanInputExclusionReason
+    ) -> ShoppingPlanExclusionReason {
+        switch reason {
+        case .explicitUserExclusion: .userExcluded
+        case .missingProduct, .ambiguousProduct, .removedProduct:
+            .invalidProduct
+        case .malformedEntry: .unsupported
+        }
+    }
+
+    nonisolated private static func staleReason(
+        _ reason: ProductStateProjectionStaleReason
+    ) -> ShoppingPlanStaleReason {
+        switch reason {
+        case .expectedListRevisionChanged, .sourceIdentityChanged,
+             .sourceRevisionChanged:
+            .sourceRevisionChanged
+        case .includedEntriesChanged:
+            .includedEntriesChanged
+        case .evidenceExpired:
+            .evidenceExpired
+        case .expectedSessionRevisionChanged, .declaredInputChanged,
+             .snapshotChanged:
+            .planningInputChanged
+        }
+    }
+
+    nonisolated private static func lengthPrefixed(
+        _ value: String
+    ) -> String {
+        "\(value.utf8.count):\(value)"
+    }
+}
+
 struct ShoppingPlan: Identifiable {
     let id: UUID
     let request: ShoppingStoreSuggestionRequest
@@ -342,6 +961,10 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     @Published var recentlyAddedShoppingItemID: UUID?
     @Published private(set) var shoppingPlan: ShoppingPlan?
     @Published private(set) var shoppingPlanState: ShoppingPlanGenerationState = .idle
+    @Published private(set) var productStateShoppingPlan:
+        ShoppingPlanConsumerPlan?
+    @Published private(set) var productStateShoppingPlanStatus =
+        ShoppingPlanConsumerBoundary.emptyConsumerStatus()
     @Published private(set) var currentShoppingListID: UUID?
     @Published var selectedShoppingListID: UUID?
     @Published private(set) var currentProductLibraryIDs: [UUID] = []
@@ -352,6 +975,9 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
     private let storeResolutionEngine = StoreResolutionEngine.shared
     private let nearbyIntentMatcher = ShoppingIntentMatcher()
     private let storeRankingService = StoreRankingService()
+    private let targetTripService = ShoppingTripService()
+    private let targetBuyingOptionsService = BuyingOptionsService()
+    private let targetDecisionEngine = DecisionEngine()
     private let nearbyRadius: CLLocationDistance = 350
     private let maxNearbyOpportunities = 8
     private let nearbyDismissCooldown: TimeInterval = 15 * 60
@@ -377,6 +1003,180 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
 
     var shoppingTripCoverages: [StoreCoverage] {
         shoppingPlan?.shoppingTripCoverages ?? []
+    }
+
+    @discardableResult
+    func publishProductStateShoppingPlan(
+        input: ProductStatePlanInputProjection,
+        planStatus: ProductStatePlanStatusProjection,
+        stores: [MapStore],
+        userCoordinate: CLLocationCoordinate2D? = nil,
+        discoveryContext: ProductStateDiscoveryContextProjection,
+        storeRecommendations:
+            ProductStateStoreRecommendationsProjection,
+        generatedAt: Date
+    ) -> ShoppingPlanConsumerStatus {
+        let plan: ProductStateShoppingPlan
+        let authority: ShoppingPlanInputAuthority
+        var evaluated: ShoppingPlanConsumerStatus
+        switch ShoppingPlanConsumerBoundary.makePlan(
+            input: input,
+            planStatus: planStatus,
+            generatedAt: generatedAt
+        ) {
+        case let .success(valuePlan, valueAuthority, valueStatus):
+            plan = valuePlan
+            authority = valueAuthority
+            evaluated = valueStatus
+        case let .failure(status):
+            productStateShoppingPlan = nil
+            productStateShoppingPlanStatus = status
+            return status
+        }
+
+        guard derivedProjectionOwnersMatch(
+            discoveryContext: discoveryContext,
+            storeRecommendations: storeRecommendations,
+            authority: authority,
+            planStatus: planStatus
+        ) else {
+            let status = ShoppingPlanConsumerBoundary.invalidStatus(
+                input: input,
+                reason: .mismatchedDerivedProjection
+            )
+            productStateShoppingPlan = nil
+            productStateShoppingPlanStatus = status
+            return status
+        }
+
+        let classification = nearbyIntentMatcher.classify(authority)
+        evaluated = ShoppingPlanConsumerBoundary
+            .includingClassificationUncertainty(
+                evaluated,
+                classification: classification
+            )
+        let intents = storeResolutionEngine.intents(
+            for: authority,
+            classification: classification
+        )
+        let contextStores = stores.map { store in
+            ShoppingContextStore(
+                id: store.id,
+                name: store.title,
+                coordinate: ShoppingCoordinate(store.coordinate),
+                matchingItemNames: store.itemNames.sorted(),
+                isFavorite: store.isSavedLocation,
+                websiteURL: store.websiteURL
+            )
+        }
+        let exactLocation: ShoppingCoordinate?
+        if let userCoordinate {
+            exactLocation = ShoppingCoordinate(userCoordinate)
+        } else {
+            exactLocation = nil
+        }
+        let context = ShoppingContext.exactPlanInput(
+            authority,
+            nearbyStores: contextStores,
+            currentLocation: exactLocation,
+            observedAt: generatedAt
+        )
+        let decision = targetDecisionEngine.evaluate(
+            mission: .exploreNearby,
+            context: context
+        )
+        let coverages = targetTripService.coverage(
+            for: authority,
+            classification: classification,
+            stores: stores,
+            userCoordinate: userCoordinate
+        )
+        let options = targetBuyingOptionsService.localOptions(
+            for: authority,
+            classification: classification,
+            intents: intents,
+            stores: stores,
+            userCoordinate: userCoordinate
+        )
+        let published = ShoppingPlanConsumerPlan(
+            plan: plan,
+            input: authority,
+            planStatus: planStatus,
+            status: evaluated,
+            generatedAt: generatedAt,
+            intentClassification: classification,
+            storeResolutionIntents: intents,
+            shoppingContext: context,
+            decision: decision,
+            tripCoverages: coverages,
+            buyingOptions: options,
+            discoveryContext: discoveryContext,
+            storeRecommendations: storeRecommendations
+        )
+        productStateShoppingPlan = published
+        productStateShoppingPlanStatus = evaluated
+        return evaluated
+    }
+
+    @discardableResult
+    func refreshProductStateShoppingPlanStatus(
+        currentInput: ProductStateProjectionOutcome<
+            ProductStatePlanInputProjection
+        >?,
+        currentPlanStatus: ProductStatePlanStatusProjection?
+    ) -> ShoppingPlanConsumerStatus {
+        var evaluated = ShoppingPlanConsumerBoundary.evaluate(
+            publishedPlan: productStateShoppingPlan,
+            currentInput: currentInput,
+            currentPlanStatus: currentPlanStatus
+        )
+        if let classification = productStateShoppingPlan?
+            .intentClassification {
+            evaluated = ShoppingPlanConsumerBoundary
+                .includingClassificationUncertainty(
+                    evaluated,
+                    classification: classification
+                )
+        }
+        productStateShoppingPlanStatus = evaluated
+        return evaluated
+    }
+
+    func discardProductStateShoppingPlan() {
+        productStateShoppingPlan = nil
+        productStateShoppingPlanStatus =
+            ShoppingPlanConsumerBoundary.emptyConsumerStatus()
+    }
+
+    private func derivedProjectionOwnersMatch(
+        discoveryContext: ProductStateDiscoveryContextProjection,
+        storeRecommendations:
+            ProductStateStoreRecommendationsProjection,
+        authority: ShoppingPlanInputAuthority,
+        planStatus: ProductStatePlanStatusProjection
+    ) -> Bool {
+        let owner = ProductStateShoppingContextOwner.plan(
+            planStatus.planID,
+            planStatus.sourceListID,
+            planStatus.sourceRevision
+        )
+        let scope = ProductStateProjectionScope.plan(
+            planStatus.planID,
+            planStatus.sourceListID
+        )
+        let productIDs = Array(Set(authority.items.map(
+            \.identity.productID
+        ))).sorted {
+            $0.rawValue.uuidString < $1.rawValue.uuidString
+        }
+        guard discoveryContext.owner == owner,
+              discoveryContext.metadata.scope == scope,
+              discoveryContext.eligibleProductIDs == productIDs,
+              storeRecommendations.owner == owner,
+              storeRecommendations.metadata.scope == scope else {
+            return false
+        }
+        return true
     }
 
     var hasNearbyOpportunityBadge: Bool {

@@ -9,6 +9,22 @@ protocol BuyingOptionsServicing {
     func suggestedStores(for request: ShoppingStoreSuggestionRequest) -> [MapStore]
 }
 
+struct ShoppingPlanBuyingOption {
+    let store: MapStore
+    let group: ShoppingIntentGroup
+    let sourceListID: ProductStateListID
+    let sourceRevision: ProductStateListRevision
+    let inputFingerprint: String
+    let entryIDs: [ProductStateListEntryID]
+    let productIDs: [ProductStateProductID]
+    let explicitlyExcludedEntryIDs: [ProductStateListEntryID]
+    let unresolvedEntryIDs: [ProductStateListEntryID]
+    let namedExclusions: [ShoppingPlanConsumerExclusion]
+    let classificationUnresolvedEntryIDs: [ProductStateListEntryID]
+    let ranking: StoreScore
+    let availabilityClaim: ShoppingPlanStoreAvailabilityClaim
+}
+
 struct BuyingOptionsService: BuyingOptionsServicing {
     private let storeRankingService = StoreRankingService()
     private let intentMatcher = ShoppingIntentMatcher()
@@ -83,6 +99,59 @@ struct BuyingOptionsService: BuyingOptionsServicing {
         }
 
         return storeOptions + futureOptionsIfAppropriate(for: request)
+    }
+
+    func localOptions(
+        for authority: ShoppingPlanInputAuthority,
+        classification: ShoppingPlanIntentClassification,
+        intents: [StoreResolutionIntent],
+        stores: [MapStore],
+        userCoordinate: CLLocationCoordinate2D?
+    ) -> [ShoppingPlanBuyingOption] {
+        guard classification.groups.count == intents.count,
+              intents.allSatisfy({
+                  $0.sourceListID == authority.projection.listID &&
+                      $0.sourceRevision == authority.projection.revision &&
+                      $0.inputFingerprint == authority.inputFingerprint
+              }) else {
+            return []
+        }
+
+        return zip(classification.groups, intents).flatMap {
+            group, intent in
+            storeRankingService.rankedStoresForPlan(
+                stores,
+                request: group.request,
+                intent: intent,
+                userCoordinate: userCoordinate
+            ).map { ranked in
+                ShoppingPlanBuyingOption(
+                    store: ranked.store,
+                    group: group.group,
+                    sourceListID: ranked.sourceListID,
+                    sourceRevision: ranked.sourceRevision,
+                    inputFingerprint: ranked.inputFingerprint,
+                    entryIDs: ranked.entryIDs,
+                    productIDs: ranked.productIDs,
+                    explicitlyExcludedEntryIDs:
+                        intent.explicitlyExcludedEntryIDs,
+                    unresolvedEntryIDs: intent.unresolvedEntryIDs,
+                    namedExclusions: ranked.namedExclusions,
+                    classificationUnresolvedEntryIDs:
+                        ranked.classificationUnresolvedEntryIDs,
+                    ranking: ranked.ranking,
+                    availabilityClaim: .estimatedOnly
+                )
+            }
+        }.sorted { lhs, rhs in
+            if lhs.ranking.score != rhs.ranking.score {
+                return lhs.ranking.score > rhs.ranking.score
+            }
+            if lhs.store.id != rhs.store.id {
+                return lhs.store.id.uuidString < rhs.store.id.uuidString
+            }
+            return lhs.group.rawValue < rhs.group.rawValue
+        }
     }
 
     private func ungroupedLocalOptions(

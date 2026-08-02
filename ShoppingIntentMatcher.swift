@@ -1,7 +1,7 @@
 import CoreLocation
 import Foundation
 
-struct ShoppingStoreSuggestionRequest: Equatable {
+struct ShoppingStoreSuggestionRequest: Equatable, Sendable {
     let itemID: UUID
     let itemName: String
     let itemCategory: String?
@@ -66,6 +66,36 @@ struct ShoppingIntentGroupResult {
 
     var itemNames: [String] {
         items.map(\.name).deduplicatedCaseInsensitive()
+    }
+}
+
+struct ShoppingPlanIntentGroupResult {
+    let group: ShoppingIntentGroup
+    let items: [ShoppingPlanInputItem]
+    let request: ShoppingStoreSuggestionRequest
+
+    var entryIDs: [ProductStateListEntryID] {
+        items.map(\.identity.id)
+    }
+
+    var productIDs: [ProductStateProductID] {
+        items.map(\.identity.productID)
+    }
+
+    var itemNames: [String] {
+        items.map(\.displayName).deduplicatedCaseInsensitive()
+    }
+}
+
+struct ShoppingPlanIntentClassification {
+    let groups: [ShoppingPlanIntentGroupResult]
+    let unresolvedItems: [ShoppingPlanInputItem]
+
+    var accountedEntryIDs: [ProductStateListEntryID] {
+        (groups.flatMap(\.entryIDs) +
+            unresolvedItems.map(\.identity.id)).sorted {
+                $0.rawValue.uuidString < $1.rawValue.uuidString
+            }
     }
 }
 
@@ -342,6 +372,38 @@ struct ProductIntentResolver {
         return profile
     }
 
+    /// T-14 classification consumes exact Product State snapshots. Display
+    /// values can inform store intent but never establish Product identity.
+    func resolve(for item: ShoppingPlanInputItem) -> ProductIntentProfile {
+        if let categoryID = item.catalogCategoryID {
+            return resolveCanonical(
+                categoryID: categoryID,
+                evidence: ["exact Product State Catalog snapshot"]
+            )
+        }
+
+        let terms = [item.displayName, item.brand, item.category]
+            .compactMap { $0 }
+        let resolved = resolve(
+            haystack: normalizedHaystack(from: terms),
+            tokens: Set(tokens(from: terms)),
+            itemName: ""
+        )
+        guard resolved.isUnresolved else {
+            return resolved
+        }
+        return profile(
+            category: .unknown,
+            group: .other,
+            confidence: resolved.confidence,
+            evidence: ["no supported exact-plan classification"],
+            primary: [],
+            secondary: [],
+            fallback: [],
+            excluded: []
+        )
+    }
+
     private func resolveCanonical(
         _ identity: ResolvedShoppingItemCatalogIdentity
     ) -> ProductIntentProfile {
@@ -354,7 +416,17 @@ struct ProductIntentResolver {
         ]
         .compactMap { $0 }
 
-        switch identity.categoryID {
+        return resolveCanonical(
+            categoryID: identity.categoryID,
+            evidence: evidence
+        )
+    }
+
+    private func resolveCanonical(
+        categoryID: String,
+        evidence: [String]
+    ) -> ProductIntentProfile {
+        switch categoryID {
         case "dairy",
              "bakery",
              "fruits_vegetables",
@@ -1017,6 +1089,103 @@ struct ShoppingIntentMatcher {
         )
     }
 
+    func suggestionRequest(
+        for item: ShoppingPlanInputItem
+    ) -> ShoppingStoreSuggestionRequest {
+        let profile = resolver.resolve(for: item)
+        let categories = profile.allowedStoreTypes
+        return ShoppingStoreSuggestionRequest(
+            itemID: item.identity.productID.rawValue,
+            itemName: item.displayName,
+            itemCategory: item.category,
+            storeCategories: categories,
+            searchTerms: planSearchTerms(
+                for: item,
+                categories: categories
+            ),
+            intentProfile: profile
+        )
+    }
+
+    func classify(
+        _ authority: ShoppingPlanInputAuthority
+    ) -> ShoppingPlanIntentClassification {
+        let ordered = authority.items.sorted(by: planItemLessThan)
+        let profiles = Dictionary(
+            uniqueKeysWithValues: ordered.map {
+                ($0.identity.id, resolver.resolve(for: $0))
+            }
+        )
+        let resolved = ordered.filter {
+            profiles[$0.identity.id]?.isUnresolved == false
+        }
+        let unresolved = ordered.filter {
+            profiles[$0.identity.id]?.isUnresolved != false
+        }
+        let grouped = Dictionary(grouping: resolved) {
+            profiles[$0.identity.id]?.intentGroup ?? .other
+        }
+        let groups: [ShoppingPlanIntentGroupResult] =
+            ShoppingIntentGroup.allCases.compactMap { group in
+            guard let items = grouped[group], !items.isEmpty else {
+                return nil
+            }
+            let itemProfiles = items.compactMap {
+                profiles[$0.identity.id]
+            }
+            let aggregate = ProductIntentProfile.aggregate(
+                profiles: itemProfiles,
+                group: group
+            )
+            let names = items.map(\.displayName)
+                .deduplicatedCaseInsensitive()
+            let terms = items.flatMap {
+                planSearchTerms(
+                    for: $0,
+                    categories: aggregate.allowedStoreTypes
+                )
+            }.deduplicatedCaseInsensitive().sorted()
+            let first = items[0]
+            return ShoppingPlanIntentGroupResult(
+                group: group,
+                items: items,
+                request: ShoppingStoreSuggestionRequest(
+                    itemID: first.identity.productID.rawValue,
+                    itemName: names.first ?? group.displayName,
+                    itemCategory: group.displayName,
+                    storeCategories: aggregate.allowedStoreTypes,
+                    searchTerms: terms.isEmpty ? names : terms,
+                    intentProfile: aggregate
+                )
+            )
+        }
+        return ShoppingPlanIntentClassification(
+            groups: groups,
+            unresolvedItems: unresolved
+        )
+    }
+
+    func relevantPlanItems(
+        from items: [ShoppingPlanInputItem],
+        for store: MapStore
+    ) -> [ShoppingPlanInputItem] {
+        items.sorted(by: planItemLessThan).filter { item in
+            let profile = resolver.resolve(for: item)
+            guard !profile.isUnresolved else { return false }
+            return ProductIntentStoreEligibility.evaluate(
+                store: store,
+                profile: profile,
+                itemName: item.displayName
+            ).isEligible
+        }
+    }
+
+    func intentProfile(
+        for item: ShoppingPlanInputItem
+    ) -> ProductIntentProfile {
+        resolver.resolve(for: item)
+    }
+
     func groupedIntents(for items: [ShoppingItem]) -> [ShoppingIntentGroupResult] {
         let activeItems = items.filter {
             !$0.isCompleted && !resolver.resolve(for: $0).isUnresolved
@@ -1154,6 +1323,29 @@ struct ShoppingIntentMatcher {
         terms.append(contentsOf: item.searchKeywords)
         terms.append(contentsOf: categories.map(\.displayName))
         return Array(Set(terms)).sorted()
+    }
+
+    private func planSearchTerms(
+        for item: ShoppingPlanInputItem,
+        categories: [ShoppingStoreCategory]
+    ) -> [String] {
+        ([item.displayName, item.brand, item.category].compactMap { $0 } +
+            categories.map(\.displayName))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .deduplicatedCaseInsensitive()
+            .sorted()
+    }
+
+    private func planItemLessThan(
+        _ lhs: ShoppingPlanInputItem,
+        _ rhs: ShoppingPlanInputItem
+    ) -> Bool {
+        if lhs.sortOrder != rhs.sortOrder {
+            return lhs.sortOrder < rhs.sortOrder
+        }
+        return lhs.identity.id.rawValue.uuidString <
+            rhs.identity.id.rawValue.uuidString
     }
 
     private func suggestionRequest(

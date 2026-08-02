@@ -4,6 +4,7 @@ import Foundation
 @MainActor
 final class DiscoverViewModel: ObservableObject {
     @Published private(set) var items: [DiscoverItem] = []
+    @Published private(set) var latestDecision: DecisionResult?
     @Published var statusMessage: String?
 
     private let decisionEngine: DecisionEngineServicing
@@ -26,10 +27,15 @@ final class DiscoverViewModel: ObservableObject {
 
     func reload() {
         let decision = decisionEngine.evaluate(mission: .exploreNearby, context: context)
+        latestDecision = decision
         var nextItems = sampleItems(from: context)
 
         if decision.outcome == .shoppingListItemsNearby {
-            nextItems.append(contentsOf: context.nearbyStores.prefix(2).map(makeListItem))
+            nextItems.append(
+                contentsOf: context.nearbyStores.sorted {
+                    $0.id.uuidString < $1.id.uuidString
+                }.prefix(2).map(makeListItem)
+            )
         }
 
         items = nextItems
@@ -100,7 +106,10 @@ final class DiscoverViewModel: ObservableObject {
         let likelyItemNames = store.matchingItemNames
         let likelyNames = Set(likelyItemNames.map { $0.lowercased() })
         let otherItemNames = context.activeShoppingListItems
-            .filter { !$0.isCompleted && !likelyNames.contains($0.name.lowercased()) }
+            .filter {
+                (context.authority == .exactPlanInput || !$0.isCompleted) &&
+                    !likelyNames.contains($0.name.lowercased())
+            }
             .map(\.name)
 
         return DiscoverItem(
@@ -132,7 +141,9 @@ final class DiscoverViewModel: ObservableObject {
 
     private func listSubtitle(from context: ShoppingContext) -> String {
         let activeItems = context.activeShoppingListItems
-            .filter { !$0.isCompleted }
+            .filter {
+                context.authority == .exactPlanInput || !$0.isCompleted
+            }
             .map(\.name)
 
         guard !activeItems.isEmpty else {
