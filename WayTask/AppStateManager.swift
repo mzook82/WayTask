@@ -953,6 +953,30 @@ enum ShoppingPlanGenerationState: Equatable {
     }
 }
 
+// MARK: - T-16 Product/Home presentation state
+
+struct ProductHomeConsumerState: Equatable {
+    let library: ProductLibraryPresentationState
+    let chooser: ProductChooserPresentationState
+    let home: ProductHomePresentation
+    let acquisition: ProductAcquisitionPresentationState
+
+    static var idle: ProductHomeConsumerState {
+        let planStatus = ShoppingPlanConsumerBoundary.emptyConsumerStatus()
+        return ProductHomeConsumerState(
+            library: .idle,
+            chooser: .idle,
+            home: ProductHomePresentationConsumer.make(
+                library: .idle,
+                namedLists: [],
+                planStatus: planStatus,
+                acquisition: .idle
+            ),
+            acquisition: .idle
+        )
+    }
+}
+
 final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
     @Published var selectedTab: AppTab = .home
     @Published var navigationPath = NavigationPath()
@@ -965,6 +989,11 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         ShoppingPlanConsumerPlan?
     @Published private(set) var productStateShoppingPlanStatus =
         ShoppingPlanConsumerBoundary.emptyConsumerStatus()
+    @Published private(set) var productHomeConsumerState =
+        ProductHomeConsumerState.idle
+    @Published private(set) var productHomeRoute: ProductHomeRoute?
+    @Published private(set) var productHomeSelectedListScope:
+        ProductStateListScopeRequest?
     @Published private(set) var currentShoppingListID: UUID?
     @Published var selectedShoppingListID: UUID?
     @Published private(set) var currentProductLibraryIDs: [UUID] = []
@@ -1146,6 +1175,134 @@ final class AppStateManager: NSObject, ObservableObject, UNUserNotificationCente
         productStateShoppingPlan = nil
         productStateShoppingPlanStatus =
             ShoppingPlanConsumerBoundary.emptyConsumerStatus()
+    }
+
+    @discardableResult
+    func publishProductHomeConsumerState(
+        library: ProductStateProjectionOutcome<
+            ProductStateProductLibraryProjection
+        >,
+        removedProducts: ProductStateProjectionOutcome<
+            ProductStateRemovedProductsProjection
+        >? = nil,
+        listScope: ProductStateListScopeRequest?,
+        catalog: [
+            ProductStateProductID:
+                ProductStateProjectionOutcome<
+                    ProductStateCatalogLinkedProductProjection
+                >
+        ],
+        knowledge: ProductStateProjectionOutcome<
+            ProductStateKnowledgeSearchProjection
+        >? = nil,
+        namedLists: [
+            ProductStateProjectionOutcome<ProductStateNamedListProjection>
+        ],
+        planStatus: ShoppingPlanConsumerStatus,
+        acquisition: ProductAcquisitionPresentationState,
+        searchText: String = "",
+        filter: ProductLibraryPresentationFilter = .all,
+        grouping: ProductLibraryPresentationGrouping = .ungrouped
+    ) -> ProductHomeConsumerState {
+        let libraryState = ProductLibraryPresentationConsumer.make(
+            library: library,
+            removedProducts: removedProducts,
+            listScope: listScope,
+            catalog: catalog,
+            knowledge: knowledge,
+            searchText: searchText,
+            filter: filter,
+            grouping: grouping
+        )
+        let chooserState: ProductChooserPresentationState
+        if let listScope {
+            chooserState = ProductChooserPresentationConsumer.make(
+                library: libraryState,
+                listScope: listScope
+            )
+        } else {
+            chooserState = .idle
+        }
+        let state = ProductHomeConsumerState(
+            library: libraryState,
+            chooser: chooserState,
+            home: ProductHomePresentationConsumer.make(
+                library: libraryState,
+                namedLists: namedLists,
+                planStatus: planStatus,
+                acquisition: acquisition
+            ),
+            acquisition: acquisition
+        )
+        productHomeConsumerState = state
+
+        if let route = productHomeRoute,
+           !productHomeRouteIsAvailable(route, state: state) {
+            productHomeRoute = nil
+            productHomeSelectedListScope = nil
+        }
+        return state
+    }
+
+    @discardableResult
+    func presentProductHomeRoute(_ route: ProductHomeRoute) -> Bool {
+        guard productHomeRouteIsAvailable(
+            route,
+            state: productHomeConsumerState
+        ) else {
+            return false
+        }
+        productHomeRoute = route
+        if case let .namedList(listID, revision) = route {
+            productHomeSelectedListScope = ProductStateListScopeRequest(
+                listID: listID,
+                expectedRevision: revision
+            )
+        } else {
+            productHomeSelectedListScope = nil
+        }
+        return true
+    }
+
+    func dismissProductHomeRoute() {
+        productHomeRoute = nil
+        productHomeSelectedListScope = nil
+    }
+
+    func discardProductHomeConsumerState() {
+        productHomeConsumerState = .idle
+        productHomeRoute = nil
+        productHomeSelectedListScope = nil
+    }
+
+    private func productHomeRouteIsAvailable(
+        _ route: ProductHomeRoute,
+        state: ProductHomeConsumerState
+    ) -> Bool {
+        switch route {
+        case .productLibrary:
+            if case .available = state.library { return true }
+            return false
+        case .removedProducts:
+            guard case let .available(presentation) = state.library,
+                  case .available = presentation.removedProducts else {
+                return false
+            }
+            return true
+        case let .product(productID):
+            guard case let .available(presentation) = state.library else {
+                return false
+            }
+            return presentation.products.contains { $0.id == productID }
+        case let .namedList(listID, revision):
+            return state.home.namedLists.contains {
+                $0.id == listID && $0.revision == revision
+            }
+        case .acquisitionConfirmation, .acquisitionResult:
+            return ProductHomeRouteConsumer.acquisition(
+                state.acquisition
+            ) == route
+        }
     }
 
     private func derivedProjectionOwnersMatch(

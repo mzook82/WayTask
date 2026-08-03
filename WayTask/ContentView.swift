@@ -10,6 +10,158 @@ import SwiftData
 import SwiftUI
 import UserNotifications
 
+// MARK: - T-16 root and chooser presentation consumers
+
+enum ProductHomeRoute: Equatable, Sendable {
+    case productLibrary
+    case removedProducts
+    case product(ProductStateProductID)
+    case namedList(ProductStateListID, ProductStateListRevision)
+    case acquisitionConfirmation(ProductStateProductID)
+    case acquisitionResult(ProductStateProductID)
+}
+
+enum ProductChooserPresentationInvalidReason: Equatable {
+    case listScopeMismatch
+    case missingListRevision(ProductStateListID)
+    case missingMembership(ProductStateProductID)
+    case invalidLibrary(ProductLibraryPresentationInvalidReason)
+}
+
+struct ProductChooserPresentationRow: Identifiable, Equatable {
+    let product: ProductStateProductProjection
+    let membership: ProductStateMembershipProjection
+    let catalog: ProductCatalogPresentationState
+
+    var id: ProductStateProductID { product.id }
+}
+
+struct ProductChooserMembershipIntent: Equatable, Sendable {
+    let productID: ProductStateProductID
+    let listID: ProductStateListID
+    let listRevision: ProductStateListRevision
+    let action: ProductStateMembershipAction
+}
+
+enum ProductChooserPresentationState: Equatable {
+    case idle
+    case available(
+        listID: ProductStateListID,
+        listRevision: ProductStateListRevision,
+        products: [ProductChooserPresentationRow],
+        metadata: ProductStateProjectionMetadata
+    )
+    case unavailable(ProductStateProjectionMetadata)
+    case invalid(ProductChooserPresentationInvalidReason)
+}
+
+enum ProductChooserPresentationConsumer {
+    static func make(
+        library: ProductLibraryPresentationState,
+        listScope: ProductStateListScopeRequest
+    ) -> ProductChooserPresentationState {
+        switch library {
+        case .idle:
+            return .idle
+        case let .unavailable(metadata):
+            return .unavailable(metadata)
+        case let .invalid(reason):
+            return .invalid(.invalidLibrary(reason))
+        case let .available(presentation):
+            guard presentation.listScope == listScope else {
+                return .invalid(.listScopeMismatch)
+            }
+            guard let revision = presentation.metadata.listRevision else {
+                return .invalid(.missingListRevision(listScope.listID))
+            }
+            if let expectedRevision = listScope.expectedRevision,
+               expectedRevision != revision {
+                return .invalid(.listScopeMismatch)
+            }
+
+            var products: [ProductChooserPresentationRow] = []
+            for row in presentation.products {
+                guard let membership = row.membership else {
+                    return .invalid(.missingMembership(row.id))
+                }
+                products.append(
+                    ProductChooserPresentationRow(
+                        product: row.product,
+                        membership: membership,
+                        catalog: row.catalog
+                    )
+                )
+            }
+            return .available(
+                listID: listScope.listID,
+                listRevision: revision,
+                products: products,
+                metadata: presentation.metadata
+            )
+        }
+    }
+
+    static func intent(
+        for row: ProductChooserPresentationRow,
+        action: ProductStateMembershipAction
+    ) -> ProductChooserMembershipIntent? {
+        guard action != .restoreProduct,
+              row.membership.permittedActions.contains(action) else {
+            return nil
+        }
+        return ProductChooserMembershipIntent(
+            productID: row.product.id,
+            listID: row.membership.listID,
+            listRevision: row.membership.listRevision,
+            action: action
+        )
+    }
+}
+
+enum ProductHomeRouteConsumer {
+    static func product(
+        _ row: ProductLibraryPresentationRow
+    ) -> ProductHomeRoute {
+        .product(row.product.id)
+    }
+
+    static func namedList(
+        _ card: ProductHomeNamedListCard
+    ) -> ProductHomeRoute {
+        .namedList(card.id, card.revision)
+    }
+
+    static func acquisition(
+        _ state: ProductAcquisitionPresentationState
+    ) -> ProductHomeRoute? {
+        switch state {
+        case .idle:
+            return nil
+        case let .awaitingAcquisitionConfirmation(confirmation):
+            return .acquisitionConfirmation(confirmation.productID)
+        case let .acquisitionResult(result):
+            guard let productID = result.authoritativeProductID else {
+                return nil
+            }
+            return .acquisitionResult(productID)
+        case let .awaitingRestoreConfirmation(confirmation):
+            guard let productID = confirmation.acquisitionResult
+                .authoritativeProductID else {
+                return nil
+            }
+            return .acquisitionConfirmation(productID)
+        case let .restoreResult(result):
+            switch result.outcome {
+            case let .restored(productID, _),
+                 let .alreadyActive(productID, _):
+                return .acquisitionResult(productID)
+            case .ambiguity, .conflict, .validationFailure, .unavailable:
+                return nil
+            }
+        }
+    }
+}
+
 struct ContentView: View {
     @EnvironmentObject private var appStateManager: AppStateManager
     @EnvironmentObject private var locationManager: LocationManager

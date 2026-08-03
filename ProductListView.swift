@@ -1,8 +1,442 @@
+import Foundation
 import MapKit
 import PhotosUI
 import SwiftData
 import SwiftUI
 import UIKit
+
+// MARK: - T-16 Product Library presentation consumer
+
+enum ProductLibraryPresentationFilter: Equatable, Sendable {
+    case all
+    case inNamedList
+    case libraryOnly
+}
+
+enum ProductLibraryPresentationGrouping: Equatable, Sendable {
+    case ungrouped
+    case category
+}
+
+enum ProductLibraryPresentationInvalidReason: Equatable, Sendable {
+    case filterRequiresNamedListScope
+    case duplicateProductIdentity(ProductStateProductID)
+    case nonActiveProduct(ProductStateProductID)
+    case unexpectedMembership(ProductStateProductID)
+    case missingMembership(ProductStateProductID)
+    case membershipProductMismatch(
+        expected: ProductStateProductID,
+        actual: ProductStateProductID
+    )
+    case membershipListMismatch(
+        expected: ProductStateListID,
+        actual: ProductStateListID
+    )
+    case membershipRevisionMismatch(
+        expected: ProductStateListRevision,
+        actual: ProductStateListRevision
+    )
+    case projectionRevisionMismatch(
+        expected: ProductStateListRevision,
+        actual: ProductStateListRevision?
+    )
+}
+
+enum ProductCatalogPresentationState: Equatable {
+    case notRequested
+    case available(ProductStateCatalogLinkedProductProjection)
+    case unavailable(ProductStateProjectionMetadata)
+    case identityMismatch(
+        expected: ProductStateProductID,
+        actual: ProductStateProductID
+    )
+}
+
+enum ProductKnowledgePresentationState: Equatable {
+    case notRequested
+    case available(ProductStateKnowledgeSearchProjection)
+    case unavailable(ProductStateProjectionMetadata)
+    case identityMismatch(
+        expected: ProductStateProductID?,
+        actual: ProductStateProductID?
+    )
+}
+
+struct ProductLibraryPresentationRow: Identifiable, Equatable {
+    let product: ProductStateProductProjection
+    let membership: ProductStateMembershipProjection?
+    let catalog: ProductCatalogPresentationState
+
+    var id: ProductStateProductID { product.id }
+
+    var isInNamedList: Bool? {
+        guard let membership else { return nil }
+        if case .absent = membership.state { return false }
+        return true
+    }
+}
+
+struct ProductLibraryPresentationGroup: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let products: [ProductLibraryPresentationRow]
+}
+
+struct RemovedProductPresentationRow: Identifiable, Equatable {
+    let projection: ProductStateRemovedProductProjection
+
+    var id: ProductStateProductID { projection.product.id }
+}
+
+enum RemovedProductsPresentationState: Equatable {
+    case notRequested
+    case available(
+        products: [RemovedProductPresentationRow],
+        metadata: ProductStateProjectionMetadata
+    )
+    case unavailable(ProductStateProjectionMetadata)
+    case invalidProduct(ProductStateProductID)
+    case duplicateProductIdentity(ProductStateProductID)
+}
+
+struct ProductLibraryPresentation: Equatable {
+    let products: [ProductLibraryPresentationRow]
+    let visibleProducts: [ProductLibraryPresentationRow]
+    let groups: [ProductLibraryPresentationGroup]
+    let listScope: ProductStateListScopeRequest?
+    let searchText: String
+    let filter: ProductLibraryPresentationFilter
+    let grouping: ProductLibraryPresentationGrouping
+    let removedProducts: RemovedProductsPresentationState
+    let knowledge: ProductKnowledgePresentationState
+    let unusedCatalogProductIDs: [ProductStateProductID]
+    let metadata: ProductStateProjectionMetadata
+}
+
+enum ProductLibraryPresentationState: Equatable {
+    case idle
+    case available(ProductLibraryPresentation)
+    case unavailable(ProductStateProjectionMetadata)
+    case invalid(ProductLibraryPresentationInvalidReason)
+}
+
+enum ProductLibraryPresentationConsumer {
+    static func make(
+        library: ProductStateProjectionOutcome<
+            ProductStateProductLibraryProjection
+        >,
+        removedProducts: ProductStateProjectionOutcome<
+            ProductStateRemovedProductsProjection
+        >? = nil,
+        listScope: ProductStateListScopeRequest?,
+        catalog: [
+            ProductStateProductID:
+                ProductStateProjectionOutcome<
+                    ProductStateCatalogLinkedProductProjection
+                >
+        ],
+        knowledge: ProductStateProjectionOutcome<
+            ProductStateKnowledgeSearchProjection
+        >? = nil,
+        searchText: String = "",
+        filter: ProductLibraryPresentationFilter = .all,
+        grouping: ProductLibraryPresentationGrouping = .ungrouped
+    ) -> ProductLibraryPresentationState {
+        guard case let .projection(projection) = library else {
+            if case let .unavailable(metadata) = library {
+                return .unavailable(metadata)
+            }
+            preconditionFailure("Product projection outcome is exhaustive")
+        }
+
+        if listScope == nil, filter != .all {
+            return .invalid(.filterRequiresNamedListScope)
+        }
+
+        if let expectedRevision = listScope?.expectedRevision,
+           projection.metadata.listRevision != expectedRevision {
+            return .invalid(
+                .projectionRevisionMismatch(
+                    expected: expectedRevision,
+                    actual: projection.metadata.listRevision
+                )
+            )
+        }
+
+        var seen = Set<ProductStateProductID>()
+        var rows: [ProductLibraryPresentationRow] = []
+        for item in projection.products {
+            let product = item.product
+            guard seen.insert(product.id).inserted else {
+                return .invalid(.duplicateProductIdentity(product.id))
+            }
+            guard product.libraryLifecycle == .active,
+                  product.libraryRemovedAt == nil else {
+                return .invalid(.nonActiveProduct(product.id))
+            }
+            if let reason = membershipInvalidReason(
+                item.membership,
+                productID: product.id,
+                listScope: listScope,
+                projectionRevision: projection.metadata.listRevision
+            ) {
+                return .invalid(reason)
+            }
+
+            rows.append(
+                ProductLibraryPresentationRow(
+                    product: product,
+                    membership: item.membership,
+                    catalog: catalogState(
+                        catalog[product.id],
+                        productID: product.id
+                    )
+                )
+            )
+        }
+
+        let normalizedSearch = normalized(searchText)
+        let visible = rows.filter { row in
+            matchesSearch(row, normalizedSearch: normalizedSearch) &&
+                matchesFilter(row, filter: filter)
+        }
+        let knownIDs = Set(rows.map(\.id))
+        let unusedCatalogProductIDs = catalog.keys
+            .filter { !knownIDs.contains($0) }
+            .sorted {
+                $0.rawValue.uuidString < $1.rawValue.uuidString
+            }
+
+        return .available(
+            ProductLibraryPresentation(
+                products: rows,
+                visibleProducts: visible,
+                groups: groups(visible, grouping: grouping),
+                listScope: listScope,
+                searchText: searchText,
+                filter: filter,
+                grouping: grouping,
+                removedProducts: removedState(removedProducts),
+                knowledge: knowledgeState(knowledge),
+                unusedCatalogProductIDs: unusedCatalogProductIDs,
+                metadata: projection.metadata
+            )
+        )
+    }
+
+    private static func membershipInvalidReason(
+        _ membership: ProductStateMembershipProjection?,
+        productID: ProductStateProductID,
+        listScope: ProductStateListScopeRequest?,
+        projectionRevision: ProductStateListRevision?
+    ) -> ProductLibraryPresentationInvalidReason? {
+        guard let listScope else {
+            return membership == nil ? nil : .unexpectedMembership(productID)
+        }
+        guard let membership else { return .missingMembership(productID) }
+        guard membership.productID == productID else {
+            return .membershipProductMismatch(
+                expected: productID,
+                actual: membership.productID
+            )
+        }
+        guard membership.listID == listScope.listID else {
+            return .membershipListMismatch(
+                expected: listScope.listID,
+                actual: membership.listID
+            )
+        }
+        if let expected = listScope.expectedRevision,
+           membership.listRevision != expected {
+            return .membershipRevisionMismatch(
+                expected: expected,
+                actual: membership.listRevision
+            )
+        }
+        if let projectionRevision,
+           membership.listRevision != projectionRevision {
+            return .membershipRevisionMismatch(
+                expected: projectionRevision,
+                actual: membership.listRevision
+            )
+        }
+        return nil
+    }
+
+    private static func catalogState(
+        _ outcome: ProductStateProjectionOutcome<
+            ProductStateCatalogLinkedProductProjection
+        >?,
+        productID: ProductStateProductID
+    ) -> ProductCatalogPresentationState {
+        guard let outcome else { return .notRequested }
+        switch outcome {
+        case let .unavailable(metadata):
+            return .unavailable(metadata)
+        case let .projection(projection):
+            guard projection.product.id == productID else {
+                return .identityMismatch(
+                    expected: productID,
+                    actual: projection.product.id
+                )
+            }
+            return .available(projection)
+        }
+    }
+
+    private static func removedState(
+        _ outcome: ProductStateProjectionOutcome<
+            ProductStateRemovedProductsProjection
+        >?
+    ) -> RemovedProductsPresentationState {
+        guard let outcome else { return .notRequested }
+        switch outcome {
+        case let .unavailable(metadata):
+            return .unavailable(metadata)
+        case let .projection(projection):
+            var seen = Set<ProductStateProductID>()
+            var rows: [RemovedProductPresentationRow] = []
+            for value in projection.products {
+                let product = value.product
+                guard seen.insert(product.id).inserted else {
+                    return .duplicateProductIdentity(product.id)
+                }
+                guard product.libraryLifecycle == .removed,
+                      product.libraryRemovedAt != nil else {
+                    return .invalidProduct(product.id)
+                }
+                rows.append(RemovedProductPresentationRow(projection: value))
+            }
+            return .available(products: rows, metadata: projection.metadata)
+        }
+    }
+
+    private static func knowledgeState(
+        _ outcome: ProductStateProjectionOutcome<
+            ProductStateKnowledgeSearchProjection
+        >?
+    ) -> ProductKnowledgePresentationState {
+        guard let outcome else { return .notRequested }
+        switch outcome {
+        case let .unavailable(metadata):
+            return .unavailable(metadata)
+        case let .projection(projection):
+            for candidate in projection.candidates
+            where candidate.productID != projection.explicitProductID {
+                return .identityMismatch(
+                    expected: projection.explicitProductID,
+                    actual: candidate.productID
+                )
+            }
+            return .available(projection)
+        }
+    }
+
+    private static func matchesFilter(
+        _ row: ProductLibraryPresentationRow,
+        filter: ProductLibraryPresentationFilter
+    ) -> Bool {
+        switch filter {
+        case .all:
+            return true
+        case .inNamedList:
+            return row.isInNamedList == true
+        case .libraryOnly:
+            return row.isInNamedList == false
+        }
+    }
+
+    private static func matchesSearch(
+        _ row: ProductLibraryPresentationRow,
+        normalizedSearch: String
+    ) -> Bool {
+        guard !normalizedSearch.isEmpty else { return true }
+        var values = [
+            row.product.displayName,
+            row.product.brand,
+            row.product.category,
+            row.product.catalogDisplayNameSnapshot,
+            row.product.catalogCategoryDisplayNameSnapshot
+        ].compactMap { $0 }
+        if case let .available(catalog) = row.catalog {
+            values.append(catalog.displayedName)
+            values.append(contentsOf: [
+                catalog.displayedCategoryID,
+                catalog.displayedCategoryName
+            ].compactMap { $0 })
+        }
+        return values.contains { normalized($0).contains(normalizedSearch) }
+    }
+
+    private static func groups(
+        _ rows: [ProductLibraryPresentationRow],
+        grouping: ProductLibraryPresentationGrouping
+    ) -> [ProductLibraryPresentationGroup] {
+        guard grouping == .category else {
+            return rows.isEmpty ? [] : [
+                ProductLibraryPresentationGroup(
+                    id: "all",
+                    title: "All Products",
+                    products: rows
+                )
+            ]
+        }
+
+        var order: [String] = []
+        var titles: [String: String] = [:]
+        var grouped: [String: [ProductLibraryPresentationRow]] = [:]
+        for row in rows {
+            let category = categoryIdentity(row)
+            if grouped[category.id] == nil {
+                order.append(category.id)
+                titles[category.id] = category.title
+                grouped[category.id] = []
+            }
+            grouped[category.id, default: []].append(row)
+        }
+        return order.map { id in
+            ProductLibraryPresentationGroup(
+                id: id,
+                title: titles[id]!,
+                products: grouped[id]!
+            )
+        }
+    }
+
+    private static func categoryIdentity(
+        _ row: ProductLibraryPresentationRow
+    ) -> (id: String, title: String) {
+        if case let .available(catalog) = row.catalog,
+           let categoryID = catalog.displayedCategoryID {
+            return (
+                "catalog:\(categoryID)",
+                catalog.displayedCategoryName ?? categoryID
+            )
+        }
+        if let categoryID = row.product.catalogCategoryIDSnapshot {
+            return (
+                "snapshot:\(categoryID)",
+                row.product.catalogCategoryDisplayNameSnapshot ?? categoryID
+            )
+        }
+        if let category = row.product.category,
+           !normalized(category).isEmpty {
+            return ("product:\(normalized(category))", category)
+        }
+        return ("uncategorized", "Uncategorized")
+    }
+
+    private static func normalized(_ value: String) -> String {
+        value
+            .precomposedStringWithCanonicalMapping
+            .folding(
+                options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
+                locale: Locale(identifier: "en_US_POSIX")
+            )
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+}
 
 struct ProductListView: View {
     @Environment(\.modelContext) private var modelContext

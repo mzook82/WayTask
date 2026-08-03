@@ -3,6 +3,171 @@ import CoreLocation
 import SwiftData
 import SwiftUI
 
+// MARK: - T-16 Home presentation consumer
+
+struct ProductHomeProductCard: Identifiable, Equatable {
+    let row: ProductLibraryPresentationRow
+
+    var id: ProductStateProductID { row.id }
+}
+
+struct ProductHomeNamedListCard: Identifiable, Equatable {
+    let id: ProductStateListID
+    let revision: ProductStateListRevision
+    let title: String
+    let neededCount: Int
+    let resolvedCount: Int
+    let unresolvedCount: Int
+    let metadata: ProductStateProjectionMetadata
+}
+
+enum ProductHomeNamedListIssue: Equatable {
+    case unavailable(ProductStateProjectionMetadata)
+    case duplicateListIdentity(ProductStateListID)
+}
+
+struct ProductHomePlanPresentation: Equatable {
+    let readiness: ShoppingPlanConsumerReadiness
+    let attention: ShoppingPlanConsumerAttention
+    let staleReasons: [ShoppingPlanStaleReason]
+    let invalidReasons: [ShoppingPlanConsumerInvalidReason]
+    let unavailableReason: ProductStateProjectionUnavailableReason?
+    let sourceListID: ProductStateListID?
+    let sourceRevision: ProductStateListRevision?
+    let inputFingerprint: String?
+    let includedEntryIDs: [ProductStateListEntryID]
+    let explicitlyExcludedEntryIDs: [ProductStateListEntryID]
+    let unresolvedEntryIDs: [ProductStateListEntryID]
+
+    init(_ status: ShoppingPlanConsumerStatus) {
+        readiness = status.readiness
+        attention = status.attention
+        staleReasons = status.staleReasons
+        invalidReasons = status.invalidReasons
+        unavailableReason = status.unavailableReason
+        sourceListID = status.sourceListID
+        sourceRevision = status.sourceRevision
+        inputFingerprint = status.inputFingerprint
+        includedEntryIDs = status.includedEntryIDs
+        explicitlyExcludedEntryIDs = status.explicitlyExcludedEntryIDs
+        unresolvedEntryIDs = status.unresolvedEntryIDs
+    }
+}
+
+struct ProductHomePresentation: Equatable {
+    let productCards: [ProductHomeProductCard]
+    let productLibraryCount: Int
+    let namedLists: [ProductHomeNamedListCard]
+    let namedListIssues: [ProductHomeNamedListIssue]
+    let plan: ProductHomePlanPresentation
+    let acquisition: ProductAcquisitionPresentationState
+}
+
+enum ProductHomePresentationConsumer {
+    static let maximumRecentProductCount = 8
+
+    static func make(
+        library: ProductLibraryPresentationState,
+        namedLists: [
+            ProductStateProjectionOutcome<ProductStateNamedListProjection>
+        ],
+        planStatus: ShoppingPlanConsumerStatus,
+        acquisition: ProductAcquisitionPresentationState
+    ) -> ProductHomePresentation {
+        let libraryRows: [ProductLibraryPresentationRow]
+        if case let .available(value) = library {
+            libraryRows = value.products
+        } else {
+            libraryRows = []
+        }
+
+        var listsByID: [
+            ProductStateListID: ProductStateNamedListProjection
+        ] = [:]
+        var issues: [ProductHomeNamedListIssue] = []
+        for outcome in namedLists {
+            switch outcome {
+            case let .unavailable(metadata):
+                issues.append(.unavailable(metadata))
+            case let .projection(projection):
+                if listsByID[projection.id] != nil {
+                    issues.append(.duplicateListIdentity(projection.id))
+                } else {
+                    listsByID[projection.id] = projection
+                }
+            }
+        }
+
+        let listCards = listsByID.values.sorted {
+            if $0.createdAt != $1.createdAt {
+                return $0.createdAt < $1.createdAt
+            }
+            return $0.id.rawValue.uuidString < $1.id.rawValue.uuidString
+        }.map {
+            ProductHomeNamedListCard(
+                id: $0.id,
+                revision: $0.revision,
+                title: $0.title,
+                neededCount: $0.neededEntries.count,
+                resolvedCount: $0.resolvedEntries.count,
+                unresolvedCount: $0.unresolvedEntries.count,
+                metadata: $0.metadata
+            )
+        }
+
+        return ProductHomePresentation(
+            productCards: libraryRows.prefix(maximumRecentProductCount).map {
+                ProductHomeProductCard(row: $0)
+            },
+            productLibraryCount: libraryRows.count,
+            namedLists: listCards,
+            namedListIssues: canonicalIssues(issues),
+            plan: ProductHomePlanPresentation(planStatus),
+            acquisition: acquisition
+        )
+    }
+
+    private static func canonicalIssues(
+        _ issues: [ProductHomeNamedListIssue]
+    ) -> [ProductHomeNamedListIssue] {
+        issues.sorted { issueKey($0) < issueKey($1) }
+    }
+
+    private static func issueKey(_ issue: ProductHomeNamedListIssue) -> String {
+        switch issue {
+        case let .duplicateListIdentity(id):
+            return "duplicate:\(id.rawValue.uuidString)"
+        case let .unavailable(metadata):
+            return "unavailable:\(metadataKey(metadata))"
+        }
+    }
+
+    private static func metadataKey(
+        _ metadata: ProductStateProjectionMetadata
+    ) -> String {
+        switch metadata.scope {
+        case let .list(id):
+            return "list:\(id.rawValue.uuidString)"
+        case let .library(lifecycle):
+            return "library:\(lifecycle.rawValue)"
+        case let .product(id):
+            return "product:\(id.rawValue.uuidString)"
+        case let .plan(id, listID):
+            return "plan:\(id.rawValue.uuidString):\(listID.rawValue.uuidString)"
+        case .sessions:
+            return "sessions"
+        case let .session(id):
+            return "session:\(id.rawValue.uuidString)"
+        case let .knowledge(fingerprint):
+            return "knowledge:\(fingerprint)"
+        case let .location(id):
+            return "location:\(id.uuidString)"
+        case let .migration(version):
+            return "migration:\(version)"
+        }
+    }
+}
+
 struct HomeView: View {
     @EnvironmentObject private var appStateManager: AppStateManager
     @EnvironmentObject private var locationManager: LocationManager
