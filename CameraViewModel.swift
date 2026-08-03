@@ -69,12 +69,16 @@ final class CameraViewModel: ObservableObject {
     @Published var isSavingPhoto = false
     @Published var statusMessage = "Point the camera at a barcode."
     @Published var focusPoint: CGPoint?
+    @Published private(set) var targetAcquisitionPresentationState:
+        ProductAcquisitionPresentationState = .idle
 
     let cameraService: CameraService
 
     private let recognitionService: ProductRecognitionServicing
     private let productDataProvider: any ProductDataProvider
     private let aiRecognitionService: AIProductRecognitionServicing
+    private let targetAcquisitionConsumer = AddProductSaveCoordinator()
+    private let productKnowledgeService = ProductKnowledgeService()
     private var pendingPhotoSource: RecognitionInputSource = .cameraCapture
     private var recognitionTask: Task<Void, Never>?
 
@@ -373,6 +377,121 @@ final class CameraViewModel: ObservableObject {
         if selectedMode == .barcode {
             startBarcodeScanning()
         }
+    }
+
+    /// T-15 target-only confirmation path. The reviewed Camera/AI/barcode
+    /// evidence remains attached to the confirmation and the resulting
+    /// bounded outcome. The currently released V3 Camera surface is not
+    /// activated against V4 during this internal conversion stage.
+    func prepareTargetAcquisitionConfirmation(
+        for candidate: ProductCandidate,
+        productID: ProductStateProductID,
+        commandID: ProductStateCommandID,
+        effectiveAt: Date,
+        confirmed: Bool
+    ) -> ProductAcquisitionConfirmation? {
+        let evidence: ProductAcquisitionReviewedEvidence?
+        switch candidate.source {
+        case .barcode:
+            guard let observation = confirmedBarcodeResult else {
+                return nil
+            }
+            evidence = productKnowledgeService
+                .targetBarcodeAcquisitionEvidence(
+                    candidate: candidate,
+                    observation: observation,
+                    fallbackImageData: capturedImageData
+                )
+
+        case .ai:
+            guard let recognitionResult else { return nil }
+            evidence = productKnowledgeService
+                .targetAIReviewedAcquisitionEvidence(
+                    candidate: candidate,
+                    recognition: recognitionResult,
+                    barcodeObservation: confirmedBarcodeResult,
+                    fallbackImageData: capturedImageData
+                )
+
+        case .cameraPhoto, .photoLibrary:
+            guard let recognitionResult,
+                  recognitionResult.status == .recognized,
+                  recognitionResult.candidates.contains(candidate) else {
+                return nil
+            }
+            evidence = .cameraReviewed(
+                candidate: candidate,
+                recognition: recognitionResult,
+                fallbackImageData: capturedImageData
+            )
+
+        case .manual:
+            evidence = .manual(
+                name: candidate.name,
+                imageData: candidate.imageData ?? capturedImageData
+            )
+
+        case .unknown:
+            evidence = nil
+        }
+
+        guard let evidence else { return nil }
+        let confirmation = ProductAcquisitionConfirmation(
+            productID: productID,
+            commandID: commandID,
+            effectiveAt: effectiveAt,
+            evidence: evidence,
+            confirmed: confirmed
+        )
+        targetAcquisitionPresentationState =
+            .awaitingAcquisitionConfirmation(confirmation)
+        return confirmation
+    }
+
+    @discardableResult
+    func confirmTargetAcquisition(
+        _ confirmation: ProductAcquisitionConfirmation,
+        using authority: ProductStateProductCommandAuthority
+    ) -> ProductAcquisitionResult {
+        let result = targetAcquisitionConsumer.confirmTargetAcquisition(
+            confirmation,
+            using: authority
+        )
+        targetAcquisitionPresentationState = .acquisitionResult(result)
+        return result
+    }
+
+    func prepareTargetRestoreConfirmation(
+        for result: ProductAcquisitionResult,
+        commandID: ProductStateCommandID,
+        historyEventID: ProductStateHistoryEventID,
+        effectiveAt: Date,
+        confirmed: Bool
+    ) -> ProductAcquisitionRestoreConfirmation? {
+        guard result.requiresExplicitRestore else { return nil }
+        let confirmation = ProductAcquisitionRestoreConfirmation(
+            acquisitionResult: result,
+            commandID: commandID,
+            historyEventID: historyEventID,
+            effectiveAt: effectiveAt,
+            confirmed: confirmed
+        )
+        targetAcquisitionPresentationState =
+            .awaitingRestoreConfirmation(confirmation)
+        return confirmation
+    }
+
+    @discardableResult
+    func confirmTargetRestore(
+        _ confirmation: ProductAcquisitionRestoreConfirmation,
+        using authority: ProductStateProductCommandAuthority
+    ) -> ProductAcquisitionRestoreResult {
+        let result = targetAcquisitionConsumer.confirmTargetRestore(
+            confirmation,
+            using: authority
+        )
+        targetAcquisitionPresentationState = .restoreResult(result)
+        return result
     }
 
     func scanAgain() {
@@ -893,6 +1012,7 @@ final class CameraViewModel: ObservableObject {
         confirmedBarcodeResult = nil
         isWaitingForBarcodePackagePhoto = false
         isRecognizing = false
+        targetAcquisitionPresentationState = .idle
     }
 
     private func playBarcodeDetectedHaptic() {

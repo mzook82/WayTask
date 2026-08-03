@@ -20,6 +20,59 @@ protocol ProductKnowledgeServicing {
 }
 
 struct ProductKnowledgeService: ProductKnowledgeServicing {
+    /// T-15 Product Knowledge remains evidence-only. These constructors do
+    /// not receive a ModelContext and cannot create, restore, or otherwise
+    /// mutate Product State.
+    func targetBarcodeAcquisitionEvidence(
+        candidate: ProductCandidate,
+        observation: BarcodeResult,
+        fallbackImageData: Data?
+    ) -> ProductAcquisitionReviewedEvidence? {
+        guard candidate.source == .barcode,
+              !observation.value.isEmpty,
+              observation.value == observation.value.trimmingCharacters(
+                in: .whitespacesAndNewlines
+              ),
+              candidate.barcode == observation.value else {
+            return nil
+        }
+        return .barcode(
+            candidate: candidate,
+            observation: observation,
+            fallbackImageData: fallbackImageData
+        )
+    }
+
+    func targetAIReviewedAcquisitionEvidence(
+        candidate: ProductCandidate,
+        recognition: RecognitionResult,
+        barcodeObservation: BarcodeResult?,
+        fallbackImageData: Data?
+    ) -> ProductAcquisitionReviewedEvidence? {
+        guard candidate.source == .ai,
+              recognition.status == .recognized,
+              recognition.candidates.contains(candidate) else {
+            return nil
+        }
+        if let barcodeObservation {
+            guard recognition.inputSource == .barcode,
+                  candidate.barcode == barcodeObservation.value else {
+                return nil
+            }
+        } else {
+            guard recognition.inputSource != .barcode,
+                  candidate.barcode == nil else {
+                return nil
+            }
+        }
+        return .aiReviewed(
+            candidate: candidate,
+            recognition: recognition,
+            barcodeObservation: barcodeObservation,
+            fallbackImageData: fallbackImageData
+        )
+    }
+
     func productKnowledge(forBarcode barcode: String, in modelContext: ModelContext) throws -> ProductKnowledge? {
         guard let normalizedBarcode = normalizeBarcode(barcode) else {
             return nil

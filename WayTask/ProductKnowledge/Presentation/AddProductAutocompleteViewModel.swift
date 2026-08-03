@@ -103,11 +103,14 @@ final class AddProductAutocompleteViewModel: ObservableObject {
     @Published private(set) var selectedCustomProduct: AddProductCustomSelection?
     @Published private(set) var rawQuery = ""
     @Published private(set) var isSavingProduct = false
+    @Published private(set) var targetAcquisitionPresentationState:
+        ProductAcquisitionPresentationState = .idle
 
     private let suggestionProvider: ProductAutocompleteSuggestionProvider?
     private let personalizationUpdater:
         ProductAutocompletePersonalizationUpdater?
     private let slowSearchDelay: ProductAutocompleteSlowSearchDelay
+    private let targetAcquisitionConsumer = AddProductSaveCoordinator()
 
     private var generation = 0
     private var lastNormalizedQuery: String?
@@ -466,6 +469,79 @@ final class AddProductAutocompleteViewModel: ObservableObject {
         isSavingProduct = false
     }
 
+    func prepareTargetAcquisitionConfirmation(
+        productID: ProductStateProductID,
+        commandID: ProductStateCommandID,
+        effectiveAt: Date,
+        imageData: Data?,
+        confirmed: Bool
+    ) -> ProductAcquisitionConfirmation? {
+        guard let selection else { return nil }
+        let evidence: ProductAcquisitionReviewedEvidence
+        switch selection {
+        case let .catalog(value):
+            evidence = .catalog(selection: value, imageData: imageData)
+        case let .custom(value):
+            evidence = .custom(selection: value, imageData: imageData)
+        }
+        let confirmation = ProductAcquisitionConfirmation(
+            productID: productID,
+            commandID: commandID,
+            effectiveAt: effectiveAt,
+            evidence: evidence,
+            confirmed: confirmed
+        )
+        targetAcquisitionPresentationState =
+            .awaitingAcquisitionConfirmation(confirmation)
+        return confirmation
+    }
+
+    @discardableResult
+    func confirmTargetAcquisition(
+        _ confirmation: ProductAcquisitionConfirmation,
+        using authority: ProductStateProductCommandAuthority
+    ) -> ProductAcquisitionResult {
+        let result = targetAcquisitionConsumer.confirmTargetAcquisition(
+            confirmation,
+            using: authority
+        )
+        targetAcquisitionPresentationState = .acquisitionResult(result)
+        return result
+    }
+
+    func prepareTargetRestoreConfirmation(
+        for result: ProductAcquisitionResult,
+        commandID: ProductStateCommandID,
+        historyEventID: ProductStateHistoryEventID,
+        effectiveAt: Date,
+        confirmed: Bool
+    ) -> ProductAcquisitionRestoreConfirmation? {
+        guard result.requiresExplicitRestore else { return nil }
+        let confirmation = ProductAcquisitionRestoreConfirmation(
+            acquisitionResult: result,
+            commandID: commandID,
+            historyEventID: historyEventID,
+            effectiveAt: effectiveAt,
+            confirmed: confirmed
+        )
+        targetAcquisitionPresentationState =
+            .awaitingRestoreConfirmation(confirmation)
+        return confirmation
+    }
+
+    @discardableResult
+    func confirmTargetRestore(
+        _ confirmation: ProductAcquisitionRestoreConfirmation,
+        using authority: ProductStateProductCommandAuthority
+    ) -> ProductAcquisitionRestoreResult {
+        let result = targetAcquisitionConsumer.confirmTargetRestore(
+            confirmation,
+            using: authority
+        )
+        targetAcquisitionPresentationState = .restoreResult(result)
+        return result
+    }
+
     func reset() {
         invalidateCurrentSearch()
         lastNormalizedQuery = nil
@@ -476,6 +552,7 @@ final class AddProductAutocompleteViewModel: ObservableObject {
         rawQuery = ""
         isSavingProduct = false
         phase = .idle
+        targetAcquisitionPresentationState = .idle
     }
 
     private func invalidateCurrentSearch() {
