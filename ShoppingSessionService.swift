@@ -160,3 +160,106 @@ struct ShoppingSessionService: ShoppingSessionServicing {
         )
     }
 }
+
+// MARK: - Inactive target Product State Session boundary (T-19)
+
+/// The normalized Session façade is intentionally not wired into the legacy
+/// runtime. It exposes immutable T-13 projections to the already-converted
+/// Shopping and Map consumers and delegates every write to the sole T-19
+/// command authority. T-21 owns any future production cutover.
+@MainActor
+struct ProductStateShoppingSessionService {
+    private let queries: ProductStateQueryBoundary
+    private let commands: ProductStateShoppingSessionCommandAuthority
+
+    init(
+        queries: ProductStateQueryBoundary,
+        commands: ProductStateShoppingSessionCommandAuthority
+    ) {
+        self.queries = queries
+        self.commands = commands
+    }
+
+    func activeSessions() -> ProductStateProjectionOutcome<
+        ProductStateActiveSessionLookupProjection
+    > {
+        queries.activeSessions()
+    }
+
+    func snapshot(
+        _ request: ProductStateSessionSnapshotRequest
+    ) -> ProductStateProjectionOutcome<ProductStateSessionSnapshotProjection> {
+        queries.sessionSnapshot(request)
+    }
+
+    func finishReview(
+        _ request: ProductStateFinishReviewRequest
+    ) -> ProductStateProjectionOutcome<ProductStateFinishReviewProjection> {
+        queries.finishReview(request)
+    }
+
+    func shoppingAndMapContext(
+        _ request: ProductStateSessionSnapshotRequest
+    ) -> ProductStateProjectionOutcome<ProductStateMapShoppingContextProjection> {
+        switch queries.sessionSnapshot(request) {
+        case let .projection(snapshot):
+            return .projection(queries.mapContext(session: snapshot))
+        case let .unavailable(metadata):
+            return .unavailable(metadata)
+        }
+    }
+
+    func start(
+        _ input: ProductStateSessionStartInput
+    ) -> ProductStateSessionCommandExecution {
+        commands.start(input)
+    }
+
+    func collect(
+        _ command: ProductStateCommand
+    ) -> ProductStateSessionCommandExecution {
+        commands.collect(command)
+    }
+
+    func undoCollection(
+        _ command: ProductStateCommand
+    ) -> ProductStateSessionCommandExecution {
+        commands.undoCollection(command)
+    }
+
+    func prepareFinishOutcome(
+        _ command: ProductStateCommand
+    ) -> ProductStateSessionCommandExecution {
+        commands.prepareFinishOutcome(command)
+    }
+
+    func recordStopActivity(
+        _ command: ProductStateSessionStopActivityCommand
+    ) -> ProductStateSessionCommandExecution {
+        commands.recordStopActivity(command)
+    }
+
+    func expire(
+        _ command: ProductStateExpireSessionCommand
+    ) -> ProductStateSessionCommandExecution {
+        commands.expire(command)
+    }
+
+    func resume(
+        _ command: ProductStateCommand
+    ) -> ProductStateSessionCommandExecution {
+        commands.resume(command)
+    }
+
+    func finish(
+        _ input: ProductStateSessionFinishInput
+    ) -> ProductStateSessionCommandExecution {
+        commands.finish(input)
+    }
+
+    func abandon(
+        _ command: ProductStateCommand
+    ) -> ProductStateSessionCommandExecution {
+        commands.abandon(command)
+    }
+}

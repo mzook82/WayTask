@@ -1100,6 +1100,18 @@ struct ProductStateFinishReviewRequest: Equatable, Sendable {
     let session: ProductStateSessionSnapshotRequest
     let proposedOutcomes: [ProductStateSessionLineID:
         ShoppingSessionFinalOutcome]
+    let expectedCurrentListRevision: ProductStateListRevision?
+
+    init(
+        session: ProductStateSessionSnapshotRequest,
+        proposedOutcomes: [ProductStateSessionLineID:
+            ShoppingSessionFinalOutcome],
+        expectedCurrentListRevision: ProductStateListRevision? = nil
+    ) {
+        self.session = session
+        self.proposedOutcomes = proposedOutcomes
+        self.expectedCurrentListRevision = expectedCurrentListRevision
+    }
 }
 
 enum ProductStateFinishReviewStatus:
@@ -2045,16 +2057,52 @@ final class ProductStateQueryBoundary {
         invalid = Array(Set(invalid)).sorted(by: lineIDLess)
 
         var sourceConflict = false
+        var currentListRevision = exactListRevision(snapshot.sourceRevision)
+        let historicalRevision = exactListRevision(snapshot.sourceRevision)
         if let listID = snapshot.sourceListID,
-           case let .exact(sourceRevision) = snapshot.sourceRevision {
+           let expectedRevision = request.expectedCurrentListRevision
+                ?? historicalRevision {
             switch loadList(
                 ProductStateListScopeRequest(
                     listID: listID,
-                    expectedRevision: sourceRevision
+                    expectedRevision: expectedRevision
                 )
             ) {
             case let .success(list):
                 sourceConflict = list.freshness != .current
+                currentListRevision = list.revision
+                if !sourceConflict,
+                   request.expectedCurrentListRevision != nil {
+                    do {
+                        for line in snapshot.lines {
+                            guard let entryID = line.sourceEntryID,
+                                  let productID = line.productID
+                            else {
+                                sourceConflict = true
+                                break
+                            }
+                            let entries = try shopping.shoppingEntries(
+                                id: entryID.rawValue,
+                                listID: listID.rawValue
+                            ).filter {
+                                $0.productID == productID.rawValue
+                                    && $0.lifecycleRawValue == "needed"
+                            }
+                            let productRows = try products.products(
+                                id: productID.rawValue
+                            ).filter {
+                                $0.libraryLifecycleRawValue
+                                    == ProductLibraryLifecycle.active.rawValue
+                            }
+                            if entries.count != 1 || productRows.count != 1 {
+                                sourceConflict = true
+                                break
+                            }
+                        }
+                    } catch {
+                        sourceConflict = true
+                    }
+                }
             case .failure:
                 sourceConflict = true
             }
@@ -2063,7 +2111,7 @@ final class ProductStateQueryBoundary {
         }
 
         let status: ProductStateFinishReviewStatus
-        if snapshot.lifecycle?.isTerminal != false {
+        if snapshot.lifecycle != .active {
             status = .invalidSession
         } else if sourceConflict {
             status = .sourceConflict
@@ -2079,7 +2127,7 @@ final class ProductStateQueryBoundary {
         let projectionMetadata = metadata(
             scope: .session(snapshot.id),
             freshness: freshness,
-            listRevision: exactListRevision(snapshot.sourceRevision),
+            listRevision: currentListRevision,
             sessionRevision: snapshot.revision,
             sessionSnapshotID: snapshot.snapshotID,
             provenances: [.frozenSessionSnapshot],

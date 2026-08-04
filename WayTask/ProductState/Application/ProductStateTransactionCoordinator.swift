@@ -378,6 +378,26 @@ final class ProductStateTransactionCoordinator {
                  let .entryDeleted(identity, revision):
                 guard revision > 0 else { return nil }
                 change = (.list(identity.listID), revision - 1, revision)
+            case let .sessionInserted(id, revision, _, _, _, _):
+                change = (.session(id), 0, revision)
+            case let .sessionLineExecutionChanged(
+                id, _, before, after, _, _
+            ), let .sessionActivityRecorded(
+                id, _, before, after, _, _
+            ), let .sessionLifecycleChanged(
+                id, before, after, _, _, _
+            ):
+                change = (.session(id), before, after)
+            case let .sessionFinished(
+                id, before, after, listID, listBefore, listAfter, _, _, _
+            ):
+                guard listAfter == listBefore + 1 else { return nil }
+                if let existing = revisions[.list(listID)],
+                   existing != (listBefore, listAfter) {
+                    return nil
+                }
+                revisions[.list(listID)] = (listBefore, listAfter)
+                change = (.session(id), before, after)
             case let .historyEventInserted(id):
                 historyIDs.append(id)
                 change = nil
@@ -604,6 +624,52 @@ final class SwiftDataProductStateTransactionScope:
                 inventory.changed.append(
                     ModelKey(kind: .list, id: identity.listID.rawValue)
                 )
+            case let .sessionInserted(
+                id, _, _, _, lineIDs, stopIDs
+            ):
+                inventory.inserted.append(
+                    ModelKey(kind: .session, id: id.rawValue)
+                )
+                inventory.inserted.append(contentsOf: lineIDs.map {
+                    ModelKey(kind: .sessionLine, id: $0.rawValue)
+                })
+                inventory.inserted.append(contentsOf: stopIDs.map {
+                    ModelKey(kind: .sessionStop, id: $0.rawValue)
+                })
+            case let .sessionLineExecutionChanged(
+                sessionID, lineID, _, _, _, _
+            ):
+                inventory.changed.append(
+                    ModelKey(kind: .session, id: sessionID.rawValue)
+                )
+                inventory.changed.append(
+                    ModelKey(kind: .sessionLine, id: lineID.rawValue)
+                )
+            case let .sessionActivityRecorded(
+                sessionID, _, _, _, _, _
+            ):
+                inventory.changed.append(
+                    ModelKey(kind: .session, id: sessionID.rawValue)
+                )
+            case let .sessionLifecycleChanged(id, _, _, _, _, _):
+                inventory.changed.append(
+                    ModelKey(kind: .session, id: id.rawValue)
+                )
+            case let .sessionFinished(
+                id, _, _, listID, _, _, lineOutcomes, resolvedEntries, _
+            ):
+                inventory.changed.append(
+                    ModelKey(kind: .session, id: id.rawValue)
+                )
+                inventory.changed.append(
+                    ModelKey(kind: .list, id: listID.rawValue)
+                )
+                inventory.changed.append(contentsOf: lineOutcomes.map {
+                    ModelKey(kind: .sessionLine, id: $0.lineID.rawValue)
+                })
+                inventory.changed.append(contentsOf: resolvedEntries.map {
+                    ModelKey(kind: .entry, id: $0.identity.id.rawValue)
+                })
             case let .historyEventInserted(id):
                 inventory.inserted.append(
                     ModelKey(kind: .history, id: id.rawValue)
@@ -788,6 +854,78 @@ final class SwiftDataProductStateTransactionScope:
                 repositories: repositories
             )
 
+        case let .sessionInserted(
+            id, revision, snapshotID, signature, lineIDs, stopIDs
+        ):
+            return try sessionInsertionState(
+                id: id,
+                revision: revision,
+                snapshotID: snapshotID,
+                signature: signature,
+                lineIDs: lineIDs,
+                stopIDs: stopIDs,
+                repositories: repositories
+            )
+
+        case let .sessionLineExecutionChanged(
+            sessionID, lineID, before, after, executionState,
+            executionChangedAt
+        ):
+            return try sessionLineExecutionState(
+                sessionID: sessionID,
+                lineID: lineID,
+                before: before,
+                after: after,
+                executionState: executionState,
+                executionChangedAt: executionChangedAt,
+                repositories: repositories
+            )
+
+        case let .sessionActivityRecorded(
+            sessionID, stopID, before, after, activityRawValue, lastActivityAt
+        ):
+            return try sessionActivityState(
+                sessionID: sessionID,
+                stopID: stopID,
+                before: before,
+                after: after,
+                activityRawValue: activityRawValue,
+                lastActivityAt: lastActivityAt,
+                repositories: repositories
+            )
+
+        case let .sessionLifecycleChanged(
+            id, before, after, beforeLifecycle, afterLifecycle,
+            transitionedAt
+        ):
+            return try sessionLifecycleState(
+                id: id,
+                before: before,
+                after: after,
+                beforeLifecycle: beforeLifecycle,
+                afterLifecycle: afterLifecycle,
+                transitionedAt: transitionedAt,
+                repositories: repositories
+            )
+
+        case let .sessionFinished(
+            id, before, after, listID, listBefore, listAfter,
+            lineOutcomes, resolvedEntries, finishedAt
+        ):
+            return try sessionFinishState(
+                commandID: commandID,
+                id: id,
+                before: before,
+                after: after,
+                listID: listID,
+                listBefore: listBefore,
+                listAfter: listAfter,
+                lineOutcomes: lineOutcomes,
+                resolvedEntries: resolvedEntries,
+                finishedAt: finishedAt,
+                repositories: repositories
+            )
+
         case let .historyEventInserted(id):
             let rows = try repositories.history.historyEvents(id: id.rawValue)
             if rows.isEmpty { return .notCommitted }
@@ -886,6 +1024,215 @@ final class SwiftDataProductStateTransactionScope:
         )
         return currentMembership.count == 1
             ? .committed : .inconsistent
+    }
+
+    private func sessionInsertionState(
+        id: ProductStateSessionID,
+        revision: UInt64,
+        snapshotID: ProductStateSessionSnapshotID,
+        signature: String,
+        lineIDs: [ProductStateSessionLineID],
+        stopIDs: [ProductStateSessionStopID],
+        repositories: ProductStateRepositories
+    ) throws -> EffectState {
+        let rows = try repositories.sessions.shoppingSessions(
+            id: id.rawValue
+        )
+        let lines = try repositories.sessions.sessionLines(
+            sessionID: id.rawValue
+        )
+        let stops = try repositories.sessions.sessionStops(
+            sessionID: id.rawValue
+        )
+        if rows.isEmpty && lines.isEmpty && stops.isEmpty {
+            return .notCommitted
+        }
+        guard rows.count == 1,
+              rows[0].revision == revision,
+              rows[0].snapshotID == snapshotID.rawValue,
+              rows[0].snapshotContentSignature == signature,
+              Set(lines.map(\.id)) == Set(lineIDs.map(\.rawValue)),
+              lines.count == lineIDs.count,
+              Set(stops.map(\.id)) == Set(stopIDs.map(\.rawValue)),
+              stops.count == stopIDs.count
+        else { return .inconsistent }
+        return .committed
+    }
+
+    private func sessionLineExecutionState(
+        sessionID: ProductStateSessionID,
+        lineID: ProductStateSessionLineID,
+        before: UInt64,
+        after: UInt64,
+        executionState: ShoppingSessionExecutionState,
+        executionChangedAt: Date,
+        repositories: ProductStateRepositories
+    ) throws -> EffectState {
+        let sessions = try repositories.sessions.shoppingSessions(
+            id: sessionID.rawValue
+        )
+        let lines = try repositories.sessions.sessionLines(
+            sessionID: sessionID.rawValue
+        ).filter { $0.id == lineID.rawValue }
+        guard sessions.count == 1, lines.count == 1 else {
+            return .inconsistent
+        }
+        if sessions[0].revision == before {
+            let prior: ShoppingSessionExecutionState =
+                executionState == .collected ? .remaining : .collected
+            return lines[0].executionStateRawValue == prior.rawValue
+                ? .notCommitted : .inconsistent
+        }
+        guard sessions[0].revision == after,
+              sessions[0].lastActivityAt == executionChangedAt,
+              lines[0].executionStateRawValue == executionState.rawValue,
+              lines[0].executionChangedAt == executionChangedAt
+        else { return .inconsistent }
+        return .committed
+    }
+
+    private func sessionLifecycleState(
+        id: ProductStateSessionID,
+        before: UInt64,
+        after: UInt64,
+        beforeLifecycle: ShoppingSessionLifecycle,
+        afterLifecycle: ShoppingSessionLifecycle,
+        transitionedAt: Date,
+        repositories: ProductStateRepositories
+    ) throws -> EffectState {
+        let rows = try repositories.sessions.shoppingSessions(id: id.rawValue)
+        guard rows.count == 1 else { return .inconsistent }
+        if rows[0].revision == before {
+            return rows[0].lifecycleRawValue == beforeLifecycle.rawValue
+                ? .notCommitted : .inconsistent
+        }
+        guard rows[0].revision == after,
+              rows[0].lifecycleRawValue == afterLifecycle.rawValue
+        else { return .inconsistent }
+        switch afterLifecycle {
+        case .active:
+            guard rows[0].activationStartedAt == transitionedAt,
+                  rows[0].lastActivityAt == transitionedAt
+            else { return .inconsistent }
+        case .expired:
+            guard rows[0].expiredAt == transitionedAt else {
+                return .inconsistent
+            }
+        case .finished, .abandoned:
+            guard rows[0].endedAt == transitionedAt else {
+                return .inconsistent
+            }
+        }
+        return .committed
+    }
+
+    private func sessionActivityState(
+        sessionID: ProductStateSessionID,
+        stopID: ProductStateSessionStopID,
+        before: UInt64,
+        after: UInt64,
+        activityRawValue: String,
+        lastActivityAt: Date,
+        repositories: ProductStateRepositories
+    ) throws -> EffectState {
+        guard ProductStateSessionStopActivity(
+            rawValue: activityRawValue
+        ) != nil else { return .inconsistent }
+        let sessions = try repositories.sessions.shoppingSessions(
+            id: sessionID.rawValue
+        )
+        let stops = try repositories.sessions.sessionStops(
+            sessionID: sessionID.rawValue
+        ).filter { $0.id == stopID.rawValue }
+        guard sessions.count == 1, stops.count == 1 else {
+            return .inconsistent
+        }
+        if sessions[0].revision == before { return .notCommitted }
+        guard sessions[0].revision == after,
+              sessions[0].lastActivityAt == lastActivityAt
+        else { return .inconsistent }
+        return .committed
+    }
+
+    private func sessionFinishState(
+        commandID: ProductStateCommandID,
+        id: ProductStateSessionID,
+        before: UInt64,
+        after: UInt64,
+        listID: ProductStateListID,
+        listBefore: UInt64,
+        listAfter: UInt64,
+        lineOutcomes: [ProductStateSessionLineOutcomeEffect],
+        resolvedEntries: [ProductStateSessionEntryResolutionEffect],
+        finishedAt: Date,
+        repositories: ProductStateRepositories
+    ) throws -> EffectState {
+        let sessions = try repositories.sessions.shoppingSessions(id: id.rawValue)
+        let lists = try repositories.shopping.shoppingLists(id: listID.rawValue)
+        guard sessions.count == 1, lists.count == 1 else {
+            return .inconsistent
+        }
+        let allLines = try repositories.sessions.sessionLines(
+            sessionID: id.rawValue
+        )
+        let selectedLines = allLines.filter {
+            Set(lineOutcomes.map(\.lineID.rawValue)).contains($0.id)
+        }
+        guard selectedLines.count == lineOutcomes.count else {
+            return .inconsistent
+        }
+        let entries = try resolvedEntries.map { effect in
+            let rows = try repositories.shopping.shoppingEntries(
+                id: effect.identity.id.rawValue,
+                listID: effect.identity.listID.rawValue
+            ).filter { $0.productID == effect.identity.productID.rawValue }
+            guard rows.count == 1 else {
+                throw ProductStateTransactionScopeError.effectMismatch
+            }
+            return (effect, rows[0])
+        }
+
+        if sessions[0].revision == before && lists[0].revision == listBefore {
+            let linesArePending = selectedLines.allSatisfy {
+                $0.finalOutcomeRawValue == nil
+                    && $0.finalOutcomeCommandID == nil
+            }
+            let entriesAreNeeded = entries.allSatisfy {
+                $0.1.lifecycleRawValue == ShoppingListEntryLifecycleKind.needed.rawValue
+            }
+            return linesArePending && entriesAreNeeded
+                ? .notCommitted : .inconsistent
+        }
+
+        guard sessions[0].revision == after,
+              sessions[0].lifecycleRawValue
+                == ShoppingSessionLifecycle.finished.rawValue,
+              sessions[0].endedAt == finishedAt,
+              lists[0].revision == listAfter
+        else { return .inconsistent }
+        let outcomes = Dictionary(
+            uniqueKeysWithValues: lineOutcomes.map {
+                ($0.lineID.rawValue, $0.outcome.rawValue)
+            }
+        )
+        guard selectedLines.allSatisfy({ line in
+            line.finalOutcomeRawValue == outcomes[line.id]
+                && line.finalOutcomeCommandID == commandID.rawValue
+                && line.finalOutcomeAt == finishedAt
+        }) else { return .inconsistent }
+        let reasons = Dictionary(
+            uniqueKeysWithValues: resolvedEntries.map {
+                ($0.identity.id.rawValue, $0.reason.rawValue)
+            }
+        )
+        guard entries.allSatisfy({ _, entry in
+            entry.lifecycleRawValue == ShoppingListEntryLifecycleKind.resolved.rawValue
+                && entry.resolutionReasonRawValue == reasons[entry.id]
+                && entry.resolutionCommandID == commandID.rawValue
+                && entry.resolutionSessionID == id.rawValue
+                && entry.resolutionEffectiveAt == finishedAt
+        }) else { return .inconsistent }
+        return .committed
     }
 }
 

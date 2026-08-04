@@ -630,7 +630,60 @@ enum ProductStateStagedEffect: Hashable, Sendable {
         identity: ProductStateListEntryIdentity,
         listRevision: UInt64
     )
+    case sessionInserted(
+        id: ProductStateSessionID,
+        revision: UInt64,
+        snapshotID: ProductStateSessionSnapshotID,
+        snapshotContentSignature: String,
+        lineIDs: [ProductStateSessionLineID],
+        stopIDs: [ProductStateSessionStopID]
+    )
+    case sessionLineExecutionChanged(
+        sessionID: ProductStateSessionID,
+        lineID: ProductStateSessionLineID,
+        beforeRevision: UInt64,
+        afterRevision: UInt64,
+        executionState: ShoppingSessionExecutionState,
+        executionChangedAt: Date
+    )
+    case sessionActivityRecorded(
+        sessionID: ProductStateSessionID,
+        stopID: ProductStateSessionStopID,
+        beforeRevision: UInt64,
+        afterRevision: UInt64,
+        activityRawValue: String,
+        lastActivityAt: Date
+    )
+    case sessionLifecycleChanged(
+        id: ProductStateSessionID,
+        beforeRevision: UInt64,
+        afterRevision: UInt64,
+        beforeLifecycle: ShoppingSessionLifecycle,
+        afterLifecycle: ShoppingSessionLifecycle,
+        transitionedAt: Date
+    )
+    case sessionFinished(
+        id: ProductStateSessionID,
+        beforeRevision: UInt64,
+        afterRevision: UInt64,
+        listID: ProductStateListID,
+        listBeforeRevision: UInt64,
+        listAfterRevision: UInt64,
+        lineOutcomes: [ProductStateSessionLineOutcomeEffect],
+        resolvedEntries: [ProductStateSessionEntryResolutionEffect],
+        finishedAt: Date
+    )
     case historyEventInserted(ProductStateHistoryEventID)
+}
+
+struct ProductStateSessionLineOutcomeEffect: Hashable, Sendable {
+    let lineID: ProductStateSessionLineID
+    let outcome: ShoppingSessionFinalOutcome
+}
+
+struct ProductStateSessionEntryResolutionEffect: Hashable, Sendable {
+    let identity: ProductStateListEntryIdentity
+    let reason: ShoppingListResolutionReason
 }
 
 struct ProductStatePreparedValidationFailure: Hashable, Sendable {
