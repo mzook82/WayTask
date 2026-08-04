@@ -1874,3 +1874,53 @@ private extension Array where Element == ShoppingStoreCategory {
         }
     }
 }
+
+// MARK: - T-20 inactive exact notification navigation intent
+
+enum ProductStateNotificationNavigationIntent: Equatable, Sendable {
+    case shoppingSession(
+        sessionID: ProductStateSessionID,
+        stopID: ProductStateSessionStopID
+    )
+    case safeShopping(ProductStateProjectionStaleReason)
+    case suppressed(ProductStateProjectionUnavailableReason)
+    case invalid
+}
+
+/// Produces an inert route value after both the opaque delivery token and the
+/// committed T-13 route projection have been revalidated. No selected tab,
+/// Map state, Session state, or Product State value is changed here.
+struct ProductStateNotificationNavigationIntentProjector {
+    func project(
+        notificationToken: String,
+        desired: ProductStateNotificationPlanProjection,
+        route: ProductStateNotificationRouteProjection
+    ) -> ProductStateNotificationNavigationIntent {
+        guard let token = ProductStateOpaqueReminderToken(
+            encoded: notificationToken
+        ), token.kind == .notification,
+              desired.state == .eligible,
+              let registration = desired.registrations.first(where: {
+                $0.payload.notificationID.rawValue == token.opaqueID
+              }),
+              route.payloadOwner == registration.payload.owner else {
+            return .invalid
+        }
+        switch route.route {
+        case let .session(sessionID):
+            guard sessionID == registration.payload.sessionID else {
+                return .invalid
+            }
+            return .shoppingSession(
+                sessionID: sessionID,
+                stopID: registration.payload.stopID
+            )
+        case let .safeShopping(reason):
+            return .safeShopping(reason)
+        case let .suppressed(reason):
+            return .suppressed(reason)
+        case .namedList:
+            return .invalid
+        }
+    }
+}

@@ -648,3 +648,86 @@ private extension Array {
         Array(prefix(maxLength))
     }
 }
+
+// MARK: - T-20 inactive monitoring coordination boundary
+
+struct ProductStateManagedReminderPlatformSnapshot: Equatable, Sendable {
+    let geofenceIdentifiers: [String]
+    let pendingNotificationIdentifiers: [String]
+    let deliveredNotificationIdentifiers: [String]
+}
+
+struct ProductStateMonitoringCoordinationProjection: Equatable, Sendable {
+    let reconciliation: ProductStateReminderReconciliationProjection
+    let invalidGeofenceIdentifiers: [String]
+    let invalidNotificationIdentifiers: [String]
+}
+
+/// Resolves enumerated platform identifiers into exact T-20 identities and
+/// delegates desired/actual comparison to the value-only reconciler. It does
+/// not own or call CLLocationManager or UNUserNotificationCenter.
+struct ProductStateLocationMonitoringCoordinator {
+    private let reconciler = ProductStatePostCommitReconciler()
+
+    func coordinate(
+        desired: ProductStateNotificationPlanProjection,
+        ledger: [ProductStateReminderLedgerEntry],
+        platform: ProductStateManagedReminderPlatformSnapshot
+    ) -> ProductStateMonitoringCoordinationProjection {
+        let geofences = decode(
+            platform.geofenceIdentifiers,
+            kind: .geofence
+        )
+        let pending = decode(
+            platform.pendingNotificationIdentifiers,
+            kind: .notification
+        )
+        let delivered = decode(
+            platform.deliveredNotificationIdentifiers,
+            kind: .notification
+        )
+        let reconciliation = reconciler.reconcile(
+            ProductStateReminderReconciliationInput(
+                desired: desired,
+                ledger: ledger,
+                actualGeofenceIDs: Set(geofences.ids.map {
+                    ProductStateGeofenceID(rawValue: $0)
+                }),
+                actualPendingNotificationIDs: Set(pending.ids.map {
+                    ProductStateNotificationID(rawValue: $0)
+                }),
+                actualDeliveredNotificationIDs: Set(delivered.ids.map {
+                    ProductStateNotificationID(rawValue: $0)
+                })
+            )
+        )
+        return ProductStateMonitoringCoordinationProjection(
+            reconciliation: reconciliation,
+            invalidGeofenceIdentifiers: geofences.invalid,
+            invalidNotificationIdentifiers: Array(
+                Set(pending.invalid + delivered.invalid)
+            ).sorted()
+        )
+    }
+
+    private func decode(
+        _ identifiers: [String],
+        kind: ProductStateOpaqueReminderToken.Kind
+    ) -> (ids: [UUID], invalid: [String]) {
+        var ids: [UUID] = []
+        var invalid: [String] = []
+        for identifier in identifiers.sorted() {
+            guard let token = ProductStateOpaqueReminderToken(
+                encoded: identifier
+            ), token.kind == kind else {
+                invalid.append(identifier)
+                continue
+            }
+            ids.append(token.opaqueID)
+        }
+        return (
+            ids.sorted { $0.uuidString < $1.uuidString },
+            invalid
+        )
+    }
+}

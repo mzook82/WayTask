@@ -357,3 +357,104 @@ struct GeofenceNotificationService {
         "waytask.geofence.lastSent.\(payload.storeID.uuidString)"
     }
 }
+
+// MARK: - T-20 inactive Product State platform projections
+
+/// A compact transport token. It deliberately contains only one opaque local
+/// ledger identity; owner, revision, Product, Store, and coordinate values are
+/// resolved from the committed T-20 ledger before any future platform action.
+struct ProductStateOpaqueReminderToken: Equatable, Sendable {
+    enum Kind: String, Equatable, Sendable {
+        case geofence = "g"
+        case notification = "n"
+    }
+
+    static let version = 1
+
+    let kind: Kind
+    let opaqueID: UUID
+
+    var encoded: String {
+        "wt-r\(Self.version)-\(kind.rawValue)-\(opaqueID.uuidString.lowercased())"
+    }
+
+    init(kind: Kind, opaqueID: UUID) {
+        self.kind = kind
+        self.opaqueID = opaqueID
+    }
+
+    init?(encoded: String) {
+        let parts = encoded.split(separator: "-", maxSplits: 3)
+        guard parts.count == 4,
+              parts[0] == "wt",
+              parts[1] == "r\(Self.version)",
+              let kind = Kind(rawValue: String(parts[2])),
+              let opaqueID = UUID(uuidString: String(parts[3])) else {
+            return nil
+        }
+        self.kind = kind
+        self.opaqueID = opaqueID
+    }
+}
+
+struct ProductStatePlatformGeofenceProjection: Equatable, Sendable {
+    let identifier: String
+    let geofenceID: ProductStateGeofenceID
+    let registrationID: ProductStateReminderRegistrationID
+    let latitude: Double
+    let longitude: Double
+    let radiusMeters: Double
+    let notifyOnEntry: Bool
+    let notifyOnExit: Bool
+}
+
+struct ProductStatePlatformNotificationProjection: Equatable, Sendable {
+    let identifier: String
+    let notificationID: ProductStateNotificationID
+    let semanticContent: ProductStateNotificationSemanticContent
+    let opaqueUserInfo: [String: String]
+}
+
+/// Converts immutable Product State values to inert platform descriptions.
+/// It has no notification center, location manager, permission prompt, or
+/// scheduling closure, so T-20 cannot activate OS behavior.
+struct ProductStateGeofenceNotificationProjectionAdapter {
+    func geofence(
+        _ registration: ProductStateReminderRegistrationProjection
+    ) -> ProductStatePlatformGeofenceProjection {
+        let token = ProductStateOpaqueReminderToken(
+            kind: .geofence,
+            opaqueID: registration.payload.geofenceID.rawValue
+        )
+        return ProductStatePlatformGeofenceProjection(
+            identifier: token.encoded,
+            geofenceID: registration.payload.geofenceID,
+            registrationID: registration.payload.registrationID,
+            latitude: registration.latitude,
+            longitude: registration.longitude,
+            radiusMeters: registration.radiusMeters,
+            notifyOnEntry: true,
+            notifyOnExit: false
+        )
+    }
+
+    func notification(
+        _ delivery: ProductStateNotificationDeliveryProjection
+    ) -> ProductStatePlatformNotificationProjection {
+        let token = ProductStateOpaqueReminderToken(
+            kind: .notification,
+            opaqueID: delivery.notificationID.rawValue
+        )
+        return ProductStatePlatformNotificationProjection(
+            identifier: token.encoded,
+            notificationID: delivery.notificationID,
+            semanticContent: delivery.content,
+            opaqueUserInfo: [
+                "waytaskReminderVersion": String(
+                    ProductStateOpaqueReminderToken.version
+                ),
+                "waytaskReminderToken": token.encoded
+            ]
+        )
+    }
+}
