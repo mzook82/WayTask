@@ -2,6 +2,93 @@ import SwiftUI
 import SwiftData
 import PhotosUI
 
+// MARK: - T-18 target saved-location presentation
+
+struct ProductStateLocationDetailProjectionPresentation: Equatable {
+    let locationID: UUID
+    let listID: ProductStateListID
+    let listRevision: ProductStateListRevision
+    let title: String
+    let note: String?
+    let coordinate: ShoppingCoordinate?
+    let links: [ProductStateMapSavedLocationLinkPresentation]
+    let issues: [ProductStateMapSavedLocationIssue]
+    let metadata: ProductStateProjectionMetadata
+}
+
+enum ProductStateLocationDetailProjectionContent: Equatable {
+    case idle
+    case available(ProductStateLocationDetailProjectionPresentation)
+    case stale(
+        ProductStateLocationDetailProjectionPresentation,
+        ProductStateMapStalenessPresentation
+    )
+    case unavailable(ProductStateProjectionMetadata)
+    case invalid(ProductStateMapProjectionInvalidReason)
+    case notFound(UUID)
+}
+
+enum ProductStateLocationDetailProjectionConsumer {
+    static func make(
+        locationID: UUID,
+        mapState: ProductStateMapProjectionConsumerState
+    ) -> ProductStateLocationDetailProjectionContent {
+        switch mapState.content {
+        case .idle:
+            return .idle
+        case let .unavailable(value):
+            return .unavailable(value.metadata)
+        case let .invalid(reason):
+            return .invalid(reason)
+        case let .available(map):
+            return detail(
+                locationID: locationID,
+                map: map,
+                staleness: nil
+            )
+        case let .stale(map, staleness):
+            return detail(
+                locationID: locationID,
+                map: map,
+                staleness: staleness
+            )
+        }
+    }
+
+    private static func detail(
+        locationID: UUID,
+        map: ProductStateMapProjectionPresentation,
+        staleness: ProductStateMapStalenessPresentation?
+    ) -> ProductStateLocationDetailProjectionContent {
+        if let location = map.savedLocations.first(where: {
+            $0.id == locationID
+        }) {
+            let presentation =
+                ProductStateLocationDetailProjectionPresentation(
+                    locationID: location.id,
+                    listID: map.listID,
+                    listRevision: map.listRevision,
+                    title: location.title,
+                    note: location.note,
+                    coordinate: location.coordinate,
+                    links: location.links,
+                    issues: location.issues,
+                    metadata: location.metadata
+                )
+            if let staleness {
+                return .stale(presentation, staleness)
+            }
+            return .available(presentation)
+        }
+        if let metadata = map.unavailableSavedLocations.first(where: {
+            $0.scope == .location(locationID)
+        }) {
+            return .unavailable(metadata)
+        }
+        return .notFound(locationID)
+    }
+}
+
 struct LocationDetailView: View {
     @Environment(\.modelContext) private var modelContext
 
@@ -115,3 +202,4 @@ struct LocationDetailView: View {
     }
 }
 
+// T-18 target presentation remains inactive until the approved cutover.

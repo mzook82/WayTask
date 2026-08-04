@@ -2,6 +2,104 @@ import MapKit
 import SwiftData
 import SwiftUI
 
+// MARK: - T-18 target Main Map presentation
+
+struct ProductStateMainMapScreenPresentation: Equatable {
+    let listID: ProductStateListID
+    let listRevision: ProductStateListRevision
+    let markers: [ProductStateMapMarkerPresentation]
+    let visibleMarkers: [ProductStateMapMarkerPresentation]
+    let recommendations: [ProductStateMapRecommendationPresentation]
+    let visibleRecommendations: [ProductStateMapRecommendationPresentation]
+    let savedLocations: [ProductStateMapSavedLocationPresentation]
+    let unavailableSavedLocations: [ProductStateProjectionMetadata]
+    let excludedProducts: [ProductStateMapExcludedProductPresentation]
+    let unresolvedProducts: [ProductStateMapUnresolvedProductPresentation]
+    let visibleUnresolvedProducts:
+        [ProductStateMapUnresolvedProductPresentation]
+    let selected: ProductStateMapSelectedPresentation?
+    let filter: ProductStateMapProjectionFilter
+    let searchText: String
+    let metadata: ProductStateProjectionMetadata
+
+    var markerIDs: [ProductStateMapMarkerID] { markers.map(\.id) }
+    var visibleMarkerIDs: [ProductStateMapMarkerID] {
+        visibleMarkers.map(\.id)
+    }
+    var recommendationStoreIDs: [UUID] { recommendations.map(\.id) }
+    var visibleRecommendationStoreIDs: [UUID] {
+        visibleRecommendations.map(\.id)
+    }
+
+    init(_ map: ProductStateMapProjectionPresentation) {
+        listID = map.listID
+        listRevision = map.listRevision
+        markers = map.markers
+        visibleMarkers = map.visibleMarkers
+        recommendations = map.recommendations
+        visibleRecommendations = map.visibleRecommendations
+        savedLocations = map.savedLocations
+        unavailableSavedLocations = map.unavailableSavedLocations
+        excludedProducts = map.excludedProducts
+        unresolvedProducts = map.unresolvedProducts
+        visibleUnresolvedProducts = map.visibleUnresolvedProducts
+        selected = map.selected
+        filter = map.filter
+        searchText = map.searchText
+        metadata = map.metadata
+    }
+}
+
+enum ProductStateMainMapScreenContent: Equatable {
+    case idle
+    case available(ProductStateMainMapScreenPresentation)
+    case stale(
+        ProductStateMainMapScreenPresentation,
+        ProductStateMapStalenessPresentation
+    )
+    case unavailable(ProductStateMapUnavailablePresentation)
+    case invalid(ProductStateMapProjectionInvalidReason)
+}
+
+enum ProductStateMainMapScreenConsumer {
+    static func make(
+        _ state: ProductStateMapProjectionConsumerState
+    ) -> ProductStateMainMapScreenContent {
+        switch state.content {
+        case .idle:
+            return .idle
+        case let .available(map):
+            return .available(ProductStateMainMapScreenPresentation(map))
+        case let .stale(map, staleness):
+            return .stale(
+                ProductStateMainMapScreenPresentation(map),
+                staleness
+            )
+        case let .unavailable(value):
+            return .unavailable(value)
+        case let .invalid(reason):
+            return .invalid(reason)
+        }
+    }
+
+    static func navigationIntent(
+        for markerID: ProductStateMapMarkerID,
+        in state: ProductStateMapProjectionConsumerState
+    ) -> ProductStateMapNavigationIntent? {
+        let presentation: ProductStateMapProjectionPresentation
+        switch state.content {
+        case let .available(value), let .stale(value, _):
+            presentation = value
+        case .idle, .unavailable, .invalid:
+            return nil
+        }
+        return ProductStateMapProjectionConsumer.navigationIntent(
+            for: markerID,
+            in: presentation
+        )
+    }
+}
+
 struct MainMapView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
