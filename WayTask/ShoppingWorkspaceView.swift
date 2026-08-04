@@ -3,6 +3,750 @@ import MapKit
 import SwiftData
 import SwiftUI
 
+// MARK: - T-17 Shopping presentation consumer
+
+enum ShoppingWorkspaceProjectionFilter: Equatable, Sendable {
+    case all
+    case needed
+    case resolved
+    case resolutionReason(ShoppingListResolutionReason)
+    case unresolved
+}
+
+enum ShoppingWorkspaceProjectionGrouping: Equatable, Sendable {
+    case listOrder
+    case shoppingIntent
+}
+
+enum ShoppingWorkspaceProjectionInvalidReason: Equatable, Sendable {
+    case listScopeMismatch(
+        expected: ProductStateListID,
+        actual: ProductStateProjectionScope
+    )
+    case listRevisionMismatch(
+        expected: ProductStateListRevision,
+        actual: ProductStateListRevision?
+    )
+    case duplicateEntryIdentity(ProductStateListEntryID)
+    case entryListMismatch(
+        entryID: ProductStateListEntryID,
+        expected: ProductStateListID,
+        actual: ProductStateListID
+    )
+    case entryProductMismatch(
+        entryID: ProductStateListEntryID,
+        expected: ProductStateProductID,
+        actual: ProductStateProductID
+    )
+    case entryStateMismatch(ProductStateListEntryID)
+    case invalidQuantity(ProductStateListEntryID)
+    case invalidSortOrder(ProductStateListEntryID)
+    case planListMismatch(
+        expected: ProductStateListID,
+        actual: ProductStateListID
+    )
+    case planRevisionMismatch(
+        expected: ProductStateListRevision,
+        actual: ProductStateListRevision
+    )
+    case planEntryMismatch(ProductStateListEntryID)
+    case planScopeMissing(ShoppingPlanConsumerReadiness)
+    case chooserListMismatch(
+        expected: ProductStateListID,
+        actual: ProductStateListID
+    )
+    case chooserRevisionMismatch(
+        expected: ProductStateListRevision,
+        actual: ProductStateListRevision
+    )
+    case chooserProductMismatch(ProductStateProductID)
+}
+
+struct ShoppingWorkspaceProjectionRow: Identifiable, Equatable {
+    let entry: ProductStateListEntryProjection
+
+    var id: ProductStateListEntryID { entry.identity.id }
+    var listID: ProductStateListID { entry.identity.listID }
+    var productID: ProductStateProductID { entry.identity.productID }
+    var product: ProductStateProductProjection? { entry.product }
+    var productLifecycle: ProductLibraryLifecycle? {
+        entry.product?.libraryLifecycle
+    }
+    var state: ProductStateListEntryProjectionState { entry.state }
+    var quantity: Double { entry.quantity }
+    var unitRawValue: String? { entry.unitRawValue }
+    var note: String? { entry.note }
+    var sortOrder: Double { entry.sortOrder }
+
+    var displayName: String {
+        entry.product?.displayName ?? "Product unavailable"
+    }
+
+    var stateTitle: String {
+        switch entry.state {
+        case .needed:
+            return "Needed"
+        case let .resolved(reason, reasonRawValue, _, _, _, _, _):
+            return Self.resolutionTitle(
+                reason: reason,
+                reasonRawValue: reasonRawValue
+            )
+        case .unresolved:
+            return "Legacy reason unknown"
+        }
+    }
+
+    var accessibilityLabel: String {
+        "\(displayName), \(stateTitle), quantity \(quantityText)"
+    }
+
+    private var quantityText: String {
+        if quantity.rounded() == quantity {
+            return String(Int(quantity))
+        }
+        return String(format: "%.1f", quantity)
+    }
+
+    private static func resolutionTitle(
+        reason: ShoppingListResolutionReason?,
+        reasonRawValue: String?
+    ) -> String {
+        switch reason {
+        case .purchased:
+            return "Purchased"
+        case .alreadyHave:
+            return "Already Have"
+        case .noLongerNeeded:
+            return "No Longer Needed"
+        case .legacyUnknown, .none:
+            return reasonRawValue == nil
+                ? "Legacy reason unknown" : "Resolved"
+        }
+    }
+}
+
+enum ShoppingWorkspaceProjectionGroupID: Hashable, Sendable {
+    case listOrder
+    case shoppingIntent(ShoppingIntentGroup)
+    case unresolved
+}
+
+struct ShoppingWorkspaceProjectionGroup: Identifiable, Equatable {
+    let id: ShoppingWorkspaceProjectionGroupID
+    let title: String
+    let subtitle: String
+    let entries: [ShoppingWorkspaceProjectionRow]
+}
+
+struct ShoppingWorkspaceCompletionPresentation: Equatable {
+    let neededEntryIDs: [ProductStateListEntryID]
+    let resolvedEntryIDs: [ProductStateListEntryID]
+    let unresolvedEntryIDs: [ProductStateListEntryID]
+    let purchasedEntryIDs: [ProductStateListEntryID]
+    let alreadyHaveEntryIDs: [ProductStateListEntryID]
+    let noLongerNeededEntryIDs: [ProductStateListEntryID]
+    let legacyUnknownEntryIDs: [ProductStateListEntryID]
+    let unresolvedReasonEntryIDs: [ProductStateListEntryID]
+
+    var isReadOnly: Bool { true }
+
+    var totalCount: Int {
+        neededEntryIDs.count + resolvedEntryIDs.count +
+            unresolvedEntryIDs.count
+    }
+
+    var resolvedCount: Int { resolvedEntryIDs.count }
+
+    var resolvedFraction: Double {
+        guard totalCount > 0 else { return 0 }
+        return Double(resolvedCount) / Double(totalCount)
+    }
+}
+
+enum ShoppingWorkspacePlanControlPresentation: Equatable, Sendable {
+    case empty(ProductStateListID, ProductStateListRevision)
+    case generate(ProductStateListID, ProductStateListRevision)
+    case generating(ProductStateListID, ProductStateListRevision)
+    case current(ProductStateListID, ProductStateListRevision)
+    case regenerate(ProductStateListID, ProductStateListRevision)
+    case reviewList(ProductStateListID, ProductStateListRevision)
+    case unavailable(
+        ProductStateListID,
+        ProductStateListRevision,
+        ProductStateProjectionUnavailableReason?
+    )
+}
+
+struct ShoppingWorkspacePlanPresentation: Equatable {
+    let state: ProductHomePlanPresentation
+    let control: ShoppingWorkspacePlanControlPresentation
+}
+
+struct ShoppingWorkspaceProjectionPresentation: Equatable {
+    let listID: ProductStateListID
+    let listRevision: ProductStateListRevision
+    let title: String
+    let purposeRawValue: String?
+    let entries: [ShoppingWorkspaceProjectionRow]
+    let visibleEntries: [ShoppingWorkspaceProjectionRow]
+    let neededEntries: [ShoppingWorkspaceProjectionRow]
+    let resolvedEntries: [ShoppingWorkspaceProjectionRow]
+    let unresolvedEntries: [ShoppingWorkspaceProjectionRow]
+    let groups: [ShoppingWorkspaceProjectionGroup]
+    let completion: ShoppingWorkspaceCompletionPresentation
+    let searchText: String
+    let filter: ShoppingWorkspaceProjectionFilter
+    let grouping: ShoppingWorkspaceProjectionGrouping
+    let metadata: ProductStateProjectionMetadata
+}
+
+enum ShoppingWorkspaceProjectionContent: Equatable {
+    case idle
+    case available(ShoppingWorkspaceProjectionPresentation)
+    case unavailable(ProductStateProjectionMetadata)
+    case invalid(ShoppingWorkspaceProjectionInvalidReason)
+}
+
+struct ShoppingWorkspaceProjectionConsumerState: Equatable {
+    let content: ShoppingWorkspaceProjectionContent
+    let plan: ShoppingWorkspacePlanPresentation?
+    let chooser: ProductChooserPresentationState
+    let acquisition: ProductAcquisitionPresentationState
+
+    static var idle: ShoppingWorkspaceProjectionConsumerState {
+        ShoppingWorkspaceProjectionConsumerState(
+            content: .idle,
+            plan: nil,
+            chooser: .idle,
+            acquisition: .idle
+        )
+    }
+}
+
+enum ShoppingWorkspaceListAction: Equatable, Sendable {
+    case updateQuantity(Double)
+    case resolve(ShoppingListResolutionReason)
+    case reopen
+    case remove
+}
+
+struct ShoppingWorkspaceListActionRequest: Equatable, Sendable {
+    let entryID: ProductStateListEntryID
+    let productID: ProductStateProductID
+    let listID: ProductStateListID
+    let listRevision: ProductStateListRevision
+    let action: ShoppingWorkspaceListAction
+}
+
+enum ShoppingWorkspaceProjectionConsumer {
+    static func make(
+        namedList: ProductStateProjectionOutcome<
+            ProductStateNamedListProjection
+        >,
+        planStatus: ShoppingPlanConsumerStatus,
+        chooser: ProductChooserPresentationState = .idle,
+        acquisition: ProductAcquisitionPresentationState = .idle,
+        searchText: String = "",
+        filter: ShoppingWorkspaceProjectionFilter = .all,
+        grouping: ShoppingWorkspaceProjectionGrouping = .shoppingIntent
+    ) -> ShoppingWorkspaceProjectionConsumerState {
+        let planState = ProductHomePlanPresentation(planStatus)
+        switch namedList {
+        case let .unavailable(metadata):
+            return ShoppingWorkspaceProjectionConsumerState(
+                content: .unavailable(metadata),
+                plan: nil,
+                chooser: chooser,
+                acquisition: acquisition
+            )
+        case let .projection(projection):
+            if let invalid = validate(projection) {
+                return invalidState(
+                    invalid,
+                    chooser: chooser,
+                    acquisition: acquisition
+                )
+            }
+            if let invalid = validate(
+                planStatus,
+                for: projection
+            ) {
+                return invalidState(
+                    invalid,
+                    chooser: chooser,
+                    acquisition: acquisition
+                )
+            }
+            if let invalid = validate(chooser, for: projection) {
+                return invalidState(
+                    invalid,
+                    chooser: chooser,
+                    acquisition: acquisition
+                )
+            }
+
+            let needed = projection.neededEntries.map(
+                ShoppingWorkspaceProjectionRow.init(entry:)
+            )
+            let resolved = projection.resolvedEntries.map(
+                ShoppingWorkspaceProjectionRow.init(entry:)
+            )
+            let unresolved = projection.unresolvedEntries.map(
+                ShoppingWorkspaceProjectionRow.init(entry:)
+            )
+            let entries = (needed + resolved + unresolved)
+                .sorted { entryLess($0, $1) }
+            let normalizedSearch = normalized(searchText)
+            let visible = entries.filter {
+                matchesFilter($0, filter: filter) &&
+                    matchesSearch($0, normalizedSearch: normalizedSearch)
+            }
+            let presentation = ShoppingWorkspaceProjectionPresentation(
+                listID: projection.id,
+                listRevision: projection.revision,
+                title: projection.title,
+                purposeRawValue: projection.purposeRawValue,
+                entries: entries,
+                visibleEntries: visible,
+                neededEntries: needed,
+                resolvedEntries: resolved,
+                unresolvedEntries: unresolved,
+                groups: groups(visible, grouping: grouping),
+                completion: completion(
+                    needed: needed,
+                    resolved: resolved,
+                    unresolved: unresolved
+                ),
+                searchText: searchText,
+                filter: filter,
+                grouping: grouping,
+                metadata: projection.metadata
+            )
+            return ShoppingWorkspaceProjectionConsumerState(
+                content: .available(presentation),
+                plan: ShoppingWorkspacePlanPresentation(
+                    state: planState,
+                    control: planControl(
+                        planStatus,
+                        list: projection
+                    )
+                ),
+                chooser: chooser,
+                acquisition: acquisition
+            )
+        }
+    }
+
+    static func actionRequest(
+        for row: ShoppingWorkspaceProjectionRow,
+        in presentation: ShoppingWorkspaceProjectionPresentation,
+        action: ShoppingWorkspaceListAction
+    ) -> ShoppingWorkspaceListActionRequest? {
+        guard row.listID == presentation.listID,
+              presentation.entries.contains(where: {
+                  $0.id == row.id && $0 == row
+              }),
+              row.productLifecycle == .active,
+              row.entry.issues.isEmpty else {
+            return nil
+        }
+
+        switch (row.state, action) {
+        case (.needed, let .updateQuantity(quantity)),
+             (.resolved, let .updateQuantity(quantity)):
+            guard quantity.isFinite,
+                  quantity >= 1,
+                  quantity != row.quantity else { return nil }
+        case (.needed, .resolve(.alreadyHave)),
+             (.needed, .resolve(.noLongerNeeded)),
+             (.needed, .remove),
+             (.resolved, .reopen),
+             (.resolved, .remove):
+            break
+        case (.needed, .resolve(.purchased)),
+             (.needed, .resolve(.legacyUnknown)),
+             (.needed, .reopen),
+             (.resolved, .resolve),
+             (.unresolved, _):
+            return nil
+        }
+
+        return ShoppingWorkspaceListActionRequest(
+            entryID: row.id,
+            productID: row.productID,
+            listID: presentation.listID,
+            listRevision: presentation.listRevision,
+            action: action
+        )
+    }
+
+    private static func invalidState(
+        _ reason: ShoppingWorkspaceProjectionInvalidReason,
+        chooser: ProductChooserPresentationState,
+        acquisition: ProductAcquisitionPresentationState
+    ) -> ShoppingWorkspaceProjectionConsumerState {
+        ShoppingWorkspaceProjectionConsumerState(
+            content: .invalid(reason),
+            plan: nil,
+            chooser: chooser,
+            acquisition: acquisition
+        )
+    }
+
+    private static func validate(
+        _ projection: ProductStateNamedListProjection
+    ) -> ShoppingWorkspaceProjectionInvalidReason? {
+        guard projection.metadata.scope == .list(projection.id) else {
+            return .listScopeMismatch(
+                expected: projection.id,
+                actual: projection.metadata.scope
+            )
+        }
+        guard projection.metadata.listRevision == projection.revision else {
+            return .listRevisionMismatch(
+                expected: projection.revision,
+                actual: projection.metadata.listRevision
+            )
+        }
+
+        var seen = Set<ProductStateListEntryID>()
+        for (expectedState, entries) in [
+            (0, projection.neededEntries),
+            (1, projection.resolvedEntries),
+            (2, projection.unresolvedEntries)
+        ] {
+            for entry in entries {
+                guard seen.insert(entry.identity.id).inserted else {
+                    return .duplicateEntryIdentity(entry.identity.id)
+                }
+                guard entry.identity.listID == projection.id else {
+                    return .entryListMismatch(
+                        entryID: entry.identity.id,
+                        expected: projection.id,
+                        actual: entry.identity.listID
+                    )
+                }
+                if let product = entry.product,
+                   product.id != entry.identity.productID {
+                    return .entryProductMismatch(
+                        entryID: entry.identity.id,
+                        expected: entry.identity.productID,
+                        actual: product.id
+                    )
+                }
+                guard entry.quantity.isFinite, entry.quantity > 0 else {
+                    return .invalidQuantity(entry.identity.id)
+                }
+                guard entry.sortOrder.isFinite else {
+                    return .invalidSortOrder(entry.identity.id)
+                }
+                let actualState: Int
+                switch entry.state {
+                case .needed: actualState = 0
+                case .resolved: actualState = 1
+                case .unresolved: actualState = 2
+                }
+                guard actualState == expectedState else {
+                    return .entryStateMismatch(entry.identity.id)
+                }
+            }
+        }
+        return nil
+    }
+
+    private static func validate(
+        _ status: ShoppingPlanConsumerStatus,
+        for projection: ProductStateNamedListProjection
+    ) -> ShoppingWorkspaceProjectionInvalidReason? {
+        if [.generating, .currentReady, .stale].contains(
+            status.readiness
+        ), status.sourceListID == nil || status.sourceRevision == nil {
+            return .planScopeMissing(status.readiness)
+        }
+        if let listID = status.sourceListID,
+           listID != projection.id {
+            return .planListMismatch(
+                expected: projection.id,
+                actual: listID
+            )
+        }
+        if let revision = status.sourceRevision,
+           revision != projection.revision {
+            return .planRevisionMismatch(
+                expected: projection.revision,
+                actual: revision
+            )
+        }
+        let neededIDs = Set(projection.neededEntryIDs)
+        let planIDs = status.includedEntryIDs +
+            status.explicitlyExcludedEntryIDs +
+            status.unresolvedEntryIDs
+        if let invalidID = planIDs.first(where: {
+            !neededIDs.contains($0)
+        }) {
+            return .planEntryMismatch(invalidID)
+        }
+        return nil
+    }
+
+    private static func validate(
+        _ chooser: ProductChooserPresentationState,
+        for projection: ProductStateNamedListProjection
+    ) -> ShoppingWorkspaceProjectionInvalidReason? {
+        guard case let .available(
+            listID,
+            listRevision,
+            products,
+            _
+        ) = chooser else { return nil }
+        guard listID == projection.id else {
+            return .chooserListMismatch(
+                expected: projection.id,
+                actual: listID
+            )
+        }
+        guard listRevision == projection.revision else {
+            return .chooserRevisionMismatch(
+                expected: projection.revision,
+                actual: listRevision
+            )
+        }
+        for row in products where
+            row.product.id != row.membership.productID ||
+                row.membership.listID != projection.id ||
+                row.membership.listRevision != projection.revision {
+            return .chooserProductMismatch(row.product.id)
+        }
+        return nil
+    }
+
+    private static func planControl(
+        _ status: ShoppingPlanConsumerStatus,
+        list: ProductStateNamedListProjection
+    ) -> ShoppingWorkspacePlanControlPresentation {
+        let scope = (list.id, list.revision)
+        switch status.readiness {
+        case .noUsablePlan:
+            return list.neededEntries.isEmpty
+                ? .empty(scope.0, scope.1)
+                : .generate(scope.0, scope.1)
+        case .generating:
+            return .generating(scope.0, scope.1)
+        case .currentReady:
+            return .current(scope.0, scope.1)
+        case .stale:
+            return .regenerate(scope.0, scope.1)
+        case .unavailable:
+            return .unavailable(
+                scope.0,
+                scope.1,
+                status.unavailableReason
+            )
+        case .invalidOrIncomplete:
+            return .reviewList(scope.0, scope.1)
+        }
+    }
+
+    private static func matchesFilter(
+        _ row: ShoppingWorkspaceProjectionRow,
+        filter: ShoppingWorkspaceProjectionFilter
+    ) -> Bool {
+        switch filter {
+        case .all:
+            return true
+        case .needed:
+            if case .needed = row.state { return true }
+            return false
+        case .resolved:
+            if case .resolved = row.state { return true }
+            return false
+        case let .resolutionReason(expected):
+            if case let .resolved(reason, _, _, _, _, _, _) = row.state {
+                return reason == expected
+            }
+            return false
+        case .unresolved:
+            if case .unresolved = row.state { return true }
+            return false
+        }
+    }
+
+    private static func matchesSearch(
+        _ row: ShoppingWorkspaceProjectionRow,
+        normalizedSearch: String
+    ) -> Bool {
+        guard !normalizedSearch.isEmpty else { return true }
+        return [
+            row.product?.displayName,
+            row.product?.brand,
+            row.product?.category
+        ].compactMap { $0 }.contains {
+            normalized($0).contains(normalizedSearch)
+        }
+    }
+
+    private static func groups(
+        _ rows: [ShoppingWorkspaceProjectionRow],
+        grouping: ShoppingWorkspaceProjectionGrouping
+    ) -> [ShoppingWorkspaceProjectionGroup] {
+        guard grouping == .shoppingIntent else {
+            return rows.isEmpty ? [] : [
+                ShoppingWorkspaceProjectionGroup(
+                    id: .listOrder,
+                    title: "Shopping List",
+                    subtitle: "List order",
+                    entries: rows
+                )
+            ]
+        }
+
+        let matcher = ShoppingIntentMatcher()
+        var grouped: [
+            ShoppingWorkspaceProjectionGroupID:
+                [ShoppingWorkspaceProjectionRow]
+        ] = [:]
+        for row in rows {
+            let groupID: ShoppingWorkspaceProjectionGroupID
+            if let item = planInputItem(row) {
+                let profile = matcher.intentProfile(for: item)
+                groupID = profile.isUnresolved
+                    ? .unresolved
+                    : .shoppingIntent(profile.intentGroup)
+            } else {
+                groupID = .unresolved
+            }
+            grouped[groupID, default: []].append(row)
+        }
+
+        var result: [ShoppingWorkspaceProjectionGroup] =
+            ShoppingIntentGroup.allCases.compactMap {
+                intent -> ShoppingWorkspaceProjectionGroup? in
+                let id = ShoppingWorkspaceProjectionGroupID
+                    .shoppingIntent(intent)
+                guard let entries = grouped[id], !entries.isEmpty else {
+                    return nil
+                }
+                return ShoppingWorkspaceProjectionGroup(
+                    id: id,
+                    title: groupTitle(intent),
+                    subtitle: groupSubtitle(intent),
+                    entries: entries
+                )
+            }
+        if let entries = grouped[.unresolved], !entries.isEmpty {
+            result.append(
+                ShoppingWorkspaceProjectionGroup(
+                    id: .unresolved,
+                    title: "Needs review",
+                    subtitle: "Unresolved shopping intent",
+                    entries: entries
+                )
+            )
+        }
+        return result
+    }
+
+    private static func planInputItem(
+        _ row: ShoppingWorkspaceProjectionRow
+    ) -> ShoppingPlanInputItem? {
+        guard let product = row.product,
+              product.libraryLifecycle == .active,
+              row.entry.issues.isEmpty else { return nil }
+        return ShoppingPlanInputItem(
+            identity: row.entry.identity,
+            quantity: row.quantity,
+            unitRawValue: row.unitRawValue,
+            sortOrder: row.sortOrder,
+            displayName: product.displayName,
+            brand: product.brand,
+            category: product.category,
+            catalogID: product.catalogID,
+            catalogCategoryID: product.catalogCategoryIDSnapshot,
+            productLifecycle: product.libraryLifecycle
+        )
+    }
+
+    private static func completion(
+        needed: [ShoppingWorkspaceProjectionRow],
+        resolved: [ShoppingWorkspaceProjectionRow],
+        unresolved: [ShoppingWorkspaceProjectionRow]
+    ) -> ShoppingWorkspaceCompletionPresentation {
+        var purchased: [ProductStateListEntryID] = []
+        var alreadyHave: [ProductStateListEntryID] = []
+        var noLongerNeeded: [ProductStateListEntryID] = []
+        var legacyUnknown: [ProductStateListEntryID] = []
+        var unresolvedReason: [ProductStateListEntryID] = []
+        for row in resolved {
+            guard case let .resolved(reason, _, _, _, _, _, _) = row.state
+            else { continue }
+            switch reason {
+            case .purchased: purchased.append(row.id)
+            case .alreadyHave: alreadyHave.append(row.id)
+            case .noLongerNeeded: noLongerNeeded.append(row.id)
+            case .legacyUnknown: legacyUnknown.append(row.id)
+            case .none: unresolvedReason.append(row.id)
+            }
+        }
+        return ShoppingWorkspaceCompletionPresentation(
+            neededEntryIDs: needed.map(\.id),
+            resolvedEntryIDs: resolved.map(\.id),
+            unresolvedEntryIDs: unresolved.map(\.id),
+            purchasedEntryIDs: purchased,
+            alreadyHaveEntryIDs: alreadyHave,
+            noLongerNeededEntryIDs: noLongerNeeded,
+            legacyUnknownEntryIDs: legacyUnknown,
+            unresolvedReasonEntryIDs: unresolvedReason
+        )
+    }
+
+    private static func entryLess(
+        _ lhs: ShoppingWorkspaceProjectionRow,
+        _ rhs: ShoppingWorkspaceProjectionRow
+    ) -> Bool {
+        if lhs.sortOrder != rhs.sortOrder {
+            return lhs.sortOrder < rhs.sortOrder
+        }
+        return lhs.id.rawValue.uuidString < rhs.id.rawValue.uuidString
+    }
+
+    private static func normalized(_ value: String) -> String {
+        value
+            .precomposedStringWithCanonicalMapping
+            .folding(
+                options: [
+                    .caseInsensitive,
+                    .diacriticInsensitive,
+                    .widthInsensitive
+                ],
+                locale: Locale(identifier: "en_US_POSIX")
+            )
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func groupTitle(
+        _ group: ShoppingIntentGroup
+    ) -> String {
+        switch group {
+        case .grocery: return "Grocery items"
+        case .electronics: return "Electronics items"
+        case .pet: return "Pet items"
+        case .pharmacy: return "Health items"
+        case .general: return "General shopping"
+        case .other: return "Other items"
+        }
+    }
+
+    private static func groupSubtitle(
+        _ group: ShoppingIntentGroup
+    ) -> String {
+        switch group {
+        case .general: return "General retail"
+        case .other: return "Needs a broader match"
+        default: return group.displayName
+        }
+    }
+}
+
 struct ShoppingWorkspaceView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var appStateManager: AppStateManager
