@@ -630,7 +630,7 @@ final class WayTaskProductStateMigrationFoundationTests: XCTestCase {
         XCTAssertEqual(receipt.exceptionSummary.totalOccurrenceCount, 0)
     }
 
-    func testNoStartupActivationPromotionOrT07T08SemanticConversionExists()
+    func testFoundationRemainsIsolatedBehindSingleT21RuntimeCutover()
         throws
     {
         let root = repositoryRoot()
@@ -690,7 +690,14 @@ final class WayTaskProductStateMigrationFoundationTests: XCTestCase {
                 callers.append(candidate.path)
             }
         }
-        XCTAssertTrue(callers.isEmpty, callers.joined(separator: "\n"))
+        XCTAssertEqual(
+            callers.sorted(),
+            [
+                root.appendingPathComponent(
+                    "WayTask/ProductState/Runtime/ProductStateRuntime.swift"
+                ).path
+            ]
+        )
     }
 
     func testEquivalentCleanCopiesProduceRepeatableFoundationIdentity()

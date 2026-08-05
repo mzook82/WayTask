@@ -554,7 +554,7 @@ final class ProductStateTransactionCoordinatorTests: XCTestCase {
         XCTAssertEqual(scope.rollbackCount, 1)
     }
 
-    func testSerializationAndOwnershipHaveNoProductionLeakage() throws {
+    func testSerializationOwnershipAndSingleT21RuntimeCaller() throws {
         let root = repositoryRoot()
         let transactionURL = root.appendingPathComponent(
             "WayTask/ProductState/Application/" +
@@ -631,7 +631,14 @@ final class ProductStateTransactionCoordinatorTests: XCTestCase {
                 externalCallers.append(candidate.path)
             }
         }
-        XCTAssertTrue(externalCallers.isEmpty, externalCallers.joined(separator: "\n"))
+        XCTAssertEqual(
+            externalCallers.sorted(),
+            [
+                root.appendingPathComponent(
+                    "WayTask/ProductState/Runtime/ProductStateRuntime.swift"
+                ).path
+            ]
+        )
     }
 
     // MARK: Fixtures

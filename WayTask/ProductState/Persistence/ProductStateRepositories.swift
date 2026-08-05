@@ -42,6 +42,8 @@ extension ProductRepository {
 
 @MainActor
 protocol ShoppingRepository: AnyObject {
+    func shoppingLists() throws -> [WayTaskSchemaV4.ShoppingList]
+
     func shoppingLists(id: UUID) throws -> [WayTaskSchemaV4.ShoppingList]
 
     func shoppingEntries(
@@ -66,6 +68,20 @@ protocol ShoppingRepository: AnyObject {
     func stageInsertion(of entry: WayTaskSchemaV4.ShoppingListEntry)
     func stageDeletion(of list: WayTaskSchemaV4.ShoppingList)
     func stageDeletion(of entry: WayTaskSchemaV4.ShoppingListEntry)
+}
+
+enum ProductStateRepositoryCapabilityError: Error {
+    case unimplementedScopedRead
+}
+
+extension ShoppingRepository {
+    /// Keeps existing isolated test repositories source-compatible while the
+    /// live SwiftData repository supplies the T-21 all-list runtime scope.
+    /// A repository that does not implement this read fails closed; it never
+    /// invents a default, first, or recent List.
+    func shoppingLists() throws -> [WayTaskSchemaV4.ShoppingList] {
+        throw ProductStateRepositoryCapabilityError.unimplementedScopedRead
+    }
 }
 
 @MainActor
@@ -227,6 +243,17 @@ private final class SwiftDataShoppingRepository: ShoppingRepository {
 
     init(access: ProductStateRepositoryAccess) {
         self.access = access
+    }
+
+    func shoppingLists() throws -> [WayTaskSchemaV4.ShoppingList] {
+        try access.fetch(
+            FetchDescriptor<WayTaskSchemaV4.ShoppingList>(
+                sortBy: [
+                    SortDescriptor(\.createdAt),
+                    SortDescriptor(\.id)
+                ]
+            )
+        )
     }
 
     func shoppingLists(

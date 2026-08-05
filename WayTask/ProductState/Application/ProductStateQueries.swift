@@ -1391,6 +1391,63 @@ final class ProductStateQueryBoundary {
         )
     }
 
+    /// Returns every named List through the same scoped projection builder
+    /// used by individual consumers. Repository failure remains explicit and
+    /// duplicate identity is never resolved by first/recent/default fallback.
+    func namedLists() -> [
+        ProductStateProjectionOutcome<ProductStateNamedListProjection>
+    ] {
+        let rows: [WayTaskSchemaV4.ShoppingList]
+        do {
+            rows = try shopping.shoppingLists()
+        } catch {
+            return [
+                .unavailable(
+                    unavailableMetadata(
+                        scope: .library(.active),
+                        reason: .repositoryReadFailed
+                    )
+                )
+            ]
+        }
+
+        var seen = Set<UUID>()
+        var outcomes: [
+            ProductStateProjectionOutcome<ProductStateNamedListProjection>
+        ] = []
+        for row in rows.sorted(by: {
+            if $0.createdAt != $1.createdAt {
+                return $0.createdAt < $1.createdAt
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }) {
+            guard seen.insert(row.id).inserted else {
+                outcomes.append(
+                    .unavailable(
+                        unavailableMetadata(
+                            scope: .list(
+                                ProductStateListID(rawValue: row.id)
+                            ),
+                            reason: .ambiguousAuthority
+                        )
+                    )
+                )
+                continue
+            }
+            outcomes.append(
+                namedList(
+                    ProductStateListScopeRequest(
+                        listID: ProductStateListID(rawValue: row.id),
+                        expectedRevision: ProductStateListRevision(
+                            value: row.revision
+                        )
+                    )
+                )
+            )
+        }
+        return outcomes
+    }
+
     func productLibrary(
         _ request: ProductStateProductLibraryRequest
     ) -> ProductStateProjectionOutcome<
@@ -2617,7 +2674,8 @@ final class ProductStateQueryBoundary {
 
     func storeRecommendations(
         context: ProductStateDiscoveryContextProjection,
-        evidence: [ProductStatePublishedStoreEvidence]
+        evidence: [ProductStatePublishedStoreEvidence],
+        emptyEvidencePublicationVersion: String? = nil
     ) -> ProductStateStoreRecommendationsProjection {
         let required = Set(context.eligibleProductIDs)
         let recommendations = evidence.map { value in
@@ -2655,8 +2713,16 @@ final class ProductStateQueryBoundary {
             }.joined(separator: "|")
             return lhsCoverage < rhsCoverage
         }
-        let versions = Array(Set(evidence.map(\.publicationVersion)))
-            .sorted()
+        var versionSet = Set(evidence.map(\.publicationVersion))
+        if evidence.isEmpty,
+           let emptyEvidencePublicationVersion,
+           !emptyEvidencePublicationVersion.isEmpty {
+            // An explicitly published empty store snapshot is different from
+            // missing store authority. T-21 uses this bounded form while no
+            // store evidence has been published for the exact List scope.
+            versionSet.insert(emptyEvidencePublicationVersion)
+        }
+        let versions = Array(versionSet).sorted()
         let provenances = versions.map {
             ProductStateProjectionProvenance.publishedStoreEvidence(
                 version: $0

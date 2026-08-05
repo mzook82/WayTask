@@ -4558,7 +4558,9 @@ enum WayTaskProtectedStoreInspectionError: Error {
     case componentChangedDuringRead
 }
 
-private enum WayTaskProtectedStoreInspector {
+// T-21 reuses the exact qualified inventory/fingerprint boundary when copying
+// the complete semantic candidate into the released runtime directory.
+enum WayTaskProtectedStoreInspector {
     static func inspect(
         storeURL: URL
     ) throws -> WayTaskMigrationStoreInventory {
