@@ -1,14 +1,36 @@
 import MapKit
 import SwiftUI
 
-struct WayTaskMapView: UIViewRepresentable {
+struct WayTaskMapView: UIViewRepresentable, Equatable {
     let stores: [MapStore]
     let products: [MapProduct]
-    let selectedStoreID: UUID?
     let cameraTarget: MKCoordinateRegion?
+    var cameraRequestID = 0
+    var cameraShouldAnimate = true
     let onSelectStore: (UUID) -> Void
+    var onClearSelection: () -> Void = {}
     let onMapRegionChanged: (MKCoordinateRegion) -> Void
     let onUserLocationChanged: (CLLocationCoordinate2D) -> Void
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        AnnotationSignature(
+            stores: lhs.stores,
+            products: ShoppingMissionMapMarkerPolicy.renderedProducts(
+                storeIDs: Set(lhs.stores.map(\.id)),
+                products: lhs.products
+            )
+        ) == AnnotationSignature(
+            stores: rhs.stores,
+            products: ShoppingMissionMapMarkerPolicy.renderedProducts(
+                storeIDs: Set(rhs.stores.map(\.id)),
+                products: rhs.products
+            )
+        )
+            && MapRegionSignature(lhs.cameraTarget)
+                == MapRegionSignature(rhs.cameraTarget)
+            && lhs.cameraRequestID == rhs.cameraRequestID
+            && lhs.cameraShouldAnimate == rhs.cameraShouldAnimate
+    }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -25,6 +47,13 @@ struct WayTaskMapView: UIViewRepresentable {
         mapView.register(MKMarkerAnnotationView.self, forAnnotationViewWithReuseIdentifier: Coordinator.storeReuseIdentifier)
         mapView.register(MKMarkerAnnotationView.self, forAnnotationViewWithReuseIdentifier: Coordinator.productReuseIdentifier)
         mapView.register(MKMarkerAnnotationView.self, forAnnotationViewWithReuseIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier)
+        let backgroundTap = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleMapBackgroundTap(_:))
+        )
+        backgroundTap.cancelsTouchesInView = false
+        backgroundTap.delegate = context.coordinator
+        mapView.addGestureRecognizer(backgroundTap)
         mapView.setRegion(
             MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: 32.0853, longitude: 34.7818),
@@ -40,19 +69,30 @@ struct WayTaskMapView: UIViewRepresentable {
         context.coordinator.updateAnnotationsIfNeeded(on: mapView)
 
         if let cameraTarget,
-           !context.coordinator.isSameRegion(cameraTarget, as: context.coordinator.lastCameraTarget) {
+           context.coordinator.lastCameraRequestID != cameraRequestID
+            || !context.coordinator.isSameRegion(
+                cameraTarget,
+                as: context.coordinator.lastCameraTarget
+            ) {
             context.coordinator.lastCameraTarget = cameraTarget
-            mapView.setRegion(cameraTarget, animated: true)
+            context.coordinator.lastCameraRequestID = cameraRequestID
+            mapView.setRegion(
+                cameraTarget,
+                animated: cameraShouldAnimate
+            )
         }
     }
 
-    final class Coordinator: NSObject, MKMapViewDelegate {
+    final class Coordinator:
+        NSObject, MKMapViewDelegate, UIGestureRecognizerDelegate {
         static let storeReuseIdentifier = "StoreAnnotation"
         static let productReuseIdentifier = "ProductAnnotation"
 
         var parent: WayTaskMapView
         var lastCameraTarget: MKCoordinateRegion?
+        var lastCameraRequestID: Int?
         private var lastAnnotationSignature: AnnotationSignature?
+        private var lastOverlaySignature: OverlaySignature?
 
         #if DEBUG
         private var updateUIViewCount = 0
@@ -70,7 +110,15 @@ struct WayTaskMapView: UIViewRepresentable {
             updateUIViewCount += 1
             #endif
 
-            let signature = AnnotationSignature(stores: parent.stores, products: parent.products)
+            let renderedProducts = ShoppingMissionMapMarkerPolicy
+                .renderedProducts(
+                    storeIDs: Set(parent.stores.map(\.id)),
+                    products: parent.products
+                )
+            let signature = AnnotationSignature(
+                stores: parent.stores,
+                products: renderedProducts
+            )
             guard signature != lastAnnotationSignature else {
                 #if DEBUG
                 skippedIdenticalUpdateCount += 1
@@ -85,17 +133,78 @@ struct WayTaskMapView: UIViewRepresentable {
             logCountersIfNeeded()
             #endif
 
-            let existingAnnotations = mapView.annotations.filter { !($0 is MKUserLocation) }
-            mapView.removeAnnotations(existingAnnotations)
-            mapView.removeOverlays(mapView.overlays)
+            reconcileAnnotations(
+                on: mapView,
+                stores: parent.stores,
+                products: renderedProducts
+            )
 
-            let storeAnnotations = parent.stores.map(StoreAnnotation.init(store:))
-            let productAnnotations = parent.products.map(ProductAnnotation.init(product:))
-            mapView.addAnnotations(storeAnnotations + productAnnotations)
+            let overlaySignature = OverlaySignature(stores: parent.stores)
+            if lastOverlaySignature != overlaySignature {
+                lastOverlaySignature = overlaySignature
+                mapView.removeOverlays(mapView.overlays)
+                for store in parent.stores {
+                    let circle = MKCircle(
+                        center: store.coordinate,
+                        radius: store.proximityRadius
+                    )
+                    mapView.addOverlay(circle)
+                }
+            }
+        }
 
-            for store in parent.stores {
-                let circle = MKCircle(center: store.coordinate, radius: store.proximityRadius)
-                mapView.addOverlay(circle)
+        @MainActor
+        private func reconcileAnnotations(
+            on mapView: MKMapView,
+            stores: [MapStore],
+            products: [MapProduct]
+        ) {
+            let desiredStores = Dictionary(
+                uniqueKeysWithValues: stores.map {
+                    ($0.id, StoreAnnotationSignature($0))
+                }
+            )
+            let desiredProducts = Dictionary(
+                uniqueKeysWithValues: products.map {
+                    ($0.id, ProductAnnotationSignature($0))
+                }
+            )
+            var retainedStoreIDs = Set<UUID>()
+            var retainedProductIDs = Set<UUID>()
+            var removals: [MKAnnotation] = []
+
+            for annotation in mapView.annotations {
+                if let store = annotation as? StoreAnnotation {
+                    let id = store.store.id
+                    if desiredStores[id] == StoreAnnotationSignature(store.store),
+                       retainedStoreIDs.insert(id).inserted {
+                        continue
+                    }
+                    removals.append(annotation)
+                } else if let product = annotation as? ProductAnnotation {
+                    let id = product.product.id
+                    if desiredProducts[id]
+                        == ProductAnnotationSignature(product.product),
+                       retainedProductIDs.insert(id).inserted {
+                        continue
+                    }
+                    removals.append(annotation)
+                }
+            }
+            if !removals.isEmpty { mapView.removeAnnotations(removals) }
+
+            let newStoreAnnotations = stores.compactMap { store in
+                retainedStoreIDs.contains(store.id)
+                    ? nil : StoreAnnotation(store: store)
+            }
+            let newProductAnnotations = products.compactMap { product in
+                retainedProductIDs.contains(product.id)
+                    ? nil : ProductAnnotation(product: product)
+            }
+            if !newStoreAnnotations.isEmpty || !newProductAnnotations.isEmpty {
+                var additions: [MKAnnotation] = newStoreAnnotations
+                additions.append(contentsOf: newProductAnnotations)
+                mapView.addAnnotations(additions)
             }
         }
 
@@ -124,11 +233,13 @@ struct WayTaskMapView: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation) {
             if let storeAnnotation = annotation as? StoreAnnotation {
                 parent.onSelectStore(storeAnnotation.store.id)
+                mapView.deselectAnnotation(annotation, animated: false)
                 return
             }
 
             if let productAnnotation = annotation as? ProductAnnotation {
                 parent.onSelectStore(productAnnotation.product.storeID)
+                mapView.deselectAnnotation(annotation, animated: false)
                 return
             }
 
@@ -143,6 +254,25 @@ struct WayTaskMapView: UIViewRepresentable {
                 mapView.setRegion(region, animated: true)
                 mapView.deselectAnnotation(cluster, animated: false)
             }
+        }
+
+        @objc func handleMapBackgroundTap(
+            _ recognizer: UITapGestureRecognizer
+        ) {
+            guard recognizer.state == .ended else { return }
+            parent.onClearSelection()
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldReceive touch: UITouch
+        ) -> Bool {
+            var touchedView: UIView? = touch.view
+            while let current = touchedView {
+                if current is MKAnnotationView { return false }
+                touchedView = current.superview
+            }
+            return true
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
@@ -221,8 +351,51 @@ private struct AnnotationSignature: Equatable {
 
     @MainActor
     init(stores: [MapStore], products: [MapProduct]) {
-        self.stores = stores.map(StoreAnnotationSignature.init)
-        self.products = products.map(ProductAnnotationSignature.init)
+        self.stores = stores.map(StoreAnnotationSignature.init).sorted {
+            $0.id.uuidString < $1.id.uuidString
+        }
+        self.products = products.map(ProductAnnotationSignature.init).sorted {
+            $0.id.uuidString < $1.id.uuidString
+        }
+    }
+}
+
+private struct OverlaySignature: Equatable {
+    let stores: [StoreOverlaySignature]
+
+    @MainActor
+    init(stores: [MapStore]) {
+        self.stores = stores.map(StoreOverlaySignature.init).sorted {
+            $0.id.uuidString < $1.id.uuidString
+        }
+    }
+}
+
+private struct StoreOverlaySignature: Equatable {
+    let id: UUID
+    let latitude: CLLocationDegrees
+    let longitude: CLLocationDegrees
+    let radius: CLLocationDistance
+
+    init(_ store: MapStore) {
+        id = store.id
+        latitude = store.coordinate.latitude
+        longitude = store.coordinate.longitude
+        radius = store.proximityRadius
+    }
+}
+
+private struct MapRegionSignature: Equatable {
+    let latitude: CLLocationDegrees?
+    let longitude: CLLocationDegrees?
+    let latitudeDelta: CLLocationDegrees?
+    let longitudeDelta: CLLocationDegrees?
+
+    init(_ region: MKCoordinateRegion?) {
+        latitude = region?.center.latitude
+        longitude = region?.center.longitude
+        latitudeDelta = region?.span.latitudeDelta
+        longitudeDelta = region?.span.longitudeDelta
     }
 }
 
@@ -232,8 +405,6 @@ private struct StoreAnnotationSignature: Equatable {
     let longitude: CLLocationDegrees
     let radius: CLLocationDistance
     let title: String
-    let source: String
-    let itemNames: [String]
 
     init(_ store: MapStore) {
         id = store.id
@@ -241,8 +412,6 @@ private struct StoreAnnotationSignature: Equatable {
         longitude = store.coordinate.longitude
         radius = store.radius
         title = store.title
-        source = store.sourceType.rawValue
-        itemNames = store.itemNames
     }
 }
 

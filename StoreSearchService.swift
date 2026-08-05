@@ -224,11 +224,8 @@ final class StoreResolutionEngine {
 
         for candidate in stores.map({ $0.materializedWithStableIdentity() }) {
             guard let duplicateIndex = result.firstIndex(where: { existing in
-                existing.id == candidate.id ||
-                    (
-                        existing.title.localizedCaseInsensitiveCompare(candidate.title) == .orderedSame &&
-                        distance(from: existing.coordinate, to: candidate.coordinate) < 80
-                    ) || distance(from: existing.coordinate, to: candidate.coordinate) < 35
+                ShoppingMissionStoreIdentityPolicy
+                    .representsSamePhysicalStore(existing, candidate)
             }) else {
                 result.append(candidate)
                 continue
@@ -843,13 +840,9 @@ final class MapKitStoreSearchService: StoreSearchService {
 
     private func aggregateMatches(_ aggregate: StoreAggregate, _ result: StoreSearchEvidence) -> Bool {
         aggregate.evidence.contains { existing in
-            let storeDistance = distance(from: existing.store.coordinate, to: result.store.coordinate)
-            return (
-                normalizedStoreName(existing.store.title) == normalizedStoreName(result.store.title) &&
-                storeDistance < 80
-            ) || (
-                storeDistance < 35 &&
-                namesLikelyMatch(existing.store.title, result.store.title)
+            ShoppingMissionStoreIdentityPolicy.representsSamePhysicalStore(
+                existing.store,
+                result.store
             )
         }
     }
@@ -917,37 +910,6 @@ final class MapKitStoreSearchService: StoreSearchService {
 
     private func titleContainsAny(_ title: String, _ terms: [String]) -> Bool {
         terms.contains { title.contains($0) }
-    }
-
-    private func normalizedStoreName(_ title: String) -> String {
-        title
-            .lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-    }
-
-    private func namesLikelyMatch(_ lhs: String, _ rhs: String) -> Bool {
-        let lhsName = normalizedStoreName(lhs)
-        let rhsName = normalizedStoreName(rhs)
-        if lhsName == rhsName || lhsName.contains(rhsName) || rhsName.contains(lhsName) {
-            return true
-        }
-
-        let lhsTokens = significantTokens(lhsName)
-        let rhsTokens = significantTokens(rhsName)
-        guard !lhsTokens.isEmpty, !rhsTokens.isEmpty else {
-            return false
-        }
-
-        return !lhsTokens.isDisjoint(with: rhsTokens)
-    }
-
-    private func significantTokens(_ normalizedTitle: String) -> Set<String> {
-        let genericTokens: Set<String> = ["store", "market", "shop", "supermarket", "grocery", "food", "mini", "the"]
-        return Set(normalizedTitle.split(separator: " ").map(String.init).filter { token in
-            token.count > 2 && !genericTokens.contains(token)
-        })
     }
 
     private var defaultDiscoveryCategories: [ShoppingStoreCategory] {

@@ -116,6 +116,8 @@ final class ProductStateCommandCoordinator {
             return try prepareCreateList(value, command: command)
         case let .renameNamedList(value):
             return try prepareRenameList(value, command: command)
+        case let .deleteNamedList(value):
+            return try prepareDeleteList(value, command: command)
         case let .addProductToList(value):
             return try prepareAddEntry(value, command: command)
         case let .updateListEntry(value):
@@ -589,6 +591,48 @@ final class ProductStateCommandCoordinator {
 
         let beforeRevision = list.revision
         list.title = title
+        list.revision = nextRevision
+        list.updatedAt = command.effectiveAt
+
+        return .staged(
+            commandID: command.id,
+            effects: [
+                .listRenamed(
+                    id: value.listID,
+                    beforeRevision: beforeRevision,
+                    afterRevision: nextRevision
+                )
+            ]
+        )
+    }
+
+    /// Logically deletes a list while retaining its durable identity and
+    /// entries for session/history referential integrity. Runtime queries hide
+    /// this purpose, so no product record is deleted or rewritten.
+    private func prepareDeleteList(
+        _ value: DeleteNamedListCommand,
+        command: ProductStateCommand
+    ) throws -> ProductStatePreparedCommandResult {
+        let stored = try shopping.shoppingLists(id: value.listID.rawValue)
+        guard let list = stored.count == 1 ? stored[0] : nil else {
+            return identityConflict(
+                count: stored.count,
+                scope: command.scope,
+                command: command
+            )
+        }
+        if let conflict = revisionConflict(command, actual: list.revision) {
+            return conflict
+        }
+        guard list.purposeRawValue != "deleted" else {
+            return .noOp(commandID: command.id)
+        }
+        guard let nextRevision = nextRevision(list.revision) else {
+            return invalidRevision(command)
+        }
+
+        let beforeRevision = list.revision
+        list.purposeRawValue = "deleted"
         list.revision = nextRevision
         list.updatedAt = command.effectiveAt
 
@@ -2176,6 +2220,7 @@ enum ProductStateNamedListCommandWriteState: String, Codable, Sendable {
 enum ProductStateNamedListCommandOperation: String, Codable, Sendable {
     case createNamedList
     case renameNamedList
+    case deleteNamedList
     case addEntry
     case updateEntry
     case resolveEntry
@@ -2186,6 +2231,7 @@ enum ProductStateNamedListCommandOperation: String, Codable, Sendable {
 enum ProductStateNamedListCommandOutcomeKind: String, Codable, Sendable {
     case listCreated
     case listRenamed
+    case listDeleted
     case entryAdded
     case existingNeeded
     case reopenRequired
@@ -2257,6 +2303,7 @@ struct ProductStateNamedListCommandCommitSummary: Equatable, Sendable {
 enum ProductStateNamedListCommandOutcome: Equatable, Sendable {
     case listCreated(ProductStateNamedListCommandCommitSummary)
     case listRenamed(ProductStateNamedListCommandCommitSummary)
+    case listDeleted(ProductStateNamedListCommandCommitSummary)
     case entryAdded(ProductStateNamedListCommandCommitSummary)
     case existingNeeded(
         identity: ProductStateListEntryIdentity,
@@ -2341,6 +2388,12 @@ final class ProductStateNamedListCommandAuthority {
         _ command: ProductStateCommand
     ) -> ProductStateNamedListCommandExecution {
         execute(command, operation: .renameNamedList)
+    }
+
+    func deleteNamedList(
+        _ command: ProductStateCommand
+    ) -> ProductStateNamedListCommandExecution {
+        execute(command, operation: .deleteNamedList)
     }
 
     func addEntry(
@@ -2558,6 +2611,9 @@ final class ProductStateNamedListCommandAuthority {
         case .renameNamedList:
             outcome = .listRenamed(summary)
             kind = .listRenamed
+        case .deleteNamedList:
+            outcome = .listDeleted(summary)
+            kind = .listDeleted
         case .addEntry:
             outcome = .entryAdded(summary)
             kind = .entryAdded
@@ -2676,6 +2732,7 @@ final class ProductStateNamedListCommandAuthority {
         switch (operation, stateEffects[0]) {
         case (.createNamedList, .listInserted),
              (.renameNamedList, .listRenamed),
+             (.deleteNamedList, .listRenamed),
              (.updateEntry, .entryUpdated):
             return historyCount == 0 && effects.count == 1
         case (.addEntry, .entryInserted),
@@ -2792,6 +2849,7 @@ final class ProductStateNamedListCommandAuthority {
         switch (operation, command.intent) {
         case (.createNamedList, .createNamedList),
              (.renameNamedList, .renameNamedList),
+             (.deleteNamedList, .deleteNamedList),
              (.addEntry, .addProductToList),
              (.updateEntry, .updateListEntry),
              (.resolveEntry, .resolveListNeed),
@@ -2835,6 +2893,7 @@ final class ProductStateNamedListCommandAuthority {
         )
         guard !trimmed.isEmpty, trimmed == purpose else { return false }
         return purpose != "completed" && purpose != "recent"
+            && purpose != "deleted"
     }
 
     private func listID(
@@ -2843,6 +2902,7 @@ final class ProductStateNamedListCommandAuthority {
         switch command.intent {
         case let .createNamedList(value): value.listID
         case let .renameNamedList(value): value.listID
+        case let .deleteNamedList(value): value.listID
         case let .addProductToList(value): value.entry.listID
         case let .updateListEntry(value): value.entry.listID
         case let .resolveListNeed(value): value.entry.listID
@@ -3025,6 +3085,7 @@ final class ProductStateNamedListCommandAuthority {
         switch outcome {
         case .listCreated: .listCreated
         case .listRenamed: .listRenamed
+        case .listDeleted: .listDeleted
         case .entryAdded: .entryAdded
         case .existingNeeded: .existingNeeded
         case .reopenRequired: .reopenRequired

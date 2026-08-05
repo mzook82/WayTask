@@ -99,6 +99,16 @@ final class ProductStateFinalRuntimeCutoverTests: XCTestCase {
             XCTFail("Expected target Map consumer: \(runtime.mapState.content)")
         }
 
+        runtime.selectList(lists[1].id)
+        XCTAssertEqual(runtime.selectedListID, lists[1].id)
+        switch runtime.mapState.content {
+        case let .available(map), let .stale(map, _):
+            XCTAssertEqual(map.listID, lists[1].id)
+            XCTAssertEqual(map.listRevision, lists[1].revision)
+        default:
+            XCTFail("Expected refreshed Map mission: \(runtime.mapState.content)")
+        }
+
         runtime.selectList(
             ProductStateListID(rawValue: uuid(9_999))
         )
@@ -425,7 +435,7 @@ final class ProductStateFinalRuntimeCutoverTests: XCTestCase {
         )
 
         XCTAssertTrue(app.contains("ProductStateRuntimeLaunchState"))
-        XCTAssertTrue(app.contains("ProductStateRuntimeRootView"))
+        XCTAssertTrue(app.contains("WayTaskProductionRuntimeView"))
         for forbidden in [
             "WayTaskStartupPersistenceBootstrap", "ContentView(",
             "AppStateManager()", "LocationManager()",

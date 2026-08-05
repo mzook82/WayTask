@@ -141,7 +141,7 @@ final class ProductStateCompatibilityAdapter {
             identity
         case let .noOp(_, entry, _):
             entry
-        case .listCreated, .listRenamed, .conflict,
+        case .listCreated, .listRenamed, .listDeleted, .conflict,
              .validationFailure, .unavailable:
             nil
         }
@@ -155,7 +155,7 @@ final class ProductStateCompatibilityAdapter {
              .entryUpdated, .entryResolved, .entryReopened,
              .entryRemoved, .noOp:
             true
-        case .listCreated, .listRenamed, .conflict,
+        case .listCreated, .listRenamed, .listDeleted, .conflict,
              .validationFailure, .unavailable:
             false
         }

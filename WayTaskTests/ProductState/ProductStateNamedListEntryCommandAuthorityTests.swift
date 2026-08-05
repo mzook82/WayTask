@@ -87,7 +87,7 @@ final class ProductStateNamedListEntryCommandAuthorityTests: XCTestCase {
         let fixture = try makeFixture("archive-purpose")
         let authority = makeAuthority(fixture)
 
-        for (offset, purpose) in ["completed", "recent"].enumerated() {
+        for (offset, purpose) in ["completed", "recent", "deleted"].enumerated() {
             let result = authority.createNamedList(
                 createListCommand(
                     command: 20 + offset,
@@ -699,7 +699,7 @@ final class ProductStateNamedListEntryCommandAuthorityTests: XCTestCase {
         XCTAssertEqual(first.state, second.state)
     }
 
-    func testT11ScopeHasNoListLifecycleStartupReverseSyncOrDefaultStore()
+    func testT11ScopeSupportsApprovedListDeletionWithoutLegacyWrites()
         throws {
         let root = repositoryRoot
         let coordinator = try source(
@@ -728,7 +728,7 @@ final class ProductStateNamedListEntryCommandAuthorityTests: XCTestCase {
         XCTAssertFalse(t11.contains("removeNamedList"))
         XCTAssertFalse(t11.contains("restoreNamedList"))
         XCTAssertFalse(t11.contains("closeNamedList"))
-        XCTAssertFalse(t11.contains("deleteNamedList"))
+        XCTAssertTrue(t11.contains("deleteNamedList"))
         XCTAssertFalse(t11.contains("import SwiftData"))
         XCTAssertFalse(t11.contains("ModelContext"))
         XCTAssertFalse(t11.contains("fatalError"))

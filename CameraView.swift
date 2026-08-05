@@ -1,18 +1,13 @@
 import PhotosUI
-import SwiftData
 import SwiftUI
 import UIKit
 
 struct CameraView: View {
-    @Environment(\.modelContext) private var modelContext
-    @EnvironmentObject private var appStateManager: AppStateManager
-    @EnvironmentObject private var featureTourCoordinator: FeatureTourCoordinator
+    @EnvironmentObject private var runtime: ProductStateRuntime
 
     var onDone: (() -> Void)?
 
     @StateObject private var viewModel = CameraViewModel()
-    private let shoppingListService = ShoppingListService()
-    private let productKnowledgeService = ProductKnowledgeService()
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var focusIndicatorPoint: CGPoint?
     @State private var focusIndicatorScale = 1.35
@@ -21,6 +16,7 @@ struct CameraView: View {
     @State private var manualProductBrand = ""
     @State private var manualProductCategory = ""
     @State private var loadedProductImageData: [UUID: Data] = [:]
+    @State private var pendingRestore: WayTaskPendingCameraRestore?
 
     var body: some View {
         NavigationStack {
@@ -55,9 +51,30 @@ struct CameraView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .featureTourHost(
-            featureTourCoordinator,
-            surface: .camera
+        .alert(
+            "Restore Product?",
+            isPresented: restoreConfirmationPresented,
+            presenting: pendingRestore
+        ) { pending in
+            Button("Cancel", role: .cancel) {
+                pendingRestore = nil
+            }
+            Button("Restore") {
+                confirmPendingRestore(pending)
+            }
+        } message: { pending in
+            Text(
+                "\(pending.product.name) was removed earlier. Restore it to Products?"
+            )
+        }
+    }
+
+    private var restoreConfirmationPresented: Binding<Bool> {
+        Binding(
+            get: { pendingRestore != nil },
+            set: { isPresented in
+                if !isPresented { pendingRestore = nil }
+            }
         )
     }
 
@@ -875,23 +892,7 @@ struct CameraView: View {
     }
 
     private func confirmBarcode() {
-        guard let barcode = currentBarcodeResult else {
-            viewModel.confirmBarcode()
-            return
-        }
-
-        do {
-            if let candidate = try productKnowledgeService.productCandidate(
-                forBarcode: barcode.value,
-                in: modelContext
-            ) {
-                viewModel.useKnownProduct(candidate, for: barcode)
-            } else {
-                viewModel.confirmBarcode()
-            }
-        } catch {
-            viewModel.confirmBarcode()
-        }
+        viewModel.confirmBarcode()
     }
 
     private func editSuggestedProduct(_ product: ProductCandidate) {
@@ -931,19 +932,74 @@ struct CameraView: View {
     }
 
     private func addRecognizedProduct(_ product: ProductCandidate) {
-        do {
-            let productToAdd = productWithLoadedImageIfAvailable(product)
-            try shoppingListService.upsertRecognizedProduct(
-                productToAdd,
-                fallbackImageData: viewModel.capturedImageData,
-                in: modelContext
+        let productToAdd = productWithLoadedImageIfAvailable(product)
+        guard let confirmation = viewModel
+            .prepareTargetAcquisitionConfirmation(
+                for: productToAdd,
+                productID: ProductStateProductID(rawValue: UUID()),
+                commandID: ProductStateCommandID(rawValue: UUID()),
+                effectiveAt: Date(),
+                confirmed: true
+            ) else {
+            viewModel.productAddFailed(
+                WayTaskCameraProductError.invalidReviewedProduct
             )
-            appStateManager.shoppingListDidChange()
-            viewModel.productWasAddedToLibrary(productToAdd)
-            closeScanner()
-        } catch {
-            viewModel.productAddFailed(error)
+            return
         }
+
+        let result = viewModel.confirmTargetAcquisition(
+            confirmation,
+            using: runtime.productCommands
+        )
+        switch result.outcome {
+        case .created, .alreadyActive:
+            completeTargetSave(productToAdd)
+        case .restoreRequired:
+            pendingRestore = WayTaskPendingCameraRestore(
+                product: productToAdd,
+                result: result
+            )
+        case .ambiguity, .validationFailure, .unavailable:
+            viewModel.productAddFailed(
+                WayTaskCameraProductError.saveUnavailable
+            )
+        }
+    }
+
+    private func confirmPendingRestore(
+        _ pending: WayTaskPendingCameraRestore
+    ) {
+        pendingRestore = nil
+        guard let restore = viewModel.prepareTargetRestoreConfirmation(
+            for: pending.result,
+            commandID: ProductStateCommandID(rawValue: UUID()),
+            historyEventID: ProductStateHistoryEventID(rawValue: UUID()),
+            effectiveAt: Date(),
+            confirmed: true
+        ) else {
+            viewModel.productAddFailed(
+                WayTaskCameraProductError.restoreUnavailable
+            )
+            return
+        }
+        let restored = viewModel.confirmTargetRestore(
+            restore,
+            using: runtime.productCommands
+        )
+        switch restored.outcome {
+        case .restored, .alreadyActive:
+            completeTargetSave(pending.product)
+        case .ambiguity, .conflict, .validationFailure, .unavailable:
+            viewModel.productAddFailed(
+                WayTaskCameraProductError.restoreUnavailable
+            )
+        }
+    }
+
+    private func completeTargetSave(_ product: ProductCandidate) {
+        runtime.refresh()
+        viewModel.productWasAddedToLibrary(product)
+        closeScanner()
     }
 
     private func productWithLoadedImageIfAvailable(_ product: ProductCandidate) -> ProductCandidate {
@@ -973,10 +1029,28 @@ struct CameraView: View {
     }
 
     private func closeScanner() {
-        if let onDone {
-            onDone()
-        } else {
-            appStateManager.selectedTab = .products
+        onDone?()
+    }
+}
+
+private struct WayTaskPendingCameraRestore {
+    let product: ProductCandidate
+    let result: ProductAcquisitionResult
+}
+
+private enum WayTaskCameraProductError: LocalizedError {
+    case invalidReviewedProduct
+    case saveUnavailable
+    case restoreUnavailable
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidReviewedProduct:
+            "Review the product details before saving."
+        case .saveUnavailable:
+            "The product could not be saved. Please try again."
+        case .restoreUnavailable:
+            "The existing product could not be restored."
         }
     }
 }

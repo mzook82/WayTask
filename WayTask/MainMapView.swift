@@ -239,7 +239,6 @@ struct MainMapView: View {
         WayTaskMapView(
             stores: mapViewModel.filteredStores,
             products: mapViewModel.filteredProducts,
-            selectedStoreID: mapViewModel.selectedStoreID,
             cameraTarget: mapViewModel.cameraTarget,
             onSelectStore: selectStore,
             onMapRegionChanged: { region in
@@ -250,6 +249,7 @@ struct MainMapView: View {
                 handleUserLocationChanged(coordinate)
             }
         )
+        .equatable()
         .ignoresSafeArea()
     }
 

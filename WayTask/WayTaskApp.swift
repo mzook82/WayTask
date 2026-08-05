@@ -38,7 +38,7 @@ struct WayTaskApp: App {
                             onComplete: onboardingCoordinator.complete
                         )
                     } else {
-                        ProductStateRuntimeRootView()
+                        WayTaskProductionRuntimeView()
                             .environmentObject(runtime)
                     }
                 }

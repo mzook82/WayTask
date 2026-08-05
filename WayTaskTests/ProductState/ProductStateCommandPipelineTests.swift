@@ -15,6 +15,7 @@ final class ProductStateCommandPipelineTests: XCTestCase {
                 .restoreProductToLibrary,
                 .createNamedList,
                 .renameNamedList,
+                .deleteNamedList,
                 .addProductToList,
                 .updateListEntry,
                 .resolveListNeed,

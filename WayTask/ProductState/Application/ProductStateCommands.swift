@@ -9,6 +9,7 @@ enum ProductStateCommandCategory: String, CaseIterable, Hashable, Sendable {
     case restoreProductToLibrary
     case createNamedList
     case renameNamedList
+    case deleteNamedList
     case addProductToList
     case updateListEntry
     case resolveListNeed
@@ -74,6 +75,11 @@ struct CreateNamedListCommand: Hashable, Sendable {
 struct RenameNamedListCommand: Hashable, Sendable {
     let listID: ProductStateListID
     let title: String
+}
+
+struct DeleteNamedListCommand: Hashable, Sendable {
+    let listID: ProductStateListID
+    let confirmed: Bool
 }
 
 struct AddProductToListCommand: Hashable, Sendable {
@@ -180,6 +186,7 @@ enum ProductStateCommandIntent: Hashable, Sendable {
     case restoreProductToLibrary(RestoreProductToLibraryCommand)
     case createNamedList(CreateNamedListCommand)
     case renameNamedList(RenameNamedListCommand)
+    case deleteNamedList(DeleteNamedListCommand)
     case addProductToList(AddProductToListCommand)
     case updateListEntry(UpdateListEntryCommand)
     case resolveListNeed(ResolveListNeedCommand)
@@ -206,6 +213,7 @@ enum ProductStateCommandIntent: Hashable, Sendable {
         case .restoreProductToLibrary: .restoreProductToLibrary
         case .createNamedList: .createNamedList
         case .renameNamedList: .renameNamedList
+        case .deleteNamedList: .deleteNamedList
         case .addProductToList: .addProductToList
         case .updateListEntry: .updateListEntry
         case .resolveListNeed: .resolveListNeed
@@ -239,6 +247,8 @@ enum ProductStateCommandIntent: Hashable, Sendable {
         case let .createNamedList(value):
             .list(value.listID)
         case let .renameNamedList(value):
+            .list(value.listID)
+        case let .deleteNamedList(value):
             .list(value.listID)
         case let .addProductToList(value):
             .entry(value.entry)
@@ -382,6 +392,8 @@ struct ProductStateCommandShapeValidator: Sendable {
             .product(value.productID)
         case let .renameNamedList(value):
             .list(value.listID)
+        case let .deleteNamedList(value):
+            .list(value.listID)
         case let .addProductToList(value):
             .list(value.entry.listID)
         case let .updateListEntry(value):
@@ -443,6 +455,9 @@ struct ProductStateCommandShapeValidator: Sendable {
 
         case let .renameNamedList(value):
             validateName(value.title, into: &codes)
+
+        case let .deleteNamedList(value):
+            if !value.confirmed { codes.insert(.missingConfirmation) }
 
         case let .addProductToList(value):
             validateHistory(value.historyEventID, into: &codes)

@@ -963,7 +963,7 @@ final class ProductStateScannerIntegrationTests: XCTestCase {
         XCTAssertEqual(first.lifecycle, second.lifecycle)
     }
 
-    func testStaticBoundaryHasNoTargetSaveTransactionOrRuntimeActivation()
+    func testStaticBoundaryKeepsPersistenceInTargetAuthorityAfterActivation()
         throws {
         let root = repositoryRoot
         let coordinator = try source(
@@ -993,7 +993,16 @@ final class ProductStateScannerIntegrationTests: XCTestCase {
         XCTAssertFalse(targetSection.contains("ProductStateTransactionCoordinator("))
         XCTAssertFalse(targetSection.contains("addTargetEntry("))
         XCTAssertFalse(targetSection.contains("retry"))
-        XCTAssertFalse(cameraView.contains("confirmTargetAcquisition("))
+        XCTAssertTrue(cameraView.contains("confirmTargetAcquisition("))
+        XCTAssertFalse(cameraView.contains("ModelContext"))
+        XCTAssertFalse(cameraView.contains("modelContext"))
+        XCTAssertFalse(cameraView.contains(".save()"))
+        XCTAssertFalse(
+            cameraView.contains("ProductStateTransactionCoordinator(")
+        )
+        XCTAssertFalse(
+            cameraView.contains("ProductStateProductCommandAuthority")
+        )
         XCTAssertFalse(productView.contains("confirmTargetAcquisition("))
         XCTAssertFalse(startup.contains("confirmTargetAcquisition("))
         XCTAssertFalse(app.contains("ProductStateProductCommandAuthority"))

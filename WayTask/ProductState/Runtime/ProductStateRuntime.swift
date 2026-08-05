@@ -650,7 +650,8 @@ final class ProductStateRuntime: ObservableObject {
         namedLists = queries.namedLists().filter { outcome in
             guard case let .projection(list) = outcome else { return true }
             return ![ShoppingListKind.completed.rawValue,
-                     ShoppingListKind.recent.rawValue]
+                     ShoppingListKind.recent.rawValue,
+                     "deleted"]
                 .contains(list.purposeRawValue)
         }
         let library = queries.productLibrary(
@@ -697,7 +698,8 @@ final class ProductStateRuntime: ObservableObject {
         buildReminderPlans()
     }
 
-    func createList(title: String) {
+    @discardableResult
+    func createList(title: String) -> ProductStateListID? {
         let id = ProductStateListID(rawValue: UUID())
         let result = listCommands.createNamedList(
             ProductStateCommand(
@@ -717,9 +719,70 @@ final class ProductStateRuntime: ObservableObject {
             ? "List created" : "List was not created"
         if result.claimsDurableSuccess { selectedListID = id }
         refresh()
+        return result.claimsDurableSuccess ? id : nil
     }
 
-    func acquireProduct(name: String) {
+    @discardableResult
+    func renameList(
+        _ list: ProductStateNamedListProjection,
+        title: String
+    ) -> Bool {
+        let result = listCommands.renameNamedList(
+            ProductStateCommand(
+                id: ProductStateCommandID(rawValue: UUID()),
+                expectedRevision: expectedRevision(for: list),
+                effectiveAt: Date(),
+                intent: .renameNamedList(
+                    RenameNamedListCommand(
+                        listID: list.id,
+                        title: title
+                    )
+                )
+            )
+        )
+        lastMutationMessage = result.claimsDurableSuccess
+            ? "List renamed" : "List was not renamed"
+        refresh()
+        return result.claimsDurableSuccess
+    }
+
+    /// Deletes a user-visible list through a revisioned logical archive. The
+    /// retained row keeps session/history references valid; list entries and
+    /// product records are not rewritten or removed.
+    @discardableResult
+    func deleteList(_ list: ProductStateNamedListProjection) -> Bool {
+        let fallbackID: ProductStateListID? = namedLists.compactMap {
+            outcome -> ProductStateListID? in
+            guard case let .projection(candidate) = outcome,
+                  candidate.id != list.id
+            else { return nil }
+            return candidate.id
+        }.first
+        let wasSelected = selectedListID == list.id
+        let result = listCommands.deleteNamedList(
+            ProductStateCommand(
+                id: ProductStateCommandID(rawValue: UUID()),
+                expectedRevision: expectedRevision(for: list),
+                effectiveAt: Date(),
+                intent: .deleteNamedList(
+                    DeleteNamedListCommand(
+                        listID: list.id,
+                        confirmed: true
+                    )
+                )
+            )
+        )
+        lastMutationMessage = result.claimsDurableSuccess
+            ? "List deleted" : "List was not deleted"
+        if result.claimsDurableSuccess, wasSelected {
+            selectedListID = fallbackID
+        }
+        refresh()
+        return result.claimsDurableSuccess
+    }
+
+    @discardableResult
+    func acquireProduct(name: String) -> Bool {
         let result = productCommands.acquire(
             ProductStateProductAcquisitionRequest(
                 commandID: ProductStateCommandID(rawValue: UUID()),
@@ -733,6 +796,7 @@ final class ProductStateRuntime: ObservableObject {
         lastMutationMessage = result.claimsDurableSuccess
             ? "Product added" : "Product was not added"
         refresh()
+        return result.claimsDurableSuccess
     }
 
     func addProduct(
@@ -768,11 +832,12 @@ final class ProductStateRuntime: ObservableObject {
         refresh()
     }
 
+    @discardableResult
     func perform(
         _ action: ShoppingWorkspaceListAction,
         row: ShoppingWorkspaceProjectionRow,
         list: ProductStateNamedListProjection
-    ) {
+    ) -> Bool {
         let commandID = ProductStateCommandID(rawValue: UUID())
         let historyID = ProductStateHistoryEventID(rawValue: UUID())
         let command: ProductStateCommand
@@ -840,6 +905,53 @@ final class ProductStateRuntime: ObservableObject {
         lastMutationMessage = result.claimsDurableSuccess
             ? "List updated" : "List was not changed"
         refresh()
+        return result.claimsDurableSuccess
+    }
+
+    @discardableResult
+    func increaseQuantity(
+        of entry: ProductStateListEntryProjection,
+        in list: ProductStateNamedListProjection
+    ) -> Bool {
+        guard let currentList = projectedList(id: list.id),
+              var currentEntry = allEntries(in: currentList).first(where: {
+                  $0.identity.id == entry.identity.id
+              }) else {
+            lastMutationMessage = "The existing product is no longer available"
+            return false
+        }
+
+        if case .resolved = currentEntry.state {
+            guard perform(
+                .reopen,
+                row: ShoppingWorkspaceProjectionRow(entry: currentEntry),
+                list: currentList
+            ),
+            let reopenedList = projectedList(id: list.id),
+            let reopenedEntry = reopenedList.neededEntries.first(where: {
+                $0.identity.id == entry.identity.id
+            }) else {
+                return false
+            }
+            currentEntry = reopenedEntry
+        }
+
+        guard case .needed = currentEntry.state,
+              let latestList = projectedList(id: list.id) else {
+            lastMutationMessage = "The existing product cannot be updated"
+            return false
+        }
+
+        let updatedQuantity = min(currentEntry.quantity + 1, 99)
+        guard updatedQuantity > currentEntry.quantity else {
+            lastMutationMessage = "Quantity is already at the maximum"
+            return false
+        }
+        return perform(
+            .updateQuantity(updatedQuantity),
+            row: ShoppingWorkspaceProjectionRow(entry: currentEntry),
+            list: latestList
+        )
     }
 
     func restore(_ product: ProductStateProductProjection) {
@@ -970,5 +1082,21 @@ final class ProductStateRuntime: ObservableObject {
         let values = (list.neededEntries + list.resolvedEntries +
             list.unresolvedEntries).map(\.sortOrder)
         return (values.max() ?? -1) + 1
+    }
+
+    private func projectedList(
+        id: ProductStateListID
+    ) -> ProductStateNamedListProjection? {
+        namedLists.compactMap {
+            guard case let .projection(list) = $0 else { return nil }
+            return list
+        }
+        .first { $0.id == id }
+    }
+
+    private func allEntries(
+        in list: ProductStateNamedListProjection
+    ) -> [ProductStateListEntryProjection] {
+        list.neededEntries + list.resolvedEntries + list.unresolvedEntries
     }
 }

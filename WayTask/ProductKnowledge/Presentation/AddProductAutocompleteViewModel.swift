@@ -379,6 +379,25 @@ final class AddProductAutocompleteViewModel: ObservableObject {
             return nil
         }
 
+        return selectCustomProduct(named: name)
+    }
+
+    @discardableResult
+    func selectCustomProduct(named proposedName: String)
+        -> AddProductCustomSelection? {
+        guard !isSavingProduct,
+              selectedCatalogProduct == nil,
+              selectedCustomProduct == nil else {
+            return nil
+        }
+
+        let name = proposedName.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        guard !ProductSearchNormalizer.normalize(name).value.isEmpty else {
+            return nil
+        }
+
         let selection = AddProductCustomSelection(
             name: name,
             preselectionQuery: rawQuery

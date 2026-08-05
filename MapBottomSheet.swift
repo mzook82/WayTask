@@ -6,6 +6,7 @@ struct MapBottomSheet: View {
     let likelyItemNames: [String]
     let otherItemNames: [String]
     let canOpenItems: Bool
+    var animatesStoreChanges = true
     let onNavigate: () -> Void
     let onWebsite: () -> Void
     let onOpenItems: () -> Void
@@ -33,7 +34,12 @@ struct MapBottomSheet: View {
                 .stroke(Color.white.opacity(0.14), lineWidth: 1)
         }
         .shadow(color: .black.opacity(0.2), radius: 24, y: 12)
-        .animation(.spring(response: 0.34, dampingFraction: 0.86), value: store?.id)
+        .animation(
+            animatesStoreChanges
+                ? .spring(response: 0.34, dampingFraction: 0.86)
+                : nil,
+            value: store?.id
+        )
     }
 
     private func storeContent(_ store: MapStore) -> some View {
