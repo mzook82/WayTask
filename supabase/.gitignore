@@ -1,0 +1,7 @@
+.branches/
+.temp/
+.env
+.env.*
+!.env.example
+functions/.env
+functions/.env.*

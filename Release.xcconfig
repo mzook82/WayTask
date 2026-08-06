@@ -1,4 +1,10 @@
 // Release build settings for WayTask.
 // Secrets.xcconfig is local-only and must not be committed.
 SENTRY_DSN =
+WAYTASK_SUPABASE_ENVIRONMENT =
+WAYTASK_SUPABASE_URL =
+WAYTASK_SUPABASE_PUBLISHABLE_KEY =
+WAYTASK_CLOUD_ACCOUNTS_ENABLED = NO
+WAYTASK_CLOUD_SYNC_ENABLED = NO
+WAYTASK_CLOUD_MIGRATION_ENABLED = NO
 #include? "Secrets.xcconfig"

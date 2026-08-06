@@ -17,3 +17,12 @@ xcuserdata/
 Secrets.xcconfig
 Secrets.plist
 .sentryclirc
+
+# Supabase CLI local state and environment-specific secrets
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+supabase/.env.*
+!supabase/.env.example
+supabase/functions/.env
+supabase/functions/.env.*

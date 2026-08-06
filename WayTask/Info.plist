@@ -4,6 +4,18 @@
 <dict>
 	<key>GEMINI_API_KEY</key>
 	<string>$(GEMINI_API_KEY)</string>
+	<key>WAYTASK_CLOUD_ACCOUNTS_ENABLED</key>
+	<string>$(WAYTASK_CLOUD_ACCOUNTS_ENABLED)</string>
+	<key>WAYTASK_CLOUD_MIGRATION_ENABLED</key>
+	<string>$(WAYTASK_CLOUD_MIGRATION_ENABLED)</string>
+	<key>WAYTASK_CLOUD_SYNC_ENABLED</key>
+	<string>$(WAYTASK_CLOUD_SYNC_ENABLED)</string>
+	<key>WAYTASK_SUPABASE_ENVIRONMENT</key>
+	<string>$(WAYTASK_SUPABASE_ENVIRONMENT)</string>
+	<key>WAYTASK_SUPABASE_PUBLISHABLE_KEY</key>
+	<string>$(WAYTASK_SUPABASE_PUBLISHABLE_KEY)</string>
+	<key>WAYTASK_SUPABASE_URL</key>
+	<string>$(WAYTASK_SUPABASE_URL)</string>
 	<key>SENTRY_DSN</key>
 	<string>$(SENTRY_DSN)</string>
 	<key>NSCameraUsageDescription</key>

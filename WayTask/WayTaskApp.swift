@@ -10,12 +10,15 @@ import SwiftData
 
 @main
 struct WayTaskApp: App {
+    private let accountSyncFoundation: WayTaskAccountSyncFoundation
     @StateObject private var productStateLaunch:
         ProductStateRuntimeLaunchState
     @StateObject private var onboardingCoordinator: OnboardingCoordinator
 
     init() {
         SentryReportingService.shared.startIfConfigured()
+        let accountSyncFoundation = WayTaskAccountSyncFoundation.startup()
+        self.accountSyncFoundation = accountSyncFoundation
         _productStateLaunch = StateObject(
             wrappedValue: ProductStateRuntimeLaunchState()
         )
@@ -25,6 +28,11 @@ struct WayTaskApp: App {
         )
         #if DEBUG
         print(SecretsManager.isGeminiConfigured ? "Gemini configured ✔" : "Gemini unavailable")
+        print(
+            "Account foundation: \(String(describing: accountSyncFoundation.configurationStatus.environment)) " +
+                "accounts=\(accountSyncFoundation.featureFlags.accountsEnabled) " +
+                "sync=\(accountSyncFoundation.featureFlags.synchronizationEnabled)"
+        )
         #endif
     }
 
