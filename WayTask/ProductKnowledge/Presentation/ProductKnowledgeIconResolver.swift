@@ -94,9 +94,19 @@ nonisolated enum ProductKnowledgeIconResolver {
         forCategoryID value: String?
     ) -> String? {
         guard let value else { return nil }
-        let normalized = normalize(value)
+        let normalized = value.split(separator: ".").map {
+            normalize(String($0))
+        }.joined(separator: ".")
         let root = normalized.split(separator: ".").first.map(String.init)
-        return resolvedSemanticKey(forNormalizedCategory: root ?? normalized)
+        let categoryID = root ?? normalized
+        let metadata = ProductCatalogCategoryMetadata.metadata(
+            for: categoryID,
+            subcategoryId: normalized.contains(".") ? normalized : nil
+        )
+        if metadata.iconKey != "product.generic" {
+            return metadata.iconKey
+        }
+        return resolvedSemanticKey(forNormalizedCategory: categoryID)
     }
 
     private static func resolvedSemanticKey(
@@ -137,13 +147,8 @@ nonisolated enum ProductKnowledgeIconResolver {
     }
 
     private static func normalize(_ value: String) -> String {
-        value.folding(
-            options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
-            locale: .current
-        )
-        .lowercased()
-        .replacingOccurrences(of: "-", with: "_")
-        .replacingOccurrences(of: " ", with: "_")
+        ProductKnowledgeNormalizer.searchText(value).value
+            .replacingOccurrences(of: " ", with: "_")
     }
 
     private static let textRules: [(key: String, terms: [String])] = [

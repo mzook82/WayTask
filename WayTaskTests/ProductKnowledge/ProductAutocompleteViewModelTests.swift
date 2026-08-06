@@ -804,6 +804,34 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.customProductActionName, "+++")
     }
 
+    func testExactAliasSuppressesDuplicateCustomProductOption() async throws {
+        let aliasResult = ProductSearchResult(
+            productID: ProductID("soft_drink"),
+            displayName: "Soft Drink",
+            displayLocale: "en",
+            secondaryName: "Soda",
+            categoryID: ProductCategoryID("beverages"),
+            categoryDisplayName: "Beverages",
+            iconKey: "product.beverage",
+            matchedRecordAuthority: .alias,
+            matchType: .exact,
+            matchTier: .exactAlias,
+            matchedValue: "Soda",
+            normalizedMatchedValue: "soda",
+            matchedLocale: "en"
+        )
+        let recorder = ProductAutocompleteSearchRecorder(
+            responses: ["soda": [aliasResult]]
+        )
+        let viewModel = makeViewModel(recorder: recorder)
+
+        viewModel.updateQuery("Soda", localeIdentifier: "en")
+        try await waitUntil { viewModel.phase == .results }
+
+        XCTAssertNil(viewModel.customProductActionName)
+        XCTAssertEqual(viewModel.results.first?.displayName, "Soft Drink")
+    }
+
     func testCustomSelectionRetainsTrimmedNameAndRequiresLaterManualConfirmation() async throws {
         let catalogResult = makeResult(id: "milk", displayName: "Milk")
         let recorder = ProductAutocompleteSearchRecorder(

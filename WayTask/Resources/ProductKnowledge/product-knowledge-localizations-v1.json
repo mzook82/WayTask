@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": 5,
+  "supportedLocales": [
+    "en",
+    "he-IL"
+  ],
+  "names": [
+    {
+      "id": "catalog_name_bread_white_en",
+      "productID": "bread_white",
+      "locale": "en",
+      "kind": "localizedDisplay",
+      "value": "White Bread",
+      "isPreferred": true
+    },
+    {
+      "id": "catalog_name_bread_white_alias_en_1",
+      "productID": "bread_white",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Bread",
+      "isPreferred": false
+    },
+    {
+      "id": "catalog_name_milk_3_percent_en",
+      "productID": "milk_3_percent",
+      "locale": "en",
+      "kind": "localizedDisplay",
+      "value": "3% Milk",
+      "isPreferred": true
+    },
+    {
+      "id": "catalog_name_milk_3_percent_alias_en_1",
+      "productID": "milk_3_percent",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Milk",
+      "isPreferred": false
+    },
+    {
+      "id": "catalog_name_eggs_en",
+      "productID": "eggs",
+      "locale": "en",
+      "kind": "localizedDisplay",
+      "value": "Eggs",
+      "isPreferred": true
+    },
+    {
+      "id": "catalog_name_rice_white_en",
+      "productID": "rice_white",
+      "locale": "en",
+      "kind": "localizedDisplay",
+      "value": "White Rice",
+      "isPreferred": true
+    },
+    {
+      "id": "catalog_name_rice_white_alias_en_1",
+      "productID": "rice_white",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Rice",
+      "isPreferred": false
+    },
+    {
+      "id": "catalog_name_mineral_water_en",
+      "productID": "mineral_water",
+      "locale": "en",
+      "kind": "localizedDisplay",
+      "value": "Mineral Water",
+      "isPreferred": true
+    },
+    {
+      "id": "catalog_name_mineral_water_alias_en_1",
+      "productID": "mineral_water",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Water",
+      "isPreferred": false
+    },
+    {
+      "id": "catalog_name_apple_en",
+      "productID": "apple",
+      "locale": "en",
+      "kind": "localizedDisplay",
+      "value": "Apple",
+      "isPreferred": true
+    },
+    {
+      "id": "catalog_name_apple_alias_en_1",
+      "productID": "apple",
+      "locale": "en",
+      "kind": "alias",
+      "value": "Apples",
+      "isPreferred": false
+    }
+  ]
+}

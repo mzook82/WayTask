@@ -64,7 +64,12 @@ actor InMemoryProductKnowledgeRepository: ProductKnowledgeRepository {
             .map(String.init)
         if let requestedLanguage,
            let languageMatch = displayNames.first(where: {
-               $0.locale.caseInsensitiveCompare(requestedLanguage) == .orderedSame
+               $0.locale
+                   .replacingOccurrences(of: "_", with: "-")
+                   .split(separator: "-", maxSplits: 1)
+                   .first
+                   .map(String.init)?
+                   .caseInsensitiveCompare(requestedLanguage) == .orderedSame
            }) {
             return languageMatch
         }
@@ -82,6 +87,8 @@ actor InMemoryProductKnowledgeRepository: ProductKnowledgeRepository {
         guard let entity = entitiesByID[productID] else {
             return nil
         }
-        return categoriesByID[entity.primaryCategoryID]?.iconKey ?? "product.generic"
+        return entity.iconKey
+            ?? categoriesByID[entity.primaryCategoryID]?.iconKey
+            ?? "product.generic"
     }
 }

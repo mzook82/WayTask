@@ -43,11 +43,14 @@ struct WayTaskProductionRuntimeView: View {
 
     private let searchAvailability: ProductKnowledgeSearchAvailability
 
+    /// Catalog decoding and index ownership live outside SwiftUI body
+    /// evaluation. The immutable search service is shared across root-view
+    /// reconstruction and prewarmed off the main interaction path.
+    private static let productionSearchAvailability =
+        ProductionProductKnowledgeFactory.makeSearchAvailability()
+
     init() {
-        let products = ProductCatalogService().loadProductsOrEmpty()
-        searchAvailability = products.isEmpty
-            ? .unavailable
-            : .catalog(ProductCatalogSearch(products: products))
+        searchAvailability = Self.productionSearchAvailability
     }
 
     var body: some View {

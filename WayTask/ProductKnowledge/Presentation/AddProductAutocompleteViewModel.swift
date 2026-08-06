@@ -624,10 +624,8 @@ final class AddProductAutocompleteViewModel: ObservableObject {
         }
 
         return results.contains {
-            $0.matchType == .exact
-                && $0.matchedRecordAuthority == .primaryDisplayName
-                && HebrewProductSearchNormalizer.normalize($0.displayName).value
-                    == normalizedQuery
+            ($0.matchTier == .exactCanonical || $0.matchTier == .exactAlias)
+                && $0.normalizedMatchedValue == normalizedQuery
         }
     }
 }

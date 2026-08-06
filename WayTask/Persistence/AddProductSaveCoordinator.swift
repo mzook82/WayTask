@@ -579,7 +579,7 @@ struct AddProductSaveCoordinator {
             ),
             brand: candidate.brand,
             category: candidate.category,
-            barcode: candidate.barcode,
+            barcode: ProductKnowledgeNormalizer.barcode(candidate.barcode),
             imageURLString: candidate.imageURL?.absoluteString,
             sourceRawValue: source.rawValue
         )

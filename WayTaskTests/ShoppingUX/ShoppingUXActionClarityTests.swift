@@ -183,20 +183,21 @@ final class ShoppingUXActionClarityTests: XCTestCase {
         )
         let entries = [listEntry(product: existing)]
 
-        XCTAssertEqual(
-            ShoppingListDuplicatePolicy.match(
-                candidate: catalogCandidate,
-                entries: entries
-            )?.evidence,
-            .matchingCatalogIdentity
+        let catalogMatch = ShoppingListDuplicatePolicy.match(
+            candidate: catalogCandidate,
+            entries: entries
         )
-        XCTAssertEqual(
-            ShoppingListDuplicatePolicy.match(
-                candidate: barcodeCandidate,
-                entries: entries
-            )?.evidence,
-            .matchingBarcode
+        let barcodeMatch = ShoppingListDuplicatePolicy.match(
+            candidate: barcodeCandidate,
+            entries: entries
         )
+
+        XCTAssertEqual(catalogMatch?.evidence, .matchingCatalogIdentity)
+        XCTAssertEqual(catalogMatch?.identityMatch, .exactMatch)
+        XCTAssertEqual(catalogMatch?.isExactProductIdentity, true)
+        XCTAssertEqual(barcodeMatch?.evidence, .matchingBarcode)
+        XCTAssertEqual(barcodeMatch?.identityMatch, .probableMatch)
+        XCTAssertEqual(barcodeMatch?.isExactProductIdentity, false)
     }
 
     func testConflictingVariantEvidenceAllowsSeparateProducts() {

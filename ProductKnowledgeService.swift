@@ -292,16 +292,11 @@ struct ProductKnowledgeService: ProductKnowledgeServicing {
             return "barcode:\(barcode)"
         }
 
-        return "name:\(productName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())"
+        return "name:\(ProductKnowledgeNormalizer.searchText(productName).value)"
     }
 
     private func normalizeBarcode(_ barcode: String?) -> String? {
-        let normalized = barcode?.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let normalized, !normalized.isEmpty else {
-            return nil
-        }
-
-        return normalized
+        ProductKnowledgeNormalizer.barcode(barcode)
     }
 
     private func normalizedRequiredText(_ value: String, fallback: String) -> String {

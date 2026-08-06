@@ -36,7 +36,7 @@ final class ProductKnowledgeSearchTests: XCTestCase {
             ProductSearchNormalizer.normalize("***\u{05B8}").value,
             ""
         )
-        XCTAssertNotEqual(
+        XCTAssertEqual(
             ProductSearchNormalizer.normalize("ך").value,
             ProductSearchNormalizer.normalize("כ").value
         )
@@ -141,12 +141,16 @@ final class ProductKnowledgeSearchTests: XCTestCase {
         XCTAssertEqual(
             hebrew.map(\.productID.rawValue),
             [
-                "prd_pilot_0007",
+                "prd_pilot_0012",
                 "prd_pilot_0014",
                 "prd_pilot_0011",
+                "prd_pilot_0007",
                 "prd_pilot_0010",
-                "prd_pilot_0012",
-                "prd_pilot_0015"
+                "prd_pilot_0015",
+                "prd_pilot_0004",
+                "prd_pilot_0003",
+                "prd_pilot_0001",
+                "prd_pilot_0002"
             ]
         )
         XCTAssertNil(english.first?.secondaryName)

@@ -7,12 +7,30 @@ enum ShoppingListDuplicateEvidence: Equatable, Sendable {
     case normalizedDisplayName
 }
 
+enum ProductKnowledgeIdentityMatch: Equatable, Sendable {
+    case exactMatch
+    case probableMatch
+    case possibleMatch
+    case noMatch
+}
+
 struct ShoppingListDuplicateMatch: Equatable, Sendable {
     let existingEntryID: ProductStateListEntryID
     let evidence: ShoppingListDuplicateEvidence
 
+    var identityMatch: ProductKnowledgeIdentityMatch {
+        switch evidence {
+        case .exactProductIdentity, .matchingCatalogIdentity:
+            return .exactMatch
+        case .matchingBarcode:
+            return .probableMatch
+        case .normalizedDisplayName:
+            return .possibleMatch
+        }
+    }
+
     var isExactProductIdentity: Bool {
-        evidence == .exactProductIdentity
+        identityMatch == .exactMatch
     }
 }
 
@@ -43,8 +61,8 @@ enum ShoppingListDuplicatePolicy {
                 )
             }
 
-            if let candidateBarcode = normalizedOptional(candidate.barcode),
-               candidateBarcode == normalizedOptional(existing.barcode) {
+            if let candidateBarcode = normalizedBarcode(candidate.barcode),
+               candidateBarcode == normalizedBarcode(existing.barcode) {
                 return ShoppingListDuplicateMatch(
                     existingEntryID: entry.identity.id,
                     evidence: .matchingBarcode
@@ -75,8 +93,8 @@ enum ShoppingListDuplicatePolicy {
            candidateCatalogID != existingCatalogID {
             return true
         }
-        if let candidateBarcode = normalizedOptional(candidate.barcode),
-           let existingBarcode = normalizedOptional(existing.barcode),
+        if let candidateBarcode = normalizedBarcode(candidate.barcode),
+           let existingBarcode = normalizedBarcode(existing.barcode),
            candidateBarcode != existingBarcode {
             return true
         }
@@ -96,6 +114,10 @@ enum ShoppingListDuplicatePolicy {
         guard let value else { return nil }
         let normalized = ProductSearchNormalizer.normalize(value).value
         return normalized.isEmpty ? nil : normalized
+    }
+
+    private static func normalizedBarcode(_ value: String?) -> String? {
+        ProductKnowledgeNormalizer.barcode(value)
     }
 }
 

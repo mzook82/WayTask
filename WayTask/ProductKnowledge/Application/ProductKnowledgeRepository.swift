@@ -6,6 +6,26 @@ nonisolated struct ProductKnowledgeSnapshotMetadata: Equatable, Sendable {
     let taxonomyVersion: String
     let expectedProductCount: Int
     let supportedLocales: [String]
+    let catalogVersion: Int?
+    let source: String?
+
+    init(
+        schemaVersion: Int,
+        catalogRevision: Int,
+        taxonomyVersion: String,
+        expectedProductCount: Int,
+        supportedLocales: [String],
+        catalogVersion: Int? = nil,
+        source: String? = nil
+    ) {
+        self.schemaVersion = schemaVersion
+        self.catalogRevision = catalogRevision
+        self.taxonomyVersion = taxonomyVersion
+        self.expectedProductCount = expectedProductCount
+        self.supportedLocales = supportedLocales
+        self.catalogVersion = catalogVersion
+        self.source = source
+    }
 }
 
 nonisolated struct ProductKnowledgeSnapshot: Equatable, Sendable {

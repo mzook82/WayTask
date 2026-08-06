@@ -4,9 +4,10 @@ nonisolated enum ProductNameKind: String, Codable, Hashable, Sendable {
     case canonical
     case localizedDisplay
     case alias
+    case keyword
 
     var isDisplayCapable: Bool {
-        self != .alias
+        self == .canonical || self == .localizedDisplay
     }
 }
 

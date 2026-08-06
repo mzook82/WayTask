@@ -247,8 +247,10 @@ struct ShoppingListService: ShoppingListServicing {
         }
         let product: Product
 
-        if let barcode = normalizedText(candidate.barcode),
-           let existing = unlinkedProducts.first(where: { normalizedText($0.barcode) == barcode }) {
+        if let barcode = normalizedBarcode(candidate.barcode),
+           let existing = unlinkedProducts.first(where: {
+               normalizedBarcode($0.barcode) == barcode
+           }) {
             // Scanning the same barcode is an explicit user request to restore
             // this identity; passive repair never calls this path.
             existing.restoreToLibrary()
@@ -461,8 +463,10 @@ struct ShoppingListService: ShoppingListServicing {
             return item
         }
 
-        if let barcode = normalizedText(product.barcode),
-           let item = items.first(where: { normalizedText($0.barcode) == barcode }) {
+        if let barcode = normalizedBarcode(product.barcode),
+           let item = items.first(where: {
+               normalizedBarcode($0.barcode) == barcode
+           }) {
             refresh(item, from: product)
             item.isCompleted = false
             product.legacyShoppingItemID = item.id
@@ -503,12 +507,13 @@ struct ShoppingListService: ShoppingListServicing {
     }
 
     private func normalizedText(_ value: String?) -> String? {
-        let normalized = value?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard let normalized, !normalized.isEmpty else {
-            return nil
-        }
+        guard let value else { return nil }
+        let normalized = ProductKnowledgeNormalizer.searchText(value).value
+        return normalized.isEmpty ? nil : normalized
+    }
 
-        return normalized
+    private func normalizedBarcode(_ value: String?) -> String? {
+        ProductKnowledgeNormalizer.barcode(value)
     }
 
     private func productMatches(_ product: Product, candidate: ProductCandidate) -> Bool {

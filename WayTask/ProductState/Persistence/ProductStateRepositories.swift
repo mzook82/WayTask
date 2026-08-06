@@ -30,7 +30,11 @@ extension ProductRepository {
     }
 
     func products(barcode: String) throws -> [WayTaskSchemaV4.Product] {
-        try allLibraryProducts().filter { $0.barcode == barcode }
+        guard let normalized = ProductKnowledgeNormalizer.barcode(barcode)
+        else { return [] }
+        return try allLibraryProducts().filter {
+            ProductKnowledgeNormalizer.barcode($0.barcode) == normalized
+        }
     }
 
     private func allLibraryProducts() throws
@@ -203,13 +207,23 @@ private final class SwiftDataProductRepository: ProductRepository {
     }
 
     func products(barcode: String) throws -> [WayTaskSchemaV4.Product] {
+        guard let normalized = ProductKnowledgeNormalizer.barcode(barcode)
+        else { return [] }
         let descriptor = FetchDescriptor<WayTaskSchemaV4.Product>(
             predicate: #Predicate { product in
-                product.barcode == barcode
+                product.barcode == normalized
             },
             sortBy: productSort
         )
-        return try access.fetch(descriptor)
+        let exact = try access.fetch(descriptor)
+        if !exact.isEmpty { return exact }
+
+        return try (
+            products(libraryLifecycle: .active)
+                + products(libraryLifecycle: .removed)
+        ).filter {
+            ProductKnowledgeNormalizer.barcode($0.barcode) == normalized
+        }
     }
 
     func products(

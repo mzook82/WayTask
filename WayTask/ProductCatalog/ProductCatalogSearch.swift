@@ -74,73 +74,15 @@ nonisolated struct CatalogProductSuggestion: Identifiable, Sendable {
     }
 }
 
-nonisolated struct HebrewProductSearchNormalizedText: Equatable, Sendable {
-    let value: String
-    let tokens: [String]
-}
+typealias HebrewProductSearchNormalizedText =
+    ProductKnowledgeNormalizedText
 
 nonisolated enum HebrewProductSearchNormalizer {
-    private static let fixedLocale = Locale(identifier: "he_IL")
-    private static let separator = UnicodeScalar(0x20)!
-    private static let quoteScalars: Set<UnicodeScalar> = [
-        "'", "\"", "`", "´", "‘", "’", "‚", "‛", "“", "”", "„", "‟", "׳", "״"
-    ]
-
     static func normalize(_ input: String) -> HebrewProductSearchNormalizedText {
-        let lowercased = input
-            .decomposedStringWithCompatibilityMapping
-            .lowercased(with: fixedLocale)
-        var output = String.UnicodeScalarView()
-        var separatorPending = false
-
-        for scalar in lowercased.unicodeScalars {
-            if quoteScalars.contains(scalar) {
-                continue
-            }
-
-            switch scalar.properties.generalCategory {
-            case .nonspacingMark, .spacingMark, .enclosingMark:
-                continue
-            case .uppercaseLetter,
-                 .lowercaseLetter,
-                 .titlecaseLetter,
-                 .modifierLetter,
-                 .otherLetter,
-                 .decimalNumber:
-                if separatorPending, !output.isEmpty {
-                    output.append(separator)
-                }
-                output.append(normalizedFinalLetter(scalar))
-                separatorPending = false
-            default:
-                if !output.isEmpty {
-                    separatorPending = true
-                }
-            }
-        }
-
-        let value = String(output)
-        return HebrewProductSearchNormalizedText(
-            value: value,
-            tokens: value.split(separator: " ").map(String.init)
+        ProductKnowledgeNormalizer.searchText(
+            input,
+            localeIdentifier: "he-IL"
         )
-    }
-
-    private static func normalizedFinalLetter(_ scalar: UnicodeScalar) -> UnicodeScalar {
-        switch scalar.value {
-        case 0x05DA:
-            return UnicodeScalar(0x05DB)!
-        case 0x05DD:
-            return UnicodeScalar(0x05DE)!
-        case 0x05DF:
-            return UnicodeScalar(0x05E0)!
-        case 0x05E3:
-            return UnicodeScalar(0x05E4)!
-        case 0x05E5:
-            return UnicodeScalar(0x05E6)!
-        default:
-            return scalar
-        }
     }
 }
 
