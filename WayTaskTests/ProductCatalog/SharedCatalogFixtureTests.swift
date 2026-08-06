@@ -163,10 +163,12 @@ final class SharedCatalogFixtureTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(document.cases.count, 40)
 
         for fixture in document.cases {
+            let expectation = fixture.currentExpectation
             let results = await search.suggestions(
                 matching: fixture.query
             )
-            guard let expectedProductID = fixture.expectedProductId else {
+            guard let expectedProductID = expectation?.expectedProductId
+                ?? fixture.expectedProductId else {
                 XCTAssertTrue(
                     results.isEmpty,
                     "Expected no match for Wave 2 fixture \(fixture.id)"
@@ -185,10 +187,11 @@ final class SharedCatalogFixtureTests: XCTestCase {
             )
             XCTAssertEqual(
                 result.product.canonicalName,
-                fixture.expectedCanonicalName
+                expectation?.expectedCanonicalName
+                    ?? fixture.expectedCanonicalName
             )
 
-            switch fixture.matchSource {
+            switch expectation?.matchSource ?? fixture.matchSource {
             case "canonical_name":
                 XCTAssertTrue(
                     [
@@ -295,12 +298,21 @@ private struct AcceptanceFixtureDocument: Decodable {
 }
 
 private struct WaveSearchFixtureDocument: Decodable {
+    struct CurrentExpectation: Decodable {
+        let fromCatalogVersion: Int
+        let expectedProductId: String?
+        let expectedCanonicalName: String?
+        let matchSource: String
+        let reason: String
+    }
+
     struct Fixture: Decodable {
         let id: String
         let query: String
         let expectedProductId: String?
         let expectedCanonicalName: String?
         let matchSource: String
+        let currentExpectation: CurrentExpectation?
     }
 
     let fixtureVersion: Int

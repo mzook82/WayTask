@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": 5,
+  "catalogVersion": 6,
   "taxonomyVersion": 1,
   "locale": "he-IL",
   "products": [
@@ -83,8 +83,7 @@
       "categoryId": "bakery",
       "subcategoryId": null,
       "aliases": [
-        "לחמנייה",
-        "לחמניות המבורגר"
+        "לחמנייה"
       ],
       "keywords": [
         "מאפייה",
@@ -93,7 +92,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 90,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:bread_rolls"
     },
     {
       "id": "bread_sourdough",
@@ -101,8 +101,7 @@
       "categoryId": "bakery",
       "subcategoryId": null,
       "aliases": [
-        "לחם שאור",
-        "מחמצת"
+        "לחם שאור"
       ],
       "keywords": [
         "מאפייה",
@@ -111,7 +110,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 86,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:bread_sourdough"
     },
     {
       "id": "milk_3_percent",
@@ -190,10 +190,7 @@
       "canonicalName": "גבינה צהובה",
       "categoryId": "dairy",
       "subcategoryId": null,
-      "aliases": [
-        "גבינה לפרוסות",
-        "פרוסות גבינה"
-      ],
+      "aliases": [],
       "keywords": [
         "מוצרי חלב",
         "טוסט",
@@ -201,7 +198,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 95,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:yellow_cheese"
     },
     {
       "id": "butter",
@@ -403,10 +401,7 @@
       "canonicalName": "ענבים",
       "categoryId": "fruits_vegetables",
       "subcategoryId": "fruits_vegetables.fruits",
-      "aliases": [
-        "ענבים ירוקים",
-        "ענבים שחורים"
-      ],
+      "aliases": [],
       "keywords": [
         "פרי",
         "פירות",
@@ -414,7 +409,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 87,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:grapes"
     },
     {
       "id": "watermelon",
@@ -530,8 +526,7 @@
       "categoryId": "fruits_vegetables",
       "subcategoryId": "fruits_vegetables.vegetables",
       "aliases": [
-        "ראש חסה",
-        "לבבות חסה"
+        "ראש חסה"
       ],
       "keywords": [
         "ירק",
@@ -540,7 +535,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 88,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:lettuce"
     },
     {
       "id": "chicken_breast",
@@ -619,8 +615,7 @@
       "categoryId": "meat_fish",
       "subcategoryId": "meat_fish.meat",
       "aliases": [
-        "נתח סטייק",
-        "אנטרקוט"
+        "נתח סטייק"
       ],
       "keywords": [
         "בקר",
@@ -629,7 +624,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 78,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:beef_steak"
     },
     {
       "id": "turkey_schnitzel",
@@ -901,10 +897,7 @@
       "canonicalName": "עדשים",
       "categoryId": "pantry",
       "subcategoryId": null,
-      "aliases": [
-        "עדשים ירוקות",
-        "עדשים כתומות"
-      ],
+      "aliases": [],
       "keywords": [
         "קטניות",
         "מרק",
@@ -912,7 +905,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 82,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:dry_lentils"
     },
     {
       "id": "dry_chickpeas",
@@ -938,8 +932,7 @@
       "categoryId": "pantry",
       "subcategoryId": null,
       "aliases": [
-        "טחינה",
-        "טחינה מלאה"
+        "טחינה"
       ],
       "keywords": [
         "שומשום",
@@ -948,7 +941,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 91,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:tahini_raw"
     },
     {
       "id": "peanut_butter",
@@ -1281,7 +1275,6 @@
       "categoryId": "pantry",
       "subcategoryId": "pantry.breakfast",
       "aliases": [
-        "ריבה",
         "קונפיטורת תות"
       ],
       "keywords": [
@@ -1291,7 +1284,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 80,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:strawberry_jam"
     },
     {
       "id": "bamba",
@@ -1351,8 +1345,7 @@
       "categoryId": "snacks",
       "subcategoryId": null,
       "aliases": [
-        "חפיסת שוקולד",
-        "שוקולד חלב"
+        "חפיסת שוקולד"
       ],
       "keywords": [
         "מתוק",
@@ -1361,7 +1354,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 95,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:chocolate_bar"
     },
     {
       "id": "cookies",
@@ -1387,8 +1381,7 @@
       "categoryId": "snacks",
       "subcategoryId": null,
       "aliases": [
-        "וופלים",
-        "ופל שוקולד"
+        "וופלים"
       ],
       "keywords": [
         "מתוק",
@@ -1397,7 +1390,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 84,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:wafers"
     },
     {
       "id": "mineral_water",
@@ -1497,8 +1491,6 @@
       "categoryId": "drinks",
       "subcategoryId": null,
       "aliases": [
-        "תיונים",
-        "שקיקי תה",
         "תה"
       ],
       "keywords": [
@@ -1508,7 +1500,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 86,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:black_tea"
     },
     {
       "id": "flour_all_purpose",
@@ -1553,7 +1546,6 @@
       "categoryId": "pantry",
       "subcategoryId": "pantry.baking",
       "aliases": [
-        "סוכר לבן",
         "שקית סוכר"
       ],
       "keywords": [
@@ -1564,7 +1556,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 99,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:sugar"
     },
     {
       "id": "baking_powder",
@@ -1677,9 +1670,7 @@
       "canonicalName": "פלפל שחור",
       "categoryId": "pantry",
       "subcategoryId": "pantry.spices",
-      "aliases": [
-        "פלפל שחור טחון"
-      ],
+      "aliases": [],
       "keywords": [
         "תבלין",
         "תיבול",
@@ -1687,7 +1678,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 96,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:black_pepper"
     },
     {
       "id": "sweet_paprika",
@@ -1712,9 +1704,7 @@
       "canonicalName": "כמון",
       "categoryId": "pantry",
       "subcategoryId": "pantry.spices",
-      "aliases": [
-        "כמון טחון"
-      ],
+      "aliases": [],
       "keywords": [
         "תבלין",
         "תיבול",
@@ -1722,16 +1712,15 @@
       ],
       "brandTerms": [],
       "popularityScore": 87,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:cumin"
     },
     {
       "id": "turmeric",
       "canonicalName": "כורכום",
       "categoryId": "pantry",
       "subcategoryId": "pantry.spices",
-      "aliases": [
-        "כורכום טחון"
-      ],
+      "aliases": [],
       "keywords": [
         "תבלין",
         "תיבול",
@@ -1739,16 +1728,15 @@
       ],
       "brandTerms": [],
       "popularityScore": 88,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:turmeric"
     },
     {
       "id": "cinnamon",
       "canonicalName": "קינמון",
       "categoryId": "pantry",
       "subcategoryId": "pantry.spices",
-      "aliases": [
-        "קינמון טחון"
-      ],
+      "aliases": [],
       "keywords": [
         "תבלין",
         "אפייה",
@@ -1756,7 +1744,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 90,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:cinnamon"
     },
     {
       "id": "zaatar",
@@ -1798,10 +1787,7 @@
       "canonicalName": "ג׳ל כביסה",
       "categoryId": "cleaning",
       "subcategoryId": null,
-      "aliases": [
-        "נוזל כביסה",
-        "אבקת כביסה"
-      ],
+      "aliases": [],
       "keywords": [
         "ניקיון",
         "מכונת כביסה",
@@ -1809,7 +1795,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 96,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:laundry_detergent"
     },
     {
       "id": "fabric_softener",
@@ -1870,7 +1857,6 @@
       "categoryId": "cleaning",
       "subcategoryId": null,
       "aliases": [
-        "קפסולות למדיח",
         "טבליות למדיח כלים"
       ],
       "keywords": [
@@ -1880,7 +1866,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 88,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:dishwasher_tablets"
     },
     {
       "id": "toilet_paper",
@@ -1944,7 +1931,8 @@
       "subcategoryId": "household.paper_products",
       "aliases": [
         "נייר אפיה",
-        "נייר לתנור"
+        "נייר לתנור",
+        "נייר פרגמנט"
       ],
       "keywords": [
         "מוצרי נייר",
@@ -1953,7 +1941,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 85,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:baking_paper"
     },
     {
       "id": "trash_bags",
@@ -2087,10 +2076,7 @@
       "canonicalName": "דאודורנט",
       "categoryId": "personal_care",
       "subcategoryId": null,
-      "aliases": [
-        "דאודורנט ספריי",
-        "דאודורנט סטיק"
-      ],
+      "aliases": [],
       "keywords": [
         "היגיינה",
         "טיפוח",
@@ -2098,7 +2084,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 93,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:deodorant"
     },
     {
       "id": "paracetamol",
@@ -2272,8 +2259,7 @@
       "categoryId": "baby",
       "subcategoryId": null,
       "aliases": [
-        "מזון תינוקות",
-        "מחית פירות לתינוק"
+        "מזון תינוקות"
       ],
       "keywords": [
         "תינוק",
@@ -2284,7 +2270,8 @@
         "גרבר"
       ],
       "popularityScore": 76,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:baby_puree"
     },
     {
       "id": "baby_shampoo",
@@ -2419,8 +2406,7 @@
       "categoryId": "pets",
       "subcategoryId": "pets.supplies",
       "aliases": [
-        "אמפולה נגד פרעושים",
-        "חומר נגד קרציות"
+        "אמפולה נגד פרעושים"
       ],
       "keywords": [
         "כלב",
@@ -2429,7 +2415,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 70,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:pet_flea_treatment"
     },
     {
       "id": "disposable_cups",
@@ -2437,8 +2424,7 @@
       "categoryId": "household",
       "subcategoryId": "household.disposable_products",
       "aliases": [
-        "כוסות חד פעמי",
-        "כוסות פלסטיק"
+        "כוסות חד פעמי"
       ],
       "keywords": [
         "אירוח",
@@ -2447,7 +2433,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 94,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:disposable_cups"
     },
     {
       "id": "disposable_plates",
@@ -2455,8 +2442,7 @@
       "categoryId": "household",
       "subcategoryId": "household.disposable_products",
       "aliases": [
-        "צלחות חד פעמי",
-        "צלחות פלסטיק"
+        "צלחות חד פעמי"
       ],
       "keywords": [
         "אירוח",
@@ -2465,7 +2451,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 92,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:disposable_plates"
     },
     {
       "id": "disposable_forks",
@@ -2473,8 +2460,7 @@
       "categoryId": "household",
       "subcategoryId": "household.disposable_products",
       "aliases": [
-        "מזלגות חד פעמי",
-        "מזלגות פלסטיק"
+        "מזלגות חד פעמי"
       ],
       "keywords": [
         "אירוח",
@@ -2483,7 +2469,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 86,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:disposable_forks"
     },
     {
       "id": "disposable_knives",
@@ -2491,8 +2478,7 @@
       "categoryId": "household",
       "subcategoryId": "household.disposable_products",
       "aliases": [
-        "סכינים חד פעמי",
-        "סכינים פלסטיק"
+        "סכינים חד פעמי"
       ],
       "keywords": [
         "אירוח",
@@ -2501,7 +2487,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 84,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:disposable_knives"
     },
     {
       "id": "disposable_spoons",
@@ -2509,8 +2496,7 @@
       "categoryId": "household",
       "subcategoryId": "household.disposable_products",
       "aliases": [
-        "כפיות חד פעמי",
-        "כפיות פלסטיק"
+        "כפיות חד פעמי"
       ],
       "keywords": [
         "אירוח",
@@ -2519,7 +2505,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 87,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:disposable_spoons"
     },
     {
       "id": "napkins",
@@ -2580,10 +2567,7 @@
       "canonicalName": "שקיות אוכל",
       "categoryId": "household",
       "subcategoryId": "household.storage",
-      "aliases": [
-        "שקיות סנדוויץ׳",
-        "שקיות כריכים"
-      ],
+      "aliases": [],
       "keywords": [
         "מטבח",
         "אחסון",
@@ -2591,7 +2575,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 88,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:food_storage_bags"
     },
     {
       "id": "batteries_aa",
@@ -3482,9 +3467,7 @@
       "canonicalName": "קוקוס טחון",
       "categoryId": "pantry",
       "subcategoryId": "pantry.baking",
-      "aliases": [
-        "פתיתי קוקוס"
-      ],
+      "aliases": [],
       "keywords": [
         "קוקוס",
         "אפייה",
@@ -3492,7 +3475,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 66,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:shredded_coconut"
     },
     {
       "id": "cake_sprinkles",
@@ -3533,9 +3517,7 @@
       "canonicalName": "פפריקה חריפה",
       "categoryId": "pantry",
       "subcategoryId": "pantry.spices",
-      "aliases": [
-        "פפריקה חריפה טחונה"
-      ],
+      "aliases": [],
       "keywords": [
         "תבלין",
         "חריף",
@@ -3543,16 +3525,15 @@
       ],
       "brandTerms": [],
       "popularityScore": 68,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:hot_paprika"
     },
     {
       "id": "white_pepper",
       "canonicalName": "פלפל לבן",
       "categoryId": "pantry",
       "subcategoryId": "pantry.spices",
-      "aliases": [
-        "פלפל לבן טחון"
-      ],
+      "aliases": [],
       "keywords": [
         "תבלין",
         "פלפל",
@@ -3560,7 +3541,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 62,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:white_pepper"
     },
     {
       "id": "garlic_powder",
@@ -3737,9 +3719,7 @@
       "canonicalName": "אגוז מוסקט",
       "categoryId": "pantry",
       "subcategoryId": "pantry.spices",
-      "aliases": [
-        "מוסקט טחון"
-      ],
+      "aliases": [],
       "keywords": [
         "תבלין",
         "אפייה",
@@ -3747,7 +3727,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 62,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:nutmeg"
     },
     {
       "id": "cloves_spice",
@@ -4337,9 +4318,7 @@
       "canonicalName": "פטריות טריות",
       "categoryId": "fruits_vegetables",
       "subcategoryId": "fruits_vegetables.vegetables",
-      "aliases": [
-        "פטריות שמפיניון"
-      ],
+      "aliases": [],
       "keywords": [
         "ירק",
         "בישול",
@@ -4347,7 +4326,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 78,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:fresh_mushrooms"
     },
     {
       "id": "celery",
@@ -5051,9 +5031,7 @@
       "canonicalName": "קרואסון",
       "categoryId": "bakery",
       "subcategoryId": null,
-      "aliases": [
-        "קרואסון חמאה"
-      ],
+      "aliases": [],
       "keywords": [
         "מאפה",
         "חמאה",
@@ -5061,7 +5039,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 72,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:croissant"
     },
     {
       "id": "rugelach",
@@ -5085,9 +5064,7 @@
       "canonicalName": "עוגת שמרים",
       "categoryId": "bakery",
       "subcategoryId": null,
-      "aliases": [
-        "עוגת שמרים שוקולד"
-      ],
+      "aliases": [],
       "keywords": [
         "עוגה",
         "מאפייה",
@@ -5095,7 +5072,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 68,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:yeast_cake"
     },
     {
       "id": "chicken_wings",
@@ -5306,9 +5284,7 @@
       "canonicalName": "כבד בקר",
       "categoryId": "meat_fish",
       "subcategoryId": "meat_fish.meat",
-      "aliases": [
-        "כבד עגל"
-      ],
+      "aliases": [],
       "keywords": [
         "בקר",
         "בשר",
@@ -5316,7 +5292,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 58,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:beef_liver"
     },
     {
       "id": "lamb_chops",
@@ -6224,9 +6201,7 @@
       "canonicalName": "פופקורן",
       "categoryId": "snacks",
       "subcategoryId": null,
-      "aliases": [
-        "תירס לפופקורן"
-      ],
+      "aliases": [],
       "keywords": [
         "חטיף",
         "מלוח",
@@ -6234,7 +6209,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 78,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:popcorn"
     },
     {
       "id": "crackers",
@@ -6919,9 +6895,7 @@
       "canonicalName": "קצף גילוח",
       "categoryId": "personal_care",
       "subcategoryId": null,
-      "aliases": [
-        "ג׳ל גילוח"
-      ],
+      "aliases": [],
       "keywords": [
         "טיפוח",
         "גילוח",
@@ -6929,7 +6903,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 70,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:shaving_foam"
     },
     {
       "id": "razors",
@@ -7530,9 +7505,7 @@
       "canonicalName": "כלוב נשיאה לחיות מחמד",
       "categoryId": "pets",
       "subcategoryId": "pets.supplies",
-      "aliases": [
-        "תיק נשיאה לחיות מחמד"
-      ],
+      "aliases": [],
       "keywords": [
         "חיות מחמד",
         "נסיעה",
@@ -7540,7 +7513,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 54,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:pet_carrier"
     },
     {
       "id": "puppy_training_pads",
@@ -8171,8 +8145,7 @@
       "categoryId": "pharmacy",
       "subcategoryId": null,
       "aliases": [
-        "תרופה לצרבת",
-        "טבליות לצרבת"
+        "תרופה לצרבת"
       ],
       "keywords": [
         "צרבת",
@@ -8180,7 +8153,8 @@
       ],
       "brandTerms": [],
       "popularityScore": 79,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:antacid"
     },
     {
       "id": "oral_rehydration_solution",
@@ -8603,16 +8577,15 @@
       "canonicalName": "לחמניות בריוש",
       "categoryId": "bakery",
       "subcategoryId": null,
-      "aliases": [
-        "בריוש"
-      ],
+      "aliases": [],
       "keywords": [
         "מאפייה",
         "לחמנייה מתוקה"
       ],
       "brandTerms": [],
       "popularityScore": 71,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:brioche_rolls"
     },
     {
       "id": "english_muffins",
@@ -9014,16 +8987,15 @@
       "canonicalName": "חטיף תירס לתינוקות",
       "categoryId": "baby",
       "subcategoryId": null,
-      "aliases": [
-        "חטיף תינוקות תפוח"
-      ],
+      "aliases": [],
       "keywords": [
         "מזון תינוקות",
         "נשנוש"
       ],
       "brandTerms": [],
       "popularityScore": 71,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:baby_snack_puffs"
     },
     {
       "id": "baby_rice_cakes",
@@ -9303,16 +9275,15 @@
       "canonicalName": "חציר למכרסמים",
       "categoryId": "pets",
       "subcategoryId": "pets.supplies",
-      "aliases": [
-        "חציר לארנבים"
-      ],
+      "aliases": [],
       "keywords": [
         "מזון לארנב",
         "מכרסמים"
       ],
       "brandTerms": [],
       "popularityScore": 58,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:small_pet_hay"
     },
     {
       "id": "aquarium_water_conditioner",
@@ -9367,34 +9338,30 @@
       "canonicalName": "רתמה לחיות מחמד",
       "categoryId": "pets",
       "subcategoryId": "pets.supplies",
-      "aliases": [
-        "רתמה לכלב",
-        "רתמה לחתול"
-      ],
+      "aliases": [],
       "keywords": [
         "טיול",
         "רצועה"
       ],
       "brandTerms": [],
       "popularityScore": 69,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:pet_harness"
     },
     {
       "id": "pet_bed",
       "canonicalName": "מיטה לחיות מחמד",
       "categoryId": "pets",
       "subcategoryId": "pets.supplies",
-      "aliases": [
-        "מיטה לכלב",
-        "מיטה לחתול"
-      ],
+      "aliases": [],
       "keywords": [
         "שינה",
         "ריפוד"
       ],
       "brandTerms": [],
       "popularityScore": 72,
-      "isActive": true
+      "isActive": true,
+      "provenance": "WT-031C editorial refinement of production catalog v5:pet_bed"
     },
     {
       "id": "pet_grooming_brush",
@@ -10967,6 +10934,1037 @@
       "brandTerms": [],
       "popularityScore": 66,
       "isActive": true
+    },
+    {
+      "id": "hamburger_buns",
+      "canonicalName": "לחמניות המבורגר",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "מאפייה",
+        "כריך",
+        "לחם"
+      ],
+      "brandTerms": [],
+      "popularityScore": 90,
+      "isActive": true,
+      "semanticKey": "bread_rolls",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 bread_rolls.aliases",
+      "variantDescriptors": [
+        "לחמניות המבורגר"
+      ]
+    },
+    {
+      "id": "sourdough_starter",
+      "canonicalName": "מחמצת",
+      "categoryId": "pantry",
+      "subcategoryId": "pantry.baking",
+      "aliases": [],
+      "keywords": [
+        "אפייה",
+        "לחם"
+      ],
+      "brandTerms": [],
+      "popularityScore": 86,
+      "isActive": true,
+      "semanticKey": "sourdough_starter",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 bread_sourdough.aliases"
+    },
+    {
+      "id": "butter_croissant",
+      "canonicalName": "קרואסון חמאה",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "מאפה",
+        "חמאה",
+        "ארוחת בוקר"
+      ],
+      "brandTerms": [],
+      "popularityScore": 72,
+      "isActive": true,
+      "semanticKey": "croissant",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 croissant.aliases",
+      "variantDescriptors": [
+        "קרואסון חמאה"
+      ]
+    },
+    {
+      "id": "chocolate_yeast_cake",
+      "canonicalName": "עוגת שמרים שוקולד",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "עוגה",
+        "מאפייה",
+        "מתוק"
+      ],
+      "brandTerms": [],
+      "popularityScore": 68,
+      "isActive": true,
+      "semanticKey": "yeast_cake",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 yeast_cake.aliases",
+      "variantDescriptors": [
+        "עוגת שמרים שוקולד"
+      ]
+    },
+    {
+      "id": "brioche",
+      "canonicalName": "בריוש",
+      "categoryId": "bakery",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "מאפייה",
+        "לחמנייה מתוקה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 71,
+      "isActive": true,
+      "semanticKey": "brioche",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 brioche_rolls.aliases"
+    },
+    {
+      "id": "green_grapes",
+      "canonicalName": "ענבים ירוקים",
+      "categoryId": "fruits_vegetables",
+      "subcategoryId": "fruits_vegetables.fruits",
+      "aliases": [],
+      "keywords": [
+        "פרי",
+        "פירות",
+        "נשנוש"
+      ],
+      "brandTerms": [],
+      "popularityScore": 87,
+      "isActive": true,
+      "semanticKey": "grapes",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 grapes.aliases",
+      "variantDescriptors": [
+        "ענבים ירוקים"
+      ]
+    },
+    {
+      "id": "black_grapes",
+      "canonicalName": "ענבים שחורים",
+      "categoryId": "fruits_vegetables",
+      "subcategoryId": "fruits_vegetables.fruits",
+      "aliases": [],
+      "keywords": [
+        "פרי",
+        "פירות",
+        "נשנוש"
+      ],
+      "brandTerms": [],
+      "popularityScore": 87,
+      "isActive": true,
+      "semanticKey": "grapes",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 grapes.aliases",
+      "variantDescriptors": [
+        "ענבים שחורים"
+      ]
+    },
+    {
+      "id": "lettuce_hearts",
+      "canonicalName": "לבבות חסה",
+      "categoryId": "fruits_vegetables",
+      "subcategoryId": "fruits_vegetables.vegetables",
+      "aliases": [],
+      "keywords": [
+        "ירק",
+        "סלט",
+        "עלים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 88,
+      "isActive": true,
+      "semanticKey": "lettuce",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 lettuce.aliases",
+      "variantDescriptors": [
+        "לבבות חסה"
+      ]
+    },
+    {
+      "id": "champignon_mushrooms",
+      "canonicalName": "פטריות שמפיניון",
+      "categoryId": "fruits_vegetables",
+      "subcategoryId": "fruits_vegetables.vegetables",
+      "aliases": [],
+      "keywords": [
+        "ירק",
+        "בישול",
+        "טרי"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true,
+      "semanticKey": "fresh_mushrooms",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 fresh_mushrooms.aliases",
+      "variantDescriptors": [
+        "פטריות שמפיניון"
+      ]
+    },
+    {
+      "id": "entrecote",
+      "canonicalName": "אנטרקוט",
+      "categoryId": "meat_fish",
+      "subcategoryId": "meat_fish.meat",
+      "aliases": [],
+      "keywords": [
+        "בקר",
+        "בשר",
+        "קצבייה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true,
+      "semanticKey": "beef_steak",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 beef_steak.aliases",
+      "variantDescriptors": [
+        "אנטרקוט"
+      ]
+    },
+    {
+      "id": "calf_liver",
+      "canonicalName": "כבד עגל",
+      "categoryId": "meat_fish",
+      "subcategoryId": "meat_fish.meat",
+      "aliases": [],
+      "keywords": [
+        "בקר",
+        "בשר",
+        "צלייה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 58,
+      "isActive": true,
+      "semanticKey": "beef_liver",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 beef_liver.aliases",
+      "variantDescriptors": [
+        "כבד עגל"
+      ]
+    },
+    {
+      "id": "green_lentils",
+      "canonicalName": "עדשים ירוקות",
+      "categoryId": "pantry",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "קטניות",
+        "מרק",
+        "מזווה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 82,
+      "isActive": true,
+      "semanticKey": "dry_lentils",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 dry_lentils.aliases",
+      "variantDescriptors": [
+        "עדשים ירוקות"
+      ]
+    },
+    {
+      "id": "orange_lentils",
+      "canonicalName": "עדשים כתומות",
+      "categoryId": "pantry",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "קטניות",
+        "מרק",
+        "מזווה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 82,
+      "isActive": true,
+      "semanticKey": "dry_lentils",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 dry_lentils.aliases",
+      "variantDescriptors": [
+        "עדשים כתומות"
+      ]
+    },
+    {
+      "id": "whole_tahini",
+      "canonicalName": "טחינה מלאה",
+      "categoryId": "pantry",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "שומשום",
+        "ממרח",
+        "מזווה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 91,
+      "isActive": true,
+      "semanticKey": "tahini_raw",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 tahini_raw.aliases",
+      "variantDescriptors": [
+        "טחינה מלאה"
+      ]
+    },
+    {
+      "id": "white_sugar",
+      "canonicalName": "סוכר לבן",
+      "categoryId": "pantry",
+      "subcategoryId": "pantry.baking",
+      "aliases": [],
+      "keywords": [
+        "אפייה",
+        "המתקה",
+        "קפה",
+        "תה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 99,
+      "isActive": true,
+      "semanticKey": "sugar",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 sugar.aliases",
+      "variantDescriptors": [
+        "סוכר לבן"
+      ]
+    },
+    {
+      "id": "popcorn_kernels",
+      "canonicalName": "תירס לפופקורן",
+      "categoryId": "pantry",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "תירס",
+        "נשנוש"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true,
+      "semanticKey": "popcorn",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 popcorn.aliases",
+      "variantDescriptors": [
+        "תירס לפופקורן"
+      ]
+    },
+    {
+      "id": "ground_black_pepper",
+      "canonicalName": "פלפל שחור טחון",
+      "categoryId": "pantry",
+      "subcategoryId": "pantry.spices",
+      "aliases": [],
+      "keywords": [
+        "תבלין",
+        "תיבול",
+        "בישול"
+      ],
+      "brandTerms": [],
+      "popularityScore": 96,
+      "isActive": true,
+      "semanticKey": "black_pepper",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 black_pepper.aliases",
+      "variantDescriptors": [
+        "פלפל שחור טחון"
+      ]
+    },
+    {
+      "id": "ground_cumin",
+      "canonicalName": "כמון טחון",
+      "categoryId": "pantry",
+      "subcategoryId": "pantry.spices",
+      "aliases": [],
+      "keywords": [
+        "תבלין",
+        "תיבול",
+        "בישול"
+      ],
+      "brandTerms": [],
+      "popularityScore": 87,
+      "isActive": true,
+      "semanticKey": "cumin",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 cumin.aliases",
+      "variantDescriptors": [
+        "כמון טחון"
+      ]
+    },
+    {
+      "id": "ground_turmeric",
+      "canonicalName": "כורכום טחון",
+      "categoryId": "pantry",
+      "subcategoryId": "pantry.spices",
+      "aliases": [],
+      "keywords": [
+        "תבלין",
+        "תיבול",
+        "בישול"
+      ],
+      "brandTerms": [],
+      "popularityScore": 88,
+      "isActive": true,
+      "semanticKey": "turmeric",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 turmeric.aliases",
+      "variantDescriptors": [
+        "כורכום טחון"
+      ]
+    },
+    {
+      "id": "ground_cinnamon",
+      "canonicalName": "קינמון טחון",
+      "categoryId": "pantry",
+      "subcategoryId": "pantry.spices",
+      "aliases": [],
+      "keywords": [
+        "תבלין",
+        "אפייה",
+        "מתוק"
+      ],
+      "brandTerms": [],
+      "popularityScore": 90,
+      "isActive": true,
+      "semanticKey": "cinnamon",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 cinnamon.aliases",
+      "variantDescriptors": [
+        "קינמון טחון"
+      ]
+    },
+    {
+      "id": "ground_hot_paprika",
+      "canonicalName": "פפריקה חריפה טחונה",
+      "categoryId": "pantry",
+      "subcategoryId": "pantry.spices",
+      "aliases": [],
+      "keywords": [
+        "תבלין",
+        "חריף",
+        "פלפל"
+      ],
+      "brandTerms": [],
+      "popularityScore": 68,
+      "isActive": true,
+      "semanticKey": "hot_paprika",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 hot_paprika.aliases",
+      "variantDescriptors": [
+        "פפריקה חריפה טחונה"
+      ]
+    },
+    {
+      "id": "ground_white_pepper",
+      "canonicalName": "פלפל לבן טחון",
+      "categoryId": "pantry",
+      "subcategoryId": "pantry.spices",
+      "aliases": [],
+      "keywords": [
+        "תבלין",
+        "פלפל",
+        "בישול"
+      ],
+      "brandTerms": [],
+      "popularityScore": 62,
+      "isActive": true,
+      "semanticKey": "white_pepper",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 white_pepper.aliases",
+      "variantDescriptors": [
+        "פלפל לבן טחון"
+      ]
+    },
+    {
+      "id": "ground_nutmeg",
+      "canonicalName": "מוסקט טחון",
+      "categoryId": "pantry",
+      "subcategoryId": "pantry.spices",
+      "aliases": [],
+      "keywords": [
+        "תבלין",
+        "אפייה",
+        "רוטב"
+      ],
+      "brandTerms": [],
+      "popularityScore": 62,
+      "isActive": true,
+      "semanticKey": "nutmeg",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 nutmeg.aliases",
+      "variantDescriptors": [
+        "מוסקט טחון"
+      ]
+    },
+    {
+      "id": "coconut_flakes",
+      "canonicalName": "פתיתי קוקוס",
+      "categoryId": "pantry",
+      "subcategoryId": "pantry.baking",
+      "aliases": [],
+      "keywords": [
+        "קוקוס",
+        "אפייה",
+        "קינוח"
+      ],
+      "brandTerms": [],
+      "popularityScore": 66,
+      "isActive": true,
+      "semanticKey": "shredded_coconut",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 shredded_coconut.aliases",
+      "variantDescriptors": [
+        "פתיתי קוקוס"
+      ]
+    },
+    {
+      "id": "buckwheat_flour",
+      "canonicalName": "קמח כוסמת",
+      "categoryId": "pantry",
+      "subcategoryId": "pantry.baking",
+      "aliases": [
+        "קמח מכוסמת"
+      ],
+      "keywords": [
+        "אפייה",
+        "כוסמת"
+      ],
+      "brandTerms": [],
+      "popularityScore": 78,
+      "isActive": true,
+      "semanticKey": "buckwheat_flour",
+      "provenance": "PRODUCT_CATALOG_GUIDE.md lines 191-203 reviewed canonical example"
+    },
+    {
+      "id": "hazelnut_spread",
+      "canonicalName": "ממרח אגוזי לוז",
+      "categoryId": "pantry",
+      "subcategoryId": "pantry.breakfast",
+      "aliases": [],
+      "keywords": [],
+      "brandTerms": [
+        "נוטלה"
+      ],
+      "popularityScore": 82,
+      "isActive": true,
+      "semanticKey": "hazelnut_spread",
+      "provenance": "docs/Specifications/CanonicalProductCatalogSpecification.md sections 6.1-6.2; popularity baseline from catalog v5 chocolate_spread"
+    },
+    {
+      "id": "dried_fruit",
+      "canonicalName": "פירות יבשים",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [],
+      "brandTerms": [],
+      "popularityScore": 57,
+      "isActive": true,
+      "semanticKey": "dried_fruit",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 chocolate_coated_raisins.keywords"
+    },
+    {
+      "id": "milk_chocolate",
+      "canonicalName": "שוקולד חלב",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "מתוק",
+        "ממתק",
+        "קינוח"
+      ],
+      "brandTerms": [],
+      "popularityScore": 95,
+      "isActive": true,
+      "semanticKey": "chocolate_bar",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 chocolate_bar.aliases",
+      "variantDescriptors": [
+        "שוקולד חלב"
+      ]
+    },
+    {
+      "id": "chocolate_wafers",
+      "canonicalName": "ופל שוקולד",
+      "categoryId": "snacks",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "מתוק",
+        "חטיף",
+        "קפה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 84,
+      "isActive": true,
+      "semanticKey": "wafers",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 wafers.aliases",
+      "variantDescriptors": [
+        "ופל שוקולד"
+      ]
+    },
+    {
+      "id": "coffee",
+      "canonicalName": "קפה",
+      "categoryId": "drinks",
+      "subcategoryId": "drinks.coffee",
+      "aliases": [],
+      "keywords": [],
+      "brandTerms": [],
+      "popularityScore": 93,
+      "isActive": true,
+      "semanticKey": "coffee",
+      "provenance": "docs/Product/PilotProductCatalog.md canonical bilingual product prd_pilot_0008; popularity baseline from catalog v5 instant_coffee"
+    },
+    {
+      "id": "tea_bags",
+      "canonicalName": "תיונים",
+      "categoryId": "drinks",
+      "subcategoryId": null,
+      "aliases": [
+        "שקיקי תה"
+      ],
+      "keywords": [
+        "שתייה חמה",
+        "חליטה",
+        "קפאין"
+      ],
+      "brandTerms": [],
+      "popularityScore": 86,
+      "isActive": true,
+      "semanticKey": "black_tea",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 black_tea.aliases",
+      "variantDescriptors": [
+        "תיונים"
+      ]
+    },
+    {
+      "id": "laundry_powder",
+      "canonicalName": "אבקת כביסה",
+      "categoryId": "cleaning",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "ניקיון",
+        "מכונת כביסה",
+        "בגדים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 96,
+      "isActive": true,
+      "semanticKey": "laundry_detergent",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 laundry_detergent.aliases",
+      "variantDescriptors": [
+        "אבקת כביסה"
+      ]
+    },
+    {
+      "id": "laundry_liquid",
+      "canonicalName": "נוזל כביסה",
+      "categoryId": "cleaning",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "ניקיון",
+        "מכונת כביסה",
+        "בגדים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 96,
+      "isActive": true,
+      "semanticKey": "laundry_detergent",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 laundry_detergent.aliases",
+      "variantDescriptors": [
+        "נוזל כביסה"
+      ]
+    },
+    {
+      "id": "dishwasher_capsules",
+      "canonicalName": "קפסולות למדיח",
+      "categoryId": "cleaning",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "ניקיון",
+        "מדיח כלים",
+        "מטבח"
+      ],
+      "brandTerms": [],
+      "popularityScore": 88,
+      "isActive": true,
+      "semanticKey": "dishwasher_tablets",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 dishwasher_tablets.aliases",
+      "variantDescriptors": [
+        "קפסולות למדיח"
+      ]
+    },
+    {
+      "id": "deodorant_spray",
+      "canonicalName": "דאודורנט ספריי",
+      "categoryId": "personal_care",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "היגיינה",
+        "טיפוח",
+        "ריח"
+      ],
+      "brandTerms": [],
+      "popularityScore": 93,
+      "isActive": true,
+      "semanticKey": "deodorant",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 deodorant.aliases",
+      "variantDescriptors": [
+        "דאודורנט ספריי"
+      ]
+    },
+    {
+      "id": "deodorant_stick",
+      "canonicalName": "דאודורנט סטיק",
+      "categoryId": "personal_care",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "היגיינה",
+        "טיפוח",
+        "ריח"
+      ],
+      "brandTerms": [],
+      "popularityScore": 93,
+      "isActive": true,
+      "semanticKey": "deodorant",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 deodorant.aliases",
+      "variantDescriptors": [
+        "דאודורנט סטיק"
+      ]
+    },
+    {
+      "id": "shaving_gel",
+      "canonicalName": "ג׳ל גילוח",
+      "categoryId": "personal_care",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "טיפוח",
+        "גילוח",
+        "פנים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 70,
+      "isActive": true,
+      "semanticKey": "shaving_foam",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 shaving_foam.aliases",
+      "variantDescriptors": [
+        "ג׳ל גילוח"
+      ]
+    },
+    {
+      "id": "fruit_baby_puree",
+      "canonicalName": "מחית פירות לתינוק",
+      "categoryId": "baby",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "תינוק",
+        "האכלה",
+        "טעימות"
+      ],
+      "brandTerms": [],
+      "popularityScore": 76,
+      "isActive": true,
+      "semanticKey": "baby_puree",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 baby_puree.aliases",
+      "variantDescriptors": [
+        "מחית פירות לתינוק"
+      ]
+    },
+    {
+      "id": "plastic_disposable_cups",
+      "canonicalName": "כוסות פלסטיק",
+      "categoryId": "household",
+      "subcategoryId": "household.disposable_products",
+      "aliases": [],
+      "keywords": [
+        "אירוח",
+        "פיקניק",
+        "כלים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 94,
+      "isActive": true,
+      "semanticKey": "disposable_cups",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 disposable_cups.aliases",
+      "variantDescriptors": [
+        "כוסות פלסטיק"
+      ]
+    },
+    {
+      "id": "plastic_disposable_plates",
+      "canonicalName": "צלחות פלסטיק",
+      "categoryId": "household",
+      "subcategoryId": "household.disposable_products",
+      "aliases": [],
+      "keywords": [
+        "אירוח",
+        "פיקניק",
+        "כלים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 92,
+      "isActive": true,
+      "semanticKey": "disposable_plates",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 disposable_plates.aliases",
+      "variantDescriptors": [
+        "צלחות פלסטיק"
+      ]
+    },
+    {
+      "id": "plastic_disposable_forks",
+      "canonicalName": "מזלגות פלסטיק",
+      "categoryId": "household",
+      "subcategoryId": "household.disposable_products",
+      "aliases": [],
+      "keywords": [
+        "אירוח",
+        "פיקניק",
+        "סכו״ם"
+      ],
+      "brandTerms": [],
+      "popularityScore": 86,
+      "isActive": true,
+      "semanticKey": "disposable_forks",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 disposable_forks.aliases",
+      "variantDescriptors": [
+        "מזלגות פלסטיק"
+      ]
+    },
+    {
+      "id": "plastic_disposable_knives",
+      "canonicalName": "סכינים פלסטיק",
+      "categoryId": "household",
+      "subcategoryId": "household.disposable_products",
+      "aliases": [],
+      "keywords": [
+        "אירוח",
+        "פיקניק",
+        "סכו״ם"
+      ],
+      "brandTerms": [],
+      "popularityScore": 84,
+      "isActive": true,
+      "semanticKey": "disposable_knives",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 disposable_knives.aliases",
+      "variantDescriptors": [
+        "סכינים פלסטיק"
+      ]
+    },
+    {
+      "id": "plastic_disposable_spoons",
+      "canonicalName": "כפיות פלסטיק",
+      "categoryId": "household",
+      "subcategoryId": "household.disposable_products",
+      "aliases": [],
+      "keywords": [
+        "אירוח",
+        "קפה",
+        "סכו״ם"
+      ],
+      "brandTerms": [],
+      "popularityScore": 87,
+      "isActive": true,
+      "semanticKey": "disposable_spoons",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 disposable_spoons.aliases",
+      "variantDescriptors": [
+        "כפיות פלסטיק"
+      ]
+    },
+    {
+      "id": "sandwich_bags",
+      "canonicalName": "שקיות סנדוויץ׳",
+      "categoryId": "household",
+      "subcategoryId": "household.storage",
+      "aliases": [
+        "שקיות כריכים"
+      ],
+      "keywords": [
+        "מטבח",
+        "אחסון",
+        "כריך"
+      ],
+      "brandTerms": [],
+      "popularityScore": 88,
+      "isActive": true,
+      "semanticKey": "food_storage_bags",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 food_storage_bags.aliases",
+      "variantDescriptors": [
+        "שקיות סנדוויץ׳"
+      ]
+    },
+    {
+      "id": "dog_harness",
+      "canonicalName": "רתמה לכלב",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [],
+      "keywords": [
+        "טיול",
+        "רצועה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 69,
+      "isActive": true,
+      "semanticKey": "pet_harness",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 pet_harness.aliases",
+      "variantDescriptors": [
+        "רתמה לכלב"
+      ]
+    },
+    {
+      "id": "cat_harness",
+      "canonicalName": "רתמה לחתול",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [],
+      "keywords": [
+        "טיול",
+        "רצועה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 69,
+      "isActive": true,
+      "semanticKey": "pet_harness",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 pet_harness.aliases",
+      "variantDescriptors": [
+        "רתמה לחתול"
+      ]
+    },
+    {
+      "id": "dog_bed",
+      "canonicalName": "מיטה לכלב",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [],
+      "keywords": [
+        "שינה",
+        "ריפוד"
+      ],
+      "brandTerms": [],
+      "popularityScore": 72,
+      "isActive": true,
+      "semanticKey": "pet_bed",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 pet_bed.aliases",
+      "variantDescriptors": [
+        "מיטה לכלב"
+      ]
+    },
+    {
+      "id": "cat_bed",
+      "canonicalName": "מיטה לחתול",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [],
+      "keywords": [
+        "שינה",
+        "ריפוד"
+      ],
+      "brandTerms": [],
+      "popularityScore": 72,
+      "isActive": true,
+      "semanticKey": "pet_bed",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 pet_bed.aliases",
+      "variantDescriptors": [
+        "מיטה לחתול"
+      ]
+    },
+    {
+      "id": "tick_treatment",
+      "canonicalName": "חומר נגד קרציות",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [],
+      "keywords": [
+        "כלב",
+        "חתול",
+        "חיות מחמד"
+      ],
+      "brandTerms": [],
+      "popularityScore": 70,
+      "isActive": true,
+      "semanticKey": "pet_parasite_treatment",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 pet_flea_treatment.aliases",
+      "variantDescriptors": [
+        "קרציות"
+      ]
+    },
+    {
+      "id": "rabbit_hay",
+      "canonicalName": "חציר לארנבים",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [],
+      "keywords": [
+        "מזון לארנב",
+        "מכרסמים"
+      ],
+      "brandTerms": [],
+      "popularityScore": 58,
+      "isActive": true,
+      "semanticKey": "small_pet_hay",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 small_pet_hay.aliases",
+      "variantDescriptors": [
+        "חציר לארנבים"
+      ]
+    },
+    {
+      "id": "soft_pet_carrier",
+      "canonicalName": "תיק נשיאה לחיות מחמד",
+      "categoryId": "pets",
+      "subcategoryId": "pets.supplies",
+      "aliases": [],
+      "keywords": [
+        "חיות מחמד",
+        "נסיעה",
+        "ציוד"
+      ],
+      "brandTerms": [],
+      "popularityScore": 54,
+      "isActive": true,
+      "semanticKey": "pet_carrier",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 pet_carrier.aliases",
+      "variantDescriptors": [
+        "תיק נשיאה לחיות מחמד"
+      ]
+    },
+    {
+      "id": "antacid_tablets",
+      "canonicalName": "טבליות לצרבת",
+      "categoryId": "pharmacy",
+      "subcategoryId": null,
+      "aliases": [],
+      "keywords": [
+        "צרבת",
+        "חומציות בקיבה"
+      ],
+      "brandTerms": [],
+      "popularityScore": 79,
+      "isActive": true,
+      "semanticKey": "antacid",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 antacid.aliases",
+      "variantDescriptors": [
+        "טבליות לצרבת"
+      ]
+    },
+    {
+      "id": "sliced_cheese",
+      "canonicalName": "פרוסות גבינה",
+      "categoryId": "dairy",
+      "subcategoryId": null,
+      "aliases": [
+        "גבינה לפרוסות"
+      ],
+      "keywords": [
+        "מוצרי חלב",
+        "טוסט",
+        "כריך"
+      ],
+      "brandTerms": [],
+      "popularityScore": 95,
+      "isActive": true,
+      "semanticKey": "yellow_cheese",
+      "provenance": "WayTask/Resources/product_catalog_he.json catalogVersion 5 yellow_cheese.aliases",
+      "variantDescriptors": [
+        "פרוסות גבינה"
+      ]
     }
   ]
 }

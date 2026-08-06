@@ -53,6 +53,14 @@ The release envelope owns `schemaVersion`, the next `catalogVersion`,
 `releaseId`, supported locales, and operations. It must advance the catalog by
 exactly one version.
 
+The first production example is
+`shared/catalog/releases/wt-031c-wave-1.json`. Its 53 additions are individually
+traced to repository evidence, and its companion
+`wt-031c-wave-1-withheld-review.json` records candidates that were not safe to
+import. `tools/catalog/releases/build-wt031c-wave-1.js` is a baseline-guarded
+editorial reproducibility utility, not a product generator; the checked-in release
+file is the immutable import input after catalog version 6 has shipped.
+
 ## Commands
 
 ### Validate

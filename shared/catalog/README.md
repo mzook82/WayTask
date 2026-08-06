@@ -21,6 +21,10 @@ metadata.
   reusable by Node, Swift, and future Kotlin tests.
 - `releases/wt-027b-wave-2.json` — reviewed 180-operation transactional source for
   released catalog revision 5.
+- `releases/wt-031c-wave-1.json` — first WT-031B editorial release: 53 traced
+  additions plus 46 compatible editorial replacements for catalog revision 6.
+- `releases/wt-031c-wave-1-withheld-review.json` — candidates excluded from the
+  first wave and the repository evidence still required before import.
 - `product-taxonomy-review.json` — non-runtime maintenance evidence containing the
   completed taxonomy decision for every production product.
 - `catalog-authoring-audit.jsonl` — append-only JSON Lines authoring history.
@@ -30,7 +34,7 @@ metadata.
 The iOS compatibility layer accepts:
 
 1. Canonical `schemaVersion: 1`, decoded directly from the JSON Schema shape. The
-   production Hebrew resource is catalog version 5 and taxonomy version 1.
+   production Hebrew resource is catalog version 6 and taxonomy version 1.
 2. The retired legacy v2 shape, identified by the absence of `schemaVersion`. Its
    `name` maps to `canonicalName`, `subcategoryId` maps to `null`, and `brandTerms`
    maps to an empty array. It remains supported and covered by an archived fixture.
@@ -102,3 +106,9 @@ WT-031B introduces the production editorial gate without adding catalog products
 the release remains catalog version 5 with 647 curated active products. Future
 expansion must use real editorial evidence and the locale-aware importer; generated
 filler, invented brands, unverified aliases, and fabricated barcodes are prohibited.
+
+WT-031C is the first release through that gate. It adds 53 source-traced product
+identities, retains every prior stable ID, and advances production to catalog
+version 6 with 700 active products. The release stops below its aspirational count
+because no larger unused approved source exists in the repository. Twenty candidates
+are withheld with explicit evidence gaps instead of being inferred or fabricated.

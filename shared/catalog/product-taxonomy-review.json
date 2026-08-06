@@ -1,9 +1,9 @@
 {
   "reviewVersion": 1,
-  "catalogVersion": 5,
+  "catalogVersion": 6,
   "taxonomyVersion": 1,
   "locale": "he-IL",
-  "productCount": 647,
+  "productCount": 700,
   "products": [
     {
       "productId": "bread_white",
@@ -170,7 +170,7 @@
       "previousLegacyCategoryId": "fruits",
       "canonicalCategoryId": "fruits_vegetables",
       "canonicalSubcategoryId": "fruits_vegetables.fruits",
-      "reviewStatus": "reclassified"
+      "reviewStatus": "confirmed"
     },
     {
       "productId": "watermelon",
@@ -220,7 +220,7 @@
       "previousLegacyCategoryId": "vegetables",
       "canonicalCategoryId": "fruits_vegetables",
       "canonicalSubcategoryId": "fruits_vegetables.vegetables",
-      "reviewStatus": "reclassified"
+      "reviewStatus": "confirmed"
     },
     {
       "productId": "chicken_breast",
@@ -255,7 +255,7 @@
       "previousLegacyCategoryId": "meat",
       "canonicalCategoryId": "meat_fish",
       "canonicalSubcategoryId": "meat_fish.meat",
-      "reviewStatus": "reclassified"
+      "reviewStatus": "confirmed"
     },
     {
       "productId": "turkey_schnitzel",
@@ -526,7 +526,7 @@
       "previousLegacyCategoryId": "breakfast",
       "canonicalCategoryId": "pantry",
       "canonicalSubcategoryId": "pantry.breakfast",
-      "reviewStatus": "reclassified",
+      "reviewStatus": "confirmed",
       "note": "Individually reviewed from legacy breakfast; assigned pantry / pantry.breakfast."
     },
     {
@@ -639,7 +639,7 @@
       "previousLegacyCategoryId": "baking",
       "canonicalCategoryId": "pantry",
       "canonicalSubcategoryId": "pantry.baking",
-      "reviewStatus": "reclassified"
+      "reviewStatus": "confirmed"
     },
     {
       "productId": "baking_powder",
@@ -689,7 +689,7 @@
       "previousLegacyCategoryId": "spices",
       "canonicalCategoryId": "pantry",
       "canonicalSubcategoryId": "pantry.spices",
-      "reviewStatus": "reclassified"
+      "reviewStatus": "confirmed"
     },
     {
       "productId": "sweet_paprika",
@@ -703,21 +703,21 @@
       "previousLegacyCategoryId": "spices",
       "canonicalCategoryId": "pantry",
       "canonicalSubcategoryId": "pantry.spices",
-      "reviewStatus": "reclassified"
+      "reviewStatus": "confirmed"
     },
     {
       "productId": "turmeric",
       "previousLegacyCategoryId": "spices",
       "canonicalCategoryId": "pantry",
       "canonicalSubcategoryId": "pantry.spices",
-      "reviewStatus": "reclassified"
+      "reviewStatus": "confirmed"
     },
     {
       "productId": "cinnamon",
       "previousLegacyCategoryId": "spices",
       "canonicalCategoryId": "pantry",
       "canonicalSubcategoryId": "pantry.spices",
-      "reviewStatus": "reclassified"
+      "reviewStatus": "confirmed"
     },
     {
       "productId": "zaatar",
@@ -738,7 +738,7 @@
       "previousLegacyCategoryId": "cleaning",
       "canonicalCategoryId": "cleaning",
       "canonicalSubcategoryId": null,
-      "reviewStatus": "alias_updated",
+      "reviewStatus": "confirmed",
       "note": "Updated aliases to remove normalization duplicates or add approved equivalents."
     },
     {
@@ -798,7 +798,7 @@
       "previousLegacyCategoryId": "paper_products",
       "canonicalCategoryId": "household",
       "canonicalSubcategoryId": "household.paper_products",
-      "reviewStatus": "reclassified",
+      "reviewStatus": "confirmed",
       "note": "Individually reviewed from legacy paper_products; assigned household / household.paper_products."
     },
     {
@@ -937,7 +937,7 @@
       "previousLegacyCategoryId": "baby",
       "canonicalCategoryId": "baby",
       "canonicalSubcategoryId": null,
-      "reviewStatus": "brand_term_updated",
+      "reviewStatus": "confirmed",
       "note": "Moved non-generic brand expressions from aliases to brandTerms."
     },
     {
@@ -999,7 +999,7 @@
       "previousLegacyCategoryId": "pet_supplies",
       "canonicalCategoryId": "pets",
       "canonicalSubcategoryId": "pets.supplies",
-      "reviewStatus": "reclassified",
+      "reviewStatus": "confirmed",
       "note": "Individually reviewed from legacy pet_supplies; assigned pets / pets.supplies."
     },
     {
@@ -1007,35 +1007,35 @@
       "previousLegacyCategoryId": "disposable_products",
       "canonicalCategoryId": "household",
       "canonicalSubcategoryId": "household.disposable_products",
-      "reviewStatus": "reclassified"
+      "reviewStatus": "confirmed"
     },
     {
       "productId": "disposable_plates",
       "previousLegacyCategoryId": "disposable_products",
       "canonicalCategoryId": "household",
       "canonicalSubcategoryId": "household.disposable_products",
-      "reviewStatus": "reclassified"
+      "reviewStatus": "confirmed"
     },
     {
       "productId": "disposable_forks",
       "previousLegacyCategoryId": "disposable_products",
       "canonicalCategoryId": "household",
       "canonicalSubcategoryId": "household.disposable_products",
-      "reviewStatus": "reclassified"
+      "reviewStatus": "confirmed"
     },
     {
       "productId": "disposable_knives",
       "previousLegacyCategoryId": "disposable_products",
       "canonicalCategoryId": "household",
       "canonicalSubcategoryId": "household.disposable_products",
-      "reviewStatus": "reclassified"
+      "reviewStatus": "confirmed"
     },
     {
       "productId": "disposable_spoons",
       "previousLegacyCategoryId": "disposable_products",
       "canonicalCategoryId": "household",
       "canonicalSubcategoryId": "household.disposable_products",
-      "reviewStatus": "reclassified"
+      "reviewStatus": "confirmed"
     },
     {
       "productId": "napkins",
@@ -1065,7 +1065,7 @@
       "previousLegacyCategoryId": "household_products",
       "canonicalCategoryId": "household",
       "canonicalSubcategoryId": "household.storage",
-      "reviewStatus": "alias_updated",
+      "reviewStatus": "confirmed",
       "note": "Individually reviewed from legacy household_products; assigned household / household.storage. Updated aliases to remove normalization duplicates or add approved equivalents."
     },
     {
@@ -5091,6 +5091,430 @@
       "canonicalSubcategoryId": null,
       "reviewStatus": "confirmed",
       "note": "Canonical product added through the catalog authoring toolkit."
+    },
+    {
+      "productId": "hamburger_buns",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "sourdough_starter",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "butter_croissant",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "chocolate_yeast_cake",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "brioche",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "bakery",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "green_grapes",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "black_grapes",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.fruits",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "lettuce_hearts",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "champignon_mushrooms",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "fruits_vegetables",
+      "canonicalSubcategoryId": "fruits_vegetables.vegetables",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "entrecote",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "calf_liver",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "meat_fish",
+      "canonicalSubcategoryId": "meat_fish.meat",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "green_lentils",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "orange_lentils",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "whole_tahini",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "white_sugar",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "popcorn_kernels",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "ground_black_pepper",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "ground_cumin",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "ground_turmeric",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "ground_cinnamon",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "ground_hot_paprika",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "ground_white_pepper",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "ground_nutmeg",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.spices",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "coconut_flakes",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "buckwheat_flour",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.baking",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "hazelnut_spread",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pantry",
+      "canonicalSubcategoryId": "pantry.breakfast",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "dried_fruit",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "milk_chocolate",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "chocolate_wafers",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "snacks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "coffee",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": "drinks.coffee",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "tea_bags",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "drinks",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "laundry_powder",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "laundry_liquid",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "dishwasher_capsules",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "cleaning",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "deodorant_spray",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "deodorant_stick",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "shaving_gel",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "personal_care",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "fruit_baby_puree",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "baby",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "plastic_disposable_cups",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "plastic_disposable_plates",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "plastic_disposable_forks",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "plastic_disposable_knives",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "plastic_disposable_spoons",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.disposable_products",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "sandwich_bags",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "household",
+      "canonicalSubcategoryId": "household.storage",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "dog_harness",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "cat_harness",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "dog_bed",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "cat_bed",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "tick_treatment",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "rabbit_hay",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "soft_pet_carrier",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pets",
+      "canonicalSubcategoryId": "pets.supplies",
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "antacid_tablets",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "pharmacy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
+    },
+    {
+      "productId": "sliced_cheese",
+      "previousLegacyCategoryId": null,
+      "canonicalCategoryId": "dairy",
+      "canonicalSubcategoryId": null,
+      "reviewStatus": "confirmed",
+      "note": "Curated product accepted through the WT-031B editorial importer."
     }
   ]
 }

@@ -1,0 +1,110 @@
+{
+  "reportVersion": 1,
+  "releaseId": "wt-031c-wave-1",
+  "catalogVersion": 6,
+  "generationDate": "2026-08-06",
+  "withheldCount": 20,
+  "rule": "Withhold any candidate whose repository evidence does not establish a production-quality Hebrew identity, taxonomy decision, or exact-SKU facts.",
+  "items": [
+    {
+      "candidateId": "usb_c_charger",
+      "evidence": "docs/100_SHOPPING_TRIPS.md",
+      "missingEvidence": "The repository names the English intent only; no approved Hebrew canonical name or product-level editorial record is present."
+    },
+    {
+      "candidateId": "iphone_cable",
+      "evidence": "docs/100_SHOPPING_TRIPS.md",
+      "missingEvidence": "The repository names the English intent only; no approved Hebrew canonical name or product-level editorial record is present."
+    },
+    {
+      "candidateId": "protein_drink",
+      "evidence": "docs/75_STORE_RANKING.md",
+      "missingEvidence": "The store-intent example does not supply an approved Hebrew canonical name or editorial taxonomy record."
+    },
+    {
+      "candidateId": "vinegar",
+      "evidence": "docs/75_STORE_RANKING.md",
+      "missingEvidence": "The store-intent example does not supply an approved Hebrew canonical name or editorial taxonomy record."
+    },
+    {
+      "candidateId": "toaster",
+      "evidence": "WayTaskTests/ProductCatalog/ProductCatalogSearchTests.swift",
+      "missingEvidence": "The term appears only in a synthetic ranking test and is not approved production editorial evidence."
+    },
+    {
+      "candidateId": "pastrami",
+      "evidence": "WayTaskTests/ProductCatalog/ProductCatalogSearchTests.swift",
+      "missingEvidence": "The term appears only in a synthetic ranking test and lacks a production taxonomy/provenance review."
+    },
+    {
+      "candidateId": "protein_vanilla_pudding",
+      "evidence": "docs/Specifications/ProductSearchUXContract.md",
+      "missingEvidence": "The specification explicitly reserves this as a custom-product no-match example."
+    },
+    {
+      "candidateId": "neighborhood_bakery_protein_pudding",
+      "evidence": "shared/catalog/acceptance-fixtures.json",
+      "missingEvidence": "The fixture explicitly expects no catalog identity and custom creation."
+    },
+    {
+      "candidateId": "compost_bags",
+      "evidence": "tools/catalog/test/fixtures/valid-editorial-release.json",
+      "missingEvidence": "This is a synthetic importer fixture and must never be promoted to production content."
+    },
+    {
+      "candidateId": "biodegradable_bags",
+      "evidence": "tools/catalog/test/fixtures/valid-editorial-release.json",
+      "missingEvidence": "This is a synthetic importer-fixture alias and not production editorial evidence."
+    },
+    {
+      "candidateId": "coca_cola_zero_sku",
+      "evidence": "docs/Specifications/CanonicalProductCatalogSpecification.md",
+      "missingEvidence": "The specification identifies a future SKU example; verified package, brand ownership, and barcode evidence are absent."
+    },
+    {
+      "candidateId": "nescafe_tasters_choice_sku",
+      "evidence": "docs/Specifications/CanonicalProductCatalogSpecification.md",
+      "missingEvidence": "The specification identifies a future SKU example; verified package and barcode evidence are absent."
+    },
+    {
+      "candidateId": "colgate_total_sku",
+      "evidence": "docs/Specifications/CanonicalProductCatalogSpecification.md",
+      "missingEvidence": "The specification identifies a future SKU example; verified package and barcode evidence are absent."
+    },
+    {
+      "candidateId": "nutella_sku",
+      "evidence": "docs/Specifications/CanonicalProductCatalogSpecification.md",
+      "missingEvidence": "The specification permits brand discovery for the generic hazelnut-spread concept but reserves the exact branded item for a verified future SKU layer."
+    },
+    {
+      "candidateId": "fresh_milk",
+      "evidence": "WayTaskTests/ProductCatalog/ProductCatalogPersonalizationTests.swift",
+      "missingEvidence": "The name is synthetic personalization-test data and does not establish a production identity distinct from existing milk records."
+    },
+    {
+      "candidateId": "full_fat_milk",
+      "evidence": "WayTaskTests/ProductCatalog/ProductCatalogPersonalizationTests.swift",
+      "missingEvidence": "The name is synthetic personalization-test data and lacks an approved mapping against the existing 1%, 3%, and lactose-free identities."
+    },
+    {
+      "candidateId": "generic_medicine",
+      "evidence": "docs/75_STORE_RANKING.md",
+      "missingEvidence": "The store-resolution intent is too broad to form a safe catalog product identity."
+    },
+    {
+      "candidateId": "generic_light_bulb",
+      "evidence": "WayTask/Resources/product_catalog_he.json catalogVersion 5 light_bulb.aliases",
+      "missingEvidence": "The existing stable ID is specifically LED; the generic alias alone does not establish a separate non-LED identity or safe migration rule."
+    },
+    {
+      "candidateId": "generic_milk",
+      "evidence": "docs/Product/PilotProductCatalog.md and production milk_3_percent aliases",
+      "missingEvidence": "A generic milk identity would require an explicit compatibility decision because the current generic Hebrew/English terms resolve to milk_3_percent."
+    },
+    {
+      "candidateId": "generic_bread",
+      "evidence": "docs/Product/PilotProductCatalog.md and production bread_white aliases",
+      "missingEvidence": "A generic bread identity would require an explicit compatibility decision because the current generic Hebrew/English terms resolve to bread_white."
+    }
+  ]
+}

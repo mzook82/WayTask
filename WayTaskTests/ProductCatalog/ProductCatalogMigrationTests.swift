@@ -11,7 +11,7 @@ final class ProductCatalogMigrationTests: XCTestCase {
         timeIntervalSince1970: 2_000_000_000
     )
 
-    func testBundledWave2CatalogIsCanonicalAndPassesFullValidator() throws {
+    func testBundledWT031CCatalogIsCanonicalAndPassesFullValidator() throws {
         let data = try canonicalCatalogData()
         let document = try service.loadDocument(data: data)
         let object = try XCTUnwrap(
@@ -23,11 +23,11 @@ final class ProductCatalogMigrationTests: XCTestCase {
         )
 
         XCTAssertEqual(document.schemaVersion, 1)
-        XCTAssertEqual(document.catalogVersion, 5)
+        XCTAssertEqual(document.catalogVersion, 6)
         XCTAssertEqual(document.taxonomyVersion, 1)
         XCTAssertEqual(document.locale, "he-IL")
         XCTAssertEqual(document.sourceFormat, .canonicalV1)
-        XCTAssertEqual(document.products.count, 647)
+        XCTAssertEqual(document.products.count, 700)
         XCTAssertTrue(document.products.allSatisfy(\.isActive))
 
         for record in records {
@@ -72,11 +72,11 @@ final class ProductCatalogMigrationTests: XCTestCase {
         )
 
         XCTAssertEqual(manifest.reviewVersion, 1)
-        XCTAssertEqual(manifest.catalogVersion, 5)
+        XCTAssertEqual(manifest.catalogVersion, 6)
         XCTAssertEqual(manifest.taxonomyVersion, taxonomy.taxonomyVersion)
-        XCTAssertEqual(manifest.productCount, 647)
-        XCTAssertEqual(manifest.products.count, 647)
-        XCTAssertEqual(Set(manifest.products.map(\.productId)).count, 647)
+        XCTAssertEqual(manifest.productCount, 700)
+        XCTAssertEqual(manifest.products.count, 700)
+        XCTAssertEqual(Set(manifest.products.map(\.productId)).count, 700)
         XCTAssertEqual(reviewRequiredCategories.count, 8)
 
         var reviewedAmbiguousProducts = 0
@@ -116,8 +116,10 @@ final class ProductCatalogMigrationTests: XCTestCase {
                 XCTAssertTrue(
                     review.note?.contains(
                         "Canonical product added through the catalog authoring toolkit."
+                    ) == true || review.note?.contains(
+                        "Curated product accepted through the WT-031B editorial importer."
                     ) == true,
-                    "Toolkit assignment lacks review evidence: \(review.productId)"
+                    "Catalog assignment lacks review evidence: \(review.productId)"
                 )
             }
         }
@@ -138,8 +140,8 @@ final class ProductCatalogMigrationTests: XCTestCase {
         )
 
         XCTAssertEqual(legacy.products.count, 147)
-        XCTAssertEqual(canonical.products.count, 647)
-        XCTAssertEqual(Set(canonical.products.map(\.id)).count, 647)
+        XCTAssertEqual(canonical.products.count, 700)
+        XCTAssertEqual(Set(canonical.products.map(\.id)).count, 700)
         XCTAssertTrue(
             Set(legacy.products.map(\.id)).isSubset(
                 of: Set(canonical.products.map(\.id))
@@ -330,7 +332,7 @@ final class ProductCatalogMigrationTests: XCTestCase {
 
         XCTAssertEqual(
             try context.fetchCount(FetchDescriptor<Product>()),
-            647
+            700
         )
         XCTAssertEqual(shoppingEntry.productID, linkedProductID)
         XCTAssertEqual(

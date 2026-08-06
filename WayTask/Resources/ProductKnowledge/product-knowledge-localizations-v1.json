@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": 5,
+  "catalogVersion": 6,
   "supportedLocales": [
     "en",
     "he-IL"
@@ -93,6 +93,22 @@
       "kind": "alias",
       "value": "Apples",
       "isPreferred": false
+    },
+    {
+      "id": "catalog_name_hazelnut_spread_en_localizeddisplay_1",
+      "productID": "hazelnut_spread",
+      "locale": "en",
+      "kind": "localizedDisplay",
+      "value": "Hazelnut Spread",
+      "isPreferred": true
+    },
+    {
+      "id": "catalog_name_coffee_en_localizeddisplay_1",
+      "productID": "coffee",
+      "locale": "en",
+      "kind": "localizedDisplay",
+      "value": "Coffee",
+      "isPreferred": true
     }
   ]
 }

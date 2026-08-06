@@ -26,7 +26,7 @@
     { "id": "baby_nasal_aspirator_alias", "query": "שואב אף לתינוק", "expectedProductId": "baby_nasal_aspirator", "expectedCanonicalName": "שואב נזלת לתינוק", "matchSource": "alias" },
 
     { "id": "bird_food_alias", "query": "אוכל לציפורים", "expectedProductId": "bird_food", "expectedCanonicalName": "מזון לציפורים", "matchSource": "alias" },
-    { "id": "pet_harness_dog_alias", "query": "רתמה לכלב", "expectedProductId": "pet_harness", "expectedCanonicalName": "רתמה לחיות מחמד", "matchSource": "alias" },
+    { "id": "pet_harness_dog_alias", "query": "רתמה לכלב", "expectedProductId": "pet_harness", "expectedCanonicalName": "רתמה לחיות מחמד", "matchSource": "alias", "currentExpectation": { "fromCatalogVersion": 6, "expectedProductId": "dog_harness", "expectedCanonicalName": "רתמה לכלב", "matchSource": "canonical_name", "reason": "WT-031C promoted the materially audience-specific alias to its own stable product identity." } },
     { "id": "aquarium_filter_borrowed_alias", "query": "פילטר לאקווריום", "expectedProductId": "aquarium_filter", "expectedCanonicalName": "מסנן לאקווריום", "matchSource": "alias" },
 
     { "id": "t_shirt_borrowed_alias", "query": "טי שירט", "expectedProductId": "t_shirt", "expectedCanonicalName": "חולצת טי", "matchSource": "alias" },

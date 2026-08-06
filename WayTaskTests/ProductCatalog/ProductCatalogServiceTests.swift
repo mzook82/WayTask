@@ -6,7 +6,7 @@ final class ProductCatalogServiceTests: XCTestCase {
     func testBundledHebrewCatalogDecodesAndLoadsAllActiveProducts() throws {
         let products = try ProductCatalogService(bundle: .main).loadProducts()
 
-        XCTAssertEqual(products.count, 647)
+        XCTAssertEqual(products.count, 700)
         XCTAssertEqual(Set(products.map(\.id)).count, products.count)
         XCTAssertTrue(products.allSatisfy(\.isActive))
         XCTAssertEqual(
@@ -46,16 +46,16 @@ final class ProductCatalogServiceTests: XCTestCase {
         )
     }
 
-    func testBundledCatalogMetadataIdentifiesWave2CanonicalFormat() throws {
+    func testBundledCatalogMetadataIdentifiesWT031CCanonicalFormat() throws {
         let document = try ProductCatalogService(bundle: .main)
             .loadDocument(data: bundledCatalogData())
 
         XCTAssertEqual(document.schemaVersion, 1)
-        XCTAssertEqual(document.catalogVersion, 5)
+        XCTAssertEqual(document.catalogVersion, 6)
         XCTAssertEqual(document.taxonomyVersion, 1)
         XCTAssertEqual(document.locale, "he-IL")
         XCTAssertEqual(document.sourceFormat, .canonicalV1)
-        XCTAssertEqual(document.products.count, 647)
+        XCTAssertEqual(document.products.count, 700)
     }
 
     func testCanonicalSchemaVersionOneDecodesDirectly() throws {
@@ -251,9 +251,9 @@ final class ProductCatalogServiceTests: XCTestCase {
             .products
             .map(\.id)
 
-        XCTAssertEqual(decodedIDs.count, 647)
+        XCTAssertEqual(decodedIDs.count, 700)
         XCTAssertEqual(decodedIDs, rawDocument.products.map(\.id))
-        XCTAssertEqual(Set(decodedIDs).count, 647)
+        XCTAssertEqual(Set(decodedIDs).count, 700)
     }
 
     func testMalformedCatalogReturnsEmptySafeFallback() {

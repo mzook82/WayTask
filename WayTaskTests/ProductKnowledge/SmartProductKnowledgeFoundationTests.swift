@@ -8,14 +8,14 @@ final class SmartProductKnowledgeFoundationTests: XCTestCase {
         let legacyProducts = try ProductCatalogService(bundle: .main)
             .loadProducts()
 
-        XCTAssertEqual(legacyProducts.count, 647)
-        XCTAssertEqual(snapshot.products.count, 647)
+        XCTAssertEqual(legacyProducts.count, 700)
+        XCTAssertEqual(snapshot.products.count, 700)
         XCTAssertEqual(
             Set(snapshot.products.map { $0.id.rawValue }),
             Set(legacyProducts.map(\.id))
         )
-        XCTAssertEqual(snapshot.metadata.catalogVersion, 5)
-        XCTAssertEqual(snapshot.metadata.catalogGenerationDate, "2026-07-25")
+        XCTAssertEqual(snapshot.metadata.catalogVersion, 6)
+        XCTAssertEqual(snapshot.metadata.catalogGenerationDate, "2026-08-06")
         XCTAssertEqual(snapshot.metadata.source, "canonical-catalog-v1+localizations-v1")
     }
 
@@ -48,7 +48,7 @@ final class SmartProductKnowledgeFoundationTests: XCTestCase {
         let statistics = await search.indexStatistics()
 
         XCTAssertTrue(report.errors.isEmpty)
-        XCTAssertEqual(statistics.productCount, 647)
+        XCTAssertEqual(statistics.productCount, 700)
         XCTAssertLessThan(loadAndValidationDuration, .seconds(2))
         XCTAssertLessThan(indexDuration, .seconds(2))
 
@@ -95,6 +95,114 @@ final class SmartProductKnowledgeFoundationTests: XCTestCase {
         }
     }
 
+    func testWT031CCuratedWaveSearchesAcrossEveryAddedCategory()
+        async throws {
+        let search = ProductKnowledgeSearch(
+            repository: InMemoryProductKnowledgeRepository(
+                snapshot: try productionSnapshot()
+            )
+        )
+        let exactCases: [(String, String, String)] = [
+            ("פרוסות גבינה", "sliced_cheese", "dairy"),
+            ("לחמניות המבורגר", "hamburger_buns", "bakery"),
+            ("ענבים ירוקים", "green_grapes", "fruits_vegetables"),
+            ("אנטרקוט", "entrecote", "meat_fish"),
+            ("קמח כוסמת", "buckwheat_flour", "pantry"),
+            ("שוקולד חלב", "milk_chocolate", "snacks"),
+            ("קפה", "coffee", "drinks"),
+            ("אבקת כביסה", "laundry_powder", "cleaning"),
+            ("דאודורנט ספריי", "deodorant_spray", "personal_care"),
+            ("מחית פירות לתינוק", "fruit_baby_puree", "baby"),
+            ("מיטה לכלב", "dog_bed", "pets"),
+            ("טבליות לצרבת", "antacid_tablets", "pharmacy"),
+            ("שקיות סנדוויץ׳", "sandwich_bags", "household")
+        ]
+
+        for (query, expectedID, expectedCategory) in exactCases {
+            let results = await search.suggestions(
+                matching: query,
+                locale: "he-IL"
+            )
+            let result = try XCTUnwrap(
+                results.first,
+                "Missing WT-031C result for \(query)"
+            )
+            XCTAssertEqual(result.productID, ProductID(expectedID))
+            XCTAssertEqual(
+                result.categoryID,
+                ProductCategoryID(expectedCategory)
+            )
+            XCTAssertEqual(result.matchTier, .exactCanonical)
+        }
+
+        let hebrewPrefix = await search.suggestions(
+            matching: "לחמניות המ",
+            locale: "he-IL"
+        )
+        XCTAssertEqual(
+            hebrewPrefix.first?.productID,
+            ProductID("hamburger_buns")
+        )
+
+        let buckwheatAlias = await search.suggestions(
+            matching: "קמח מכוסמת",
+            locale: "he-IL"
+        )
+        XCTAssertEqual(
+            buckwheatAlias.first?.productID,
+            ProductID("buckwheat_flour")
+        )
+        XCTAssertEqual(buckwheatAlias.first?.matchTier, .exactAlias)
+
+        let englishCoffee = await search.suggestions(
+            matching: "Coffee",
+            locale: "en"
+        )
+        let englishHazelnut = await search.suggestions(
+            matching: "Hazelnut Spread",
+            locale: "en"
+        )
+        XCTAssertEqual(englishCoffee.first?.productID, ProductID("coffee"))
+        XCTAssertEqual(englishCoffee.first?.displayName, "Coffee")
+        XCTAssertEqual(
+            englishHazelnut.first?.productID,
+            ProductID("hazelnut_spread")
+        )
+
+        let categoryEvidence = await search.suggestions(
+            matching: "מכונת כביסה",
+            locale: "he-IL"
+        )
+        let categoryIDs = Set(categoryEvidence.map(\.productID))
+        XCTAssertTrue(categoryIDs.contains(ProductID("laundry_powder")))
+        XCTAssertTrue(categoryIDs.contains(ProductID("laundry_liquid")))
+
+        let aliasDeduplication = await search.suggestions(
+            matching: "שקיות כריכים",
+            locale: "he-IL"
+        )
+        XCTAssertEqual(
+            aliasDeduplication.filter {
+                $0.productID == ProductID("sandwich_bags")
+            }.count,
+            1
+        )
+
+        let noResult = await search.suggestions(
+            matching: "מתאם קוונטי מותאם אישית",
+            locale: "he-IL"
+        )
+        XCTAssertTrue(noResult.isEmpty)
+        let existingMilk = await search.suggestions(
+            matching: "חלב",
+            locale: "he-IL"
+        )
+        XCTAssertEqual(
+            existingMilk.first?.productID,
+            ProductID("milk_3_percent")
+        )
+    }
+
     func testProductionShortQueriesEnforceDirectEvidenceAndStableExamples()
         async throws {
         let search = ProductKnowledgeSearch(
@@ -112,7 +220,12 @@ final class SmartProductKnowledgeFoundationTests: XCTestCase {
         )
         let latinMilk = await search.suggestions(matching: "Mi", locale: "en")
 
-        XCTAssertTrue(latinOne.isEmpty)
+        XCTAssertEqual(latinOne.map(\.productID), [ProductID("coffee")])
+        XCTAssertTrue(latinOne.allSatisfy {
+            $0.displayLocale == "en"
+                && $0.matchTier == .canonicalPrefix
+                && $0.candidateConfidence == .strong
+        })
 
         let colaIndex = try XCTUnwrap(
             colaPrefix.firstIndex { $0.productID == ProductID("cola") }
@@ -194,24 +307,24 @@ final class SmartProductKnowledgeFoundationTests: XCTestCase {
 
     func testLocalizationDocumentRejectsVersionMismatchAndMalformedData() throws {
         let loader = BundledProductKnowledgeLocalizationLoader(bundle: .main)
-        let valid = try loader.load(expectedCatalogVersion: 5)
-        XCTAssertEqual(valid.names.count, 11)
+        let valid = try loader.load(expectedCatalogVersion: 6)
+        XCTAssertEqual(valid.names.count, 13)
 
         XCTAssertThrowsError(
             try loader.load(
                 data: try JSONEncoder().encode(valid),
-                expectedCatalogVersion: 6
+                expectedCatalogVersion: 7
             )
         ) { error in
             XCTAssertEqual(
                 error as? ProductKnowledgeLocalizationError,
-                .catalogVersionMismatch(expected: 6, actual: 5)
+                .catalogVersionMismatch(expected: 7, actual: 6)
             )
         }
         XCTAssertThrowsError(
             try loader.load(
                 data: Data("{ malformed".utf8),
-                expectedCatalogVersion: 5
+                expectedCatalogVersion: 6
             )
         )
     }
@@ -219,38 +332,38 @@ final class SmartProductKnowledgeFoundationTests: XCTestCase {
     func testProductionReleaseManifestIsVersionedAndAtomicallyMatched() throws {
         let loader = BundledProductCatalogReleaseManifestLoader(bundle: .main)
         let manifest = try loader.load(
-            expectedCatalogVersion: 5,
-            expectedProductCount: 647
+            expectedCatalogVersion: 6,
+            expectedProductCount: 700
         )
 
         XCTAssertEqual(manifest.schemaVersion, 1)
-        XCTAssertEqual(manifest.catalogVersion, 5)
-        XCTAssertEqual(manifest.generationDate, "2026-07-25")
-        XCTAssertEqual(manifest.productCount, 647)
+        XCTAssertEqual(manifest.catalogVersion, 6)
+        XCTAssertEqual(manifest.generationDate, "2026-08-06")
+        XCTAssertEqual(manifest.productCount, 700)
 
         let data = try JSONEncoder().encode(manifest)
         XCTAssertThrowsError(
             try loader.load(
                 data: data,
-                expectedCatalogVersion: 6,
-                expectedProductCount: 647
+                expectedCatalogVersion: 7,
+                expectedProductCount: 700
             )
         ) { error in
             XCTAssertEqual(
                 error as? ProductCatalogReleaseManifestError,
-                .catalogVersionMismatch(expected: 6, actual: 5)
+                .catalogVersionMismatch(expected: 7, actual: 6)
             )
         }
         XCTAssertThrowsError(
             try loader.load(
                 data: data,
-                expectedCatalogVersion: 5,
-                expectedProductCount: 648
+                expectedCatalogVersion: 6,
+                expectedProductCount: 701
             )
         ) { error in
             XCTAssertEqual(
                 error as? ProductCatalogReleaseManifestError,
-                .productCountMismatch(expected: 648, actual: 647)
+                .productCountMismatch(expected: 701, actual: 700)
             )
         }
     }

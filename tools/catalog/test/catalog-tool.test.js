@@ -179,24 +179,24 @@ test("shared Hebrew normalization fixtures execute in Node", () => {
   }
 });
 
-test("Wave 2 production catalog, taxonomy, and all 647 reviews validate", () => {
+test("WT-031C production catalog, taxonomy, and all 700 reviews validate", () => {
   const context = productionContext();
   const result = validateCatalog(context);
   assert.equal(result.valid, true, JSON.stringify(result.errors, null, 2));
   assert.deepEqual(result.stats, {
-    products: 647,
-    active: 647,
+    products: 700,
+    active: 700,
     inactive: 0,
     categories: 23,
     subcategories: 22,
   });
   assert.equal(
     buildReport(context).idFingerprint,
-    "31d11cc10d8aed1f7d27b210b8402f1883f87e1a334abe50ec2c2a3b8c0d53ff",
+    "d953038e3b7416128ad7414c20341edf7c080eff331283f8200debcfc65dacd2",
   );
 });
 
-test("WT-031B production bundle exposes release metadata and validates localized content", () => {
+test("WT-031C production bundle exposes release metadata and validates localized content", () => {
   const root = productionContext();
   const context = loadEditorialContext({
     ...root.paths,
@@ -223,10 +223,10 @@ test("WT-031B production bundle exposes release metadata and validates localized
 
   assert.equal(result.valid, true, JSON.stringify(result.errors, null, 2));
   assert.equal(context.manifest.schemaVersion, 1);
-  assert.equal(context.manifest.catalogVersion, 5);
-  assert.equal(context.manifest.generationDate, "2026-07-25");
-  assert.equal(context.manifest.productCount, 647);
-  assert.equal(result.stats.localizedNames, 11);
+  assert.equal(context.manifest.catalogVersion, 6);
+  assert.equal(context.manifest.generationDate, "2026-08-06");
+  assert.equal(context.manifest.productCount, 700);
+  assert.equal(result.stats.localizedNames, 13);
 });
 
 test("WT-031B importer produces a complete validated bundle without mutating on dry run", () => {
@@ -449,22 +449,24 @@ test("Wave 2 shared search fixtures resolve production canonical products", () =
 
   assert.equal(fixtures.fixtureVersion, 1);
   assert.equal(fixtures.locale, "he-IL");
-  assert.equal(fixtures.catalogVersion, context.catalog.catalogVersion);
+  assert.equal(fixtures.catalogVersion, 5);
+  assert.ok(fixtures.catalogVersion < context.catalog.catalogVersion);
   assert.ok(fixtures.cases.length >= 40);
 
   for (const fixture of fixtures.cases) {
+    const expectation = fixture.currentExpectation ?? fixture;
     const results = findProducts(context, fixture.query);
-    if (fixture.expectedProductId === null) {
+    if (expectation.expectedProductId === null) {
       assert.equal(results.length, 0, fixture.id);
       continue;
     }
-    assert.equal(results[0]?.id, fixture.expectedProductId, fixture.id);
+    assert.equal(results[0]?.id, expectation.expectedProductId, fixture.id);
     assert.equal(
       results[0]?.canonicalName,
-      fixture.expectedCanonicalName,
+      expectation.expectedCanonicalName,
       fixture.id,
     );
-    assert.equal(results[0]?.matchSource, fixture.matchSource, fixture.id);
+    assert.equal(results[0]?.matchSource, expectation.matchSource, fixture.id);
   }
 });
 
@@ -496,8 +498,9 @@ test("Wave 2 preserves all prior IDs and its transactional audit history", () =>
   const auditEntries = auditLines.map(JSON.parse);
   const historicalEntries = auditEntries.slice(0, 330);
   const normalization = auditEntries[330];
-  const wave2Entries = auditEntries.slice(331);
-  assert.equal(auditEntries.length, 511);
+  const wave2Entries = auditEntries.slice(331, 511);
+  const wt031cEntry = auditEntries[511];
+  assert.equal(auditEntries.length, 512);
   assert.equal(
     sha256(`${auditLines.slice(0, 330).join("\n")}\n`),
     "6fdf64be6980f848d1549b1ee9ebd8b247d32016b11bd0ef22df94842f87412f",
@@ -561,7 +564,7 @@ test("Wave 2 preserves all prior IDs and its transactional audit history", () =>
   assert.equal(wave2Entries.length, 180);
   assert.deepEqual(
     wave2Entries.map((entry) => entry.productId),
-    productionIDs.slice(467),
+    productionIDs.slice(467, 647),
   );
   assert.ok(
     wave2Entries.every(
@@ -582,7 +585,57 @@ test("Wave 2 preserves all prior IDs and its transactional audit history", () =>
   );
   assert.equal(
     wave2Entries.at(-1).catalogSha256After,
-    fileSha256(PRODUCTION_CATALOG),
+    wt031cEntry.catalogSha256Before,
+  );
+  assert.equal(wt031cEntry.auditVersion, 3);
+  assert.equal(wt031cEntry.operation, "editorial_import");
+  assert.equal(wt031cEntry.releaseId, "wt-031c-wave-1");
+  assert.equal(wt031cEntry.catalogVersionFrom, 5);
+  assert.equal(wt031cEntry.catalogVersionTo, 6);
+  assert.equal(wt031cEntry.productCount, 700);
+  assert.equal(wt031cEntry.changedProductIDs.length, 99);
+  assert.equal(wt031cEntry.catalogSha256After, fileSha256(PRODUCTION_CATALOG));
+});
+
+test("WT-031C release preserves the 647-ID baseline and documents withheld candidates", () => {
+  const context = productionContext();
+  const release = readJson(
+    path.join(SHARED, "releases", "wt-031c-wave-1.json"),
+  );
+  const withheld = readJson(
+    path.join(
+      SHARED,
+      "releases",
+      "wt-031c-wave-1-withheld-review.json",
+    ),
+  );
+  const productionIDs = context.catalog.products.map((product) => product.id);
+  const baselineIDs = productionIDs.slice(0, 647);
+  const addIDs = release.operations
+    .filter((operation) => operation.operation === "add")
+    .map((operation) => operation.product.id);
+  const replaceIDs = release.operations
+    .filter((operation) => operation.operation === "replace")
+    .map((operation) => operation.product.id);
+
+  assert.equal(release.schemaVersion, 1);
+  assert.equal(release.catalogVersion, 6);
+  assert.equal(release.productCount, 700);
+  assert.equal(addIDs.length, 53);
+  assert.equal(replaceIDs.length, 46);
+  assert.deepEqual(productionIDs.slice(647), addIDs);
+  assert.ok(replaceIDs.every((id) => baselineIDs.includes(id)));
+  assert.equal(
+    sha256(`${baselineIDs.slice().sort().join("\n")}\n`),
+    "31d11cc10d8aed1f7d27b210b8402f1883f87e1a334abe50ec2c2a3b8c0d53ff",
+  );
+  assert.equal(withheld.releaseId, release.releaseId);
+  assert.equal(withheld.withheldCount, 20);
+  assert.equal(withheld.items.length, 20);
+  assert.ok(
+    withheld.items.every(
+      (item) => item.evidence.length > 0 && item.missingEvidence.length > 0,
+    ),
   );
 });
 
@@ -705,13 +758,13 @@ test("read-only CLI commands return actionable machine-readable results", () => 
 
   const validation = runCli(["validate", "--json"]);
   assert.equal(validation.status, 0, validation.stderr);
-  assert.equal(parseStdout(validation).stats.products, 647);
+  assert.equal(parseStdout(validation).stats.products, 700);
 
   const report = runCli(["report", "--json"]);
   assert.equal(report.status, 0, report.stderr);
-  assert.equal(parseStdout(report).metadata.catalogVersion, 5);
-  assert.equal(parseStdout(report).metadata.generationDate, "2026-07-25");
-  assert.equal(parseStdout(report).metadata.productCount, 647);
+  assert.equal(parseStdout(report).metadata.catalogVersion, 6);
+  assert.equal(parseStdout(report).metadata.generationDate, "2026-08-06");
+  assert.equal(parseStdout(report).metadata.productCount, 700);
 
   const find = runCli([
     "find",

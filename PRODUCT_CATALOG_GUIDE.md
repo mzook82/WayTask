@@ -3,7 +3,7 @@
 The [Canonical Product Catalog Specification](docs/Specifications/CanonicalProductCatalogSpecification.md)
 is the normative long-term identity, schema, taxonomy, resolution, parity, and
 migration contract. This guide describes maintenance of the canonical Hebrew
-resource shipped through WT-027B.
+resource shipped through WT-031C.
 
 ## Shared contract
 
@@ -22,6 +22,10 @@ Platform-neutral contract resources are stored in:
 - `wave-2-search-fixtures.json`: representative Hebrew search regressions for
   the WT-027B production expansion.
 - `releases/wt-027b-wave-2.json`: the reviewed transactional source for release 5.
+- `releases/wt-031c-wave-1.json`: the first WT-031B editorial release, advancing
+  production to release 6 with 53 repository-supported additions.
+- `releases/wt-031c-wave-1-withheld-review.json`: candidates withheld from WT-031C
+  and their missing editorial evidence.
 - `product-taxonomy-review.json`: non-runtime evidence of the completed
   product-by-product taxonomy review, including Wave 1 and Wave 2 additions.
 - `catalog-authoring-audit.jsonl`: append-only authoring audit for toolkit
@@ -45,13 +49,13 @@ node tools/catalog/catalog-tool.js inspect --id trash_bags
 node tools/catalog/catalog-tool.js check-candidate --input product.json
 ```
 
-`add`, `update`, `deactivate`, and `batch` are dry runs by default. `--write` is
-required to commit. A committed single command or multi-mutation batch represents
-one released catalog revision: it validates the complete proposal, increments
-`catalogVersion` exactly once, synchronizes the taxonomy review manifest, and
-appends one audit entry per mutation. The toolkit rejects stale concurrent writes.
-See its README for batch shape, path overrides, audit fields, tests, and the release
-workflow.
+Production writes now use a complete locale-aware editorial release. Run
+`validate-release`, then dry-run `import-release`, and only then run
+`import-release --write`. The import validates and atomically advances the catalog,
+localization overlay, release manifest, taxonomy review, and audit exactly once.
+The older per-product commands remain dry-run development tools but refuse default
+production writes. See the toolkit README for the release schema, validation rules,
+path overrides, audit fields, tests, and transaction guarantees.
 
 ## Catalog location
 
@@ -71,7 +75,7 @@ The file has this top-level structure:
 ```json
 {
   "schemaVersion": 1,
-  "catalogVersion": 5,
+  "catalogVersion": 6,
   "taxonomyVersion": 1,
   "locale": "he-IL",
   "products": []
@@ -80,7 +84,7 @@ The file has this top-level structure:
 
 - `schemaVersion`: Version of the canonical document shape. The shipped format is 1.
 - `catalogVersion`: Positive released revision of catalog content. The shipped
-  Hebrew Wave 2 catalog is release 5.
+  WT-031C catalog is release 6.
 - `taxonomyVersion`: Version of `shared/catalog/taxonomy.json`. The shipped value is 1.
 - `locale`: Catalog language and regional terminology. Phase 1 requires `he-IL`.
 - `products`: The complete list of catalog product records.
@@ -144,9 +148,10 @@ records. Optional migration fields are defined by the shared schema.
 ## Taxonomy compatibility
 
 `shared/catalog/taxonomy.json` is the category source of truth. WT-026B reviewed the
-original 147 products individually, WT-027A reviewed 320 additions, and WT-027B
-reviewed another 180 additions through the authoring toolkit. All 647 products have
-an approved `categoryId` and nullable `subcategoryId`. The review evidence is recorded in
+original 147 products individually, WT-027A reviewed 320 additions, WT-027B
+reviewed another 180 additions, and WT-031C imported 53 repository-supported
+identities through the editorial gate. All 700 products have an approved
+`categoryId` and nullable `subcategoryId`. The review evidence is recorded in
 `shared/catalog/product-taxonomy-review.json`; it is maintenance evidence and is
 included only in the test bundle, not read at runtime.
 
@@ -276,6 +281,19 @@ brand-term, and custom no-match cases consumed by both the Node and native iOS
 suites. Wave 2 changes no ranking, personalization, UI, persistence, schema, or
 taxonomy behavior.
 
+## WT-031C first editorial expansion record
+
+WT-031C is the first production import through the WT-031B locale-aware release
+pipeline. `shared/catalog/releases/wt-031c-wave-1.json` adds 53 traceable identities
+and applies 46 stable-ID-preserving editorial replacements, advancing production
+once from catalog 5/647 products to catalog 6/700 products. It adds no unverified
+brand, barcode, package, or translation data and deactivates no prior product.
+
+`shared/catalog/releases/wt-031c-wave-1-withheld-review.json` records 20 candidates
+that lacked sufficient repository evidence. The detailed audit, category
+distribution, coverage metrics, validation evidence, and device checklist are in
+`docs/Implementation/WT-031C_First_Curated_Product_Catalog_Expansion_Wave.md`.
+
 ## Add an alias
 
 Add the alternative name to the product's `aliases` array. An alias should denote
@@ -346,11 +364,12 @@ Run the toolkit suite first:
 node --test tools/catalog/test/*.test.js
 ```
 
-## Next migration and expansion steps
+## Next expansion steps
 
-**WT-027C — Catalog Coverage QA and Wave 3 planning:** collect real missing-query
-evidence in `CATALOG_FEEDBACK.md`, review the remaining shallow categories
-(especially electronics and the newer non-grocery categories), and improve shared
-taxonomy subcategory coverage before authoring another transactional release. Wave
-3 should remain feedback-led and must not add narrow SKU or brand variants merely
-to raise counts.
+Collect a human-reviewed source sheet with Hebrew canonical names, identity
+rationale, taxonomy assignments, and provenance. Prioritize real device feedback
+and shallow categories such as electronics; add English, brand, package, or barcode
+data only when independently verified. Every future wave must use the WT-031B
+release validator, dry-run importer, atomic write importer, production validator,
+shared/native regressions, and physical-device QA. Do not add narrow SKU or brand
+variants merely to raise counts.
