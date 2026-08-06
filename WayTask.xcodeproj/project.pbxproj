@@ -60,8 +60,6 @@
 		D1954E2E2FF7D01300E946DA /* GeofenceNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E2D2FF7D01300E946DA /* GeofenceNotificationService.swift */; };
 		D1954E302FF82CDF00E946DA /* AIProductRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E2F2FF82CDF00E946DA /* AIProductRecognitionService.swift */; };
 		D1954E322FF83E7800E946DA /* GeminiProductRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E312FF83E7800E946DA /* GeminiProductRecognitionService.swift */; };
-		D1954E3C2FF85B7D00E946DA /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = D1954E3B2FF85B7D00E946DA /* Secrets.plist */; };
-		D1954E3E2FF85C6B00E946DA /* SecretsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E3D2FF85C6B00E946DA /* SecretsManager.swift */; };
 		D1954E402FF8FB2E00E946DA /* DebugSeedStoreService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E3F2FF8FB2E00E946DA /* DebugSeedStoreService.swift */; };
 		D1954E422FF9010700E946DA /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E412FF9010700E946DA /* SettingsView.swift */; };
 		D1954E442FF91D5B00E946DA /* ProductKnowledge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1954E432FF91D5B00E946DA /* ProductKnowledge.swift */; };
@@ -136,8 +134,6 @@
 		D1954E312FF83E7800E946DA /* GeminiProductRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiProductRecognitionService.swift; sourceTree = "<group>"; };
 		D1954E372FF8488C00E946DA /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		D1954E392FF8489800E946DA /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
-		D1954E3B2FF85B7D00E946DA /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.plist; sourceTree = "<group>"; };
-		D1954E3D2FF85C6B00E946DA /* SecretsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretsManager.swift; sourceTree = "<group>"; };
 		D1954E3F2FF8FB2E00E946DA /* DebugSeedStoreService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSeedStoreService.swift; sourceTree = "<group>"; };
 		D1954E412FF9010700E946DA /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		D1954E432FF91D5B00E946DA /* ProductKnowledge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductKnowledge.swift; sourceTree = "<group>"; };
@@ -229,7 +225,6 @@
 				D1954DF12FF3C45B00E946DA /* MapBottomSheet.swift */,
 				D1954DF32FF3CCF800E946DA /* StoreSearchService.swift */,
 				D1954DF52FF59EE800E946DA /* ShoppingMission.swift */,
-				D1954E3B2FF85B7D00E946DA /* Secrets.plist */,
 				D1954DF72FF59EE800E946DA /* ShoppingContext.swift */,
 				D1954DF92FF59EE900E946DA /* DecisionEngine.swift */,
 				D1954DFB2FF5A2A200E946DA /* DiscoverItem.swift */,
@@ -264,7 +259,6 @@
 				D1954E452FF91D5B00E946DA /* ProductKnowledgeService.swift */,
 				D1954E372FF8488C00E946DA /* Debug.xcconfig */,
 				D1954E392FF8489800E946DA /* Release.xcconfig */,
-				D1954E3D2FF85C6B00E946DA /* SecretsManager.swift */,
 				D1954E3F2FF8FB2E00E946DA /* DebugSeedStoreService.swift */,
 				D1954E412FF9010700E946DA /* SettingsView.swift */,
 			);
@@ -391,7 +385,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000006 /* taxonomy.json in Resources */,
-				D1954E3C2FF85B7D00E946DA /* Secrets.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -472,7 +465,6 @@
 				D1954DFE2FF5A2A300E946DA /* DiscoverViewModel.swift in Sources */,
 				D1954E302FF82CDF00E946DA /* AIProductRecognitionService.swift in Sources */,
 				D11995CB2FF399E100C9EAF2 /* CameraViewModel.swift in Sources */,
-				D1954E3E2FF85C6B00E946DA /* SecretsManager.swift in Sources */,
 				D1954DF22FF3C45B00E946DA /* MapBottomSheet.swift in Sources */,
 				D1B8519B2FF18FF50083B34C /* ProductListView.swift in Sources */,
 				D1954E422FF9010700E946DA /* SettingsView.swift in Sources */,

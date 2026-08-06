@@ -27,11 +27,11 @@ struct WayTaskApp: App {
             wrappedValue: onboardingCoordinator
         )
         #if DEBUG
-        print(SecretsManager.isGeminiConfigured ? "Gemini configured ✔" : "Gemini unavailable")
         print(
             "Account foundation: \(String(describing: accountSyncFoundation.configurationStatus.environment)) " +
                 "accounts=\(accountSyncFoundation.featureFlags.accountsEnabled) " +
-                "sync=\(accountSyncFoundation.featureFlags.synchronizationEnabled)"
+                "sync=\(accountSyncFoundation.featureFlags.synchronizationEnabled) " +
+                "secureAI=\(accountSyncFoundation.featureFlags.secureAIRecognitionEnabled)"
         )
         #endif
     }

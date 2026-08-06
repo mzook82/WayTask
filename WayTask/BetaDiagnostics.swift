@@ -10,7 +10,7 @@ enum BetaDiagnosticCategory: String, CaseIterable {
     case notification = "Notifications"
     case geofence = "Geofence"
     case map = "Map"
-    case recognition = "Gemini"
+    case recognition = "Secure AI"
     case performance = "Performance"
 }
 
@@ -505,7 +505,7 @@ final class BetaDiagnosticsCenter: ObservableObject {
 
     func recognitionStarted(kind: String, fallback: Bool) -> Date {
         guard isEnabled else { return Date() }
-        if kind == "Gemini" {
+        if kind == "Secure AI" {
             recognition.geminiRequests += 1
             if fallback { recognition.fallbackCount += 1 }
             if defaults.object(forKey: "waytask.betaDiagnostics.firstGeminiRequest") == nil {
@@ -523,7 +523,7 @@ final class BetaDiagnosticsCenter: ObservableObject {
     func recognitionFinished(kind: String, success: Bool, startedAt: Date, reason: String) {
         guard isEnabled else { return }
         let duration = Date().timeIntervalSince(startedAt)
-        if kind == "Gemini" {
+        if kind == "Secure AI" {
             if success { recognition.geminiSuccesses += 1 } else { recognition.geminiFailures += 1 }
         }
         recognition.lastRecognitionDuration = duration
@@ -645,7 +645,7 @@ final class BetaDiagnosticsCenter: ObservableObject {
         - Zoom: \(map.zoom.map { String(format: "%.2f", $0) } ?? "Unavailable")
         - Region: \(map.regionDescription)
 
-        ## Gemini
+        ## Secure AI Recognition
         - Requests: \(recognition.geminiRequests)
         - Success: \(recognition.geminiSuccesses)
         - Failure: \(recognition.geminiFailures)
@@ -655,7 +655,7 @@ final class BetaDiagnosticsCenter: ObservableObject {
         - Manual Products: \(recognition.manualProducts)
         - Recognition Time: \(durationText(recognition.lastRecognitionDuration))
         - Cache Hits / Misses: \(recognition.cacheHits) / \(recognition.cacheMisses)
-        - Estimated Monthly Gemini Requests: \(recognition.estimatedMonthlyGeminiRequests) (local usage projection)
+        - Estimated Monthly Secure AI Requests: \(recognition.estimatedMonthlyGeminiRequests) (local usage projection)
 
         ## Performance
         - Average Generate Plan: \(durationText(averagePlanDuration))

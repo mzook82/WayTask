@@ -440,6 +440,14 @@ struct CameraView: View {
 
     private var photoReviewControls: some View {
         VStack(spacing: 12) {
+            if viewModel.selectedMode == .aiVision ||
+                viewModel.isWaitingForBarcodePackagePhoto {
+                Text("Use Photo sends a compressed, metadata-free copy to WayTask’s secure AI service. Cancel or Retake keeps it on this device.")
+                    .font(.caption)
+                    .foregroundStyle(WayTaskDesign.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             HStack(spacing: 12) {
                 Button {
                     viewModel.usePendingPhoto()
@@ -594,7 +602,7 @@ struct CameraView: View {
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(WayTaskDesign.primaryText)
 
-                Text("Take a clear front photo so Gemini can improve the product details.")
+                Text("Take a clear front photo for secure AI recognition. The photo is sent only after you choose Use Photo.")
                     .font(.caption)
                     .foregroundStyle(WayTaskDesign.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -670,7 +678,7 @@ struct CameraView: View {
             Image(systemName: "sparkles")
                 .foregroundStyle(WayTaskDesign.accent)
 
-            Text(viewModel.selectedMode == .aiVision ? "Gemini can suggest product details from your photo." : "Photo recognition uses Gemini when available.")
+            Text(viewModel.selectedMode == .aiVision ? "Secure AI can suggest product details when configured and signed in." : "Photo recognition stays local unless you explicitly start secure AI.")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(WayTaskDesign.secondaryText)
 

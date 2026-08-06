@@ -69,7 +69,7 @@ The result is a smarter, faster, and more personalized shopping experience.
 - Import from Photos
 - Barcode scanning
 - Open Food Facts barcode lookup
-- Gemini Vision product recognition
+- Secure-proxy AI product recognition (disabled until approved staging Auth)
 - AI Vision mode
 - Manual fallback when recognition is unavailable
 - User review before saving recognized products
@@ -114,13 +114,15 @@ Examples:
 
 Current AI foundation:
 
-- Gemini Vision integration
-- Secrets.plist API key loading through SecretsManager
-- Open Food Facts -> Gemini fallback for unknown barcodes
+- Protocol-based secure AI recognition authority
+- Authenticated, rate-limited staging Edge Function contract for Gemini
+- No Gemini credential or direct Gemini endpoint in iOS
+- Open Food Facts with explicit secure-AI enrichment for unknown barcodes
 - AI Vision mode for product photos
 - Structured JSON product recognition
 - Search keywords support for future matching
 - Manual fallback when confidence is low or AI is unavailable
+- Client and server kill switches OFF by default
 
 Future AI capabilities include:
 
@@ -169,7 +171,7 @@ WayTask is built using native Apple technologies.
 - Vision Framework
 - PhotosUI
 - UserNotifications
-- Gemini Vision API
+- Supabase Edge Functions (staging secure-AI boundary)
 - Git
 - GitHub
 
@@ -212,9 +214,9 @@ Current Progress
 - Camera UX improvements
 - Barcode scanning
 - Open Food Facts product lookup
-- Gemini Vision integration
+- Secure Gemini proxy/client boundary
 - AI Vision mode
-- Secrets.plist API key architecture
+- Built-artifact credential scanner and bundled-secret removal
 - AI review flow
 - AI search keywords support
 - Interactive Map Foundation
@@ -236,7 +238,7 @@ Current Progress
 - Sprint 19.2 AI persistence and learning foundation
 - Persisting AI search keywords
 - AI result editing polish
-- Gemini parsing and SecretsManager tests
+- Staging Auth token integration and proxy deployment validation
 
 ---
 
@@ -266,7 +268,7 @@ Current Progress
 - Smart Notifications
 - Barcode scanning
 - Open Food Facts lookup
-- Gemini Vision fallback
+- Secure-proxy AI enrichment after approved staging configuration
 - Shopping Mode
 - Shopping Trip Planner
 
@@ -305,16 +307,26 @@ Additional documentation is available in the `docs` directory.
 | ROADMAP | Product roadmap |
 | ARCHITECTURE | Technical architecture |
 | AI_ROADMAP | AI vision and future plans |
-| AI_PRODUCT_RECOGNITION | Gemini Vision and product recognition flow |
+| AI_PRODUCT_RECOGNITION | Secure AI and product recognition flow |
 | DEVELOPMENT_GUIDE | Development workflow |
 
 ---
 
 # Recent Progress
 
+## WT-032A.1 security remediation
+
+- Removed the direct Gemini iOS client, key loader, `Info.plist` key expansion,
+  and `Secrets.plist` Copy Bundle Resources membership.
+- Added a signed-in, rate-limited, fixed-schema staging proxy contract; all
+  cloud/account/sync/secure-AI features remain OFF by default.
+- Added Debug/Release built-product and tracked-source secret scanners.
+- See `docs/WT-032A/17_GEMINI_CREDENTIAL_REMEDIATION.md` for proof, prerequisites,
+  privacy/cost controls, and the required Google Cloud rotation checklist.
+
 ## Sprint 19.1
 
-Completed:
+Historical state (superseded by WT-032A.1):
 
 - Gemini Vision is the active AI product recognition provider.
 - `Secrets.plist` is the primary API key source through `SecretsManager`.
@@ -326,7 +338,7 @@ Completed:
 - Search keywords are available on `ProductCandidate` for future matching.
 - Notifications now use confirmed shopping-list product names rather than keyword-only labels.
 
-Known remaining work for Sprint 19.2:
+Historical planned work at that point:
 
 - Persist AI search keywords to SwiftData safely.
 - Add migration support for keyword storage.

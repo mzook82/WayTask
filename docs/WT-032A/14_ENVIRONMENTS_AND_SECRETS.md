@@ -26,13 +26,13 @@ The iOS build contract uses these Info/xcconfig keys:
 - `WAYTASK_SUPABASE_URL`: loopback HTTP(S) for local, HTTPS for remote;
 - `WAYTASK_SUPABASE_PUBLISHABLE_KEY`: client-safe publishable or legacy anon
   value only;
-- account, sync, and first-migration flags, each OFF by default.
+- account, sync, first-migration, and secure-AI flags, each OFF by default.
 
 Missing/all-placeholder values resolve to **not configured**. Partial, malformed,
 non-TLS remote, non-loopback local, privileged-prefix, or privileged-JWT-role
 values resolve invalid. Both outcomes disable client creation and preserve Guest
 Mode. Feature dependencies are ordered: sync requires accounts; first migration
-requires both.
+requires both; secure AI requires accounts and additionally rejects Production.
 
 ## Allowed in iOS
 
@@ -50,15 +50,17 @@ ProductState fields. CI secrets are environment-scoped, least-privilege,
 masked, rotated, and unavailable to untrusted pull requests. Production requires
 different approvers and secret variables from staging.
 
-Audit exception outside the new Supabase path: the existing Xcode project still
-bundles the ignored `WayTask/Secrets.plist`, and artifact inspection confirmed
-that its `GEMINI_API_KEY` value is non-empty. WT-032A did not read, print, copy,
-or change that value, and no Supabase credential was added there. A bundled iOS
-value cannot be treated as secret; before a Production account/sync pilot it
-must be removed/rotated and the Gemini operation moved behind an authenticated,
-abuse-controlled server path, or the value must be formally reclassified as a
-restricted client credential with accepted extraction/quota risk. This finding
-does not relax the prohibition on Supabase server credentials in the app.
+WT-032A.1 closed the client-bundling path: `Secrets.plist` and its loader are no
+longer members of the Xcode project, `Info.plist` has no Gemini-key expansion,
+and remediated Debug and Release products pass an exact-value and forbidden-file
+artifact scan. The developer's ignored root `Secrets.plist` and
+`Secrets.xcconfig` were not deleted, but neither is an accepted app credential
+source. The direct Gemini client was replaced by a disabled-by-default,
+authenticated staging Function contract. A Gemini key is allowed only as a
+server environment secret. Existing distributed builds remain exposed until an
+authorized Google Cloud owner restricts and rotates the incident key; see
+`17_GEMINI_CREDENTIAL_REMEDIATION.md`. This does not relax the prohibition on
+Supabase or other server credentials in the app.
 
 ## Deployment gate
 

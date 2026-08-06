@@ -17,11 +17,21 @@
 | Push token | future push routing | Keychain/provider; cloud stores hash in current schema only | installation life | never | future deletion; raw value excluded from export | notification feature only |
 | Mutation IDs/hash/count/status | idempotency/recovery | local sidecar/private DB | bounded operational window, proposed 90 days after convergence | counts/codes only | delete with account; export optional technical manifest | sync only |
 | Diagnostics | reliability/security | Sentry/operational systems | separate approved short retention | allowlisted only | not private-content export; deletion per provider/legal contract | optional/operational |
+| Secure recognition request | explicit product-photo recognition | transient iOS/Function/provider request memory; no WayTask image retention by default | request lifetime; provider contract pending privacy review | event/outcome/duration/response byte count only | not synced; cancel/manual path keeps image local | optional, explicit Use Photo, signed-in staging only |
+| AI quota ledger | abuse/cost and duplicate control | private DB: user UUID, request UUID, salted IP hash, timestamp | two-day rolling cleanup | counts/codes only | delete cascades with account; technical export not needed | only when secure AI enabled |
 
 Never collect continuous location history, full travel routes, raw tokens in
 logs, extra email copies, camera frames/images unless explicitly saved, shopping
 content in analytics, or precise location outside the requested feature. The
 catalog remains shared/bundled and is excluded from user export.
+
+Secure recognition re-renders an explicitly selected image as JPEG to remove
+metadata and limits it to 1,280 pixels/2 MiB. It omits QR payloads and sends only
+an allowlisted numeric retail barcode when available. Images can still contain
+faces, addresses, backgrounds, or readable private text, so the review screen
+must disclose transmission before **Use Photo**. Cancel/retake causes no secure
+AI request. Provider retention/training, region, subprocessors, privacy policy,
+App Store labels, and deletion obligations require review before Production.
 
 Saved stores and notification preferences are private owner-owned resources.
 Location-based smart shopping needs a separate opt-in, just-in-time explanation,

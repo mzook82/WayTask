@@ -39,3 +39,7 @@ enable_confirmations = false
 
 [analytics]
 enabled = false
+
+[functions.recognize-product]
+enabled = true
+verify_jwt = true

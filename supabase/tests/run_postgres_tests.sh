@@ -3,7 +3,6 @@ set -euo pipefail
 
 test_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 supabase_root="$(cd "${test_root}/.." && pwd)"
-migration="${supabase_root}/migrations/20260806000100_wt032a_account_sync_foundation.sql"
 database_name="waytask_wt032a_test"
 
 for command_name in createdb dropdb psql pg_dump; do
@@ -23,10 +22,15 @@ trap cleanup EXIT
 
 psql --set ON_ERROR_STOP=on --dbname "${database_name}" \
     --file "${test_root}/bootstrap_bare_postgres.sql"
-psql --set ON_ERROR_STOP=on --dbname "${database_name}" --file "${migration}"
+for migration in "${supabase_root}"/migrations/*.sql; do
+    psql --set ON_ERROR_STOP=on --dbname "${database_name}" \
+        --file "${migration}"
+done
 psql --set ON_ERROR_STOP=on --dbname "${database_name}" \
     --file "${test_root}/authorization.sql"
 psql --set ON_ERROR_STOP=on --dbname "${database_name}" \
     --file "${test_root}/constraints.sql"
+psql --set ON_ERROR_STOP=on --dbname "${database_name}" \
+    --file "${test_root}/ai_proxy_rate_limit.sql"
 
 echo "WT-032A PostgreSQL policy suite completed."

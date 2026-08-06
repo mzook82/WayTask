@@ -18,6 +18,7 @@ All `429` responses include integer `Retry-After` seconds and a safe typed
 | Store reports | user + IP + device | 3/10 min | 10/day | Edge/moderation mandatory | queue or reject; no direct catalog write | 5/day/user or coordinated target |
 | Notification registration | user + installation | 10/min | 30/day | Edge/provider integration | keep local notifications; retry later | token churn >10/day |
 | Export/deletion/security operations | user + recent reauth + IP | 2/hour | 5/day export; deletion one active job | Edge/job mandatory | explicit status; never duplicate job | any repeated deletion request or job >SLO |
+| Secure AI recognition (implemented staging start) | authenticated user + salted IP hash + request UUID | 6/user/min; 30/IP/min | 60/user/day; 300/IP/day | transactional quota RPC before Gemini; Function/client kill switches | `429` + bounded `Retry-After`; retry or manual entry | provider cost/latency, >2% limited, repeated old-key use |
 
 ## Idempotency contract
 
@@ -37,3 +38,12 @@ All `429` responses include integer `Retry-After` seconds and a safe typed
   cannot forge it and a duplicate retry leaves exactly one receipt.
 - Safe coalescing is limited to superseded unsent updates for the same record;
   deletes, history events, conflict copies, and user choices are never dropped.
+
+Secure AI uses a narrower idempotency contract because recognition is not a
+state mutation: `(auth.uid(), request_id)` is unique, a duplicate is rejected,
+and the two-day quota ledger contains only the user UUID, request UUID, salted
+IP hash, and timestamp. It stores no image, barcode, prompt, or response. The
+limits are staging values and require cost/abuse tuning before Production. The
+IP component is enabled only with an explicitly configured allowlisted ingress
+header, and staging must prove the gateway overwrites it rather than trusting a
+client-supplied value.

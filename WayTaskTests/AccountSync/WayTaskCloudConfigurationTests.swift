@@ -122,6 +122,22 @@ final class WayTaskCloudConfigurationTests: XCTestCase {
         XCTAssertTrue(flags.accountsEnabled)
         XCTAssertTrue(flags.synchronizationEnabled)
         XCTAssertTrue(flags.firstMigrationEnabled)
+        XCTAssertFalse(flags.secureAIRecognitionEnabled)
+
+        let secureAIWithoutAccounts = WayTaskCloudConfiguration.featureFlags(
+            values: [WayTaskCloudConfiguration.secureAIFlagKey: "YES"],
+            configurationStatus: status
+        )
+        XCTAssertFalse(secureAIWithoutAccounts.secureAIRecognitionEnabled)
+
+        let secureAIWithAccounts = WayTaskCloudConfiguration.featureFlags(
+            values: [
+                WayTaskCloudConfiguration.accountsFlagKey: "YES",
+                WayTaskCloudConfiguration.secureAIFlagKey: "YES"
+            ],
+            configurationStatus: status
+        )
+        XCTAssertTrue(secureAIWithAccounts.secureAIRecognitionEnabled)
     }
 
     private var enabledFlagValues: [String: String] {

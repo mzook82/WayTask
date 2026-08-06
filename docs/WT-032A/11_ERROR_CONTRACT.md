@@ -33,3 +33,15 @@ it to an allowlisted internal reason and discard the payload.
 Tests enumerate all 15 categories, require complete safe metadata, verify the
 approved Offline/Permission/Rate/Server copy, and reject database/JWT vocabulary
 from explanations.
+
+## Secure AI recognition
+
+Secure recognition has an independent fail-closed mapping: not configured,
+offline, authentication required, permission denied, rate limited, payload too
+large, unsupported image, service unavailable, timeout, invalid/empty result,
+recoverable server error, non-recoverable configuration, duplicate request, and
+cancellation. Every state returns zero candidates and offers retry/retake/manual
+entry as applicable. No state falls back to a direct Gemini client or invents a
+successful product. The UI never receives raw Gemini, Supabase, HTTP, SQL, JWT,
+or stack text. The complete copy/action matrix is in
+`17_GEMINI_CREDENTIAL_REMEDIATION.md`.

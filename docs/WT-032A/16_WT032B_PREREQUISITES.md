@@ -28,6 +28,11 @@ preview/sidecar, and disabled-by-default sync slices—not Production activation
   duplicate-retry, conflict and local-persistence tests.
 - [ ] Define supported older app/schema compatibility and a cloud-write kill
   switch; local features must remain operational.
+- [x] Remove the direct Gemini client/key loader and bundled `Secrets.plist`;
+  add the authenticated staging proxy contract, disabled flags, quota boundary,
+  artifact scanner, and safe unavailable UX.
+- [ ] Wire secure AI to a real WT-032B staging Auth access token and validate the
+  deployed Function with synthetic images before enabling its two kill switches.
 
 ## Required before any Production pilot (not WT-032B entry criteria)
 
@@ -38,9 +43,11 @@ preview/sidecar, and disabled-by-default sync slices—not Production activation
 - [ ] Provisional rate limits tuned from staging evidence and abuse alerts tested.
 - [ ] Independent security review of migrations/RLS/Storage/Edge/auth redirects,
   dependency review and production artifact secret scan.
-- [ ] Remove and rotate the existing bundled Gemini key by moving that request
-  behind an authenticated/rate-limited server path, or formally accept and
-  constrain it as an extractable client credential; it is not a Supabase key.
+- [x] Remove the existing bundled Gemini key and direct Release request path;
+  remediated Debug/Release artifacts prove the file/value/endpoint absent.
+- [ ] Restrict and rotate the exposed historical Gemini key after the secure
+  staging path is deployed and verified; prove old-key rejection. This requires
+  authorized Google Cloud Console action and is not a Supabase-key operation.
 - [ ] Explicit opt-in and privacy review for saved-store precision, images,
   notification/location behavior and analytics/monitoring.
 - [ ] Small reversible pilot with flags, no automatic upload of existing
@@ -50,16 +57,19 @@ preview/sidecar, and disabled-by-default sync slices—not Production activation
 
 - Guest-default account/config/sync/error foundation: implemented.
 - Account, sync and migration flags: OFF in Debug and Release defaults.
+- Secure-AI flag and server kill switch: OFF by default; Production is rejected.
 - Supabase migration repository and default-deny policy matrix: implemented.
 - Real PostgreSQL authorization suite: 50/50 passed.
 - Real PostgreSQL constraint suite: 30/30 passed.
 - Supabase CLI 2.111.0 applied migration and seed to a clean PostgreSQL 17
   database; a second migration dry run reported the database up to date.
 - Two independent clean rebuilds: schema-identical.
-- Generic iOS build: passed; 18 focused account/configuration/error tests and
-  842 repository-wide non-performance tests passed on iOS Simulator.
+- Generic Debug and Release iOS builds: passed; focused security/account/scanner
+  tests and 852 repository-wide non-performance tests passed on iOS Simulator.
 - Managed Supabase backup/restore, remote staging, interactive simulator account
   flows and physical-device account flows: intentionally not claimed.
+- Gemini staging deployment/JWT wiring, Google key rotation, provider cost proof,
+  and physical-device secure-recognition flow: intentionally not claimed.
 
 ## Recommended iOS authentication method order
 

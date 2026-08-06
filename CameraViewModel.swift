@@ -86,7 +86,7 @@ final class CameraViewModel: ObservableObject {
         self.cameraService = CameraService()
         self.recognitionService = ProductRecognitionService()
         self.productDataProvider = OpenFoodFactsProvider()
-        self.aiRecognitionService = GeminiProductRecognitionService()
+        self.aiRecognitionService = SecureAIProductRecognitionService()
     }
 
     init(
@@ -521,7 +521,7 @@ final class CameraViewModel: ObservableObject {
             clearRecognition()
         }
         recognitionPhase = isWaitingForBarcodePackagePhoto ? .unavailable : .idle
-        statusMessage = isWaitingForBarcodePackagePhoto ? "Product not found. Show the front of the package." : selectedMode == .aiVision ? "Capture a product photo for Gemini." : "Ready to capture a photo."
+        statusMessage = isWaitingForBarcodePackagePhoto ? "Product not found. Show the front of the package." : selectedMode == .aiVision ? "Capture a product photo for secure AI recognition." : "Ready to capture a photo."
     }
 
     func savePendingPhotoToLibrary() {
@@ -570,7 +570,7 @@ final class CameraViewModel: ObservableObject {
         statusMessage = selectedMode == .barcode
             ? "Point the camera at a barcode."
             : selectedMode == .aiVision
-                ? "Capture a product photo for Gemini."
+                ? "Capture a product photo for secure AI recognition."
                 : "Ready to capture a photo."
     }
 
@@ -585,7 +585,7 @@ final class CameraViewModel: ObservableObject {
         } else {
             cameraService.stopBarcodeScanning()
             statusMessage = selectedMode == .aiVision
-                ? "Capture a product photo for Gemini."
+                ? "Capture a product photo for secure AI recognition."
                 : "Ready to capture a photo."
         }
     }
@@ -732,7 +732,7 @@ final class CameraViewModel: ObservableObject {
             operation: .recognition
         )
 
-        let diagnosticsStartedAt = BetaDiagnosticsCenter.shared.recognitionStarted(kind: "Gemini", fallback: false)
+        let diagnosticsStartedAt = BetaDiagnosticsCenter.shared.recognitionStarted(kind: "Secure AI", fallback: false)
         recognitionTask?.cancel()
         recognitionTask = Task { [weak self] in
             guard let self else {
@@ -741,10 +741,12 @@ final class CameraViewModel: ObservableObject {
 
             let result = await aiRecognitionService.suggestProduct(from: imageData, barcode: nil)
             BetaDiagnosticsCenter.shared.recognitionFinished(
-                kind: "Gemini",
+                kind: "Secure AI",
                 success: result.bestCandidate != nil && (result.bestCandidate?.confidence ?? 0) >= 0.55,
                 startedAt: diagnosticsStartedAt,
-                reason: result.message
+                reason: result.bestCandidate == nil
+                    ? "No reviewable candidate returned"
+                    : "Reviewable candidate returned"
             )
             SentryReportingService.shared.breadcrumb(
                 result.bestCandidate != nil ? .recognitionCompleted : .recognitionFailed,
@@ -766,7 +768,7 @@ final class CameraViewModel: ObservableObject {
             operation: .recognition
         )
 
-        let diagnosticsStartedAt = BetaDiagnosticsCenter.shared.recognitionStarted(kind: "Gemini", fallback: true)
+        let diagnosticsStartedAt = BetaDiagnosticsCenter.shared.recognitionStarted(kind: "Secure AI", fallback: true)
         recognitionTask?.cancel()
         recognitionTask = Task { [weak self] in
             guard let self else {
@@ -779,10 +781,12 @@ final class CameraViewModel: ObservableObject {
             )
 
             BetaDiagnosticsCenter.shared.recognitionFinished(
-                kind: "Gemini",
+                kind: "Secure AI",
                 success: result.bestCandidate != nil && (result.bestCandidate?.confidence ?? 0) >= 0.55,
                 startedAt: diagnosticsStartedAt,
-                reason: result.message
+                reason: result.bestCandidate == nil
+                    ? "No reviewable candidate returned"
+                    : "Reviewable candidate returned"
             )
             SentryReportingService.shared.breadcrumb(
                 result.bestCandidate != nil ? .recognitionCompleted : .recognitionFailed,

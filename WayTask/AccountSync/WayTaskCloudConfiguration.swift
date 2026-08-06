@@ -45,23 +45,28 @@ struct WayTaskCloudFeatureFlags: Equatable, Sendable {
     let accountsEnabled: Bool
     let synchronizationEnabled: Bool
     let firstMigrationEnabled: Bool
+    let secureAIRecognitionEnabled: Bool
 
     nonisolated static let disabled = WayTaskCloudFeatureFlags(
         accountsEnabled: false,
         synchronizationEnabled: false,
-        firstMigrationEnabled: false
+        firstMigrationEnabled: false,
+        secureAIRecognitionEnabled: false
     )
 
     nonisolated init(
         accountsEnabled: Bool,
         synchronizationEnabled: Bool,
-        firstMigrationEnabled: Bool
+        firstMigrationEnabled: Bool,
+        secureAIRecognitionEnabled: Bool = false
     ) {
         self.accountsEnabled = accountsEnabled
         self.synchronizationEnabled =
             accountsEnabled && synchronizationEnabled
         self.firstMigrationEnabled =
             accountsEnabled && synchronizationEnabled && firstMigrationEnabled
+        self.secureAIRecognitionEnabled =
+            accountsEnabled && secureAIRecognitionEnabled
     }
 }
 
@@ -75,6 +80,8 @@ enum WayTaskCloudConfiguration {
     nonisolated static let syncFlagKey = "WAYTASK_CLOUD_SYNC_ENABLED"
     nonisolated static let migrationFlagKey =
         "WAYTASK_CLOUD_MIGRATION_ENABLED"
+    nonisolated static let secureAIFlagKey =
+        "WAYTASK_SECURE_AI_ENABLED"
 
     nonisolated static func resolve(
         values: [String: String]
@@ -149,7 +156,8 @@ enum WayTaskCloudConfiguration {
         return WayTaskCloudFeatureFlags(
             accountsEnabled: enabled(values[accountsFlagKey]),
             synchronizationEnabled: enabled(values[syncFlagKey]),
-            firstMigrationEnabled: enabled(values[migrationFlagKey])
+            firstMigrationEnabled: enabled(values[migrationFlagKey]),
+            secureAIRecognitionEnabled: enabled(values[secureAIFlagKey])
         )
     }
 

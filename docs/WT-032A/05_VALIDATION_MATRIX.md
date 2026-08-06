@@ -29,6 +29,9 @@ provide early feedback but never replace DB/server validation.
 | mutation hash | lower-case SHA-256 | hidden | computed over canonical bytes | 64-hex CHECK | recompute before applying |
 | batch count | 1–500 | progress/preflight | `validateBatch` | receipt CHECK | reject before parsing/applying |
 | payload size | 1–1,048,576 bytes for custom operations | preflight | `validateBatch` | receipt CHECK | request body limit is authoritative |
+| secure-AI image | JPEG only; re-rendered metadata-free; local input ≤12 MiB; upload ≤2 MiB and longest side ≤1,280 px | explicit review/consent and preflight | fixed encoder | never stored | body ≤2,850,000; JPEG signature/MIME/decoded size checked |
+| secure-AI request | schema v1; UUID; only image and optional numeric allowlisted barcode; no QR/model/prompt/endpoint/user/location | hidden generated UUID | fixed Codable type | quota ledger stores identifiers/hash/time only | reject unknown/malformed fields; derive user from JWT |
+| secure-AI response | ≤64 KiB client/provider; normalized body ≤32 KiB; bounded fields; one candidate or no-match | reviewed, never auto-added | strict decoder and safe message codes | no response persistence by proxy | fixed model/prompt; validate and normalize provider JSON |
 
 The presentation layer must show typed field errors and must submit the original
 Unicode value as data. It may trim surrounding whitespace only as an explicit
@@ -44,3 +47,9 @@ copy.
 The database constraint suite contains 30 executed assertions, including
 malformed Unicode controls, bounds, enum values, URLs, barcodes, image metadata,
 location, quiet hours, batch count, and payload size.
+
+The secure-AI Function contract suite additionally covers valid requests,
+unknown client controls, malformed/oversized payloads, JPEG signature/MIME, and
+bounded response normalization. Its PostgreSQL quota suite executes eight
+authorization, duplicate, user-limit, IP-limit, and no-content-storage
+assertions.

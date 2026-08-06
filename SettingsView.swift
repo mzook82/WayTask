@@ -154,7 +154,7 @@ struct SettingsView: View {
                         versionTapCount = 0
                     }
                 }
-            LabeledContent("AI", value: "Gemini Vision")
+            LabeledContent("AI", value: "Secure proxy (off by default)")
             LabeledContent("Product Knowledge", value: "Enabled")
             LabeledContent("Learned products", value: "\(productKnowledge.count)")
             LabeledContent("Store sources", value: "Saved, Apple Maps, fallback")

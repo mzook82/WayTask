@@ -29,12 +29,16 @@ authentication alone.
 | 22 | Authorization | Wrong project/environment config | explicit environment, HTTPS/loopback guard, flags off, separate project linking | startup classification, deploy checklist | fail to Guest Mode; unlink/rotate config | valid but mislabelled remote URL |
 | 23 | Tokens/content | Sensitive logging | typed codes/privacy classes; never tokens/full rows/images | log scans and sampling review | purge where possible, rotate token, incident review | third-party SDK behavior |
 | 24 | Account lifecycle | Incomplete deletion/retention | reauth, durable deletion job, ordered resources, minimized audit | job state/age and orphan scans | retry/resume, manual authorized repair, report final status | provider/legal retention lag |
+| 25 | Gemini key/cost | Extracted client credential used for arbitrary calls, quota/cost exhaustion, or outage | no key/direct endpoint in iOS; authenticated fixed Function; server secret and kill switch | artifact/source scans; provider quota/cost/rejection alerts | disable Function, rotate key, investigate old-key attempts | old builds expose key until rotation; distributed abuse |
+| 26 | Recognition image/text | Sensitive background/OCR/barcode sent or logged | explicit Use Photo; JPEG re-render; fixed schema/prompt; QR omitted; no WayTask retention | content-free logs and sampled schema audits | kill switch; purge provider data where contract permits; privacy incident process | provider/network metadata and user-framed content |
 
 ## Trust boundaries
 
 - The iOS process is untrusted for ownership claims and administrative actions.
 - Supabase Auth proves a session; RLS and constraints authorize each row.
 - Service credentials exist only in controlled server/deployment systems.
+- Secure AI treats iOS as untrusted: Auth, validation, user/salted-IP quota,
+  idempotency, endpoint/model/prompt ownership, and normalization are server-side.
 - Apple/Core Location/notification/photo services are separate privacy domains.
 - Shared catalog releases are not private-user ownership domains.
 

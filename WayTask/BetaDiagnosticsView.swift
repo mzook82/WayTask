@@ -254,10 +254,10 @@ struct BetaDiagnosticsView: View {
     }
 
     private var recognitionSection: some View {
-        Section("Gemini & Recognition") {
-            diagnosticRow("Gemini Requests", "\(diagnostics.recognition.geminiRequests)")
-            diagnosticRow("Gemini Success", "\(diagnostics.recognition.geminiSuccesses)")
-            diagnosticRow("Gemini Failures", "\(diagnostics.recognition.geminiFailures)")
+        Section("Secure AI & Recognition") {
+            diagnosticRow("Secure AI Requests", "\(diagnostics.recognition.geminiRequests)")
+            diagnosticRow("Secure AI Success", "\(diagnostics.recognition.geminiSuccesses)")
+            diagnosticRow("Secure AI Failures", "\(diagnostics.recognition.geminiFailures)")
             diagnosticRow("Fallback Count", "\(diagnostics.recognition.fallbackCount)")
             diagnosticRow("Barcode Count", "\(diagnostics.recognition.barcodeCount)")
             diagnosticRow("OpenFoodFacts Count", "\(diagnostics.recognition.openFoodFactsCount)")
@@ -265,7 +265,7 @@ struct BetaDiagnosticsView: View {
             diagnosticRow("Recognition Time", durationText(diagnostics.recognition.lastRecognitionDuration))
             diagnosticRow("Cache Hits", "\(diagnostics.recognition.cacheHits)")
             diagnosticRow("Cache Misses", "\(diagnostics.recognition.cacheMisses)")
-            diagnosticRow("Estimated Monthly Gemini Requests", "\(diagnostics.recognition.estimatedMonthlyGeminiRequests)")
+            diagnosticRow("Estimated Monthly Secure AI Requests", "\(diagnostics.recognition.estimatedMonthlyGeminiRequests)")
         }
     }
 

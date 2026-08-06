@@ -22,6 +22,7 @@ Documents:
 14. [Environments and secrets](14_ENVIRONMENTS_AND_SECRETS.md)
 15. [Account deletion and export](15_ACCOUNT_DELETION_AND_EXPORT.md)
 16. [WT-032B prerequisites](16_WT032B_PREREQUISITES.md)
+17. [Gemini credential remediation](17_GEMINI_CREDENTIAL_REMEDIATION.md)
 
 Executable evidence lives under `supabase/tests/` and iOS contract tests live
-under `WayTaskTests/AccountSync/`.
+under `WayTaskTests/AccountSync/` and `WayTaskTests/AIRecognition/`.
