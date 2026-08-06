@@ -200,14 +200,14 @@ final class AddProductAutocompleteViewModel: ObservableObject {
     var customProductActionName: String? {
         guard selectedCatalogProduct == nil,
               selectedCustomProduct == nil,
-              !hasExactCatalogNameMatch else {
+              !hasSuitableCatalogMatch,
+              phase == .results || phase == .noMatch || phase == .unavailable else {
             return nil
         }
-
-        let trimmedName = rawQuery.trimmingCharacters(
-            in: .whitespacesAndNewlines
+        return CatalogCustomCreationPolicy.offeredName(
+            for: rawQuery,
+            searchCompletedWithoutMatch: true
         )
-        return trimmedName.isEmpty ? nil : trimmedName
     }
 
     init(
@@ -617,26 +617,18 @@ final class AddProductAutocompleteViewModel: ObservableObject {
         slowStatusTask = nil
     }
 
-    private var hasExactCatalogNameMatch: Bool {
-        let normalizedQuery = HebrewProductSearchNormalizer.normalize(rawQuery).value
-        guard !normalizedQuery.isEmpty else {
-            return false
-        }
-
-        return results.contains {
-            ($0.matchTier == .exactCanonical || $0.matchTier == .exactAlias)
-                && $0.normalizedMatchedValue == normalizedQuery
-        }
+    private var hasSuitableCatalogMatch: Bool {
+        results.contains { $0.isSuitableCatalogMatch }
     }
 }
 
 nonisolated enum ProductAutocompleteCopy {
     static func productNameFieldLabel(localeIdentifier: String) -> String {
-        isHebrew(localeIdentifier) ? "שם המוצר" : "Product name"
+        isHebrew(localeIdentifier) ? "חיפוש מוצרים" : "Search products"
     }
 
     static func productNamePlaceholder(localeIdentifier: String) -> String {
-        isHebrew(localeIdentifier) ? "הקלדת שם מוצר" : "Type a product name"
+        isHebrew(localeIdentifier) ? "חיפוש בקטלוג" : "Search catalog"
     }
 
     static func productEntryGuidance(localeIdentifier: String) -> String {

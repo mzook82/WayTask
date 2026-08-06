@@ -114,7 +114,42 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
             ]
         )
         XCTAssertEqual(viewModel.results.map(\.displayName), ["Milk"])
-        XCTAssertEqual(viewModel.customProductActionName, "M")
+        XCTAssertNil(viewModel.customProductActionName)
+    }
+
+    func testMeaningfulQueryPolicySuppressesCAndCoButAllowsCompletedUnmatchedText()
+        async throws {
+        let recorder = ProductAutocompleteSearchRecorder()
+        let viewModel = makeViewModel(recorder: recorder)
+
+        viewModel.updateQuery("C", localeIdentifier: "en")
+        try await waitUntil { viewModel.phase == .noMatch }
+        XCTAssertNil(viewModel.customProductActionName)
+
+        viewModel.updateQuery("Co", localeIdentifier: "en")
+        try await waitUntil { viewModel.phase == .noMatch }
+        XCTAssertNil(viewModel.customProductActionName)
+
+        viewModel.updateQuery("Cocoa Powder", localeIdentifier: "en")
+        try await waitUntil { viewModel.phase == .noMatch }
+        XCTAssertEqual(viewModel.customProductActionName, "Cocoa Powder")
+    }
+
+    func testThreeLetterAlphabeticCustomTermRequiresExplicitCuratedEvidence() {
+        XCTAssertNil(
+            CatalogCustomCreationPolicy.offeredName(
+                for: "Tea",
+                searchCompletedWithoutMatch: true
+            )
+        )
+        XCTAssertEqual(
+            CatalogCustomCreationPolicy.offeredName(
+                for: "Tea",
+                searchCompletedWithoutMatch: true,
+                validatedCompleteShortTerms: ["tea"]
+            ),
+            "Tea"
+        )
     }
 
     func testQueryReplacementKeepsPriorPresentationButRejectsStaleSelection() async throws {
@@ -139,7 +174,7 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
                 isActive: true,
                 statusContent: .hidden,
                 showsResults: true,
-                customActionName: "m"
+                customActionName: nil
             )
         )
         let staleResult = try XCTUnwrap(viewModel.results.first)
@@ -157,7 +192,7 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
                 isActive: true,
                 statusContent: .hidden,
                 showsResults: true,
-                customActionName: "b"
+                customActionName: nil
             )
         )
         XCTAssertFalse(
@@ -233,7 +268,7 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.allowsNameFieldFocus)
     }
 
-    func testSearchingCustomOnlyAndNoMatchSharePersistentPresentationSlots() async throws {
+    func testShortQueriesNeverExposeCustomCreationWhileSearchingOrUnmatched() async throws {
         let gate = ProductAutocompleteSearchGate()
         let viewModel = AddProductAutocompleteViewModel(
             suggestionProvider: { query, _, _ in
@@ -254,22 +289,14 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
                 isActive: true,
                 statusContent: .searching,
                 showsResults: false,
-                customActionName: "z"
+                customActionName: nil
             )
         )
 
         viewModel.updateQuery("zx", localeIdentifier: "en")
 
         XCTAssertEqual(viewModel.phase, .idle)
-        XCTAssertEqual(
-            viewModel.presentationSlots,
-            ProductAutocompletePresentationSlots(
-                isActive: true,
-                statusContent: .hidden,
-                showsResults: false,
-                customActionName: "zx"
-            )
-        )
+        XCTAssertEqual(viewModel.presentationSlots, .empty)
 
         try await gate.waitUntilRequested("zx")
         await gate.resolve("z", with: [])
@@ -284,7 +311,7 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
                 isActive: true,
                 statusContent: .noMatch,
                 showsResults: false,
-                customActionName: "zx"
+                customActionName: nil
             )
         )
     }
@@ -294,15 +321,7 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
         let viewModel = makeViewModel(recorder: recorder)
 
         viewModel.updateQuery("nonsense", localeIdentifier: "en")
-        XCTAssertEqual(
-            viewModel.presentationSlots,
-            ProductAutocompletePresentationSlots(
-                isActive: true,
-                statusContent: .hidden,
-                showsResults: false,
-                customActionName: "nonsense"
-            )
-        )
+        XCTAssertEqual(viewModel.presentationSlots, .empty)
         try await waitUntil {
             viewModel.phase == .noMatch
         }
@@ -310,31 +329,16 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
             viewModel.presentationSlots.statusContent,
             .noMatch
         )
+        XCTAssertEqual(viewModel.customProductActionName, "nonsense")
 
         viewModel.updateQuery("nonsensex", localeIdentifier: "en")
-        XCTAssertEqual(
-            viewModel.presentationSlots,
-            ProductAutocompletePresentationSlots(
-                isActive: true,
-                statusContent: .hidden,
-                showsResults: false,
-                customActionName: "nonsensex"
-            )
-        )
+        XCTAssertEqual(viewModel.presentationSlots, .empty)
         try await waitUntil {
             viewModel.phase == .noMatch
         }
 
         viewModel.updateQuery("nonsense", localeIdentifier: "en")
-        XCTAssertEqual(
-            viewModel.presentationSlots,
-            ProductAutocompletePresentationSlots(
-                isActive: true,
-                statusContent: .hidden,
-                showsResults: false,
-                customActionName: "nonsense"
-            )
-        )
+        XCTAssertEqual(viewModel.presentationSlots, .empty)
         try await waitUntil {
             viewModel.phase == .noMatch
         }
@@ -386,14 +390,14 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.phase, .unavailable)
         XCTAssertTrue(viewModel.results.isEmpty)
-        XCTAssertEqual(viewModel.customProductActionName, "m")
+        XCTAssertNil(viewModel.customProductActionName)
         XCTAssertEqual(
             viewModel.presentationSlots,
             ProductAutocompletePresentationSlots(
                 isActive: true,
                 statusContent: .unavailable,
                 showsResults: false,
-                customActionName: "m"
+                customActionName: nil
             )
         )
         XCTAssertEqual(
@@ -709,13 +713,13 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
             ProductAutocompleteCopy.productNameFieldLabel(
                 localeIdentifier: "he-IL"
             ),
-            "שם המוצר"
+            "חיפוש מוצרים"
         )
         XCTAssertEqual(
             ProductAutocompleteCopy.productNamePlaceholder(
                 localeIdentifier: "en"
             ),
-            "Type a product name"
+            "Search catalog"
         )
         XCTAssertEqual(
             ProductAutocompleteCopy.alreadyPresentTitle(
@@ -766,7 +770,7 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
         )
     }
 
-    func testCustomActionUsesTrimmedRawTextWithoutRepeatingEquivalentSearch() async throws {
+    func testCatalogResultsSuppressCustomActionWithoutRepeatingEquivalentSearch() async throws {
         let result = makeResult(id: "milk", displayName: "Milk")
         let recorder = ProductAutocompleteSearchRecorder(responses: ["mil": [result]])
         let viewModel = makeViewModel(recorder: recorder)
@@ -775,14 +779,67 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
         try await waitUntil {
             viewModel.phase == .results
         }
-        XCTAssertEqual(viewModel.customProductActionName, "MiL")
+        XCTAssertNil(viewModel.customProductActionName)
 
         viewModel.updateQuery("\nMIL\n", localeIdentifier: "en")
 
-        XCTAssertEqual(viewModel.customProductActionName, "MIL")
+        XCTAssertNil(viewModel.customProductActionName)
         XCTAssertEqual(viewModel.results, [result])
         let requests = await recorder.requests
         XCTAssertEqual(requests.map(\.query), ["mil"])
+    }
+
+    func testWeakFallbackOnlyResultsDoNotSuppressMeaningfulCustomAction()
+        async throws {
+        let weak = makeResult(
+            id: "fallback",
+            displayName: "Suggested Item",
+            matchTier: .conservativeFallback
+        )
+        let recorder = ProductAutocompleteSearchRecorder(
+            responses: ["mystery product": [weak]]
+        )
+        let viewModel = makeViewModel(recorder: recorder)
+
+        viewModel.updateQuery("Mystery Product", localeIdentifier: "en")
+        try await waitUntil { viewModel.phase == .results }
+
+        XCTAssertEqual(viewModel.results, [weak])
+        XCTAssertEqual(weak.candidateConfidence, .weak)
+        XCTAssertEqual(viewModel.customProductActionName, "Mystery Product")
+        XCTAssertTrue(viewModel.presentationSlots.showsResults)
+        XCTAssertEqual(
+            viewModel.presentationSlots.customActionName,
+            "Mystery Product"
+        )
+    }
+
+    func testStrongAndModerateResultsSuppressCustomCreation() async throws {
+        let strong = makeResult(
+            id: "direct",
+            displayName: "Mystery Product Plus",
+            matchTier: .canonicalPrefix
+        )
+        let moderate = makeResult(
+            id: "token",
+            displayName: "Complete Mystery Product",
+            matchTier: .tokenPrefix
+        )
+        let recorder = ProductAutocompleteSearchRecorder(
+            responses: [
+                "mystery product": [strong],
+                "complete mystery": [moderate]
+            ]
+        )
+        let viewModel = makeViewModel(recorder: recorder)
+
+        viewModel.updateQuery("Mystery Product", localeIdentifier: "en")
+        try await waitUntil { viewModel.results == [strong] }
+        XCTAssertNil(viewModel.customProductActionName)
+
+        viewModel.updateQuery("Complete Mystery", localeIdentifier: "en")
+        try await waitUntil { viewModel.results == [moderate] }
+        XCTAssertNil(viewModel.customProductActionName)
     }
 
     func testCustomActionAppearsWithoutCatalogResultsAndSupportsNormalizationEmptyText() async throws {
@@ -801,7 +858,7 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.phase, .idle)
         XCTAssertTrue(viewModel.results.isEmpty)
-        XCTAssertEqual(viewModel.customProductActionName, "+++")
+        XCTAssertNil(viewModel.customProductActionName)
     }
 
     func testExactAliasSuppressesDuplicateCustomProductOption() async throws {
@@ -833,16 +890,13 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
     }
 
     func testCustomSelectionRetainsTrimmedNameAndRequiresLaterManualConfirmation() async throws {
-        let catalogResult = makeResult(id: "milk", displayName: "Milk")
-        let recorder = ProductAutocompleteSearchRecorder(
-            responses: ["vanilla pudding": [catalogResult]]
-        )
+        let recorder = ProductAutocompleteSearchRecorder()
         let viewModel = makeViewModel(recorder: recorder)
         let rawQuery = "  Vanilla   Pudding  "
 
         viewModel.updateQuery(rawQuery, localeIdentifier: "en")
         try await waitUntil {
-            viewModel.phase == .results
+            viewModel.phase == .noMatch
         }
 
         let selection = try XCTUnwrap(viewModel.selectCustomProduct())
@@ -870,14 +924,13 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
     }
 
     func testCustomChangeRestoresOriginalQuerySuggestionsAndConfirmationGuard() async throws {
-        let result = makeResult(id: "milk", displayName: "Milk")
-        let recorder = ProductAutocompleteSearchRecorder(responses: ["mil": [result]])
+        let recorder = ProductAutocompleteSearchRecorder()
         let viewModel = makeViewModel(recorder: recorder)
-        let rawQuery = "  MiL  "
+        let rawQuery = "  Mystery Product  "
 
         viewModel.updateQuery(rawQuery, localeIdentifier: "en")
         try await waitUntil {
-            viewModel.phase == .results
+            viewModel.phase == .noMatch
         }
         XCTAssertNotNil(viewModel.selectCustomProduct())
 
@@ -889,13 +942,16 @@ final class ProductAutocompleteViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.selectedCustomProduct)
         XCTAssertFalse(viewModel.canChangeSelection)
         XCTAssertFalse(viewModel.allowsManualProductSave)
-        XCTAssertEqual(viewModel.customProductActionName, "MiL")
+        XCTAssertNil(viewModel.customProductActionName)
         try await waitUntil {
-            viewModel.phase == .results
+            viewModel.phase == .noMatch
         }
-        XCTAssertEqual(viewModel.results, [result])
+        XCTAssertTrue(viewModel.results.isEmpty)
         let requests = await recorder.requests
-        XCTAssertEqual(requests.map(\.query), ["mil", "mil"])
+        XCTAssertEqual(
+            requests.map(\.query),
+            ["mystery product", "mystery product"]
+        )
     }
 
     func testResetClearsCustomSelectionAndManualConfirmation() async throws {
@@ -1047,7 +1103,8 @@ nonisolated private func makeResult(
     secondaryName: String? = nil,
     categoryID: String = "test",
     categoryDisplayName: String = "Test",
-    iconKey: String = "product.generic"
+    iconKey: String = "product.generic",
+    matchTier: ProductSearchMatchTier = .canonicalPrefix
 ) -> ProductSearchResult {
     ProductSearchResult(
         productID: ProductID(id),
@@ -1059,6 +1116,7 @@ nonisolated private func makeResult(
         iconKey: iconKey,
         matchedRecordAuthority: .primaryDisplayName,
         matchType: .fullNamePrefix,
+        matchTier: matchTier,
         matchedLocale: "en"
     )
 }

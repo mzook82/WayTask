@@ -34,6 +34,12 @@ final class ShoppingUXActionClarityTests: XCTestCase {
         )
         XCTAssertNil(
             CatalogCustomCreationPolicy.offeredName(
+                for: "Co",
+                searchCompletedWithoutMatch: true
+            )
+        )
+        XCTAssertNil(
+            CatalogCustomCreationPolicy.offeredName(
                 for: "Whole Wheat Bread",
                 searchCompletedWithoutMatch: false
             )
@@ -45,6 +51,36 @@ final class ShoppingUXActionClarityTests: XCTestCase {
             ),
             "Whole Wheat Bread"
         )
+    }
+
+    func testCatalogSearchHidesPhotoAndExplicitCustomFlowOwnsIt() throws {
+        let customFlow = try productionSourceSection(
+            from: "private struct WayTaskProductionCreateCustomProductView",
+            to: "private enum WayTaskProductAddDestination"
+        )
+        let catalogSearch = try productionSourceSection(
+            from: "private struct WayTaskProductionAddProductView",
+            to: "private struct WayTaskProductionShoppingView"
+        )
+
+        XCTAssertTrue(customFlow.contains("PhotosPicker"))
+        XCTAssertTrue(customFlow.contains("\"Add Photo\""))
+        XCTAssertFalse(catalogSearch.contains("PhotosPicker"))
+        XCTAssertFalse(catalogSearch.contains("\"Add Photo\""))
+        XCTAssertTrue(catalogSearch.contains("slots.customActionName"))
+    }
+
+    func testAddProductUsesSearchCopyAndCompactToolbarOwnership() throws {
+        let catalogSearch = try productionSourceSection(
+            from: "private struct WayTaskProductionAddProductView",
+            to: "private struct WayTaskProductionShoppingView"
+        )
+
+        XCTAssertTrue(catalogSearch.contains("Search products in the catalog"))
+        XCTAssertTrue(catalogSearch.contains("productNamePlaceholder"))
+        XCTAssertTrue(catalogSearch.contains("WayTaskScreenHeader"))
+        XCTAssertTrue(catalogSearch.contains(".navigationBarTitleDisplayMode(.inline)"))
+        XCTAssertTrue(catalogSearch.contains(".cancellationAction"))
     }
 
     func testCustomProductConfirmationPreservesPrefilledQuery() {
@@ -74,7 +110,7 @@ final class ShoppingUXActionClarityTests: XCTestCase {
             )
         )
         XCTAssertTrue(source.contains("initialName: pendingCustomName"))
-        XCTAssertTrue(source.contains("autocomplete.phase == .noMatch"))
+        XCTAssertTrue(source.contains("slots.customActionName"))
         XCTAssertTrue(
             source.contains(
                 "Creating this custom product also adds it to"

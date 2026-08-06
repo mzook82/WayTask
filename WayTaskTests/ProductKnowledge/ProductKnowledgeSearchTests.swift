@@ -40,6 +40,30 @@ final class ProductKnowledgeSearchTests: XCTestCase {
             ProductSearchNormalizer.normalize("ך").value,
             ProductSearchNormalizer.normalize("כ").value
         )
+        XCTAssertEqual(
+            ProductKnowledgeNormalizer.queryScript(
+                ProductSearchNormalizer.normalize("חלב")
+            ),
+            .hebrew
+        )
+        XCTAssertEqual(
+            ProductKnowledgeNormalizer.queryScript(
+                ProductSearchNormalizer.normalize("Milk")
+            ),
+            .latin
+        )
+        XCTAssertEqual(
+            ProductKnowledgeNormalizer.queryScript(
+                ProductSearchNormalizer.normalize("Milk חלב")
+            ),
+            .mixedOrIndeterminate
+        )
+        XCTAssertEqual(
+            ProductKnowledgeNormalizer.queryScript(
+                ProductSearchNormalizer.normalize("123")
+            ),
+            .mixedOrIndeterminate
+        )
     }
 
     func testBundledCatalogSupportsApprovedEnglishHebrewAndAliasExamples() async throws {
@@ -93,30 +117,30 @@ final class ProductKnowledgeSearchTests: XCTestCase {
         let englishUI = await search.suggestions(matching: "חלב", locale: "en")
         let alias = await search.suggestions(matching: "dishw", locale: "en")
 
-        XCTAssertEqual(hebrewUI.first?.displayName, "חלב")
-        XCTAssertEqual(hebrewUI.first?.displayLocale, "he")
-        XCTAssertEqual(hebrewUI.first?.secondaryName, "Milk")
+        XCTAssertEqual(hebrewUI.first?.displayName, "Milk")
+        XCTAssertEqual(hebrewUI.first?.displayLocale, "en")
+        XCTAssertNil(hebrewUI.first?.secondaryName)
         XCTAssertEqual(hebrewUI.first?.matchedLocale, "en")
         XCTAssertEqual(
             hebrewUI.first?.categoryDisplayName,
-            "מוצרי חלב ותחליפים"
-        )
-        XCTAssertEqual(
-            hebrewUI.first?.matchedRecordAuthority,
-            .preferredDisplayName
-        )
-
-        XCTAssertEqual(englishUI.first?.displayName, "Milk")
-        XCTAssertEqual(englishUI.first?.displayLocale, "en")
-        XCTAssertEqual(englishUI.first?.secondaryName, "חלב")
-        XCTAssertEqual(englishUI.first?.matchedLocale, "he")
-        XCTAssertEqual(
-            englishUI.first?.categoryDisplayName,
             "Dairy & Alternatives"
         )
         XCTAssertEqual(
+            hebrewUI.first?.matchedRecordAuthority,
+            .primaryDisplayName
+        )
+
+        XCTAssertEqual(englishUI.first?.displayName, "חלב")
+        XCTAssertEqual(englishUI.first?.displayLocale, "he")
+        XCTAssertNil(englishUI.first?.secondaryName)
+        XCTAssertEqual(englishUI.first?.matchedLocale, "he")
+        XCTAssertEqual(
+            englishUI.first?.categoryDisplayName,
+            "מוצרי חלב ותחליפים"
+        )
+        XCTAssertEqual(
             englishUI.first?.matchedRecordAuthority,
-            .preferredDisplayName
+            .primaryDisplayName
         )
 
         XCTAssertEqual(alias.first?.displayName, "Dish Soap")
@@ -136,24 +160,167 @@ final class ProductKnowledgeSearchTests: XCTestCase {
 
         XCTAssertEqual(
             english.map(\.productID.rawValue),
-            ["prd_pilot_0007", "prd_pilot_0013", "prd_pilot_0012"]
+            ["prd_pilot_0007"]
         )
         XCTAssertEqual(
             hebrew.map(\.productID.rawValue),
             [
-                "prd_pilot_0012",
-                "prd_pilot_0014",
-                "prd_pilot_0011",
                 "prd_pilot_0007",
+                "prd_pilot_0011",
                 "prd_pilot_0010",
-                "prd_pilot_0015",
-                "prd_pilot_0004",
-                "prd_pilot_0003",
-                "prd_pilot_0001",
-                "prd_pilot_0002"
+                "prd_pilot_0014",
+                "prd_pilot_0012"
             ]
         )
+        XCTAssertTrue((english + hebrew).allSatisfy {
+            $0.matchTier == .canonicalPrefix
+                && $0.candidateConfidence == .strong
+        })
         XCTAssertNil(english.first?.secondaryName)
+    }
+
+    func testOneCharacterAdmitsOnlySameScriptDirectDisplayNames() async {
+        let snapshot = SearchFixtureFactory.makeSnapshot([
+            .init(id: "coffee", english: "Coffee"),
+            .init(id: "token", english: "Iced Coffee"),
+            .init(
+                id: "hebrew_keyword",
+                english: nil,
+                hebrew: "חומר ניקוי",
+                keywords: [("en", "Cleaning")]
+            ),
+            .init(
+                id: "hebrew_alias",
+                english: nil,
+                hebrew: "טיפוח אישי",
+                aliases: [("en", "Care")]
+            )
+        ])
+
+        let results = await makeSearch(snapshot: snapshot).suggestions(
+            matching: "C",
+            locale: "en"
+        )
+
+        XCTAssertEqual(results.map(\.productID.rawValue), ["coffee"])
+        XCTAssertEqual(results.first?.displayLocale, "en")
+        XCTAssertEqual(results.first?.matchTier, .canonicalPrefix)
+        XCTAssertEqual(results.first?.candidateConfidence, .strong)
+    }
+
+    func testTwoCharacterStrictBandsOutrankAndSuppressWeakCandidates() async {
+        let snapshot = SearchFixtureFactory.makeSnapshot([
+            .init(id: "canonical", english: "Coffee"),
+            .init(
+                id: "exact_alias",
+                english: "Chocolate",
+                aliases: [("en", "Co")]
+            ),
+            .init(
+                id: "alias_prefix",
+                english: "Soft Drink",
+                aliases: [("en", "Cola")]
+            ),
+            .init(id: "token", english: "Iced Coffee"),
+            .init(
+                id: "keyword",
+                english: nil,
+                hebrew: "חומר ניקוי",
+                keywords: [("en", "Coffee Cleaner")]
+            ),
+            .init(id: "substring", english: "Scorch Pads")
+        ])
+
+        let results = await makeSearch(snapshot: snapshot).suggestions(
+            matching: "Co",
+            locale: "en"
+        )
+
+        XCTAssertEqual(
+            results.map(\.productID.rawValue),
+            ["canonical", "exact_alias", "alias_prefix", "token"]
+        )
+        XCTAssertEqual(
+            results.map(\.matchTier),
+            [.canonicalPrefix, .exactAlias, .aliasPrefix, .tokenPrefix]
+        )
+        XCTAssertFalse(results.contains { $0.productID == ProductID("keyword") })
+        XCTAssertFalse(results.contains { $0.productID == ProductID("substring") })
+    }
+
+    func testShortHebrewDirectPrefixesBeatSecondaryEvidence() async {
+        let snapshot = SearchFixtureFactory.makeSnapshot([
+            .init(id: "cola", english: "Cola", hebrew: "קולה"),
+            .init(id: "token", english: nil, hebrew: "משקה קולה"),
+            .init(
+                id: "alias",
+                english: nil,
+                hebrew: "משקה מוגז",
+                aliases: [("he", "קולה חלופית")]
+            ),
+            .init(
+                id: "keyword",
+                english: nil,
+                hebrew: "חומר ניקוי",
+                keywords: [("he", "קולה")]
+            )
+        ])
+
+        let results = await makeSearch(snapshot: snapshot).suggestions(
+            matching: "קו",
+            locale: "he"
+        )
+
+        XCTAssertEqual(results.first?.productID, ProductID("cola"))
+        XCTAssertEqual(results.first?.matchTier, .canonicalPrefix)
+        XCTAssertTrue(results.contains { $0.productID == ProductID("token") })
+        XCTAssertFalse(results.contains { $0.productID == ProductID("keyword") })
+    }
+
+    func testHebrewCompletedNameAndAmbiguousPrefixFollowGeneralRules() async {
+        let definitions: [SearchFixtureFactory.ProductDefinition] = [
+            .init(id: "milk", english: "Milk", hebrew: "חלב"),
+            .init(id: "challah", english: "Challah", hebrew: "חלה")
+        ]
+        let forward = makeSearch(
+            snapshot: SearchFixtureFactory.makeSnapshot(definitions)
+        )
+        let reversed = makeSearch(
+            snapshot: SearchFixtureFactory.makeSnapshot(
+                definitions.reversed(),
+                reverseNames: true
+            )
+        )
+
+        let completed = await forward.suggestions(matching: "חלב", locale: "he")
+        let first = await forward.suggestions(matching: "חל", locale: "he")
+        let second = await reversed.suggestions(matching: "חל", locale: "he")
+
+        XCTAssertEqual(completed.map(\.productID.rawValue), ["milk"])
+        XCTAssertEqual(
+            Set(first.map(\.productID.rawValue)),
+            Set(["milk", "challah"])
+        )
+        XCTAssertEqual(first, second)
+    }
+
+    func testWeakCrossScriptCandidatesAreSuppressedForShortQueries() async {
+        let snapshot = SearchFixtureFactory.makeSnapshot([
+            .init(
+                id: "hebrew",
+                english: nil,
+                hebrew: "ניקיון",
+                aliases: [("en", "Care")],
+                keywords: [("en", "Cleaning")]
+            )
+        ])
+        let search = makeSearch(snapshot: snapshot)
+
+        let one = await search.suggestions(matching: "C", locale: "en")
+        let two = await search.suggestions(matching: "Cl", locale: "en")
+
+        XCTAssertTrue(one.isEmpty)
+        XCTAssertTrue(two.isEmpty)
     }
 
     func testNonpreferredDisplayRecordReportsDisplayAuthority() async {
@@ -181,30 +348,191 @@ final class ProductKnowledgeSearchTests: XCTestCase {
             locale: "en"
         )
 
-        XCTAssertEqual(results.first?.displayName, "Primary")
-        XCTAssertEqual(results.first?.secondaryName, "Searchable")
-        XCTAssertEqual(results.first?.matchedRecordAuthority, .displayName)
+        XCTAssertEqual(results.first?.displayName, "Searchable")
+        XCTAssertNil(results.first?.secondaryName)
+        XCTAssertEqual(results.first?.matchedRecordAuthority, .primaryDisplayName)
     }
 
-    func testDisplayNameFallbackMatchesRepositoryContract() async throws {
+    func testQueryScriptOverridesKeyboardLocaleForDisplaySelection() async throws {
         let snapshot = try BundledProductKnowledgeLoader(bundle: .main).load()
         let repository = InMemoryProductKnowledgeRepository(snapshot: snapshot)
         let search = ProductKnowledgeSearch(repository: repository)
         let locales = ["he", "he-IL", "en_US", "EN-us", "fr-FR"]
 
         for locale in locales {
-            let results = await search.suggestions(matching: "milk", locale: locale)
-            let preferredName = await repository.preferredName(
-                productID: ProductID("prd_pilot_0001"),
-                locale: locale
-            )
+            let latin = await search.suggestions(matching: "milk", locale: locale)
+            let hebrew = await search.suggestions(matching: "חלב", locale: locale)
 
-            XCTAssertEqual(
-                results.first?.displayName,
-                preferredName?.value,
-                "Display fallback drifted for \(locale)"
-            )
+            XCTAssertEqual(latin.first?.displayName, "Milk")
+            XCTAssertEqual(latin.first?.displayLocale, "en")
+            XCTAssertEqual(hebrew.first?.displayName, "חלב")
+            XCTAssertEqual(hebrew.first?.displayLocale, "he")
         }
+    }
+
+    func testHebrewQueryPrefersHebrewDisplayForComparableMatches() async {
+        let snapshot = SearchFixtureFactory.makeSnapshot([
+            .init(id: "hebrew", english: nil, hebrew: "מוצר חלב"),
+            .init(
+                id: "english",
+                english: "English Product",
+                aliases: [("he", "מוצר מים")]
+            )
+        ])
+        let results = await makeSearch(snapshot: snapshot).suggestions(
+            matching: "מו",
+            locale: "en"
+        )
+
+        XCTAssertEqual(results.map(\.productID.rawValue), ["hebrew"])
+        XCTAssertEqual(results.first?.displayLocale, "he")
+    }
+
+    func testLatinQueryPrefersEnglishDisplayForComparableMatches() async {
+        let snapshot = SearchFixtureFactory.makeSnapshot([
+            .init(id: "english", english: "Milk Product"),
+            .init(
+                id: "hebrew",
+                english: nil,
+                hebrew: "מוצר חלב",
+                aliases: [("en", "Milk Hebrew")]
+            )
+        ])
+        let results = await makeSearch(snapshot: snapshot).suggestions(
+            matching: "mi",
+            locale: "he"
+        )
+
+        XCTAssertEqual(results.map(\.productID.rawValue), ["english"])
+        XCTAssertEqual(results.first?.displayLocale, "en")
+    }
+
+    func testMixedScriptQueryIsNeutralDeterministicAndSourceIndependent() async {
+        let definitions: [SearchFixtureFactory.ProductDefinition] = [
+            .init(
+                id: "beta",
+                english: "Beta",
+                aliases: [("he", "Milk חלב Beta")]
+            ),
+            .init(
+                id: "alpha",
+                english: "Alpha",
+                aliases: [("en", "Milk חלב Alpha")]
+            )
+        ]
+        let forward = makeSearch(
+            snapshot: SearchFixtureFactory.makeSnapshot(definitions)
+        )
+        let reversed = makeSearch(
+            snapshot: SearchFixtureFactory.makeSnapshot(
+                definitions.reversed(),
+                reverseNames: true
+            )
+        )
+
+        let first = await forward.suggestions(
+            matching: "Milk חלב",
+            locale: "he"
+        )
+        let second = await reversed.suggestions(
+            matching: "Milk חלב",
+            locale: "he"
+        )
+
+        XCTAssertEqual(first, second)
+        XCTAssertEqual(first.map(\.productID.rawValue), ["beta", "alpha"])
+    }
+
+    func testExactOtherLocaleMatchStaysAboveSameScriptWeakPrefix() async {
+        let snapshot = SearchFixtureFactory.makeSnapshot([
+            .init(
+                id: "exact_alias",
+                english: "Dairy",
+                aliases: [("he", "חלב")]
+            ),
+            .init(id: "weak_prefix", english: nil, hebrew: "חלבונים")
+        ])
+        let results = await makeSearch(snapshot: snapshot).suggestions(
+            matching: "חלב",
+            locale: "he"
+        )
+
+        XCTAssertEqual(
+            results.map(\.productID.rawValue),
+            ["exact_alias", "weak_prefix"]
+        )
+        XCTAssertEqual(results.first?.matchTier, .exactAlias)
+    }
+
+    func testDirectPrefixCompletionRanksMilkBeforeMineralWater() async {
+        let snapshot = SearchFixtureFactory.makeSnapshot([
+            .init(id: "mineral", english: "Mineral Water"),
+            .init(id: "milk", english: "Milk 3%")
+        ])
+        let results = await makeSearch(snapshot: snapshot).suggestions(
+            matching: "Mi",
+            locale: "en"
+        )
+
+        XCTAssertEqual(results.map(\.productID.rawValue), ["milk", "mineral"])
+        XCTAssertEqual(results.first?.matchedValue, "Milk 3%")
+    }
+
+    func testConfidenceDerivesFromMatchEvidence() async {
+        let snapshot = SearchFixtureFactory.makeSnapshot([
+            .init(id: "direct", english: "Cleaning Brush"),
+            .init(id: "token", english: "Bottle Cleaning"),
+            .init(
+                id: "keyword",
+                english: "Surface Spray",
+                keywords: [("en", "Cleaning")]
+            )
+        ])
+
+        let results = await makeSearch(snapshot: snapshot).suggestions(
+            matching: "Cleaning",
+            locale: "en"
+        )
+
+        XCTAssertEqual(
+            Dictionary(uniqueKeysWithValues: results.map {
+                ($0.productID.rawValue, $0.candidateConfidence)
+            }),
+            [
+                "direct": .strong,
+                "token": .moderate,
+                "keyword": .weak
+            ]
+        )
+    }
+
+    func testCanonicalAuthorityOutranksKeywordFallback() async {
+        let base = SearchFixtureFactory.makeSnapshot([
+            .init(id: "canonical", english: "Cocoa"),
+            .init(id: "keyword", english: "Baking Ingredient")
+        ])
+        let keyword = ProductName(
+            id: ProductNameID("name_keyword_term"),
+            productID: ProductID("keyword"),
+            locale: "en",
+            kind: .keyword,
+            value: "Cocoa",
+            isPreferred: false
+        )
+        let snapshot = ProductKnowledgeSnapshot(
+            metadata: base.metadata,
+            categories: base.categories,
+            products: base.products,
+            names: base.names + [keyword]
+        )
+        let results = await makeSearch(snapshot: snapshot).suggestions(
+            matching: "Cocoa",
+            locale: "en"
+        )
+
+        XCTAssertEqual(results.map(\.productID.rawValue), ["canonical", "keyword"])
+        XCTAssertEqual(results.first?.matchedRecordAuthority, .primaryDisplayName)
+        XCTAssertEqual(results.last?.matchTier, .conservativeFallback)
     }
 
     func testExactThenFullPrefixThenWordPrefixRanking() async {
@@ -521,6 +849,7 @@ nonisolated private enum SearchFixtureFactory {
         let english: String?
         let hebrew: String?
         let aliases: [(locale: String, value: String)]
+        let keywords: [(locale: String, value: String)]
         let status: ProductEntityStatus
 
         init(
@@ -528,12 +857,14 @@ nonisolated private enum SearchFixtureFactory {
             english: String?,
             hebrew: String? = nil,
             aliases: [(String, String)] = [],
+            keywords: [(String, String)] = [],
             status: ProductEntityStatus = .active
         ) {
             self.id = id
             self.english = english
             self.hebrew = hebrew
             self.aliases = aliases
+            self.keywords = keywords
             self.status = status
         }
     }
@@ -599,6 +930,18 @@ nonisolated private enum SearchFixtureFactory {
                         locale: alias.locale,
                         kind: .alias,
                         value: alias.value,
+                        isPreferred: false
+                    )
+                )
+            }
+            for (index, keyword) in definition.keywords.enumerated() {
+                names.append(
+                    ProductName(
+                        id: ProductNameID("name_\(definition.id)_keyword_\(index)"),
+                        productID: ProductID(definition.id),
+                        locale: keyword.locale,
+                        kind: .keyword,
+                        value: keyword.value,
                         isPreferred: false
                     )
                 )

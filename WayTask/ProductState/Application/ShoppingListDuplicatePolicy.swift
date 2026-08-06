@@ -124,12 +124,27 @@ enum ShoppingListDuplicatePolicy {
 enum CatalogCustomCreationPolicy {
     static func offeredName(
         for query: String,
-        searchCompletedWithoutMatch: Bool
+        searchCompletedWithoutMatch: Bool,
+        validatedCompleteShortTerms: Set<String> = []
     ) -> String? {
         guard searchCompletedWithoutMatch else { return nil }
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        let normalized = ProductSearchNormalizer.normalize(trimmed).value
-        guard normalized.count >= 2 else { return nil }
+        let normalized = ProductSearchNormalizer.normalize(trimmed)
+        let searchableScalars = normalized.value.unicodeScalars.filter {
+            CharacterSet.letters.contains($0)
+                || CharacterSet.decimalDigits.contains($0)
+        }
+        guard searchableScalars.count >= 3 else { return nil }
+
+        let isSimpleAlphabeticPrefix = normalized.tokens.count == 1
+            && normalized.value.unicodeScalars.allSatisfy {
+                CharacterSet.letters.contains($0)
+            }
+        if isSimpleAlphabeticPrefix,
+           searchableScalars.count < 4,
+           !validatedCompleteShortTerms.contains(normalized.value) {
+            return nil
+        }
         return trimmed
     }
 }

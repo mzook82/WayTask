@@ -29,6 +29,14 @@ nonisolated enum ProductSearchMatchTier: Int, Codable, Hashable, Sendable {
     case conservativeFallback = 6
 }
 
+/// Suitability derives only from the evidence that matched the indexed
+/// product. It is intentionally independent of catalog/import/scan source.
+nonisolated enum ProductSearchCandidateConfidence: Int, Codable, Hashable, Sendable {
+    case strong
+    case moderate
+    case weak
+}
+
 nonisolated struct ProductSearchResult: Identifiable, Hashable, Sendable {
     let productID: ProductID
     let displayName: String
@@ -43,6 +51,11 @@ nonisolated struct ProductSearchResult: Identifiable, Hashable, Sendable {
     let matchedValue: String
     let normalizedMatchedValue: String
     let matchedLocale: String
+    let candidateConfidence: ProductSearchCandidateConfidence
+
+    var isSuitableCatalogMatch: Bool {
+        candidateConfidence != .weak
+    }
 
     var id: ProductID {
         productID
@@ -61,7 +74,8 @@ nonisolated struct ProductSearchResult: Identifiable, Hashable, Sendable {
         matchTier: ProductSearchMatchTier? = nil,
         matchedValue: String? = nil,
         normalizedMatchedValue: String? = nil,
-        matchedLocale: String
+        matchedLocale: String,
+        candidateConfidence: ProductSearchCandidateConfidence? = nil
     ) {
         self.productID = productID
         self.displayName = displayName
@@ -72,16 +86,19 @@ nonisolated struct ProductSearchResult: Identifiable, Hashable, Sendable {
         self.iconKey = iconKey
         self.matchedRecordAuthority = matchedRecordAuthority
         self.matchType = matchType
-        self.matchTier = matchTier ?? Self.compatibilityTier(
+        let resolvedTier = matchTier ?? Self.compatibilityTier(
             authority: matchedRecordAuthority,
             matchType: matchType
         )
+        self.matchTier = resolvedTier
         self.matchedValue = matchedValue ?? secondaryName ?? displayName
         self.normalizedMatchedValue = normalizedMatchedValue
             ?? ProductSearchNormalizer.normalize(
                 matchedValue ?? secondaryName ?? displayName
             ).value
         self.matchedLocale = matchedLocale
+        self.candidateConfidence = candidateConfidence
+            ?? Self.compatibilityConfidence(for: resolvedTier)
     }
 
     private static func compatibilityTier(
@@ -99,6 +116,19 @@ nonisolated struct ProductSearchResult: Identifiable, Hashable, Sendable {
             return .categoryRelevance
         case .fallback:
             return .conservativeFallback
+        }
+    }
+
+    private static func compatibilityConfidence(
+        for tier: ProductSearchMatchTier
+    ) -> ProductSearchCandidateConfidence {
+        switch tier {
+        case .exactCanonical, .canonicalPrefix, .exactAlias:
+            return .strong
+        case .aliasPrefix, .tokenPrefix:
+            return .moderate
+        case .categoryRelevance, .conservativeFallback:
+            return .weak
         }
     }
 }

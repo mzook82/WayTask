@@ -94,6 +94,59 @@ final class SmartProductKnowledgeFoundationTests: XCTestCase {
         }
     }
 
+    func testProductionShortQueriesEnforceDirectEvidenceAndStableExamples()
+        async throws {
+        let search = ProductKnowledgeSearch(
+            repository: InMemoryProductKnowledgeRepository(
+                snapshot: try productionSnapshot()
+            )
+        )
+
+        let latinOne = await search.suggestions(matching: "C", locale: "en")
+        let colaPrefix = await search.suggestions(matching: "קו", locale: "he-IL")
+        let ambiguous = await search.suggestions(matching: "חל", locale: "he-IL")
+        let completedMilk = await search.suggestions(
+            matching: "חלב",
+            locale: "he-IL"
+        )
+        let latinMilk = await search.suggestions(matching: "Mi", locale: "en")
+
+        XCTAssertTrue(latinOne.isEmpty)
+
+        let colaIndex = try XCTUnwrap(
+            colaPrefix.firstIndex { $0.productID == ProductID("cola") }
+        )
+        XCTAssertTrue(colaPrefix[...colaIndex].allSatisfy {
+            $0.matchTier == .exactCanonical
+                || $0.matchTier == .canonicalPrefix
+        })
+
+        XCTAssertTrue(ambiguous.contains {
+            $0.productID == ProductID("challah")
+        })
+        XCTAssertTrue(ambiguous.contains {
+            $0.productID == ProductID("milk_3_percent")
+        })
+
+        XCTAssertEqual(
+            completedMilk.first?.productID,
+            ProductID("milk_3_percent")
+        )
+        XCTAssertFalse(completedMilk.contains {
+            $0.productID == ProductID("challah")
+        })
+
+        XCTAssertEqual(
+            latinMilk.first?.productID,
+            ProductID("milk_3_percent")
+        )
+        XCTAssertEqual(latinMilk.first?.displayName, "Milk 3%")
+        XCTAssertEqual(
+            latinMilk.dropFirst().first?.productID,
+            ProductID("mineral_water")
+        )
+    }
+
     func testAliasKeepsLocalizedCanonicalDisplayAndExposesMatchMetadata()
         async throws {
         let search = ProductKnowledgeSearch(

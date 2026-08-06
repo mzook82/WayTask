@@ -805,16 +805,18 @@ private struct WayTaskProductionCreateCustomProductView: View {
     @EnvironmentObject private var runtime: ProductStateRuntime
     @Binding var isPresented: Bool
     let destinationListTitle: String?
-    let onConfirm: ((String) -> Void)?
+    let onConfirm: ((String, Data?) -> Void)?
 
     @State private var name: String
     @State private var errorMessage: String?
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var imageData: Data?
 
     init(
         isPresented: Binding<Bool>,
         initialName: String = "",
         destinationListTitle: String? = nil,
-        onConfirm: ((String) -> Void)? = nil
+        onConfirm: ((String, Data?) -> Void)? = nil
     ) {
         _isPresented = isPresented
         _name = State(initialValue: initialName)
@@ -837,6 +839,29 @@ private struct WayTaskProductionCreateCustomProductView: View {
                         Text("The custom product will be saved to Products.")
                     }
                 }
+                Section("Photo") {
+                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                        Label(
+                            imageData == nil ? "Add Photo" : "Change Photo",
+                            systemImage: "photo"
+                        )
+                    }
+
+                    if let imageData,
+                       let image = UIImage(data: imageData) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 160)
+                            .clipShape(
+                                RoundedRectangle(
+                                    cornerRadius: 16,
+                                    style: .continuous
+                                )
+                            )
+                    }
+                }
                 if let errorMessage {
                     Text(errorMessage)
                         .foregroundStyle(.red)
@@ -855,7 +880,7 @@ private struct WayTaskProductionCreateCustomProductView: View {
                         if let onConfirm {
                             isPresented = false
                             DispatchQueue.main.async {
-                                onConfirm(trimmed)
+                                onConfirm(trimmed, imageData)
                             }
                         } else if runtime.acquireProduct(name: trimmed) {
                             isPresented = false
@@ -868,6 +893,12 @@ private struct WayTaskProductionCreateCustomProductView: View {
                             in: .whitespacesAndNewlines
                         ).isEmpty
                     )
+                }
+            }
+            .onChange(of: selectedPhoto) {
+                Task {
+                    imageData = try? await selectedPhoto?
+                        .loadTransferable(type: Data.self)
                 }
             }
         }
@@ -901,7 +932,6 @@ private struct WayTaskProductionAddProductView: View {
 
     @StateObject private var autocomplete: AddProductAutocompleteViewModel
     @State private var query = ""
-    @State private var selectedPhoto: PhotosPickerItem?
     @State private var imageData: Data?
     @State private var errorMessage: String?
     @State private var pendingRestore: ProductAcquisitionResult?
@@ -934,13 +964,12 @@ private struct WayTaskProductionAddProductView: View {
                     WayTaskScreenHeader(
                         title: "Add Product",
                         subtitle: destination.listTitle.map {
-                            "Search the catalog or create a custom product for \($0)"
-                        } ?? "Search the catalog or create a custom product"
+                            "Search products for \($0)"
+                        } ?? "Search products in the catalog"
                     )
 
                     nameCard
                     suggestionContent
-                    photoCard
 
                     if let errorMessage {
                         Text(errorMessage)
@@ -986,12 +1015,6 @@ private struct WayTaskProductionAddProductView: View {
                     localeIdentifier: locale.identifier
                 )
             }
-            .onChange(of: selectedPhoto) {
-                Task {
-                    imageData = try? await selectedPhoto?
-                        .loadTransferable(type: Data.self)
-                }
-            }
             .alert(
                 "Restore Product?",
                 isPresented: restoreConfirmationPresented,
@@ -1013,8 +1036,11 @@ private struct WayTaskProductionAddProductView: View {
                     isPresented: $isCreatingCustomProduct,
                     initialName: pendingCustomName,
                     destinationListTitle: destination.listTitle
-                ) { confirmedName in
-                    confirmCustomProduct(named: confirmedName)
+                ) { confirmedName, confirmedImageData in
+                    confirmCustomProduct(
+                        named: confirmedName,
+                        imageData: confirmedImageData
+                    )
                 }
             }
             .confirmationDialog(
@@ -1056,13 +1082,6 @@ private struct WayTaskProductionAddProductView: View {
         )
     }
 
-    private var contextualCustomProductName: String? {
-        CatalogCustomCreationPolicy.offeredName(
-            for: query,
-            searchCompletedWithoutMatch: autocomplete.phase == .noMatch
-        )
-    }
-
     private var duplicateDialogTitle: String {
         guard let pendingDuplicate else { return "Product Already Added" }
         return pendingDuplicate.match.isExactProductIdentity
@@ -1090,7 +1109,12 @@ private struct WayTaskProductionAddProductView: View {
                         .font(.subheadline.weight(.semibold))
                 }
             } else {
-                TextField("Product name", text: $query)
+                TextField(
+                    ProductAutocompleteCopy.productNamePlaceholder(
+                        localeIdentifier: locale.identifier
+                    ),
+                    text: $query
+                )
                     .textInputAutocapitalization(.words)
                     .autocorrectionDisabled(false)
                     .padding(12)
@@ -1154,9 +1178,10 @@ private struct WayTaskProductionAddProductView: View {
                     }
                 }
 
-                if let customName = contextualCustomProductName {
+                if let customName = slots.customActionName {
                     Button {
                         pendingCustomName = customName
+                        imageData = nil
                         isCreatingCustomProduct = true
                     } label: {
                         Label(
@@ -1176,7 +1201,11 @@ private struct WayTaskProductionAddProductView: View {
                     Label("Searching products…", systemImage: "magnifyingglass")
                         .foregroundStyle(WayTaskDesign.secondaryText)
                 case .noMatch:
-                    Text("No catalog match. You can create a custom product below.")
+                    Text(
+                        slots.customActionName == nil
+                            ? "No suitable catalog match yet. Keep typing to make the product name more specific."
+                            : "No catalog match. You can create a custom product below."
+                    )
                         .foregroundStyle(WayTaskDesign.secondaryText)
                 case .unavailable:
                     Text("Catalog suggestions are unavailable. Try again later.")
@@ -1189,55 +1218,26 @@ private struct WayTaskProductionAddProductView: View {
         }
     }
 
-    private var photoCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                Label(
-                    imageData == nil ? "Add Photo" : "Change Photo",
-                    systemImage: "photo"
-                )
-            }
-            .buttonStyle(
-                WayTaskSecondaryPillButtonStyle(
-                    minHeight: 46,
-                    cornerRadius: 15
-                )
-            )
-
-            if let imageData,
-               let image = UIImage(data: imageData) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 160)
-                    .clipShape(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    )
-            }
-        }
-        .padding(16)
-        .wayTaskCard(cornerRadius: 20)
-    }
-
     private func changeSelection() {
         if autocomplete.selectedCatalogProduct != nil {
             query = autocomplete.changeCatalogSelection(
                 localeIdentifier: locale.identifier
             ) ?? query
         } else {
+            imageData = nil
             query = autocomplete.changeCustomProductSelection(
                 localeIdentifier: locale.identifier
             ) ?? query
         }
     }
 
-    private func confirmCustomProduct(named name: String) {
+    private func confirmCustomProduct(named name: String, imageData: Data?) {
         guard let selection = autocomplete.selectCustomProduct(named: name)
         else {
             errorMessage = "The custom product could not be prepared."
             return
         }
+        self.imageData = imageData
         query = selection.name
         save()
     }

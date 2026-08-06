@@ -132,9 +132,11 @@ GTIN-like values. The original display value remains untouched.
 ## Alias and multilingual contract
 
 Aliases are individual locale-tagged `ProductName` records. Exact and prefix alias
-matches participate in ranking but return the owning product once, using the
-preferred display record for the requested locale. An exact alias also suppresses
-the contextual custom-product action because it is already an exact catalog match.
+matches participate in ranking but return the owning product once. Since
+WT-031A.1, the result first uses a suitable matched or preferred display record in
+the query script, then falls back to the application-locale policy. An exact alias
+also suppresses the contextual custom-product action because it is already an
+exact catalog match.
 
 `product-knowledge-localizations-v1.json` is schema 1 and explicitly bound to
 catalog version 5. It proves English plus Hebrew resolution for existing IDs:
@@ -181,6 +183,119 @@ Autocomplete preserves the existing empty-query behavior (idle, no catalog resul
 no custom action), keeps existing results visible while replacing them, cancels the
 prior task, and uses a generation guard so stale completions cannot publish. A
 meaningful unmatched query continues to expose contextual custom creation.
+
+### WT-031A.1 locale-aware ranking and Add Product contract
+
+The normalized query's Unicode characters determine one script classification:
+Hebrew, Latin, or mixed/indeterminate. Keyboard and application locale do not
+override that evidence. Mixed queries and queries without Hebrew or Latin letters
+receive neutral script affinity.
+
+Ranking keeps the public match tiers, with five non-overlapping strength bands:
+
+1. exact canonical/display or exact alias;
+2. direct canonical/display or alias prefix;
+3. contiguous token prefix;
+4. category relevance;
+5. conservative keyword/substring fallback.
+
+A stronger band always wins, so an exact match in another script cannot be buried
+under a weak same-script prefix or fallback. Inside a band, same-query-script match
+evidence comes first, followed by query-script display availability. Exact ties
+then use canonical/display before alias. Direct-prefix ties use the completion
+distance of the active token, total name-completion distance, canonical/display
+authority, and the original canonical/alias tier. Remaining ties use requested
+locale affinity, token start position, normalized display name, and stable product
+ID. This bounded ordering makes `Milk` (the shorter completion) rank before
+`Mineral Water` for `Mi` without product-specific rules. Acquisition source and
+source array order never participate.
+
+Display selection is separate from identity: use the matched display-capable name
+in the query script when available, otherwise a preferred display-capable name in
+that script, otherwise the existing application-locale/English/catalog fallback.
+The result retains matched value, locale, authority, and tier. It never rewrites a
+persisted Product snapshot and still emits one row per stable Product ID.
+
+Custom creation is gated by the autocomplete's completed `noMatch` state (or the
+existing catalog-unavailable manual fallback), an empty result set, and no current
+selection or exact catalog match. The central policy requires at least three
+normalized alphanumeric characters. A simple one-token alphabetic term shorter
+than four characters is rejected unless it appears in an explicit curated
+complete-short-term set; that set is empty in production. Thus empty text, one
+character, and `Co` do not offer creation, while a completed unmatched name such
+as `Cocoa Powder` does. Selection remains explicit and cancel/change restores the
+original query.
+
+The ordinary Add Product catalog-search surface no longer owns a photo picker.
+`Add Photo` remains available in the explicit custom-product sheet, and its data is
+passed through the existing acquisition/persistence path only after confirmation.
+The search field uses `Search products` / `Search catalog`; destination context
+remains in the content header while Cancel remains a compact navigation-toolbar
+action.
+
+WT-031A.1 validation on the iOS 26.5 iPhone 17 Pro simulator passed the unsigned
+generic iOS build, 68 focused search/autocomplete/UX tests, 78 existing WT-031A
+foundation tests, and 70 bounded affected-regression tests. The foundation run
+included the 5,000-record budget test (1.098 s test-case duration) and 64 rapid
+queries (0.895 s test-case duration). Per-stage benchmark values were not extracted
+from the result bundle. No exploratory simulator session or physical-device QA is
+claimed.
+
+### WT-031A.2 short-query candidate and confidence contract
+
+The active index now separates canonical/display, alias, ordinary token, keyword,
+category, and trigram postings before query evaluation. Normalized alphanumeric
+length selects an explicit policy:
+
+- empty: preserve idle behavior and do not load/search the catalog;
+- one character: canonical/localized-display exact or beginning prefix only, with
+  matching query and rendered-display script; aliases, noninitial tokens, keywords,
+  categories, substring/trigram fallback, and cross-script rows are not admitted;
+- two characters: canonical/display exact and beginning prefix, then same-script
+  exact alias, alias prefix, then contiguous token prefix; keyword, category,
+  substring, and trigram maps are skipped;
+- three or more characters: preserve the WT-031A.1 exact/direct/token/category/
+  conservative-fallback contract and multilingual behavior.
+
+For short queries, semantic bands are absolute: exact canonical/display, direct
+canonical/display prefix, exact alias, alias prefix, then contiguous token prefix.
+Completion distance, authority, script affinity, normalized display name, and stable
+ID only break ties inside one band. A one- or two-character lower band cannot move
+above a higher band. Two-character cross-display rows require an exact/direct
+canonical or alias relationship and are admitted only when no same-script result of
+equal or stronger strength exists. Mixed/indeterminate input remains neutral and
+deterministic. Stable-ID deduplication still happens once per indexed product.
+
+Direct-prefix ties compare active-token completion distance, total name completion,
+canonical/display authority, query-script affinity, normalized name, then stable ID.
+The curated English localized display for `milk_3_percent` is now `Milk 3%` rather
+than `3% Milk`; this preserves the approved general `Mi` completion behavior without
+a product-specific ranking exception or identity change.
+
+Every result now exposes evidence-derived confidence: exact canonical/display,
+canonical prefix, and exact alias are `strong`; alias prefix and contiguous token
+prefix are `moderate`; category/keyword/substring/trigram fallback is `weak`.
+Acquisition source never participates. Autocomplete suppresses contextual custom
+creation only for a strong or moderate suitable result. A completed meaningful term
+may therefore offer explicit custom creation alongside weak fallback suggestions;
+empty, one-character, two-character, and `Co` input remains suppressed by the
+existing meaningful-query policy.
+
+The short path performs no full-catalog scan or index rebuild. One-character work
+touches only canonical/display prefix postings; two-character work does not query
+keyword, category, substring, or trigram indexes. Existing task cancellation,
+generation guards, result limits, display selection, Add Photo ownership, Add
+Product copy/layout, persistence snapshots, categories/icons, and duplicate rules
+remain unchanged.
+
+WT-031A.2 validation on the iOS 26.5 iPhone 17 Pro simulator passed the final
+unsigned generic iOS build, 73/73 focused search/autocomplete/production-foundation
+tests, 87/87 catalog-validator/identity/icon/persistence/Shopping foundation tests,
+and 76/76 bounded WT-030 through WT-030C affected scanner/Shopping/Map regressions.
+The unchanged 5,000-record broad-budget test passed in 1.531 seconds; its 64-query
+concurrency/deduplication case passed in 0.934 seconds. Per-stage metrics were not
+extracted from the result bundle. Validation was automated; no exploratory
+simulator session or physical-device QA is claimed.
 
 ## Categories and icons
 

@@ -11,6 +11,15 @@ nonisolated struct ProductKnowledgeNormalizedText: Equatable, Sendable {
     let tokens: [String]
 }
 
+/// Script evidence comes from normalized query characters, never from the
+/// active keyboard or application locale. Mixed and non-letter input stays
+/// neutral so it cannot receive an invented language preference.
+nonisolated enum ProductKnowledgeQueryScript: String, Equatable, Sendable {
+    case hebrew
+    case latin
+    case mixedOrIndeterminate
+}
+
 nonisolated enum ProductKnowledgeNormalizer {
     private static let defaultLocale = Locale(identifier: "en_US_POSIX")
     private static let separator = UnicodeScalar(0x20)!
@@ -115,6 +124,28 @@ nonisolated enum ProductKnowledgeNormalizer {
         }.joined(separator: "-")
     }
 
+    static func queryScript(
+        _ normalized: ProductKnowledgeNormalizedText
+    ) -> ProductKnowledgeQueryScript {
+        var hasHebrew = false
+        var hasLatin = false
+
+        for scalar in normalized.value.unicodeScalars {
+            if isHebrewLetter(scalar) {
+                hasHebrew = true
+            } else if isLatinLetter(scalar) {
+                hasLatin = true
+            }
+            if hasHebrew && hasLatin {
+                return .mixedOrIndeterminate
+            }
+        }
+
+        if hasHebrew { return .hebrew }
+        if hasLatin { return .latin }
+        return .mixedOrIndeterminate
+    }
+
     private static func normalizedHebrewFinalLetter(
         _ scalar: UnicodeScalar
     ) -> UnicodeScalar {
@@ -134,6 +165,18 @@ nonisolated enum ProductKnowledgeNormalizer {
 
     private static func isASCIIDigit(_ scalar: UnicodeScalar) -> Bool {
         (48...57).contains(scalar.value)
+    }
+
+    private static func isHebrewLetter(_ scalar: UnicodeScalar) -> Bool {
+        (0x0590...0x05FF).contains(scalar.value)
+            || (0xFB1D...0xFB4F).contains(scalar.value)
+    }
+
+    private static func isLatinLetter(_ scalar: UnicodeScalar) -> Bool {
+        (0x0041...0x005A).contains(scalar.value)
+            || (0x0061...0x007A).contains(scalar.value)
+            || (0x00C0...0x024F).contains(scalar.value)
+            || (0x1E00...0x1EFF).contains(scalar.value)
     }
 }
 
