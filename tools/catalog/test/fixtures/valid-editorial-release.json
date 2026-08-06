@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": 4,
+  "taxonomyVersion": 1,
+  "generationDate": "2026-08-06",
+  "productCount": 4,
+  "releaseId": "fixture_editorial_4",
+  "supportedLocales": [
+    "en",
+    "he-IL"
+  ],
+  "operations": [
+    {
+      "operation": "add",
+      "product": {
+        "id": "compost_bags",
+        "canonicalNames": {
+          "he-IL": "שקיות קומפוסט",
+          "en": "Compost Bags"
+        },
+        "localizedDisplayNames": [],
+        "aliases": [
+          {
+            "locale": "he-IL",
+            "value": "שקיות מתכלות"
+          },
+          {
+            "locale": "en",
+            "value": "Compostable Bags"
+          }
+        ],
+        "keywords": [
+          {
+            "locale": "he-IL",
+            "value": "קומפוסט"
+          }
+        ],
+        "brandTerms": [],
+        "brand": null,
+        "categoryId": "household",
+        "subcategoryId": "household.waste_bags",
+        "barcodes": [
+          "4006381333931"
+        ],
+        "semanticKey": "compost_bags",
+        "variantDescriptors": [],
+        "packageDescriptor": null,
+        "unit": null,
+        "provenance": "editorial-review",
+        "popularityScore": 50,
+        "status": {
+          "state": "active"
+        }
+      }
+    }
+  ]
+}

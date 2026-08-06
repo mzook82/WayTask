@@ -98,6 +98,19 @@ nonisolated struct ProductCatalogKnowledgeAdapter: Sendable {
     let document: ProductCatalogDocument
     let taxonomy: ProductCatalogTaxonomyRegistry
     let localizations: ProductKnowledgeLocalizationDocument?
+    let releaseManifest: ProductCatalogReleaseManifest?
+
+    init(
+        document: ProductCatalogDocument,
+        taxonomy: ProductCatalogTaxonomyRegistry,
+        localizations: ProductKnowledgeLocalizationDocument?,
+        releaseManifest: ProductCatalogReleaseManifest? = nil
+    ) {
+        self.document = document
+        self.taxonomy = taxonomy
+        self.localizations = localizations
+        self.releaseManifest = releaseManifest
+    }
 
     func makeSnapshot() -> ProductKnowledgeSnapshot {
         let categories = taxonomy.categories.enumerated().map {
@@ -207,6 +220,7 @@ nonisolated struct ProductCatalogKnowledgeAdapter: Sendable {
                 expectedProductCount: document.products.count,
                 supportedLocales: locales,
                 catalogVersion: document.catalogVersion,
+                catalogGenerationDate: releaseManifest?.generationDate,
                 source: "canonical-catalog-v1+localizations-v1"
             ),
             categories: categories,
@@ -258,6 +272,12 @@ enum ProductionProductKnowledgeFactory {
             }
             let data = try Data(contentsOf: catalogURL)
             let document = try service.loadDocument(data: data)
+            let releaseManifest = try BundledProductCatalogReleaseManifestLoader(
+                bundle: bundle
+            ).load(
+                expectedCatalogVersion: document.catalogVersion,
+                expectedProductCount: document.products.count
+            )
             let taxonomy = try ProductCatalogTaxonomyLoader(bundle: bundle).load()
             let localizations: ProductKnowledgeLocalizationDocument?
             do {
@@ -274,7 +294,8 @@ enum ProductionProductKnowledgeFactory {
             let snapshot = ProductCatalogKnowledgeAdapter(
                 document: document,
                 taxonomy: taxonomy,
-                localizations: localizations
+                localizations: localizations,
+                releaseManifest: releaseManifest
             ).makeSnapshot()
             let report = ProductKnowledgeFoundationValidator().validate(snapshot)
             guard report.errors.isEmpty else {

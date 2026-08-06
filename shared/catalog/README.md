@@ -8,6 +8,8 @@ metadata.
 
 - `product-catalog.schema.json` — JSON Schema Draft 2020-12 contract for canonical
   catalog documents (`schemaVersion` 1).
+- `product-editorial-release.schema.json` — WT-031B locale-aware editorial release
+  contract accepted by the production importer (`schemaVersion` 1).
 - `taxonomy.json` — taxonomy version 1 with 23 approved top-level categories,
   controlled subcategories, and explicit mappings from every production v2 category.
 - `normalization-fixtures.json` — Hebrew normalization inputs and expected outputs.
@@ -35,6 +37,13 @@ The iOS compatibility layer accepts:
 
 Both formats produce the same Swift `CatalogProduct` model. Search, ranking,
 personalization, UI, and persistence do not branch on source format.
+
+WT-031B keeps the runtime canonical shape compatible and adds optional structured
+identity fields already supported by Swift: brand, semantic key, variants, package,
+unit, GTIN/barcodes, and provenance. Locale-specific names remain outside stable
+identity in the bundled localization overlay. The bundled release manifest exposes
+schema version, catalog version, generation date, and product count and is checked
+before the production Product Knowledge snapshot is accepted.
 
 WT-026B assigned approved taxonomy IDs to every one of the original 147 products.
 All 48 products in the eight `product_review_required` legacy groups were reviewed
@@ -71,13 +80,13 @@ Kotlin decoder, normalizer, validator, and search implementation.
 
 ## Release workflow
 
-1. Use `tools/catalog/catalog-tool.js` to inspect, validate, and dry-run catalog
-   content changes; see `tools/catalog/README.md`.
-2. Put all mutations for one release into one toolkit `batch`; dry-run it, then
-   commit only with the explicit `--write` flag.
-3. Increment the catalog revision once per committed release. Each mutation remains
-   a separate audit entry. Increment schema or taxonomy versions only under their
-   independent compatibility rules.
+1. Use `tools/catalog/catalog-tool.js` to inspect existing identities, then author a
+   complete versioned editorial release; see `tools/catalog/README.md`.
+2. Run `validate-release`, then dry-run `import-release`. Production writes through
+   the older per-product mutation commands are no longer accepted.
+3. Commit once with `import-release --write`. It advances the catalog revision once
+   and transactionally emits the canonical catalog, locale overlay, release
+   manifest, taxonomy review, and audit.
 4. Validate all JSON and run shared fixtures and toolkit tests.
 5. Run the full native test suites.
 6. Tag the shared contract release and record its checksum in each platform
@@ -86,5 +95,10 @@ Kotlin decoder, normalizer, validator, and search implementation.
 WT-026B migrated but did not expand the original 147-product catalog. WT-027A and
 WT-027B are the first two controlled expansions. All future additions must use
 canonical schema version 1, an approved taxonomy assignment, a review-manifest
-entry, one catalog-version increment per transactional release, per-mutation audit
-records, and shared/native regression coverage.
+entry, one catalog-version increment per transactional release, a checksum-bearing
+release audit record, and shared/native regression coverage.
+
+WT-031B introduces the production editorial gate without adding catalog products:
+the release remains catalog version 5 with 647 curated active products. Future
+expansion must use real editorial evidence and the locale-aware importer; generated
+filler, invented brands, unverified aliases, and fabricated barcodes are prohibited.

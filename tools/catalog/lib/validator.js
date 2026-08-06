@@ -25,6 +25,32 @@ function nonEmptyText(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function normalizedBarcode(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.replace(/[\s-]+/g, "");
+  return /^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(normalized)
+    ? normalized
+    : null;
+}
+
+function hasValidGTINCheckDigit(value) {
+  const barcode = normalizedBarcode(value);
+  if (barcode === null) {
+    return false;
+  }
+  const digits = [...barcode].map(Number);
+  const checkDigit = digits.pop();
+  let sum = 0;
+  for (let index = digits.length - 1, weight = 3;
+    index >= 0;
+    index -= 1, weight = weight === 3 ? 1 : 3) {
+    sum += digits[index] * weight;
+  }
+  return (10 - (sum % 10)) % 10 === checkDigit;
+}
+
 function addError(errors, code, message, details = {}) {
   errors.push(issue(code, message, details));
 }
@@ -200,6 +226,10 @@ function validateProductShape(product, index, schema, patterns, errors) {
     "aliases",
     "keywords",
     "brandTerms",
+    ...(Object.hasOwn(product, "variantDescriptors")
+      ? ["variantDescriptors"]
+      : []),
+    ...(Object.hasOwn(product, "barcodes") ? ["barcodes"] : []),
     ...(Object.hasOwn(product, "legacyNames") ? ["legacyNames"] : []),
   ]) {
     validateTextArray({
@@ -231,6 +261,38 @@ function validateProductShape(product, index, schema, patterns, errors) {
       `Product ${product.id} isActive must be a boolean.`,
       { productId: product.id, field: "isActive" },
     );
+  }
+  for (const field of [
+    "semanticKey",
+    "brand",
+    "packageDescriptor",
+    "unit",
+    "provenance",
+  ]) {
+    if (
+      Object.hasOwn(product, field) &&
+      product[field] !== null &&
+      !nonEmptyText(product[field])
+    ) {
+      addError(
+        errors,
+        "product.invalid_optional_text",
+        `Product ${product.id} field ${field} must be null or nonempty text.`,
+        { productId: product.id, field },
+      );
+    }
+  }
+  for (const barcode of Array.isArray(product.barcodes)
+    ? product.barcodes
+    : []) {
+    if (!hasValidGTINCheckDigit(barcode)) {
+      addError(
+        errors,
+        "product.malformed_barcode",
+        `Product ${product.id} has malformed GTIN/barcode ${JSON.stringify(barcode)}.`,
+        { productId: product.id, barcode },
+      );
+    }
   }
   if (
     Object.hasOwn(product, "replacementProductId") &&
@@ -529,6 +591,7 @@ function validateProductRelationships(
   }
   const productsById = new Map();
   const canonicalNames = new Map();
+  const barcodeOwners = new Map();
 
   for (const product of catalog.products) {
     if (!isObject(product) || typeof product.id !== "string") {
@@ -604,6 +667,29 @@ function validateProductRelationships(
           { productId: product.id },
         ),
       );
+    }
+    for (const barcode of Array.isArray(product.barcodes)
+      ? product.barcodes
+      : []) {
+      const key = normalizedBarcode(barcode);
+      if (key === null) {
+        continue;
+      }
+      const owner = barcodeOwners.get(key);
+      if (owner && owner !== product.id) {
+        addError(
+          errors,
+          "product.conflicting_barcode",
+          `Products ${owner} and ${product.id} share normalized barcode ${key}.`,
+          {
+            productId: product.id,
+            relatedProductId: owner,
+            barcode: key,
+          },
+        );
+      } else {
+        barcodeOwners.set(key, product.id);
+      }
     }
   }
 
@@ -957,5 +1043,7 @@ function validateCatalog({ catalog, schema, taxonomy, review = null }) {
 
 module.exports = {
   REVIEW_STATUSES,
+  hasValidGTINCheckDigit,
+  normalizedBarcode,
   validateCatalog,
 };

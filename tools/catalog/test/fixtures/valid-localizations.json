@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": 3,
+  "supportedLocales": [
+    "en",
+    "he-IL"
+  ],
+  "names": [
+    {
+      "id": "catalog_name_toilet_paper_en",
+      "productID": "toilet_paper",
+      "locale": "en",
+      "kind": "localizedDisplay",
+      "value": "Toilet Paper",
+      "isPreferred": true
+    }
+  ]
+}

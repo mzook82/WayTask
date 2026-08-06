@@ -15,6 +15,7 @@ final class SmartProductKnowledgeFoundationTests: XCTestCase {
             Set(legacyProducts.map(\.id))
         )
         XCTAssertEqual(snapshot.metadata.catalogVersion, 5)
+        XCTAssertEqual(snapshot.metadata.catalogGenerationDate, "2026-07-25")
         XCTAssertEqual(snapshot.metadata.source, "canonical-catalog-v1+localizations-v1")
     }
 
@@ -215,6 +216,56 @@ final class SmartProductKnowledgeFoundationTests: XCTestCase {
         )
     }
 
+    func testProductionReleaseManifestIsVersionedAndAtomicallyMatched() throws {
+        let loader = BundledProductCatalogReleaseManifestLoader(bundle: .main)
+        let manifest = try loader.load(
+            expectedCatalogVersion: 5,
+            expectedProductCount: 647
+        )
+
+        XCTAssertEqual(manifest.schemaVersion, 1)
+        XCTAssertEqual(manifest.catalogVersion, 5)
+        XCTAssertEqual(manifest.generationDate, "2026-07-25")
+        XCTAssertEqual(manifest.productCount, 647)
+
+        let data = try JSONEncoder().encode(manifest)
+        XCTAssertThrowsError(
+            try loader.load(
+                data: data,
+                expectedCatalogVersion: 6,
+                expectedProductCount: 647
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? ProductCatalogReleaseManifestError,
+                .catalogVersionMismatch(expected: 6, actual: 5)
+            )
+        }
+        XCTAssertThrowsError(
+            try loader.load(
+                data: data,
+                expectedCatalogVersion: 5,
+                expectedProductCount: 648
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? ProductCatalogReleaseManifestError,
+                .productCountMismatch(expected: 648, actual: 647)
+            )
+        }
+    }
+
+    func testProductionFactoryAcceptsOnlyTheMatchedBundledRelease() {
+        switch ProductionProductKnowledgeFactory.makeSearchAvailability(
+            bundle: .main
+        ) {
+        case .available:
+            break
+        case .catalog, .unavailable:
+            XCTFail("Matched catalog, localization, taxonomy, and manifest must load")
+        }
+    }
+
     func testValidatorReportsEveryUnsafeFoundationCondition() {
         let first = product(
             id: "first",
@@ -320,10 +371,17 @@ final class SmartProductKnowledgeFoundationTests: XCTestCase {
         let localizations = try BundledProductKnowledgeLocalizationLoader(
             bundle: .main
         ).load(expectedCatalogVersion: document.catalogVersion)
+        let releaseManifest = try BundledProductCatalogReleaseManifestLoader(
+            bundle: .main
+        ).load(
+            expectedCatalogVersion: document.catalogVersion,
+            expectedProductCount: document.products.count
+        )
         return ProductCatalogKnowledgeAdapter(
             document: document,
             taxonomy: taxonomy,
-            localizations: localizations
+            localizations: localizations,
+            releaseManifest: releaseManifest
         ).makeSnapshot()
     }
 

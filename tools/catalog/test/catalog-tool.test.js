@@ -20,6 +20,12 @@ const {
 const { fileSha256, readJson, sha256 } = require("../lib/io");
 const { normalizedValue } = require("../lib/normalization");
 const { validateCatalog } = require("../lib/validator");
+const {
+  commitEditorialImport,
+  loadEditorialContext,
+  planEditorialImport,
+  validateProductionBundle,
+} = require("../lib/editorial");
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
 const CLI = path.join(REPO_ROOT, "tools", "catalog", "catalog-tool.js");
@@ -103,9 +109,23 @@ function temporaryWorkspace() {
   const catalog = path.join(directory, "catalog.json");
   const review = path.join(directory, "review.json");
   const audit = path.join(directory, "audit.jsonl");
+  const localizations = path.join(directory, "localizations.json");
+  const manifest = path.join(directory, "manifest.json");
   fs.copyFileSync(path.join(FIXTURES, "valid-catalog.json"), catalog);
   fs.copyFileSync(path.join(FIXTURES, "valid-review.json"), review);
-  return { directory, catalog, review, audit };
+  fs.copyFileSync(
+    path.join(FIXTURES, "valid-localizations.json"),
+    localizations,
+  );
+  fs.copyFileSync(path.join(FIXTURES, "valid-manifest.json"), manifest);
+  return {
+    directory,
+    catalog,
+    review,
+    audit,
+    localizations,
+    manifest,
+  };
 }
 
 function commonTemporaryArguments(workspace) {
@@ -120,7 +140,29 @@ function commonTemporaryArguments(workspace) {
     workspace.review,
     "--audit",
     workspace.audit,
+    "--localizations",
+    workspace.localizations,
+    "--manifest",
+    workspace.manifest,
+    "--editorial-schema",
+    path.join(SHARED, "product-editorial-release.schema.json"),
   ];
+}
+
+function editorialTemporaryContext(workspace) {
+  return loadEditorialContext({
+    catalog: workspace.catalog,
+    schema: path.join(SHARED, "product-catalog.schema.json"),
+    taxonomy: path.join(SHARED, "taxonomy.json"),
+    review: workspace.review,
+    audit: workspace.audit,
+    editorialSchema: path.join(
+      SHARED,
+      "product-editorial-release.schema.json",
+    ),
+    localizations: workspace.localizations,
+    manifest: workspace.manifest,
+  });
 }
 
 test("shared Hebrew normalization fixtures execute in Node", () => {
@@ -152,6 +194,221 @@ test("Wave 2 production catalog, taxonomy, and all 647 reviews validate", () => 
     buildReport(context).idFingerprint,
     "31d11cc10d8aed1f7d27b210b8402f1883f87e1a334abe50ec2c2a3b8c0d53ff",
   );
+});
+
+test("WT-031B production bundle exposes release metadata and validates localized content", () => {
+  const root = productionContext();
+  const context = loadEditorialContext({
+    ...root.paths,
+    editorialSchema: path.join(
+      SHARED,
+      "product-editorial-release.schema.json",
+    ),
+    localizations: path.join(
+      REPO_ROOT,
+      "WayTask",
+      "Resources",
+      "ProductKnowledge",
+      "product-knowledge-localizations-v1.json",
+    ),
+    manifest: path.join(
+      REPO_ROOT,
+      "WayTask",
+      "Resources",
+      "ProductKnowledge",
+      "product-catalog-release-v1.json",
+    ),
+  });
+  const result = validateProductionBundle(context);
+
+  assert.equal(result.valid, true, JSON.stringify(result.errors, null, 2));
+  assert.equal(context.manifest.schemaVersion, 1);
+  assert.equal(context.manifest.catalogVersion, 5);
+  assert.equal(context.manifest.generationDate, "2026-07-25");
+  assert.equal(context.manifest.productCount, 647);
+  assert.equal(result.stats.localizedNames, 11);
+});
+
+test("WT-031B importer produces a complete validated bundle without mutating on dry run", () => {
+  const workspace = temporaryWorkspace();
+  const context = editorialTemporaryContext(workspace);
+  const release = readJson(
+    path.join(FIXTURES, "valid-editorial-release.json"),
+  );
+  const hashes = {
+    catalog: fileSha256(workspace.catalog),
+    review: fileSha256(workspace.review),
+    localizations: fileSha256(workspace.localizations),
+    manifest: fileSha256(workspace.manifest),
+  };
+  const plan = planEditorialImport(context, release);
+
+  assert.equal(plan.valid, true, JSON.stringify(plan.validation.errors, null, 2));
+  assert.equal(plan.catalog.products.length, 4);
+  assert.equal(plan.manifest.productCount, 4);
+  assert.equal(plan.manifest.generationDate, "2026-08-06");
+  assert.equal(plan.localizations.catalogVersion, 4);
+  assert.ok(
+    plan.localizations.names.some(
+      (name) =>
+        name.productID === "compost_bags" &&
+        name.locale === "en" &&
+        name.kind === "localizedDisplay" &&
+        name.value === "Compost Bags",
+    ),
+  );
+  assert.equal(fileSha256(workspace.catalog), hashes.catalog);
+  assert.equal(fileSha256(workspace.review), hashes.review);
+  assert.equal(fileSha256(workspace.localizations), hashes.localizations);
+  assert.equal(fileSha256(workspace.manifest), hashes.manifest);
+  assert.equal(fs.existsSync(workspace.audit), false);
+});
+
+test("WT-031B editorial validator reports every required unsafe content class", async (t) => {
+  const cases = [
+    {
+      name: "duplicate stable ID",
+      code: "editorial.add_existing_product",
+      change(release) {
+        release.operations[0].product.id = "trash_bags";
+      },
+    },
+    {
+      name: "duplicate localized alias",
+      code: "editorial.duplicate_alias",
+      change(release) {
+        release.operations[0].product.aliases[0].value = "שקיות זבל";
+      },
+    },
+    {
+      name: "conflicting localized display name",
+      code: "editorial.conflicting_localized_name",
+      change(release) {
+        release.operations[0].product.canonicalNames.en = "Toilet Paper";
+      },
+    },
+    {
+      name: "invalid category",
+      code: "editorial.invalid_category",
+      change(release) {
+        release.operations[0].product.categoryId = "missing_category";
+      },
+    },
+    {
+      name: "orphan subcategory",
+      code: "editorial.orphan_subcategory",
+      change(release) {
+        release.operations[0].product.subcategoryId = "household.missing";
+      },
+    },
+    {
+      name: "invalid localized name",
+      code: "editorial.invalid_localized_name",
+      change(release) {
+        release.operations[0].product.localizedDisplayNames = [
+          { locale: "bad_locale!", value: "Display" },
+        ];
+      },
+    },
+    {
+      name: "invalid keyword",
+      code: "editorial.invalid_keyword",
+      change(release) {
+        release.operations[0].product.keywords = [
+          { locale: "he-IL", value: "   " },
+        ];
+      },
+    },
+    {
+      name: "missing canonical Hebrew name",
+      code: "editorial.missing_canonical_name",
+      change(release) {
+        delete release.operations[0].product.canonicalNames["he-IL"];
+      },
+    },
+    {
+      name: "malformed barcode",
+      code: "editorial.malformed_barcode",
+      change(release) {
+        release.operations[0].product.barcodes = ["1234"];
+      },
+    },
+  ];
+
+  for (const entry of cases) {
+    await t.test(entry.name, () => {
+      const workspace = temporaryWorkspace();
+      const release = readJson(
+        path.join(FIXTURES, "valid-editorial-release.json"),
+      );
+      entry.change(release);
+      const plan = planEditorialImport(
+        editorialTemporaryContext(workspace),
+        release,
+      );
+      expectErrorCode(plan.validation, entry.code);
+      assert.equal(fs.existsSync(workspace.audit), false);
+    });
+  }
+});
+
+test("WT-031B importer commits catalog, localization, manifest, review, and audit atomically", () => {
+  const workspace = temporaryWorkspace();
+  const context = editorialTemporaryContext(workspace);
+  const release = readJson(
+    path.join(FIXTURES, "valid-editorial-release.json"),
+  );
+  const plan = planEditorialImport(context, release);
+  const committed = commitEditorialImport(context, plan);
+
+  assert.equal(committed.validation.valid, true);
+  assert.equal(readJson(workspace.catalog).catalogVersion, 4);
+  assert.equal(readJson(workspace.catalog).products.length, 4);
+  assert.equal(readJson(workspace.localizations).catalogVersion, 4);
+  assert.equal(readJson(workspace.manifest).productCount, 4);
+  assert.equal(readJson(workspace.review).productCount, 4);
+  const audit = fs
+    .readFileSync(workspace.audit, "utf8")
+    .trim()
+    .split("\n")
+    .map(JSON.parse);
+  assert.equal(audit.length, 1);
+  assert.equal(audit[0].auditVersion, 3);
+  assert.equal(audit[0].operation, "editorial_import");
+  assert.equal(audit[0].releaseId, "fixture_editorial_4");
+});
+
+test("WT-031B CLI validates and dry-runs an editorial release without writes", () => {
+  const workspace = temporaryWorkspace();
+  const common = commonTemporaryArguments(workspace);
+  const release = path.join(FIXTURES, "valid-editorial-release.json");
+  const before = fileSha256(workspace.catalog);
+
+  const production = runCli(["validate-production", ...common, "--json"]);
+  assert.equal(production.status, 0, production.stderr);
+  assert.equal(parseStdout(production).valid, true);
+
+  const validation = runCli([
+    "validate-release",
+    "--input",
+    release,
+    ...common,
+    "--json",
+  ]);
+  assert.equal(validation.status, 0, validation.stderr);
+  assert.equal(parseStdout(validation).valid, true);
+
+  const dryRun = runCli([
+    "import-release",
+    "--input",
+    release,
+    ...common,
+    "--json",
+  ]);
+  assert.equal(dryRun.status, 0, dryRun.stderr);
+  assert.equal(parseStdout(dryRun).dryRun, true);
+  assert.equal(fileSha256(workspace.catalog), before);
+  assert.equal(fs.existsSync(workspace.audit), false);
 });
 
 test("Wave 1 shared search fixtures resolve production canonical products", () => {
@@ -453,6 +710,8 @@ test("read-only CLI commands return actionable machine-readable results", () => 
   const report = runCli(["report", "--json"]);
   assert.equal(report.status, 0, report.stderr);
   assert.equal(parseStdout(report).metadata.catalogVersion, 5);
+  assert.equal(parseStdout(report).metadata.generationDate, "2026-07-25");
+  assert.equal(parseStdout(report).metadata.productCount, 647);
 
   const find = runCli([
     "find",

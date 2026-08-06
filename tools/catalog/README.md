@@ -15,13 +15,43 @@ The CLI reads these repository sources by default:
 | Purpose | Path |
 | --- | --- |
 | Production catalog | `WayTask/Resources/product_catalog_he.json` |
+| Locale overlay | `WayTask/Resources/ProductKnowledge/product-knowledge-localizations-v1.json` |
+| Release manifest | `WayTask/Resources/ProductKnowledge/product-catalog-release-v1.json` |
 | JSON Schema | `shared/catalog/product-catalog.schema.json` |
+| Editorial release schema | `shared/catalog/product-editorial-release.schema.json` |
 | Taxonomy | `shared/catalog/taxonomy.json` |
 | Taxonomy review | `shared/catalog/product-taxonomy-review.json` |
 | Write audit | `shared/catalog/catalog-authoring-audit.jsonl` |
 
 The audit file is created only by the first committed authoring change. Dry runs and
 read-only commands do not create it.
+
+## WT-031B production boundary
+
+Production expansion now enters through a versioned editorial release. Direct
+`add`, `update`, `deactivate`, and `batch --write` calls against the default
+production catalog are refused. Those commands remain available for historical
+fixtures, diagnostics, and explicitly overridden development copies.
+
+An editorial release contains one complete record for every added or replaced
+product. The record owns:
+
+- Stable `id` and locale-keyed `canonicalNames`; `he-IL` is required and `en` is
+  optional.
+- Locale-tagged `localizedDisplayNames`, `aliases`, `keywords`, `brandTerms`, and
+  optional `legacyNames`.
+- Optional `brand`, `semanticKey`, variant descriptors, package descriptor, unit,
+  GTIN/barcodes, and provenance.
+- Approved category/subcategory, popularity, and explicit active/inactive status.
+
+Localized strings never replace the stable product ID. A secondary canonical name
+is emitted as a preferred localized display record, so Hebrew and English resolve
+to one Product Knowledge identity.
+
+The release envelope owns `schemaVersion`, the next `catalogVersion`,
+`taxonomyVersion`, an ISO `generationDate`, the proposed `productCount`, a stable
+`releaseId`, supported locales, and operations. It must advance the catalog by
+exactly one version.
 
 ## Commands
 
@@ -49,6 +79,51 @@ rules:
 
 Errors include stable codes and affected product IDs. Exit status is nonzero when
 validation fails.
+
+### Validate the complete production bundle
+
+```sh
+node tools/catalog/catalog-tool.js validate-production
+node tools/catalog/catalog-tool.js validate-production --json
+```
+
+This validates the canonical catalog, taxonomy review, locale overlay, and release
+manifest as one bundle. Catalog version and product count must agree across all
+resources. Localized name IDs, locale codes, preferred displays, cross-product
+localized names, aliases, and product references are also checked.
+
+### Validate an editorial release
+
+```sh
+node tools/catalog/catalog-tool.js validate-release \
+  --input path/to/editorial-release.json
+```
+
+The validator applies the release to an in-memory copy of the current production
+bundle and reports all errors before import. It rejects malformed records, existing
+IDs submitted as adds, repeated operations, normalized alias collisions,
+conflicting localized display names, missing Hebrew canonical names, invalid
+keywords/locales, broken taxonomy, malformed or conflicting GTINs, invalid status,
+and incorrect release metadata. It never merges records.
+
+### Import an editorial release
+
+```sh
+# Full dry run; no files change
+node tools/catalog/catalog-tool.js import-release \
+  --input path/to/editorial-release.json
+
+# Commit only after human review and validation
+node tools/catalog/catalog-tool.js import-release \
+  --input path/to/editorial-release.json \
+  --write
+```
+
+The importer validates the current baseline, constructs the complete proposed
+catalog in memory, validates the editorial and runtime representations, rejects a
+stale filesystem snapshot, then transactionally replaces the canonical catalog,
+locale overlay, release manifest, taxonomy review, and audit. Any validation or
+write failure leaves the prior release intact.
 
 ### Report
 
@@ -239,6 +314,10 @@ Always review the ordinary dry-run output or use `--json` before committing.
 Commit the catalog, review manifest, audit entry, feedback update, and regression
 tests together.
 
+For WT-031B and later production releases, `import-release` is the only approved
+write path. Its audit entry records the release ID, changed stable IDs, release
+versions, generation date, product count, and checksums of every runtime artifact.
+
 ## Path overrides
 
 All contract and output paths can be overridden, which is useful for release
@@ -281,15 +360,26 @@ git diff --check
 
 Use `CATALOG_FEEDBACK.md` as the operational source for accepted work:
 
-1. Record and reproduce the missing product or content defect.
-2. Run `find`, `inspect`, and `check-candidate`.
-3. Group all mutations intended for one release in one batch input. An isolated
-   one-product release may use its single-product command.
-4. Review the complete dry run, then commit once with `--write`.
-5. Add the shared/native regression named in the feedback row.
-6. Run toolkit validation, toolkit tests, iOS tests, and the build.
-7. Review the generated per-mutation audit entries and single release-version
-   increment.
+1. The editor records the request and evidence in `CATALOG_FEEDBACK.md`, searches
+   existing names/aliases, confirms identity and taxonomy, and authors complete
+   locale-aware records. Names, brands, aliases, and barcodes require a real
+   editorial source; missing optional data stays absent.
+2. Run `validate-release`. Resolve every error and review every warning; never
+   auto-merge identities.
+3. Run `import-release` without `--write` and review the proposed version, count,
+   stable IDs, localized output, and taxonomy review.
+4. Run `import-release --write` once. This is the Importer step and creates the
+   accepted runtime resources.
+5. Run `validate-production`; then run toolkit, Product Knowledge, search, and
+   persistence compatibility tests plus the generic iOS build.
+6. Review the generated audit entry and checksums, commit the editorial release,
+   runtime resources, review, audit, feedback, and tests together.
+7. Device-QA Hebrew/English search, display selection, aliases, duplicate handling,
+   icons/categories, custom creation, scan/import readability, and cold startup.
+
+The deployment flow is therefore:
+
+`Editor -> Validator -> Importer -> ProductKnowledgeSnapshot -> Production App`.
 
 Do not hand-edit the audit log. Do not use this toolkit to bypass canonical identity,
 alias, brand, taxonomy, versioning, or feedback-review policy.

@@ -7,6 +7,7 @@ nonisolated struct ProductKnowledgeSnapshotMetadata: Equatable, Sendable {
     let expectedProductCount: Int
     let supportedLocales: [String]
     let catalogVersion: Int?
+    let catalogGenerationDate: String?
     let source: String?
 
     init(
@@ -16,6 +17,7 @@ nonisolated struct ProductKnowledgeSnapshotMetadata: Equatable, Sendable {
         expectedProductCount: Int,
         supportedLocales: [String],
         catalogVersion: Int? = nil,
+        catalogGenerationDate: String? = nil,
         source: String? = nil
     ) {
         self.schemaVersion = schemaVersion
@@ -24,6 +26,7 @@ nonisolated struct ProductKnowledgeSnapshotMetadata: Equatable, Sendable {
         self.expectedProductCount = expectedProductCount
         self.supportedLocales = supportedLocales
         self.catalogVersion = catalogVersion
+        self.catalogGenerationDate = catalogGenerationDate
         self.source = source
     }
 }

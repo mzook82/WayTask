@@ -17,6 +17,12 @@ const {
   validateContext,
 } = require("./lib/catalog");
 const { readJson } = require("./lib/io");
+const {
+  commitEditorialImport,
+  loadEditorialContext,
+  planEditorialImport,
+  validateProductionBundle,
+} = require("./lib/editorial");
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const DEFAULTS = {
@@ -50,6 +56,26 @@ const DEFAULTS = {
     "catalog",
     "catalog-authoring-audit.jsonl",
   ),
+  editorialSchema: path.join(
+    REPO_ROOT,
+    "shared",
+    "catalog",
+    "product-editorial-release.schema.json",
+  ),
+  localizations: path.join(
+    REPO_ROOT,
+    "WayTask",
+    "Resources",
+    "ProductKnowledge",
+    "product-knowledge-localizations-v1.json",
+  ),
+  manifest: path.join(
+    REPO_ROOT,
+    "WayTask",
+    "Resources",
+    "ProductKnowledge",
+    "product-catalog-release-v1.json",
+  ),
 };
 
 const VALUE_OPTIONS = new Set([
@@ -57,7 +83,10 @@ const VALUE_OPTIONS = new Set([
   "catalog",
   "id",
   "input",
+  "editorial-schema",
   "limit",
+  "localizations",
+  "manifest",
   "query",
   "review",
   "schema",
@@ -75,6 +104,9 @@ function usage() {
 
 Usage:
   node tools/catalog/catalog-tool.js validate [--json]
+  node tools/catalog/catalog-tool.js validate-production [--json]
+  node tools/catalog/catalog-tool.js validate-release --input release.json [--json]
+  node tools/catalog/catalog-tool.js import-release --input release.json [--write] [--json]
   node tools/catalog/catalog-tool.js report [--json]
   node tools/catalog/catalog-tool.js find --query "שקיות זבל" [--limit 10] [--json]
   node tools/catalog/catalog-tool.js inspect --id trash_bags [--json]
@@ -92,7 +124,8 @@ when it contains multiple product mutations.
 
 Common path overrides:
   --catalog PATH   --schema PATH   --taxonomy PATH
-  --review PATH    --audit PATH
+  --review PATH    --audit PATH    --localizations PATH
+  --manifest PATH  --editorial-schema PATH
 `;
 }
 
@@ -133,6 +166,15 @@ function contextPaths(options) {
     taxonomy: resolvedPath(options.taxonomy, DEFAULTS.taxonomy),
     review: resolvedPath(options.review, DEFAULTS.review),
     audit: resolvedPath(options.audit, DEFAULTS.audit),
+    editorialSchema: resolvedPath(
+      options["editorial-schema"],
+      DEFAULTS.editorialSchema,
+    ),
+    localizations: resolvedPath(
+      options.localizations,
+      DEFAULTS.localizations,
+    ),
+    manifest: resolvedPath(options.manifest, DEFAULTS.manifest),
   };
 }
 
@@ -170,6 +212,11 @@ function printReport(report) {
   console.log(
     `Catalog schema ${report.metadata.schemaVersion}, catalog ${report.metadata.catalogVersion}, taxonomy ${report.metadata.taxonomyVersion}, ${report.metadata.locale}`,
   );
+  if (report.metadata.generationDate) {
+    console.log(
+      `Release: generated ${report.metadata.generationDate}, declared ${report.metadata.productCount} products`,
+    );
+  }
   console.log(
     `Products: ${report.products.total} total, ${report.products.active} active, ${report.products.inactive} inactive`,
   );
@@ -227,6 +274,14 @@ function planSummary(plan, written) {
 }
 
 function executeMutation(context, plan, options) {
+  if (
+    options.write &&
+    path.resolve(context.paths.catalog) === path.resolve(DEFAULTS.catalog)
+  ) {
+    throw new Error(
+      "Direct production mutation is disabled by WT-031B; submit a versioned editorial release through import-release.",
+    );
+  }
   if (!plan.validation.valid) {
     if (options.json) {
       printJson(planSummary(plan, false));
@@ -290,6 +345,9 @@ function main() {
 
   const supported = new Set([
     "validate",
+    "validate-production",
+    "validate-release",
+    "import-release",
     "report",
     "find",
     "inspect",
@@ -303,7 +361,16 @@ function main() {
     throw new Error(`Unknown command: ${command}\n\n${usage()}`);
   }
 
-  const context = loadContext(contextPaths(options));
+  const paths = contextPaths(options);
+  const editorialCommands = new Set([
+    "validate-production",
+    "validate-release",
+    "import-release",
+    "report",
+  ]);
+  const context = editorialCommands.has(command)
+    ? loadEditorialContext(paths)
+    : loadContext(paths);
   switch (command) {
     case "validate": {
       const validation = validateContext(context);
@@ -317,8 +384,82 @@ function main() {
       }
       break;
     }
+    case "validate-production": {
+      const validation = validateProductionBundle(context);
+      if (options.json) {
+        printJson(validation);
+      } else {
+        printValidation(validation);
+      }
+      if (!validation.valid) {
+        process.exitCode = 1;
+      }
+      break;
+    }
+    case "validate-release":
+    case "import-release": {
+      const inputPath = path.resolve(
+        process.cwd(),
+        requireOption(options, "input", command),
+      );
+      const release = readJson(inputPath, "editorial release");
+      const plan = planEditorialImport(context, release);
+      let written = false;
+      let committed = null;
+      if (command === "import-release" && options.write && plan.valid) {
+        committed = commitEditorialImport(context, plan);
+        written = true;
+      }
+      const summary = {
+        valid: plan.valid,
+        releaseId: release.releaseId ?? null,
+        schemaVersion: release.schemaVersion ?? null,
+        catalogVersionFrom:
+          plan.catalogVersionFrom ?? context.catalog.catalogVersion,
+        catalogVersionTo: release.catalogVersion ?? null,
+        generationDate: release.generationDate ?? null,
+        productCount: release.productCount ?? null,
+        operationCount: Array.isArray(release.operations)
+          ? release.operations.length
+          : 0,
+        changedProductIDs: plan.changedProductIDs ?? [],
+        dryRun: command === "validate-release" || !options.write,
+        written,
+        errors: plan.validation?.errors ?? [],
+        warnings: plan.validation?.warnings ?? [],
+        ...(committed ? { audit: committed.auditEntry } : {}),
+      };
+      if (options.json) {
+        printJson(summary);
+      } else if (!plan.valid) {
+        printValidation(plan.validation);
+        console.error("Nothing was written.");
+      } else if (written) {
+        console.log(
+          `WROTE: editorial release ${release.releaseId}; catalogVersion ${plan.catalogVersionFrom} -> ${plan.catalogVersionTo}.`,
+        );
+        console.log("Post-import production validation passed.");
+      } else {
+        console.log(
+          `VALID: editorial release ${release.releaseId}; ${release.operations.length} operations, proposed ${release.productCount} products.`,
+        );
+        console.log("Nothing was written; use import-release --write to commit.");
+      }
+      if (!plan.valid) {
+        process.exitCode = 1;
+      }
+      break;
+    }
     case "report": {
       const report = buildReport(context);
+      const productionValidation = validateProductionBundle(context);
+      report.valid = productionValidation.valid;
+      report.metadata.generationDate = context.manifest.generationDate;
+      report.metadata.productCount = context.manifest.productCount;
+      report.validation = {
+        errors: productionValidation.errors.length,
+        warnings: productionValidation.warnings.length,
+      };
       if (options.json) {
         printJson(report);
       } else {

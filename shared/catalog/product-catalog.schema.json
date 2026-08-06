@@ -98,6 +98,62 @@
         "brandTerms": {
           "$ref": "#/$defs/textArray"
         },
+        "semanticKey": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/nonEmptyText"
+            }
+          ]
+        },
+        "brand": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/nonEmptyText"
+            }
+          ]
+        },
+        "variantDescriptors": {
+          "$ref": "#/$defs/textArray"
+        },
+        "packageDescriptor": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/nonEmptyText"
+            }
+          ]
+        },
+        "unit": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/nonEmptyText"
+            }
+          ]
+        },
+        "barcodes": {
+          "$ref": "#/$defs/textArray"
+        },
+        "provenance": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/nonEmptyText"
+            }
+          ]
+        },
         "popularityScore": {
           "type": "integer",
           "minimum": 0,
