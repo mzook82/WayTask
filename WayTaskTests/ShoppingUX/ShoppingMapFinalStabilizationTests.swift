@@ -120,11 +120,14 @@ final class ShoppingMapFinalStabilizationTests: XCTestCase {
         )
 
         XCTAssertTrue(
-            map.contains("guard movement == nil || (movement ?? 0) >= 10")
+            map.contains("(movement ?? 0) < 10")
         )
+        XCTAssertTrue(map.contains("!shouldRecenter { return }"))
         XCTAssertTrue(map.contains("lastDiscoveryCoordinate"))
         XCTAssertTrue(map.contains(") >= 250"))
-        XCTAssertTrue(map.contains("didStartLocationUpdates"))
+        XCTAssertTrue(map.contains("locationManager.requestLocation()"))
+        XCTAssertTrue(map.contains("remainingFreshLocationRetries = 2"))
+        XCTAssertFalse(map.contains("locationManager.startUpdatingLocation()"))
     }
 
     private func productionSource() throws -> String {

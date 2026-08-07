@@ -230,9 +230,10 @@ struct ShoppingTripService: ShoppingTripServicing {
             return nil
         }
 
-        let matchedItems = group.items.filter { item in
-            storeLikelyMatches(item, in: relevantStore)
-        }
+        let matchedItems = intentMatcher.relevantItems(
+            from: group.items,
+            for: relevantStore
+        )
         let matchedIDs = Set(matchedItems.map(\.id))
         let missingItems = group.items.filter { !matchedIDs.contains($0.id) }
         let coverageScore = Double(matchedItems.count) / Double(max(group.items.count, 1))
@@ -321,38 +322,6 @@ struct ShoppingTripService: ShoppingTripServicing {
             searchTerms: (groupRequest.searchTerms + fallbackRequest.searchTerms).deduplicatedCaseInsensitive(),
             intentProfile: groupRequest.intentProfile
         )
-    }
-
-    private func storeLikelyMatches(_ item: ShoppingItem, in store: MapStore) -> Bool {
-        let productTerms = [
-            item.name,
-            item.brand,
-            item.category,
-            item.productType,
-            item.flavor,
-            item.packageSize,
-            item.packageType
-        ]
-        .compactMap { $0 }
-        let itemTokens = tokens(from: productTerms + item.searchKeywords)
-        guard !itemTokens.isEmpty else {
-            return false
-        }
-
-        let itemCategories = Set(intentMatcher.matchStoreCategories(for: item))
-        let storeCategories = Set(store.storeCategories)
-        if storeCategories.contains(where: { storeCategory in
-            itemCategories.contains { itemCategory in
-                storeCategory.matches(itemCategory)
-            }
-        }) {
-            return true
-        }
-
-        let storeTokens = tokens(from: store.itemNames + [store.title] + store.storeCategories.map(\.displayName))
-        return itemTokens.contains { token in
-            storeTokens.contains(token)
-        }
     }
 
     private func fallbackRequest(for items: [ShoppingItem], store: MapStore) -> ShoppingStoreSuggestionRequest {

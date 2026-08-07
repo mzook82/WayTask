@@ -434,6 +434,30 @@ final class BetaDiagnosticsCenter: ObservableObject {
         append(.notification, "Notification authorization checked", status)
     }
 
+    func notificationRequestAccepted(
+        type: String,
+        store: String,
+        coordinate: CLLocationCoordinate2D?,
+        shoppingListID: UUID?,
+        matchedProducts: [String]
+    ) {
+        guard isEnabled else { return }
+        notification.lastNotification = "Request accepted; delivery unproven"
+        notification.notificationType = type
+        notification.notificationTime = Date()
+        notification.store = store
+        notification.coordinate = coordinate
+        notification.shoppingListID = shoppingListID
+        notification.matchedProducts = matchedProducts
+        notification.decisionReason =
+            "UNUserNotificationCenter accepted the request; device delivery is not automatically proven"
+        append(
+            .notification,
+            "Notification request accepted",
+            "\(store): delivery unproven"
+        )
+    }
+
     func notificationTapped(store: String, deepLinkStatus: String) {
         guard isEnabled else { return }
         notification.tapResult = "Tapped"

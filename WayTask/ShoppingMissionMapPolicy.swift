@@ -1,6 +1,44 @@
 import CoreLocation
 import Foundation
 
+enum MapLocationFreshnessPolicy {
+    static let maximumAutomaticLocationAge: TimeInterval = 30
+    static let maximumHorizontalAccuracy: CLLocationAccuracy = 500
+    static let meaningfulInactivityInterval: TimeInterval = 15 * 60
+
+    static func isUsableForAutomaticRecenter(
+        _ location: CLLocation,
+        now: Date = Date()
+    ) -> Bool {
+        let age = now.timeIntervalSince(location.timestamp)
+        return CLLocationCoordinate2DIsValid(location.coordinate)
+            && location.horizontalAccuracy >= 0
+            && location.horizontalAccuracy <= maximumHorizontalAccuracy
+            && age >= -5
+            && age <= maximumAutomaticLocationAge
+    }
+
+    static func shouldRefreshAfterActivation(
+        inactiveSince: Date?,
+        now: Date = Date()
+    ) -> Bool {
+        guard let inactiveSince else { return true }
+        return now.timeIntervalSince(inactiveSince)
+            >= meaningfulInactivityInterval
+    }
+
+    static func shouldAutomaticallyFollowAfterActivation(
+        inactiveSince: Date?,
+        isUserExploring: Bool,
+        now: Date = Date()
+    ) -> Bool {
+        !isUserExploring || shouldRefreshAfterActivation(
+            inactiveSince: inactiveSince,
+            now: now
+        )
+    }
+}
+
 enum ShoppingMissionMapSelectionPolicy {
     static func toggledSelection(
         current: UUID?,

@@ -95,6 +95,39 @@ final class SmartProductKnowledgeFoundationTests: XCTestCase {
         }
     }
 
+    func testMapCompatibilityProductsRetainExactCatalogTaxonomy()
+        async throws {
+        let search = ProductKnowledgeSearch(
+            repository: InMemoryProductKnowledgeRepository(
+                snapshot: try productionSnapshot()
+            )
+        )
+        let cases: [(String, String, String)] = [
+            ("קוטג׳", "cottage_cheese", "dairy"),
+            ("חלב", "milk_3_percent", "dairy"),
+            ("שקיות אשפה", "trash_bags", "household"),
+            ("קפה", "coffee", "drinks"),
+            ("לחם", "bread_white", "bakery"),
+            ("Coffee", "coffee", "drinks"),
+            ("Milk", "milk_3_percent", "dairy"),
+            ("Hazelnut Spread", "hazelnut_spread", "pantry")
+        ]
+
+        for (query, productID, categoryID) in cases {
+            let results = await search.suggestions(
+                matching: query,
+                locale: query == "Coffee" || query == "Milk" ||
+                    query == "Hazelnut Spread" ? "en" : "he-IL"
+            )
+            let result = try XCTUnwrap(
+                results.first,
+                "Expected a Product Knowledge match for \(query)"
+            )
+            XCTAssertEqual(result.productID.rawValue, productID, query)
+            XCTAssertEqual(result.categoryID.rawValue, categoryID, query)
+        }
+    }
+
     func testWT031CCuratedWaveSearchesAcrossEveryAddedCategory()
         async throws {
         let search = ProductKnowledgeSearch(

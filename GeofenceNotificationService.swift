@@ -1,3 +1,4 @@
+import Combine
 import CoreLocation
 import Foundation
 import UserNotifications
@@ -162,6 +163,17 @@ struct ShoppingGeofencePayload {
 }
 
 struct GeofenceNotificationService {
+    enum SuppressionReason: Equatable {
+        case invalidPayload
+        case noMatchedProducts
+        case cooldown
+    }
+
+    enum RequestOutcome {
+        case request(UNNotificationRequest)
+        case suppressed(SuppressionReason)
+    }
+
     private let notificationCenter: UNUserNotificationCenter
     private let userDefaults: UserDefaults
     private let cooldown: TimeInterval
@@ -241,7 +253,23 @@ struct GeofenceNotificationService {
         }
     }
 
-    func notificationRequest(for regionIdentifier: String, now: Date = Date()) -> UNNotificationRequest? {
+    func notificationRequest(
+        for regionIdentifier: String,
+        now: Date = Date()
+    ) -> UNNotificationRequest? {
+        switch notificationRequestOutcome(
+            for: regionIdentifier,
+            now: now
+        ) {
+        case let .request(value): return value
+        case .suppressed: return nil
+        }
+    }
+
+    func notificationRequestOutcome(
+        for regionIdentifier: String,
+        now: Date = Date()
+    ) -> RequestOutcome {
         guard let payload = ShoppingGeofencePayload(identifier: regionIdentifier) else {
             BetaDiagnosticsCenter.shared.recordError(
                 category: .notification,
@@ -260,7 +288,7 @@ struct GeofenceNotificationService {
             #if DEBUG
             print("[WayTask Geofence] Ignoring non-shopping region: \(regionIdentifier)")
             #endif
-            return nil
+            return .suppressed(.invalidPayload)
         }
 
         guard !payload.itemNames.isEmpty else {
@@ -276,7 +304,7 @@ struct GeofenceNotificationService {
             #if DEBUG
             print("[WayTask Geofence] Skipping notification with no matched items for store: \(payload.title)")
             #endif
-            return nil
+            return .suppressed(.noMatchedProducts)
         }
 
         guard shouldNotify(payload, now: now) else {
@@ -292,7 +320,7 @@ struct GeofenceNotificationService {
             #if DEBUG
             print("[WayTask Geofence] Cooldown blocked notification for store: \(payload.title)")
             #endif
-            return nil
+            return .suppressed(.cooldown)
         }
 
         let content = UNMutableNotificationContent()
@@ -301,16 +329,27 @@ struct GeofenceNotificationService {
         content.sound = .default
         content.userInfo = payload.notificationUserInfo
 
-        recordNotificationSent(for: payload, now: now)
         #if DEBUG
         print("[WayTask Geofence] Scheduling notification for \(payload.title), source: \(payload.sourceType), matched items: \(payload.itemNames.joined(separator: ", "))")
         #endif
 
-        return UNNotificationRequest(
-            identifier: "shopping-geofence-\(payload.storeID.uuidString)-\(Int(now.timeIntervalSince1970))",
-            content: content,
-            trigger: nil
+        return .request(
+            UNNotificationRequest(
+                identifier: "shopping-geofence-\(payload.storeID.uuidString)-\(Int(now.timeIntervalSince1970))",
+                content: content,
+                trigger: nil
+            )
         )
+    }
+
+    func recordNotificationRequestAccepted(
+        for regionIdentifier: String,
+        now: Date = Date()
+    ) {
+        guard let payload = ShoppingGeofencePayload(
+            identifier: regionIdentifier
+        ) else { return }
+        recordNotificationSent(for: payload, now: now)
     }
 
     private func notificationBody(for payload: ShoppingGeofencePayload) -> String {
@@ -355,6 +394,576 @@ struct GeofenceNotificationService {
 
     private func lastNotificationKey(for payload: ShoppingGeofencePayload) -> String {
         "waytask.geofence.lastSent.\(payload.storeID.uuidString)"
+    }
+}
+
+enum ProductionNearbyNotificationDiagnosticState: Equatable {
+    case idle
+    case permissionMissing(notification: String, location: String)
+    case noEligibleStores
+    case geofenceNotArmed(String)
+    case osMonitoringLimit
+    case arming(Int)
+    case registrationSucceeded(Int)
+    case notificationSuppressedByCooldown
+    case notificationRequestAcceptedDeliveryUnproven
+}
+
+struct ProductionNearbyNotificationDeepLink: Equatable {
+    let storeID: UUID
+    let storeTitle: String
+    let shoppingListID: UUID?
+}
+
+/// App-scoped production owner for Product State nearby notifications.
+/// Region monitoring is low-power and persists in iOS; coordinate acquisition
+/// is one-shot and only runs when the mission or foreground state changes.
+@MainActor
+final class ProductionNearbyNotificationCoordinator:
+    NSObject,
+    ObservableObject,
+    CLLocationManagerDelegate,
+    UNUserNotificationCenterDelegate {
+    @Published private(set) var diagnosticState:
+        ProductionNearbyNotificationDiagnosticState = .idle
+    @Published private(set) var pendingDeepLink:
+        ProductionNearbyNotificationDeepLink?
+
+    private let locationManager = CLLocationManager()
+    private let notificationCenter = UNUserNotificationCenter.current()
+    private let notificationService = GeofenceNotificationService()
+    private let resolutionEngine = StoreResolutionEngine.shared
+    private let intentMatcher = ShoppingIntentMatcher()
+    private let userDefaults = UserDefaults.standard
+    private let approvedRegionIdentifiersKey =
+        "waytask.productionNearby.approvedRegions.v1"
+    private let missionSignatureKey =
+        "waytask.productionNearby.missionSignature.v1"
+    private let maximumShoppingRegions = 12
+    private let maximumSystemRegions = 20
+    private var items: [ShoppingPlanInputItem] = []
+    private var intents: [StoreResolutionIntent] = []
+    private var listID: ProductStateListID?
+    private var missionSignature: String?
+    private var refreshGeneration = 0
+    private var pendingRegionIdentifiers = Set<String>()
+    private var approvedRegionIdentifiers: Set<String>
+    private var remainingFreshLocationRetries = 0
+    private var regionRegistrationWasLimited = false
+    private var regionRegistrationFailed = false
+
+    override init() {
+        approvedRegionIdentifiers = Set(
+            UserDefaults.standard.stringArray(
+                forKey: "waytask.productionNearby.approvedRegions.v1"
+            ) ?? []
+        )
+        missionSignature = UserDefaults.standard.string(
+            forKey: "waytask.productionNearby.missionSignature.v1"
+        )
+        super.init()
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        locationManager.distanceFilter = 100
+        locationManager.pausesLocationUpdatesAutomatically = true
+        notificationCenter.delegate = self
+    }
+
+    func configure(
+        list: ProductStateNamedListProjection?,
+        activate: Bool = true
+    ) {
+        let nextItems = ShoppingMissionProductStateAdapter.neededItems(
+            from: list?.neededEntries ?? []
+        )
+        let nextIntents: [StoreResolutionIntent]
+        if let list {
+            nextIntents = intentMatcher.resolutionIntents(
+                for: nextItems,
+                sourceListID: list.id,
+                sourceRevision: list.revision
+            )
+        } else {
+            nextIntents = []
+        }
+        let nextSignature = [
+            list?.id.rawValue.uuidString ?? "no-list",
+            list.map { String($0.revision.value) } ?? "no-revision",
+            nextItems.map {
+                [
+                    $0.identity.id.rawValue.uuidString,
+                    $0.displayName,
+                    $0.catalogCategoryID ?? ""
+                ].joined(separator: "=")
+            }.joined(separator: "|")
+        ].joined(separator: ":")
+
+        let missionChanged = missionSignature != nextSignature
+        items = nextItems
+        intents = nextIntents
+        listID = list?.id
+        missionSignature = nextSignature
+        userDefaults.set(nextSignature, forKey: missionSignatureKey)
+        refreshGeneration &+= 1
+        if missionChanged {
+            stopManagedRegions()
+            pendingRegionIdentifiers.removeAll()
+            setApprovedRegionIdentifiers([])
+        }
+        guard !items.isEmpty, !intents.isEmpty else {
+            publish(.noEligibleStores)
+            return
+        }
+        if activate { applicationDidBecomeActive() }
+    }
+
+    func applicationDidBecomeActive() {
+        Task { [weak self] in
+            await self?.activateIfAuthorized()
+        }
+    }
+
+    func consumeDeepLink() {
+        pendingDeepLink = nil
+    }
+
+    private func activateIfAuthorized() async {
+        var notificationSettings = await notificationCenter
+            .notificationSettings()
+        if notificationSettings.authorizationStatus == .notDetermined {
+            do {
+                _ = try await notificationCenter.requestAuthorization(
+                    options: [.alert, .sound, .badge]
+                )
+            } catch {
+                publish(.permissionMissing(
+                    notification: "Error: \(error.localizedDescription)",
+                    location: locationAuthorizationDescription
+                ))
+                return
+            }
+            notificationSettings = await notificationCenter
+                .notificationSettings()
+        }
+        let notificationAuthorized = [
+            UNAuthorizationStatus.authorized,
+            .provisional,
+            .ephemeral
+        ].contains(notificationSettings.authorizationStatus)
+        BetaDiagnosticsCenter.shared.notificationAuthorization(
+            status: notificationAuthorizationDescription(
+                notificationSettings.authorizationStatus
+            )
+        )
+        guard notificationAuthorized else {
+            publish(.permissionMissing(
+                notification: notificationAuthorizationDescription(
+                    notificationSettings.authorizationStatus
+                ),
+                location: locationAuthorizationDescription
+            ))
+            return
+        }
+
+        switch locationManager.authorizationStatus {
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+            publish(.permissionMissing(
+                notification: "Authorized",
+                location: "Not determined"
+            ))
+        case .authorizedWhenInUse:
+            locationManager.requestAlwaysAuthorization()
+            publish(.permissionMissing(
+                notification: "Authorized",
+                location: "When In Use; Always is required for background entry"
+            ))
+        case .authorizedAlways:
+            guard CLLocationManager.isMonitoringAvailable(
+                for: CLCircularRegion.self
+            ) else {
+                publish(.geofenceNotArmed(
+                    "Region monitoring is unavailable on this device"
+                ))
+                return
+            }
+            guard !items.isEmpty, !intents.isEmpty else {
+                stopManagedRegions()
+                publish(.noEligibleStores)
+                return
+            }
+            requestFreshCandidateLocation()
+        case .denied:
+            publish(.permissionMissing(
+                notification: "Authorized",
+                location: "Denied"
+            ))
+        case .restricted:
+            publish(.permissionMissing(
+                notification: "Authorized",
+                location: "Restricted"
+            ))
+        @unknown default:
+            publish(.permissionMissing(
+                notification: "Authorized",
+                location: "Unknown"
+            ))
+        }
+    }
+
+    private func refreshCandidates(around location: CLLocation) {
+        guard MapLocationFreshnessPolicy.isUsableForAutomaticRecenter(
+            location
+        ) else {
+            publish(.geofenceNotArmed(
+                "Fresh usable location has not been received"
+            ))
+            return
+        }
+        let generation = refreshGeneration
+        let currentItems = items
+        let currentIntents = intents
+        let currentListID = listID
+        Task { [weak self] in
+            guard let self else { return }
+            let resolved = await resolutionEngine.resolve(
+                savedStores: [],
+                intents: currentIntents,
+                around: location.coordinate,
+                forceRefresh: false
+            )
+            guard generation == refreshGeneration else { return }
+            let recommendations = ShoppingMissionRecommendationAuthority
+                .recommendations(
+                    stores: resolved,
+                    items: currentItems,
+                    userCoordinate: location.coordinate
+                )
+            let candidates = recommendations.map { recommendation in
+                ShoppingGeofenceCandidate(
+                    id: recommendation.store.id,
+                    locationID: recommendation.store.locationID,
+                    title: recommendation.store.title,
+                    coordinate: recommendation.store.coordinate,
+                    radius: min(
+                        max(recommendation.store.radius, 150),
+                        250
+                    ),
+                    itemNames: Array(
+                        recommendation.store.itemNames.prefix(3)
+                    ),
+                    itemIDs: recommendation.matchedItems.prefix(3).map {
+                        $0.identity.id.rawValue
+                    },
+                    shoppingListID: currentListID?.rawValue,
+                    sourceType: recommendation.store.sourceType.rawValue,
+                    distanceMeters: recommendation.distanceMeters,
+                    notificationType: "shoppingGeofence"
+                )
+            }
+            apply(candidates: candidates)
+        }
+    }
+
+    private func requestFreshCandidateLocation() {
+        remainingFreshLocationRetries = 2
+        locationManager.requestLocation()
+    }
+
+    private func retryFreshCandidateLocationIfNeeded() -> Bool {
+        guard remainingFreshLocationRetries > 0 else { return false }
+        remainingFreshLocationRetries -= 1
+        locationManager.requestLocation()
+        return true
+    }
+
+    private func apply(candidates: [ShoppingGeofenceCandidate]) {
+        let rankedCandidates = Array(candidates.prefix(
+            maximumShoppingRegions
+        ))
+        BetaDiagnosticsCenter.shared.recordGeofenceCandidates(
+            rankedCandidates
+        )
+        guard !rankedCandidates.isEmpty else {
+            stopManagedRegions()
+            setApprovedRegionIdentifiers([])
+            publish(.noEligibleStores)
+            return
+        }
+
+        let desired = rankedCandidates.map {
+            ShoppingGeofencePayload(candidate: $0).identifier
+        }
+        let monitoredManaged = Set(locationManager.monitoredRegions.compactMap {
+            ShoppingGeofencePayload(identifier: $0.identifier) == nil
+                ? nil : $0.identifier
+        })
+        if monitoredManaged == Set(desired) {
+            setApprovedRegionIdentifiers(Set(desired))
+            publish(.registrationSucceeded(monitoredManaged.count))
+            publishMonitoredRegions()
+            return
+        }
+
+        stopManagedRegions()
+        let unmanagedCount = locationManager.monitoredRegions.filter {
+            ShoppingGeofencePayload(identifier: $0.identifier) == nil
+        }.count
+        let availableCount = max(maximumSystemRegions - unmanagedCount, 0)
+        guard availableCount > 0 else {
+            setApprovedRegionIdentifiers([])
+            publish(.osMonitoringLimit)
+            return
+        }
+        let registrations = Array(
+            zip(rankedCandidates, desired).prefix(availableCount)
+        )
+        regionRegistrationWasLimited =
+            registrations.count < rankedCandidates.count
+        regionRegistrationFailed = false
+        pendingRegionIdentifiers = Set(registrations.map(\.1))
+        setApprovedRegionIdentifiers(pendingRegionIdentifiers)
+        publish(.arming(registrations.count))
+        for (candidate, identifier) in registrations {
+            let region = CLCircularRegion(
+                center: candidate.coordinate,
+                radius: candidate.radius,
+                identifier: identifier
+            )
+            region.notifyOnEntry = true
+            region.notifyOnExit = false
+            locationManager.startMonitoring(for: region)
+        }
+    }
+
+    private func stopManagedRegions() {
+        for region in locationManager.monitoredRegions where
+            ShoppingGeofencePayload(identifier: region.identifier) != nil {
+            locationManager.stopMonitoring(for: region)
+        }
+    }
+
+    private func setApprovedRegionIdentifiers(_ identifiers: Set<String>) {
+        approvedRegionIdentifiers = identifiers
+        userDefaults.set(
+            identifiers.sorted(),
+            forKey: approvedRegionIdentifiersKey
+        )
+    }
+
+    private func publishMonitoredRegions() {
+        let regions = locationManager.monitoredRegions.compactMap {
+            region -> BetaGeofenceRegion? in
+            guard let circular = region as? CLCircularRegion,
+                  let payload = ShoppingGeofencePayload(
+                      identifier: circular.identifier
+                  ) else { return nil }
+            return BetaGeofenceRegion(
+                id: circular.identifier,
+                title: payload.title,
+                coordinate: circular.center,
+                radius: circular.radius,
+                source: payload.sourceType
+            )
+        }
+        BetaDiagnosticsCenter.shared.updateMonitoredRegions(regions)
+    }
+
+    private func publish(
+        _ state: ProductionNearbyNotificationDiagnosticState
+    ) {
+        diagnosticState = state
+        switch state {
+        case let .permissionMissing(notification, location):
+            BetaDiagnosticsCenter.shared.geofenceSuppressed(
+                reason: "Permission missing: notifications \(notification); location \(location)"
+            )
+        case .noEligibleStores:
+            BetaDiagnosticsCenter.shared.geofenceSuppressed(
+                reason: "No compatibility-approved stores"
+            )
+        case let .geofenceNotArmed(reason):
+            BetaDiagnosticsCenter.shared.geofenceSuppressed(reason: reason)
+        case .osMonitoringLimit:
+            BetaDiagnosticsCenter.shared.geofenceSuppressed(
+                reason: "Core Location monitored-region limit reached"
+            )
+        case .idle, .arming, .registrationSucceeded,
+             .notificationSuppressedByCooldown,
+             .notificationRequestAcceptedDeliveryUnproven:
+            break
+        }
+    }
+
+    private var locationAuthorizationDescription: String {
+        switch locationManager.authorizationStatus {
+        case .notDetermined: "Not determined"
+        case .restricted: "Restricted"
+        case .denied: "Denied"
+        case .authorizedAlways: "Always"
+        case .authorizedWhenInUse: "When In Use"
+        @unknown default: "Unknown"
+        }
+    }
+
+    private func notificationAuthorizationDescription(
+        _ status: UNAuthorizationStatus
+    ) -> String {
+        switch status {
+        case .notDetermined: "Not determined"
+        case .denied: "Denied"
+        case .authorized: "Authorized"
+        case .provisional: "Provisional"
+        case .ephemeral: "Ephemeral"
+        @unknown default: "Unknown"
+        }
+    }
+
+    func locationManagerDidChangeAuthorization(
+        _ manager: CLLocationManager
+    ) {
+        applicationDidBecomeActive()
+    }
+
+    func locationManager(
+        _ manager: CLLocationManager,
+        didUpdateLocations locations: [CLLocation]
+    ) {
+        guard let location = locations.last(where: {
+            MapLocationFreshnessPolicy.isUsableForAutomaticRecenter($0)
+        }) else {
+            if retryFreshCandidateLocationIfNeeded() { return }
+            publish(.geofenceNotArmed(
+                "Location callback contained only stale or inaccurate values"
+            ))
+            return
+        }
+        remainingFreshLocationRetries = 0
+        refreshCandidates(around: location)
+    }
+
+    func locationManager(
+        _ manager: CLLocationManager,
+        didFailWithError error: Error
+    ) {
+        publish(.geofenceNotArmed(
+            "Location request failed: \(error.localizedDescription)"
+        ))
+    }
+
+    func locationManager(
+        _ manager: CLLocationManager,
+        didStartMonitoringFor region: CLRegion
+    ) {
+        pendingRegionIdentifiers.remove(region.identifier)
+        publishMonitoredRegions()
+        if pendingRegionIdentifiers.isEmpty, !regionRegistrationFailed {
+            let count = locationManager.monitoredRegions.filter {
+                ShoppingGeofencePayload(identifier: $0.identifier) != nil
+            }.count
+            if regionRegistrationWasLimited {
+                publish(.osMonitoringLimit)
+            } else {
+                publish(.registrationSucceeded(count))
+            }
+        }
+    }
+
+    func locationManager(
+        _ manager: CLLocationManager,
+        monitoringDidFailFor region: CLRegion?,
+        withError error: Error
+    ) {
+        regionRegistrationFailed = true
+        if let region {
+            pendingRegionIdentifiers.remove(region.identifier)
+            var approved = approvedRegionIdentifiers
+            approved.remove(region.identifier)
+            setApprovedRegionIdentifiers(approved)
+        }
+        publish(.geofenceNotArmed(
+            "OS region registration failed: \(error.localizedDescription)"
+        ))
+    }
+
+    func locationManager(
+        _ manager: CLLocationManager,
+        didEnterRegion region: CLRegion
+    ) {
+        guard let circular = region as? CLCircularRegion,
+              let payload = ShoppingGeofencePayload(
+                  identifier: circular.identifier
+              ) else { return }
+        guard approvedRegionIdentifiers.contains(circular.identifier) else {
+            publish(.geofenceNotArmed(
+                "Region entry was not approved for the current shopping mission"
+            ))
+            return
+        }
+        BetaDiagnosticsCenter.shared.geofenceTriggered(
+            title: payload.title,
+            entered: true,
+            distance: nil
+        )
+        switch notificationService.notificationRequestOutcome(
+            for: circular.identifier,
+            now: Date()
+        ) {
+        case let .request(request):
+            Task { [weak self] in
+                guard let self else { return }
+                do {
+                    try await notificationCenter.add(request)
+                    notificationService.recordNotificationRequestAccepted(
+                        for: circular.identifier
+                    )
+                    publish(.notificationRequestAcceptedDeliveryUnproven)
+                    BetaDiagnosticsCenter.shared.notificationRequestAccepted(
+                        type: payload.notificationType,
+                        store: payload.title,
+                        coordinate: payload.coordinate,
+                        shoppingListID: payload.shoppingListID,
+                        matchedProducts: payload.itemNames
+                    )
+                } catch {
+                    publish(.geofenceNotArmed(
+                        "Notification scheduling failed: \(error.localizedDescription)"
+                    ))
+                }
+            }
+        case let .suppressed(reason):
+            if reason == .cooldown {
+                publish(.notificationSuppressedByCooldown)
+            }
+        }
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        let info = response.notification.request.content.userInfo
+        guard let value = info["storeID"] as? String,
+              let storeID = UUID(uuidString: value) else { return }
+        let title = info["storeTitle"] as? String ?? "Nearby store"
+        let listID = (info["shoppingListID"] as? String)
+            .flatMap(UUID.init(uuidString:))
+        pendingDeepLink = ProductionNearbyNotificationDeepLink(
+            storeID: storeID,
+            storeTitle: title,
+            shoppingListID: listID
+        )
+        BetaDiagnosticsCenter.shared.notificationTapped(
+            store: title,
+            deepLinkStatus: "Production Map route accepted"
+        )
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        [.banner, .sound]
     }
 }
 

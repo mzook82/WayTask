@@ -741,10 +741,9 @@ final class MapKitStoreSearchService: StoreSearchService {
         }
 
         let mapKitCategory = category(from: item.pointOfInterestCategory)
-        let canInheritQueryCategory = canInheritCategoryFromQuery(item.pointOfInterestCategory)
-        let storeCategory = mapKitCategory == .generalStore && inferredCategory != .generalStore && canInheritQueryCategory
-            ? inferredCategory
-            : (mapKitCategory ?? inferredCategory)
+        // A broad search query is discovery context, not evidence that a
+        // generic MapKit place has that retail type. Unknown stays unknown.
+        let storeCategory = mapKitCategory ?? .generalStore
         let storeCategories = [storeCategory]
         let storeDistance = distance(from: queryCoordinate, to: item.location.coordinate)
         let rejectionReason: String?
@@ -1010,14 +1009,6 @@ final class MapKitStoreSearchService: StoreSearchService {
         default:
             return nil
         }
-    }
-
-    private func canInheritCategoryFromQuery(_ pointOfInterestCategory: MKPointOfInterestCategory?) -> Bool {
-        guard let pointOfInterestCategory else {
-            return true
-        }
-
-        return pointOfInterestCategory == .store
     }
 
     private func cacheKey(

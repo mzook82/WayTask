@@ -197,7 +197,9 @@ enum NormalizedProductCategory: String, Equatable, Hashable, Codable, Sendable {
     case catalogPet = "catalog.pet"
     case catalogPharmacy = "catalog.pharmacy"
     case catalogGeneral = "catalog.general"
+    case catalogHousehold = "catalog.household"
     case groceryBaking = "grocery.baking"
+    case groceryBakery = "grocery.bakery"
     case groceryCondiment = "grocery.condiment"
     case groceryCoffee = "grocery.coffee"
     case groceryDairy = "grocery.dairy"
@@ -428,15 +430,12 @@ struct ProductIntentResolver {
     ) -> ProductIntentProfile {
         switch categoryID {
         case "dairy",
-             "bakery",
              "fruits_vegetables",
              "meat_fish",
              "pantry",
              "drinks",
              "frozen",
-             "snacks",
-             "household",
-             "cleaning":
+             "snacks":
             return profile(
                 category: .catalogGrocery,
                 group: .grocery,
@@ -449,6 +448,38 @@ struct ProductIntentResolver {
                     .electronicsStore,
                     .petStore,
                     .homeImprovement
+                ]
+            )
+        case "bakery":
+            return profile(
+                category: .groceryBakery,
+                group: .grocery,
+                confidence: 1,
+                evidence: evidence,
+                primary: [.grocery, .supermarket],
+                secondary: [.convenienceStore],
+                fallback: [],
+                excluded: [
+                    .electronicsStore,
+                    .petStore,
+                    .pharmacy,
+                    .homeImprovement,
+                    .coffeeShop
+                ]
+            )
+        case "household", "cleaning":
+            return profile(
+                category: .catalogHousehold,
+                group: .general,
+                confidence: 1,
+                evidence: evidence,
+                primary: [.supermarket, .grocery, .homeImprovement],
+                secondary: [.convenienceStore],
+                fallback: [],
+                excluded: [
+                    .electronicsStore,
+                    .petStore,
+                    .coffeeShop
                 ]
             )
         case "personal_care", "pharmacy", "baby":
@@ -627,7 +658,7 @@ struct ProductIntentResolver {
         }
 
         if hasPhrase(["coffee beans", "ground coffee", "instant coffee", "coffee"], in: haystack) ||
-            tokens.contains("coffee") {
+            hasPhrase(["קפה"], in: haystack) || tokens.contains("coffee") {
             return profile(
                 category: .groceryCoffee,
                 group: .grocery,
@@ -641,12 +672,55 @@ struct ProductIntentResolver {
         }
 
         if hasPhrase(["milk", "whole milk", "skim milk", "oat milk", "almond milk"], in: haystack) ||
+            hasPhrase(["חלב", "קוטג׳", "קוטג'", "קוטג"], in: haystack) ||
             tokens.contains("milk") {
             return profile(
                 category: .groceryDairy,
                 group: .grocery,
                 confidence: 0.9,
                 evidence: ["matched milk terms"],
+                primary: [.grocery, .supermarket],
+                secondary: [.convenienceStore],
+                fallback: [],
+                excluded: [.electronicsStore, .petStore, .pharmacy, .homeImprovement, .coffeeShop]
+            )
+        }
+
+        if hasPhrase([
+            "trash bags", "garbage bags", "waste bags",
+            "שקיות אשפה", "שקיות זבל", "שקיות לפח"
+        ], in: haystack) {
+            return profile(
+                category: .catalogHousehold,
+                group: .general,
+                confidence: 0.94,
+                evidence: ["matched household waste-bag terms"],
+                primary: [.supermarket, .grocery, .homeImprovement],
+                secondary: [.convenienceStore],
+                fallback: [],
+                excluded: [.electronicsStore, .petStore, .coffeeShop]
+            )
+        }
+
+        if hasPhrase(["bread", "loaf", "לחם"], in: haystack) {
+            return profile(
+                category: .groceryBakery,
+                group: .grocery,
+                confidence: 0.9,
+                evidence: ["matched bread or bakery terms"],
+                primary: [.grocery, .supermarket],
+                secondary: [.convenienceStore],
+                fallback: [],
+                excluded: [.electronicsStore, .petStore, .pharmacy, .homeImprovement, .coffeeShop]
+            )
+        }
+
+        if hasPhrase(["hazelnut spread", "chocolate spread"], in: haystack) {
+            return profile(
+                category: .catalogGrocery,
+                group: .grocery,
+                confidence: 0.9,
+                evidence: ["matched pantry spread terms"],
                 primary: [.grocery, .supermarket],
                 secondary: [.convenienceStore],
                 fallback: [],
@@ -748,10 +822,130 @@ struct ProductIntentResolver {
     }
 }
 
+enum ProductStoreCompatibility: Int, Equatable, Sendable {
+    case incompatible
+    case unknown
+    case plausibleButUnverified
+    case supported
+
+    var isEligibleForProductCoverage: Bool {
+        self == .supported || self == .plausibleButUnverified
+    }
+}
+
+enum RetailStoreType: String, Equatable, Hashable, Sendable {
+    case grocery
+    case supermarket
+    case convenience
+    case bakery
+    case coffeeShop
+    case pharmacy
+    case household
+    case hardware
+    case pet
+    case electronics
+    case fashion
+    case jewelry
+    case footwear
+    case general
+}
+
+enum StoreRetailTypeEvidence {
+    static func types(for store: MapStore) -> Set<RetailStoreType> {
+        let titleTypes = types(fromTitle: store.title)
+        // A specific visible business type is stronger than a generic or
+        // query-inherited MapKit category. This prevents a fashion result
+        // returned by a grocery query from becoming grocery evidence.
+        if !titleTypes.isEmpty {
+            let explicitlyIncompatible = titleTypes.intersection([
+                .fashion, .jewelry, .footwear
+            ])
+            if !explicitlyIncompatible.isEmpty {
+                return explicitlyIncompatible
+            }
+            return titleTypes
+        }
+
+        return Set(store.storeCategories.map { category in
+            switch category {
+            case .grocery: .grocery
+            case .supermarket: .supermarket
+            case .convenienceStore: .convenience
+            case .coffeeShop: .coffeeShop
+            case .petStore: .pet
+            case .electronicsStore: .electronics
+            case .homeImprovement: .hardware
+            case .pharmacy: .pharmacy
+            case .generalStore: .general
+            }
+        })
+    }
+
+    private static func types(fromTitle title: String) -> Set<RetailStoreType> {
+        let value = title.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: Locale(identifier: "en_US_POSIX")
+        )
+        var result = Set<RetailStoreType>()
+        if contains(value, terms: [
+            "fashion", "clothing", "apparel", "boutique", "אופנה",
+            "בגדים", "ביגוד"
+        ]) { result.insert(.fashion) }
+        if contains(value, terms: [
+            "jewelry", "jewellery", "jeweler", "jeweller", "תכשיט",
+            "תכשיטים", "צורפות"
+        ]) { result.insert(.jewelry) }
+        if contains(value, terms: [
+            "footwear", "shoe store", "shoes", "נעליים", "הנעלה"
+        ]) { result.insert(.footwear) }
+        if contains(value, terms: [
+            "bakery", "bake shop", "מאפייה", "מאפיה"
+        ]) { result.insert(.bakery) }
+        if contains(value, terms: [
+            "supermarket", "hypermarket", "סופרמרקט", "היפרמרקט"
+        ]) { result.insert(.supermarket) }
+        if contains(value, terms: [
+            "grocery", "food market", "מכולת"
+        ]) { result.insert(.grocery) }
+        if contains(value, terms: [
+            "convenience", "mini market", "minimarket", "מינימרקט"
+        ]) { result.insert(.convenience) }
+        if contains(value, terms: [
+            "coffee", "cafe", "café", "בית קפה"
+        ]) { result.insert(.coffeeShop) }
+        if contains(value, terms: [
+            "pharmacy", "drugstore", "chemist", "בית מרקחת", "פארם"
+        ]) { result.insert(.pharmacy) }
+        if contains(value, terms: [
+            "household", "home store", "כלי בית", "מוצרי בית"
+        ]) { result.insert(.household) }
+        if contains(value, terms: [
+            "hardware", "home improvement", "building supplies",
+            "חומרי בניין", "כלי עבודה"
+        ]) { result.insert(.hardware) }
+        if contains(value, terms: ["pet store", "pet shop", "חנות חיות"]) {
+            result.insert(.pet)
+        }
+        if contains(value, terms: [
+            "electronics", "computer store", "mobile store", "חשמל",
+            "אלקטרוניקה"
+        ]) { result.insert(.electronics) }
+        return result
+    }
+
+    private static func contains(_ value: String, terms: [String]) -> Bool {
+        terms.contains { value.localizedCaseInsensitiveContains($0) }
+    }
+}
+
 struct ProductIntentStoreEligibility {
-    struct Evaluation {
-        let isEligible: Bool
+    struct Evaluation: Equatable {
+        let compatibility: ProductStoreCompatibility
         let reason: String
+
+        var isEligible: Bool {
+            compatibility.isEligibleForProductCoverage
+        }
     }
 
     static func evaluate(
@@ -765,16 +959,16 @@ struct ProductIntentStoreEligibility {
 
         guard !request.storeCategories.isEmpty else {
             if store.isSavedLocation && rawItemHintMatched(store: store, itemName: request.itemName) {
-                return Evaluation(isEligible: true, reason: "saved item history")
+                return Evaluation(compatibility: .supported, reason: "saved item history")
             }
 
-            return Evaluation(isEligible: false, reason: "unknown intent has no allowed store types")
+            return Evaluation(compatibility: .unknown, reason: "unknown intent has no allowed store types")
         }
 
         return evaluate(
             store: store,
             profile: ProductIntentProfile(
-                normalizedCategory: .unknown,
+                normalizedCategory: .catalogGeneral,
                 intentGroup: .other,
                 confidence: 0.5,
                 evidence: ["legacy request categories"],
@@ -793,84 +987,77 @@ struct ProductIntentStoreEligibility {
         itemName: String
     ) -> Evaluation {
         if store.isSavedLocation && rawItemHintMatched(store: store, itemName: itemName) {
-            return Evaluation(isEligible: true, reason: "saved item history")
+            return Evaluation(compatibility: .supported, reason: "saved item history")
         }
 
         let allowed = profile.allowedStoreTypes
-        guard !allowed.isEmpty else {
-            return Evaluation(isEligible: false, reason: "unknown intent has no allowed store types")
+        guard !profile.isUnresolved, !allowed.isEmpty else {
+            return Evaluation(compatibility: .unknown, reason: "unknown intent has no allowed store types")
         }
 
-        if allowed.allSatisfy({ $0 == .generalStore }),
-           !store.storeCategories.isEmpty {
+        let observedTypes = StoreRetailTypeEvidence.types(for: store)
+        guard !observedTypes.isEmpty,
+              observedTypes != [.general] else {
             return Evaluation(
-                isEligible: true,
-                reason: "canonical general-retail category"
+                compatibility: .unknown,
+                reason: "store type has insufficient compatibility evidence"
             )
         }
 
-        if store.storeCategories.contains(where: { storeCategory in
-            profile.excludedStoreTypes.contains { excludedCategory in
-                storeCategory.matches(excludedCategory) || excludedCategory.matches(storeCategory)
-            }
-        }),
-           !store.storeCategories.contains(where: { storeCategory in
-               allowed.contains { allowedCategory in
-                   storeCategory.matches(allowedCategory) || allowedCategory.matches(storeCategory)
-               }
-           }) {
-            return Evaluation(isEligible: false, reason: "store type excluded for product intent")
-        }
-
-        if store.storeCategories.contains(where: { storeCategory in
-            allowed.contains { allowedCategory in
-                storeCategory.matches(allowedCategory) || allowedCategory.matches(storeCategory)
-            }
+        if observedTypes.contains(where: {
+            retailType($0, isAllowedFor: profile)
         }) {
-            return Evaluation(isEligible: true, reason: "store category allowed for product intent")
+            return Evaluation(
+                compatibility: .plausibleButUnverified,
+                reason: "product taxonomy is compatible with observed store type"
+            )
         }
 
-        if titleMatchesAllowedStoreType(store.title, allowed: allowed) {
-            return Evaluation(isEligible: true, reason: "store title matches allowed product intent")
-        }
-
-        return Evaluation(isEligible: false, reason: "store type not allowed for product intent")
+        return Evaluation(
+            compatibility: .incompatible,
+            reason: "observed store type is incompatible with product taxonomy"
+        )
     }
 
     private static func rawItemHintMatched(store: MapStore, itemName: String) -> Bool {
-        store.itemNames.contains { storedItemName in
-            storedItemName.localizedCaseInsensitiveContains(itemName) ||
-            itemName.localizedCaseInsensitiveContains(storedItemName)
+        let expected = itemName.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        return store.itemNames.contains { storedItemName in
+            storedItemName.trimmingCharacters(in: .whitespacesAndNewlines)
+                .localizedCaseInsensitiveCompare(expected) == .orderedSame
         }
     }
 
-    private static func titleMatchesAllowedStoreType(_ title: String, allowed: [ShoppingStoreCategory]) -> Bool {
-        let normalizedTitle = title.lowercased()
-        return allowed.contains { category in
-            titleTerms(for: category).contains { normalizedTitle.contains($0) }
-        }
-    }
-
-    private static func titleTerms(for category: ShoppingStoreCategory) -> [String] {
-        switch category {
+    private static func retailType(
+        _ type: RetailStoreType,
+        isAllowedFor profile: ProductIntentProfile
+    ) -> Bool {
+        switch type {
         case .grocery:
-            return ["grocery", "food market", "produce", "deli", "bakery", "walmart", "costco", "aldi", "kroger", "safeway", "whole foods"]
+            return profile.allowedStoreTypes.contains(.grocery)
         case .supermarket:
-            return ["supermarket", "hypermarket", "market", "mart", "carrefour", "lidl", "tesco", "shoprite"]
-        case .convenienceStore:
-            return ["convenience", "corner store", "mini market", "minimarket", "bodega"]
+            return profile.allowedStoreTypes.contains(.supermarket)
+        case .convenience:
+            return profile.allowedStoreTypes.contains(.convenienceStore)
+        case .bakery:
+            return profile.normalizedCategory == .groceryBakery
         case .coffeeShop:
-            return ["coffee", "cafe", "café", "espresso"]
-        case .petStore:
-            return ["pet store", "pet supply", "pet shop", "petco", "petsmart"]
-        case .electronicsStore:
-            return ["electronics", "computer store", "mobile store", "phone store", "apple store", "best buy", "micro center"]
-        case .homeImprovement:
-            return ["hardware", "home improvement"]
+            return profile.normalizedCategory == .groceryCoffee
+                || profile.allowedStoreTypes.contains(.coffeeShop)
         case .pharmacy:
-            return ["pharmacy", "drugstore", "drug store", "chemist", "cvs", "walgreens", "rite aid"]
-        case .generalStore:
-            return []
+            return profile.allowedStoreTypes.contains(.pharmacy)
+        case .household:
+            return profile.normalizedCategory == .catalogHousehold
+                || profile.normalizedCategory == .householdCleaning
+        case .hardware:
+            return profile.allowedStoreTypes.contains(.homeImprovement)
+        case .pet:
+            return profile.allowedStoreTypes.contains(.petStore)
+        case .electronics:
+            return profile.allowedStoreTypes.contains(.electronicsStore)
+        case .fashion, .jewelry, .footwear, .general:
+            return false
         }
     }
 }
@@ -1028,12 +1215,14 @@ enum ShoppingStoreCategoryFilter {
         let poiCategory = pointOfInterestCategory?.lowercased() ?? ""
         let excludedTerms = [
             "jewelry", "jewellery", "jeweler", "jeweller",
+            "תכשיט", "תכשיטים", "צורפות",
             "florist", "flower shop", "flower", "flowers",
             "law office", "law firm", "lawyer", "attorney", "legal",
             "insurance",
             "bank", "banking", "credit union",
             "office", "real estate", "accounting", "consulting",
             "boutique", "clothing", "fashion", "shoe", "furniture",
+            "אופנה", "בגדים", "ביגוד", "נעליים", "הנעלה",
             "salon", "beauty", "repair shop", "auto", "car dealer"
         ]
 
@@ -1184,6 +1373,48 @@ struct ShoppingIntentMatcher {
         for item: ShoppingPlanInputItem
     ) -> ProductIntentProfile {
         resolver.resolve(for: item)
+    }
+
+    func compatibility(
+        of item: ShoppingPlanInputItem,
+        with store: MapStore
+    ) -> ProductIntentStoreEligibility.Evaluation {
+        ProductIntentStoreEligibility.evaluate(
+            store: store,
+            profile: resolver.resolve(for: item),
+            itemName: item.displayName
+        )
+    }
+
+    func resolutionIntents(
+        for items: [ShoppingPlanInputItem],
+        sourceListID: ProductStateListID,
+        sourceRevision: ProductStateListRevision
+    ) -> [StoreResolutionIntent] {
+        let eligible = items.filter {
+            !resolver.resolve(for: $0).isUnresolved
+        }
+        let grouped = Dictionary(grouping: eligible) { item in
+            resolver.resolve(for: item).allowedStoreTypes
+                .map(\.rawValue)
+                .sorted()
+                .joined(separator: ",")
+        }
+        return grouped.keys.sorted().compactMap { key in
+            guard let group = grouped[key], !group.isEmpty else { return nil }
+            let categories = group
+                .flatMap { resolver.resolve(for: $0).allowedStoreTypes }
+                .deduplicated()
+            guard !categories.isEmpty else { return nil }
+            return StoreResolutionIntent(
+                itemNames: group.map(\.displayName),
+                storeCategories: categories,
+                sourceListID: sourceListID,
+                sourceRevision: sourceRevision,
+                entryIDs: group.map(\.identity.id),
+                productIDs: group.map(\.identity.productID)
+            )
+        }
     }
 
     func groupedIntents(for items: [ShoppingItem]) -> [ShoppingIntentGroupResult] {
@@ -1416,6 +1647,150 @@ struct ShoppingIntentMatcher {
             "health", "medicine", "pharmacy", "vitamin", "care", "soap", "shampoo", "toothpaste", "baby", "medical"
         ]
     ]
+}
+
+enum ShoppingMissionProductStateAdapter {
+    static func neededItems(
+        from entries: [ProductStateListEntryProjection]
+    ) -> [ShoppingPlanInputItem] {
+        entries.compactMap { entry in
+            guard case .needed = entry.state,
+                  entry.issues.isEmpty,
+                  let product = entry.product,
+                  product.libraryLifecycle == .active else {
+                return nil
+            }
+            return ShoppingPlanInputItem(
+                identity: entry.identity,
+                quantity: entry.quantity,
+                unitRawValue: entry.unitRawValue,
+                sortOrder: entry.sortOrder,
+                displayName: product.displayName,
+                brand: product.brand,
+                category: product.category,
+                catalogID: product.catalogID,
+                catalogCategoryID: product.catalogCategoryIDSnapshot,
+                productLifecycle: product.libraryLifecycle
+            )
+        }
+        .sorted {
+            if $0.sortOrder != $1.sortOrder {
+                return $0.sortOrder < $1.sortOrder
+            }
+            return $0.identity.id.rawValue.uuidString
+                < $1.identity.id.rawValue.uuidString
+        }
+    }
+}
+
+struct ShoppingMissionStoreRecommendation {
+    let store: MapStore
+    let matchedItems: [ShoppingPlanInputItem]
+    let compatibilityScore: Int
+    let dataQualityScore: Int
+    let distanceMeters: CLLocationDistance
+}
+
+enum ShoppingMissionRecommendationAuthority {
+    static func recommendations(
+        stores: [MapStore],
+        items: [ShoppingPlanInputItem],
+        userCoordinate: CLLocationCoordinate2D?
+    ) -> [ShoppingMissionStoreRecommendation] {
+        let matcher = ShoppingIntentMatcher()
+        return stores.compactMap { store in
+            let matches = items.compactMap { item -> (
+                ShoppingPlanInputItem,
+                ProductIntentStoreEligibility.Evaluation
+            )? in
+                let evaluation = matcher.compatibility(of: item, with: store)
+                guard evaluation.isEligible else { return nil }
+                return (item, evaluation)
+            }
+            guard !matches.isEmpty else { return nil }
+
+            let names = matches.map { $0.0.displayName }
+                .deduplicatedCaseInsensitive()
+            let compatibleStore = MapStore(
+                id: store.id,
+                locationID: store.locationID,
+                title: store.title,
+                coordinate: store.coordinate,
+                radius: store.radius,
+                itemNames: names,
+                completedItemNames: store.completedItemNames,
+                isOpen: store.isOpen,
+                rating: store.rating,
+                storeCategories: store.storeCategories,
+                queryEvidenceCategories: store.queryEvidenceCategories,
+                websiteURL: store.websiteURL,
+                sourceType: store.sourceType
+            )
+            let compatibility = matches.reduce(0) { partial, match in
+                partial + match.1.compatibility.rawValue
+            }
+            let observedTypes = StoreRetailTypeEvidence.types(for: store)
+            let dataQuality = observedTypes.isEmpty || observedTypes == [.general]
+                ? 0 : 1
+            return ShoppingMissionStoreRecommendation(
+                store: compatibleStore,
+                matchedItems: matches.map { $0.0 },
+                compatibilityScore: compatibility,
+                dataQualityScore: dataQuality,
+                distanceMeters: distance(
+                    from: userCoordinate,
+                    to: store.coordinate
+                )
+            )
+        }
+        .sorted(by: recommendationPrecedes)
+    }
+
+    nonisolated private static func recommendationPrecedes(
+        _ lhs: ShoppingMissionStoreRecommendation,
+        _ rhs: ShoppingMissionStoreRecommendation
+    ) -> Bool {
+        if lhs.matchedItems.count != rhs.matchedItems.count {
+            return lhs.matchedItems.count > rhs.matchedItems.count
+        }
+        if lhs.compatibilityScore != rhs.compatibilityScore {
+            return lhs.compatibilityScore > rhs.compatibilityScore
+        }
+        if lhs.dataQualityScore != rhs.dataQualityScore {
+            return lhs.dataQualityScore > rhs.dataQualityScore
+        }
+        let lhsOpen = openSortValue(lhs.store.isOpen)
+        let rhsOpen = openSortValue(rhs.store.isOpen)
+        if lhsOpen != rhsOpen { return lhsOpen > rhsOpen }
+        if lhs.distanceMeters != rhs.distanceMeters {
+            return lhs.distanceMeters < rhs.distanceMeters
+        }
+        if lhs.store.title != rhs.store.title {
+            return lhs.store.title.localizedStandardCompare(rhs.store.title)
+                == .orderedAscending
+        }
+        return lhs.store.id.uuidString < rhs.store.id.uuidString
+    }
+
+    nonisolated private static func openSortValue(_ value: Bool?) -> Int {
+        switch value {
+        case true: 2
+        case nil: 1
+        case false: 0
+        }
+    }
+
+    private static func distance(
+        from origin: CLLocationCoordinate2D?,
+        to destination: CLLocationCoordinate2D
+    ) -> CLLocationDistance {
+        guard let origin else { return .greatestFiniteMagnitude }
+        return CLLocation(latitude: origin.latitude, longitude: origin.longitude)
+            .distance(from: CLLocation(
+                latitude: destination.latitude,
+                longitude: destination.longitude
+            ))
+    }
 }
 
 private extension Array where Element == String {

@@ -39,7 +39,11 @@ private enum WayTaskProductionTab: Hashable {
 /// no persistence context, compatibility adapter, migration, or runtime state.
 struct WayTaskProductionRuntimeView: View {
     @EnvironmentObject private var runtime: ProductStateRuntime
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: WayTaskProductionTab = .home
+    @State private var notificationStoreID: UUID?
+    @StateObject private var nearbyNotifications =
+        ProductionNearbyNotificationCoordinator()
 
     private let searchAvailability: ProductKnowledgeSearchAvailability
 
@@ -99,7 +103,10 @@ struct WayTaskProductionRuntimeView: View {
                 }
                 .tag(WayTaskProductionTab.shopping)
 
-            WayTaskProductionMapView(selectedTab: $selectedTab)
+            WayTaskProductionMapView(
+                selectedTab: $selectedTab,
+                notificationStoreID: notificationStoreID
+            )
                 .tabItem {
                     Label(
                         WayTaskProductionTab.map.title,
@@ -111,6 +118,53 @@ struct WayTaskProductionRuntimeView: View {
         .tint(WayTaskDesign.accent)
         .preferredColorScheme(.dark)
         .onAppear { runtime.refresh() }
+        .task(id: nearbyMissionSignature) {
+            nearbyNotifications.configure(
+                list: selectedList,
+                activate: scenePhase == .active
+            )
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                nearbyNotifications.applicationDidBecomeActive()
+            }
+        }
+        .onReceive(
+            nearbyNotifications.$pendingDeepLink.compactMap { $0 }
+        ) { destination in
+            if let listID = destination.shoppingListID {
+                runtime.selectList(ProductStateListID(rawValue: listID))
+            }
+            notificationStoreID = nil
+            selectedTab = .map
+            DispatchQueue.main.async {
+                notificationStoreID = destination.storeID
+            }
+            nearbyNotifications.consumeDeepLink()
+        }
+    }
+
+    private var selectedList: ProductStateNamedListProjection? {
+        runtime.namedLists.compactMap {
+            guard case let .projection(list) = $0 else { return nil }
+            return list
+        }
+        .first { $0.id == runtime.selectedListID }
+    }
+
+    private var nearbyMissionSignature: String {
+        guard let selectedList else { return "no-selected-list" }
+        return [
+            selectedList.id.rawValue.uuidString,
+            String(selectedList.revision.value),
+            selectedList.neededEntries.map {
+                [
+                    $0.identity.id.rawValue.uuidString,
+                    $0.product?.displayName ?? "",
+                    $0.product?.catalogCategoryIDSnapshot ?? ""
+                ].joined(separator: "=")
+            }.joined(separator: "|")
+        ].joined(separator: ":")
     }
 }
 
@@ -2421,7 +2475,9 @@ private final class WayTaskProductionMapModel:
 
     private let locationManager = CLLocationManager()
     private let resolutionEngine = StoreResolutionEngine.shared
+    private let intentMatcher = ShoppingIntentMatcher()
     private var coordinate: CLLocationCoordinate2D?
+    private var lastLocation: CLLocation?
     private var entries: [ProductStateListEntryProjection] = []
     private var listID: ProductStateListID?
     private var listRevision: ProductStateListRevision?
@@ -2430,7 +2486,12 @@ private final class WayTaskProductionMapModel:
     private var lastSignature: String?
     private var visibleRegion: MKCoordinateRegion?
     private var lastDiscoveryCoordinate: CLLocationCoordinate2D?
-    private var didStartLocationUpdates = false
+    private var inactiveSince: Date?
+    private var pendingAutomaticFollow = true
+    private var pendingExplicitFollow = false
+    private var isUserExploring = false
+    private var pendingFocusedStoreID: UUID?
+    private var remainingFreshLocationRetries = 0
 
     override init() {
         super.init()
@@ -2475,12 +2536,16 @@ private final class WayTaskProductionMapModel:
         if missionChanged {
             resetMissionPresentation()
         }
-        ensureLocationUpdates()
+        requestFreshLocation()
         discover(force: false)
     }
 
-    func receiveUserLocation(_ coordinate: CLLocationCoordinate2D) {
-        guard CLLocationCoordinate2DIsValid(coordinate) else { return }
+    func receiveUserLocation(_ location: CLLocation, now: Date = Date()) {
+        guard MapLocationFreshnessPolicy.isUsableForAutomaticRecenter(
+            location,
+            now: now
+        ) else { return }
+        let coordinate = location.coordinate
         let movement = self.coordinate.map {
             CLLocation(latitude: $0.latitude, longitude: $0.longitude)
                 .distance(from: CLLocation(
@@ -2488,10 +2553,19 @@ private final class WayTaskProductionMapModel:
                     longitude: coordinate.longitude
                 ))
         }
-        guard movement == nil || (movement ?? 0) >= 10 else { return }
+        lastLocation = location
+        let shouldRecenter = pendingExplicitFollow
+            || (pendingAutomaticFollow && !isUserExploring)
+        if movement != nil,
+           (movement ?? 0) < 10,
+           !shouldRecenter { return }
         self.coordinate = coordinate
+        if shouldRecenter {
+            centerCameraOnUser(animated: true)
+            pendingExplicitFollow = false
+            pendingAutomaticFollow = false
+        }
         if movement == nil {
-            followUser()
             discover(force: false)
         } else if distance(
             from: lastDiscoveryCoordinate,
@@ -2502,6 +2576,51 @@ private final class WayTaskProductionMapModel:
     }
 
     func followUser() {
+        isUserExploring = false
+        pendingExplicitFollow = true
+        if let lastLocation,
+           MapLocationFreshnessPolicy.isUsableForAutomaticRecenter(
+               lastLocation
+           ) {
+            centerCameraOnUser(animated: true)
+        }
+        requestFreshLocation()
+    }
+
+    func userDidExploreMap() {
+        isUserExploring = true
+        pendingAutomaticFollow = false
+        pendingExplicitFollow = false
+    }
+
+    func applicationDidBecomeInactive(now: Date = Date()) {
+        if inactiveSince == nil { inactiveSince = now }
+    }
+
+    func applicationDidBecomeActive(now: Date = Date()) {
+        let meaningfulReturn = MapLocationFreshnessPolicy
+            .shouldRefreshAfterActivation(
+                inactiveSince: inactiveSince,
+                now: now
+            )
+        if MapLocationFreshnessPolicy
+            .shouldAutomaticallyFollowAfterActivation(
+                inactiveSince: inactiveSince,
+                isUserExploring: isUserExploring,
+                now: now
+            ) {
+            pendingAutomaticFollow = true
+        }
+        if meaningfulReturn {
+            isUserExploring = false
+            coordinate = nil
+            lastLocation = nil
+        }
+        inactiveSince = nil
+        requestFreshLocation()
+    }
+
+    private func centerCameraOnUser(animated: Bool) {
         guard let coordinate else { return }
         selectionCameraTask?.cancel()
         selectionCameraTask = nil
@@ -2511,7 +2630,7 @@ private final class WayTaskProductionMapModel:
                 latitudeDelta: 0.018,
                 longitudeDelta: 0.018
             )
-        ), animated: true)
+        ), animated: animated)
     }
 
     func selectStore(_ id: UUID) {
@@ -2548,6 +2667,11 @@ private final class WayTaskProductionMapModel:
         publishSelection(nil)
     }
 
+    func focusNotificationStore(_ id: UUID) {
+        pendingFocusedStoreID = id
+        applyPendingNotificationFocus()
+    }
+
     func prepareForMissionChange() {
         resetMissionPresentation()
     }
@@ -2557,6 +2681,11 @@ private final class WayTaskProductionMapModel:
     }
 
     func refresh() {
+        requestFreshLocation()
+        guard let lastLocation,
+              MapLocationFreshnessPolicy.isUsableForAutomaticRecenter(
+                  lastLocation
+              ) else { return }
         discover(force: true)
     }
 
@@ -2598,7 +2727,7 @@ private final class WayTaskProductionMapModel:
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         if manager.authorizationStatus == .authorizedAlways
             || manager.authorizationStatus == .authorizedWhenInUse {
-            ensureLocationUpdates()
+            requestFreshLocation()
         }
     }
 
@@ -2606,8 +2735,14 @@ private final class WayTaskProductionMapModel:
         _ manager: CLLocationManager,
         didUpdateLocations locations: [CLLocation]
     ) {
-        guard let value = locations.last else { return }
-        receiveUserLocation(value.coordinate)
+        guard let value = locations.last(where: {
+            MapLocationFreshnessPolicy.isUsableForAutomaticRecenter($0)
+        }) else {
+            _ = retryFreshLocationIfNeeded()
+            return
+        }
+        remainingFreshLocationRetries = 0
+        receiveUserLocation(value)
     }
 
     func locationManager(
@@ -2626,12 +2761,10 @@ private final class WayTaskProductionMapModel:
             publishSelection(nil)
             return
         }
-        let needed = entries.filter {
-            if case .needed = $0.state { return true }
-            return false
-        }
-        let names = needed.compactMap(\.product?.displayName)
-        guard !names.isEmpty else {
+        let neededItems = ShoppingMissionProductStateAdapter.neededItems(
+            from: entries
+        )
+        guard !neededItems.isEmpty else {
             publishStores([])
             publishProducts([])
             publishSelection(nil)
@@ -2640,10 +2773,11 @@ private final class WayTaskProductionMapModel:
         let signature = [
             listID.rawValue.uuidString,
             coordinateSignature(coordinate),
-            needed.map {
+            neededItems.map {
                 [
                     $0.identity.productID.rawValue.uuidString,
-                    $0.product?.displayName ?? ""
+                    $0.displayName,
+                    $0.catalogCategoryID ?? ""
                 ].joined(separator: "=")
             }.sorted().joined(separator: "|")
         ].joined(separator: ":")
@@ -2652,33 +2786,44 @@ private final class WayTaskProductionMapModel:
         lastDiscoveryCoordinate = coordinate
         searchTask?.cancel()
         publishLoading(true)
-        let intent = StoreResolutionIntent(
-            itemNames: names,
-            storeCategories: [.generalStore],
+        let intents = intentMatcher.resolutionIntents(
+            for: neededItems,
             sourceListID: listID,
-            sourceRevision: listRevision,
-            entryIDs: needed.map(\.identity.id),
-            productIDs: needed.map(\.identity.productID)
+            sourceRevision: listRevision
         )
+        guard !intents.isEmpty else {
+            publishStores([])
+            publishProducts([])
+            publishSelection(nil)
+            publishLoading(false)
+            return
+        }
         searchTask = Task { [weak self] in
             guard let self else { return }
             let resolved = await resolutionEngine.resolve(
                 savedStores: [],
-                intents: [intent],
+                intents: intents,
                 around: coordinate,
                 forceRefresh: force
             )
             guard !Task.isCancelled else { return }
-            publishStores(resolved)
+            let recommendations = ShoppingMissionRecommendationAuthority
+                .recommendations(
+                    stores: resolved,
+                    items: neededItems,
+                    userCoordinate: coordinate
+                )
+            let recommendedStores = recommendations.map(\.store)
+            publishStores(recommendedStores)
             let resolvedProducts = makeProductMarkers(
-                stores: resolved,
-                entries: needed
+                stores: recommendedStores,
+                items: neededItems
             )
             publishProducts(resolvedProducts)
             publishSelection(
                 ShoppingMissionMapSelectionPolicy.validSelection(
                     current: selectedStoreID,
-                    availableStoreIDs: Set(resolved.map(\.id))
+                    availableStoreIDs: Set(recommendedStores.map(\.id))
                 )
             )
             publishLoading(false)
@@ -2697,18 +2842,24 @@ private final class WayTaskProductionMapModel:
         )
     }
 
-    private func ensureLocationUpdates() {
+    private func requestFreshLocation() {
         let status = locationManager.authorizationStatus
         if status == .notDetermined {
             locationManager.requestWhenInUseAuthorization()
             return
         }
-        guard !didStartLocationUpdates,
-              status == .authorizedAlways
+        guard status == .authorizedAlways
                 || status == .authorizedWhenInUse
         else { return }
-        didStartLocationUpdates = true
-        locationManager.startUpdatingLocation()
+        remainingFreshLocationRetries = 2
+        locationManager.requestLocation()
+    }
+
+    private func retryFreshLocationIfNeeded() -> Bool {
+        guard remainingFreshLocationRetries > 0 else { return false }
+        remainingFreshLocationRetries -= 1
+        locationManager.requestLocation()
+        return true
     }
 
     private func resetMissionPresentation() {
@@ -2730,6 +2881,7 @@ private final class WayTaskProductionMapModel:
             proposed: proposed
         ) else { return }
         stores = proposed
+        applyPendingNotificationFocus()
     }
 
     private func publishProducts(_ proposed: [MapProduct]) {
@@ -2748,6 +2900,25 @@ private final class WayTaskProductionMapModel:
     private func publishLoading(_ proposed: Bool) {
         guard isLoading != proposed else { return }
         isLoading = proposed
+    }
+
+    private func applyPendingNotificationFocus() {
+        guard let pendingFocusedStoreID,
+              let store = stores.first(where: {
+                  $0.id == pendingFocusedStoreID
+              }) else { return }
+        self.pendingFocusedStoreID = nil
+        publishSelection(store.id)
+        requestCamera(MKCoordinateRegion(
+            center: store.coordinate,
+            span: MKCoordinateSpan(
+                latitudeDelta: 0.008,
+                longitudeDelta: 0.008
+            )
+        ), animated: true)
+        BetaDiagnosticsCenter.shared.notificationBottomSheetOpened(
+            store: store.title
+        )
     }
 
     private func distance(
@@ -2804,24 +2975,25 @@ private final class WayTaskProductionMapModel:
 
     private func makeProductMarkers(
         stores: [MapStore],
-        entries: [ProductStateListEntryProjection]
+        items: [ShoppingPlanInputItem]
     ) -> [MapProduct] {
         var placed = Set<ProductStateProductID>()
         var markers: [MapProduct] = []
         for store in stores {
-            for entry in entries {
-                let productID = entry.identity.productID
+            for item in items {
+                let productID = item.identity.productID
                 guard !placed.contains(productID),
-                      let name = entry.product?.displayName,
                       store.itemNames.contains(where: {
-                          $0.localizedCaseInsensitiveCompare(name) == .orderedSame
+                          $0.localizedCaseInsensitiveCompare(
+                              item.displayName
+                          ) == .orderedSame
                       }) else { continue }
                 placed.insert(productID)
                 markers.append(
                     MapProduct(
                         id: productID.rawValue,
                         storeID: store.id,
-                        name: name,
+                        name: item.displayName,
                         coordinate: store.coordinate
                     )
                 )
@@ -2834,7 +3006,9 @@ private final class WayTaskProductionMapModel:
 private struct WayTaskProductionMapView: View {
     @EnvironmentObject private var runtime: ProductStateRuntime
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     @Binding var selectedTab: WayTaskProductionTab
+    let notificationStoreID: UUID?
     @StateObject private var model = WayTaskProductionMapModel()
     @State private var isCreatingList = false
     @State private var newListTitle = ""
@@ -2852,7 +3026,11 @@ private struct WayTaskProductionMapView: View {
                     onSelectStore: model.selectStore,
                     onClearSelection: clearMapSelection,
                     onMapRegionChanged: model.receiveVisibleRegion,
-                    onUserLocationChanged: model.receiveUserLocation
+                    onUserLocationChanged: { _ in },
+                    onUserLocationReceived: {
+                        model.receiveUserLocation($0)
+                    },
+                    onUserMapInteraction: model.userDidExploreMap
                 )
                 .equatable()
                 .ignoresSafeArea()
@@ -2908,6 +3086,9 @@ private struct WayTaskProductionMapView: View {
                             + $0.unresolvedEntries
                     } ?? []
                 )
+                if let notificationStoreID {
+                    model.focusNotificationStore(notificationStoreID)
+                }
             }
             .sheet(
                 isPresented: $isCreatingList,
@@ -2917,6 +3098,16 @@ private struct WayTaskProductionMapView: View {
             }
             .onChange(of: selectedTab) { _, tab in
                 if tab != .map { dismissKeyboard() }
+            }
+            .onChange(of: notificationStoreID) { _, id in
+                if let id { model.focusNotificationStore(id) }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    model.applicationDidBecomeActive()
+                } else {
+                    model.applicationDidBecomeInactive()
+                }
             }
             .onDisappear { dismissKeyboard() }
         }

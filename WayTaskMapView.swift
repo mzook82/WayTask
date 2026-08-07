@@ -11,6 +11,8 @@ struct WayTaskMapView: UIViewRepresentable, Equatable {
     var onClearSelection: () -> Void = {}
     let onMapRegionChanged: (MKCoordinateRegion) -> Void
     let onUserLocationChanged: (CLLocationCoordinate2D) -> Void
+    var onUserLocationReceived: (CLLocation) -> Void = { _ in }
+    var onUserMapInteraction: () -> Void = {}
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         AnnotationSignature(
@@ -222,12 +224,23 @@ struct WayTaskMapView: UIViewRepresentable, Equatable {
             parent.onMapRegionChanged(mapView.region)
         }
 
+        func mapView(
+            _ mapView: MKMapView,
+            regionWillChangeAnimated animated: Bool
+        ) {
+            let userInitiated = mapView.gestureRecognizers?.contains {
+                $0.state == .began || $0.state == .changed
+            } == true
+            if userInitiated { parent.onUserMapInteraction() }
+        }
+
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
-            guard let coordinate = userLocation.location?.coordinate else {
+            guard let location = userLocation.location else {
                 return
             }
 
-            parent.onUserLocationChanged(coordinate)
+            parent.onUserLocationChanged(location.coordinate)
+            parent.onUserLocationReceived(location)
         }
 
         func mapView(_ mapView: MKMapView, didSelect annotation: MKAnnotation) {

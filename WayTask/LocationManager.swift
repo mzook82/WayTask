@@ -170,16 +170,10 @@ final class LocationManager: NSObject, ObservableObject {
         }
 
         return stores.compactMap { store in
-            let taggedNames = Set(store.itemNames.map { $0.lowercased() })
-            let directlyMatchedItems = eligibleItems.filter {
-                taggedNames.contains($0.name.lowercased())
-            }
-            let matchingItems = directlyMatchedItems.isEmpty
-                ? intentMatcher.relevantItems(
-                    from: eligibleItems,
-                    for: store
-                )
-                : directlyMatchedItems
+            let matchingItems = intentMatcher.relevantItems(
+                from: eligibleItems,
+                for: store
+            )
             guard !matchingItems.isEmpty else { return nil }
 
             return ShoppingGeofenceCandidate(
@@ -362,7 +356,10 @@ final class LocationManager: NSObject, ObservableObject {
             return
         }
 
-        addNotificationRequest(request)
+        addNotificationRequest(
+            request,
+            regionIdentifier: region.identifier
+        )
     }
 
     private func evaluateSmartNearbyDetection(reason: String) {
@@ -426,11 +423,18 @@ final class LocationManager: NSObject, ObservableObject {
         print("[WayTask Nearby] Allowed \(nearestCandidate.candidate.title): scheduling nearby notification.")
         #endif
 
-        addNotificationRequest(request)
+        addNotificationRequest(
+            request,
+            regionIdentifier: payload.identifier
+        )
     }
 
-    private func addNotificationRequest(_ request: UNNotificationRequest) {
-        notificationCenter.add(request) { error in
+    private func addNotificationRequest(
+        _ request: UNNotificationRequest,
+        regionIdentifier: String
+    ) {
+        Task { [weak self] in
+            guard let self else { return }
             let userInfo = request.content.userInfo
             let store = (userInfo["storeTitle"] as? String) ?? "Unknown store"
             let notificationType = (userInfo["notificationType"] as? String) ?? "shoppingGeofence"
@@ -445,34 +449,47 @@ final class LocationManager: NSObject, ObservableObject {
                     CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
                 }
             }
-            Task { @MainActor in
+            let schedulingError: Error?
+            do {
+                try await notificationCenter.add(request)
+                schedulingError = nil
+                notificationService.recordNotificationRequestAccepted(
+                    for: regionIdentifier
+                )
+                BetaDiagnosticsCenter.shared.notificationRequestAccepted(
+                    type: notificationType,
+                    store: store,
+                    coordinate: coordinate,
+                    shoppingListID: listID,
+                    matchedProducts: itemNames
+                )
+            } catch {
+                schedulingError = error
                 BetaDiagnosticsCenter.shared.notificationDecision(
-                    fired: error == nil,
+                    fired: false,
                     type: notificationType,
                     store: store,
                     coordinate: coordinate,
                     shoppingListID: listID,
                     matchedProducts: itemNames,
-                    reason: error?.localizedDescription ?? "Notification request accepted by UNUserNotificationCenter"
+                    reason: error.localizedDescription
                 )
-                if let error {
-                    BetaDiagnosticsCenter.shared.recordError(
-                        category: .notification,
-                        message: "Notification scheduling failed",
-                        detail: error.localizedDescription
-                    )
-                    SentryReportingService.shared.capture(
-                        error: error,
-                        message: .notificationSchedulingFailed,
-                        operation: .notification,
-                        category: .integration,
-                        area: .shopping,
-                        numericContext: [.itemCount: itemNames.count]
-                    )
-                }
+                BetaDiagnosticsCenter.shared.recordError(
+                    category: .notification,
+                    message: "Notification scheduling failed",
+                    detail: error.localizedDescription
+                )
+                SentryReportingService.shared.capture(
+                    error: error,
+                    message: .notificationSchedulingFailed,
+                    operation: .notification,
+                    category: .integration,
+                    area: .shopping,
+                    numericContext: [.itemCount: itemNames.count]
+                )
             }
             #if DEBUG
-            if let error {
+            if let error = schedulingError {
                 print("[WayTask Geofence] Notification scheduling failed: \(error.localizedDescription)")
             } else {
                 print("[WayTask Geofence] Notification handed to notification center: \(request.identifier)")
