@@ -43,3 +43,7 @@ enabled = false
 [functions.recognize-product]
 enabled = true
 verify_jwt = true
+
+[functions.initial-migration]
+enabled = true
+verify_jwt = true

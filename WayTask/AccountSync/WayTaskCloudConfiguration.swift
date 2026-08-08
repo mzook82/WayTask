@@ -71,7 +71,7 @@ struct WayTaskCloudFeatureFlags: Equatable, Sendable {
         self.synchronizationEnabled =
             accountsEnabled && synchronizationEnabled
         self.firstMigrationEnabled =
-            accountsEnabled && synchronizationEnabled && firstMigrationEnabled
+            accountsEnabled && firstMigrationEnabled
         self.secureAIRecognitionEnabled =
             accountsEnabled && secureAIRecognitionEnabled
     }

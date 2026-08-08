@@ -78,10 +78,9 @@ supabase db advisors --linked --type security --level warn \
 
 The Data API script refuses any linked project whose name is not exactly
 `WayTask Staging`, uses only the client-safe publishable key in process memory,
-and never requests a service-role key. The current expected assertion totals are
-56 hosted database assertions and 18 HTTPS/Auth assertions, including unsigned/
-forged JWT denial and the Apple-only provider contract. As of 2026-08-08, 17 of
-18 pass; the public settings check finds the unused Email provider enabled.
+and never requests a service-role key. The current assertion totals are 56/56
+hosted database assertions and 18/18 HTTPS/Auth assertions, including unsigned/
+forged JWT denial and the Apple-only provider contract. Email Auth is disabled.
 
 Confirm all expected public tables have both RLS and FORCE RLS, private/admin
 schemas have no `anon`/`authenticated` access, anonymous private reads/writes
@@ -102,10 +101,8 @@ Then test through the hosted HTTPS gateways with synthetic staging accounts:
 Record sanitized request IDs/statuses and assertion counts only. Never capture
 JWTs, emails, names, or row contents in test reports.
 
-Before any signed-session migration gate, the Supabase Dashboard for **WayTask
-Staging** must show Apple as the only enabled Auth provider. Disable Email at
-**Authentication → Providers → Email**; do not change Apple, Production, or any
-iOS feature flag. The exact subsequent identity/session checklist is in
+The Supabase Dashboard for **WayTask Staging** now shows Apple as the only
+enabled Auth provider. The exact remaining identity/session checklist is in
 [WT-032B.1 external QA](../WT-032B.1/EXTERNAL_SIGNED_SESSION_QA.md).
 
 See [the executed hosted validation report](REMOTE_STAGING_VALIDATION.md) for

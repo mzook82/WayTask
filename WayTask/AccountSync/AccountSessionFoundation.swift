@@ -112,7 +112,11 @@ protocol AccountSessionAuthorizing: AccountSessionProviding {
         identity: UserIdentity,
         expiresAt: Date?
     )
+    @discardableResult
+    func prepareInitialMigrationBinding() -> Bool
     func markInitialMigrationPending()
+    @discardableResult
+    func markInitialMigrationCompleted() -> Bool
     func markSynchronizationActive()
     func pauseSynchronization(_ reason: SyncPauseReason)
     func recordRecoverableSyncError(_ error: WayTaskAccountSyncError)
@@ -180,25 +184,16 @@ final class LocalAccountSessionAuthority: AccountSessionAuthorizing {
         identity: UserIdentity,
         expiresAt: Date?
     ) {
-        let dataSetID = currentDataSetID
         let targetOwnership: LocalDataOwnershipState
         let synchronization: SyncLifecycleState
 
         switch currentSession.localDataOwnership {
         case .guestOnly:
-            let pendingOwnership = LocalDataOwnershipState.migrationPending(
-                dataSetID: dataSetID,
-                targetUserID: identity.userID
-            )
-            if persist(pendingOwnership) {
-                targetOwnership = pendingOwnership
-                synchronization = .signedInLocalDataNotBackedUp
-            } else {
-                targetOwnership = currentSession.localDataOwnership
-                synchronization = .recoverableError(
-                    WayTaskAccountSyncError(category: .localPersistenceFailure)
-                )
-            }
+            // Authentication grants account identity only. The local dataset
+            // remains Guest-owned until the separate migration preparation
+            // action persists an immutable target-account binding.
+            targetOwnership = currentSession.localDataOwnership
+            synchronization = .signedInLocalDataNotBackedUp
         case let .migrationPending(_, targetUserID):
             targetOwnership = currentSession.localDataOwnership
             synchronization = targetUserID == identity.userID
@@ -227,23 +222,90 @@ final class LocalAccountSessionAuthority: AccountSessionAuthorizing {
         authenticationBeforeSignIn = nil
     }
 
-    func markInitialMigrationPending() {
-        guard let identity = signedInIdentity,
-              case let .migrationPending(_, targetUserID) =
-                currentSession.localDataOwnership,
-              targetUserID == identity.userID
-        else {
-            return
+    @discardableResult
+    func prepareInitialMigrationBinding() -> Bool {
+        guard let identity = signedInIdentity else { return false }
+        let pending = LocalDataOwnershipState.migrationPending(
+            dataSetID: currentDataSetID,
+            targetUserID: identity.userID
+        )
+
+        switch currentSession.localDataOwnership {
+        case .guestOnly:
+            guard persist(pending) else {
+                currentSession = AccountSessionSnapshot(
+                    authentication: currentSession.authentication,
+                    authorization: .ownerScoped(userID: identity.userID),
+                    synchronization: .recoverableError(
+                        WayTaskAccountSyncError(
+                            category: .localPersistenceFailure
+                        )
+                    ),
+                    localDataOwnership: currentSession.localDataOwnership
+                )
+                return false
+            }
+        case let .migrationPending(_, targetUserID):
+            guard targetUserID == identity.userID else {
+                recordOwnershipConflict(for: identity.userID)
+                return false
+            }
+        case let .linked(_, ownerUserID):
+            guard ownerUserID == identity.userID else {
+                recordOwnershipConflict(for: identity.userID)
+                return false
+            }
+            return false
         }
+
         currentSession = AccountSessionSnapshot(
             authentication: currentSession.authentication,
             authorization: .ownerScoped(userID: identity.userID),
             synchronization: .initialMigrationPending,
-            localDataOwnership: .migrationPending(
-                dataSetID: currentDataSetID,
-                targetUserID: identity.userID
-            )
+            localDataOwnership: pending
         )
+        return true
+    }
+
+    func markInitialMigrationPending() {
+        _ = prepareInitialMigrationBinding()
+    }
+
+    @discardableResult
+    func markInitialMigrationCompleted() -> Bool {
+        guard let identity = signedInIdentity else { return false }
+        if case let .linked(dataSetID, ownerUserID) =
+            currentSession.localDataOwnership {
+            guard ownerUserID == identity.userID else {
+                recordOwnershipConflict(for: identity.userID)
+                return false
+            }
+            currentSession = AccountSessionSnapshot(
+                authentication: currentSession.authentication,
+                authorization: .ownerScoped(userID: identity.userID),
+                synchronization: .paused(.featureDisabled),
+                localDataOwnership: .linked(
+                    dataSetID: dataSetID,
+                    ownerUserID: ownerUserID
+                )
+            )
+            return true
+        }
+        guard case let .migrationPending(dataSetID, targetUserID) =
+            currentSession.localDataOwnership,
+              targetUserID == identity.userID else { return false }
+        let linked = LocalDataOwnershipState.linked(
+            dataSetID: dataSetID,
+            ownerUserID: identity.userID
+        )
+        guard persist(linked) else { return false }
+        currentSession = AccountSessionSnapshot(
+            authentication: currentSession.authentication,
+            authorization: .ownerScoped(userID: identity.userID),
+            synchronization: .paused(.featureDisabled),
+            localDataOwnership: linked
+        )
+        return true
     }
 
     func markSynchronizationActive() {
@@ -347,8 +409,10 @@ final class LocalAccountSessionAuthority: AccountSessionAuthorizing {
         switch currentSession.localDataOwnership {
         case .guestOnly:
             return false
-        case let .migrationPending(_, targetUserID):
-            return targetUserID == userID
+        case .migrationPending:
+            // Initial migration completion is separate from synchronization.
+            // Pending data must never be promoted by turning Sync on.
+            return false
         case let .linked(_, ownerUserID):
             return ownerUserID == userID
         }
@@ -362,6 +426,17 @@ final class LocalAccountSessionAuthority: AccountSessionAuthorizing {
         } catch {
             return false
         }
+    }
+
+    private func recordOwnershipConflict(for userID: UUID) {
+        currentSession = AccountSessionSnapshot(
+            authentication: currentSession.authentication,
+            authorization: .ownerScoped(userID: userID),
+            synchronization: .recoverableError(
+                WayTaskAccountSyncError(category: .permissionDenied)
+            ),
+            localDataOwnership: currentSession.localDataOwnership
+        )
     }
 
     private func synchronizationAfterCancelledSignIn(

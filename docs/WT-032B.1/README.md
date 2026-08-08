@@ -1,14 +1,14 @@
 # WT-032B.1 — Staging Signed-Session Adversarial Closure
 
-Status: **BLOCKED AT EXTERNAL SIGNED-SESSION GATES** as of 2026-08-08.
+Status: **COMPLETE WITH EXPLICIT DEFERRED EXTERNAL QA** as of 2026-08-08.
 
 The repository-side refresh, expiration, revocation-recovery, project-binding,
 and fail-closed session work is implemented and locally tested. Hosted WayTask
-Staging rejects missing, malformed, unsigned, and forged bearer tokens. Guest →
-Account Migration is not authorized to begin because the Apple-only hosted Auth
-configuration check fails and the live two-user, valid foreign-project token,
-and administrative-revocation scenarios still require external identities and
-manual Staging-only actions.
+Staging rejects missing, malformed, unsigned, and forged bearer tokens, exposes
+Apple as its only enabled provider, and passes the complete 18/18 HTTPS/Auth
+gate. Migration foundation implementation may proceed, but activation remains
+blocked by the live two-user gate and the explicitly deferred hosted
+session/foreign-project evidence.
 
 Sync, Migration, Secure AI, and Production remain OFF. No ProductState content
 was read, serialized, uploaded, migrated, relinked, or deleted.
@@ -37,10 +37,10 @@ was read, serialized, uploaded, migrated, relinked, or deleted.
 - Four local and remote migration versions match; the linked-project dry run is
   up to date. The linked project name was verified as **WayTask Staging**.
 - The current Security Advisor reports the reviewed authenticated Secure-AI
-  quota RPC warning plus leaked-password protection disabled. The latter is
-  actionable because the public settings audit found Email enabled; disabling
-  the unused Email provider is the approved Apple-only correction. Secure AI
-  remains OFF and the quota RPC is not invoked.
+  quota RPC warning plus leaked-password protection disabled. Email Auth is now
+  disabled, so the latter describes an inactive password capability rather than
+  an enabled password entry point. Secure AI remains OFF and the quota RPC is
+  not invoked.
 - Existing device evidence remains valid: one real Apple identity completed
   native sign-in and Private Relay, restored after force-close, stayed signed
   out after force-close, and re-signed in to the same Supabase user without
@@ -122,14 +122,12 @@ logic, not a real hosted token aging or revocation event.
 
 - Migration parity and deployed RLS/FORCE-RLS remain proven by the prior 56/56
   transactional PostgreSQL assertions.
-- The extended live publishable-key HTTPS/Auth gate passes 17 security checks:
+- The extended live publishable-key HTTPS/Auth gate passes 18/18 checks:
   anonymous private denial, exact-UUID/filter attacks, private/admin schema
   denial, published catalog behavior, missing API/session denial, malformed
   bearer denial, unsigned `alg=none` denial, forged-signature denial, fixed
-  issuer/JWKS discovery, and non-empty verification keys.
-- The eighteenth hosted check currently fails because the public Auth settings
-  expose both `apple` and `email`; WT-032B.1 requires Apple to be the only
-  enabled sign-in provider.
+  issuer/JWKS discovery, non-empty verification keys, and Apple as the only
+  enabled provider.
 - Database-role User A/User B isolation remains 56/56 proven, but it is not
   represented here as a live signed-session A/B result.
 
@@ -156,8 +154,8 @@ prior single-user happy path does not prove A/B isolation or server revocation.
   four cloud flags resolved NO.
 - Tracked-source and both built-app secret scans passed. No privileged credential,
   bundled secret file, or direct Gemini endpoint was found.
-- The hosted HTTPS/Auth extension passed its first 17 checks and failed the
-  eighteenth Apple-only provider check exactly as documented.
+- The hosted HTTPS/Auth extension passed 18/18 after Email Auth was disabled in
+  WayTask Staging. No user or session was created or modified by that rerun.
 - No migration was applied and no hosted row was written by this sprint's HTTP
   extension. The previous 56/56 transaction remains the deployed RLS baseline.
 - The prior 880/880 full non-performance regression was not redundantly rerun:
@@ -173,7 +171,6 @@ prior single-user happy path does not prove A/B isolation or server revocation.
 
 | Gate | Exact missing proof |
 |---|---|
-| Apple-only hosted Auth | Disable the hosted Staging Email provider and rerun the 18th assertion |
 | Real A/B isolation | Two different real Apple/Supabase Staging identities and live signed Data API requests in both directions |
 | Valid-token claims | `iss`/project, `aud`, `sub`, `exp`, `iat`/`nbf` behavior after a genuinely valid signature, not only malformed/forged input |
 | Wrong project | A valid signed session from a separate disposable non-Production Supabase project denied by WayTask Staging |
@@ -250,9 +247,9 @@ turn this staging gate green.
 
 ## Gate for Guest → Account Migration
 
-Migration remains blocked until all of the following are recorded:
+Migration activation remains blocked until all of the following are recorded:
 
-1. hosted Auth exposes Apple only;
+1. hosted Auth exposes Apple only — **PASSED, 18/18 hosted gate**;
 2. real signed User A/User B symmetric isolation passes and disposable rows are
    cleaned up;
 3. valid foreign-project token denial passes;

@@ -42,7 +42,7 @@ final class AccountSessionFoundationTests: XCTestCase {
         )
         XCTAssertEqual(
             authority.currentSession.localDataOwnership,
-            .migrationPending(dataSetID: dataSetID, targetUserID: userID)
+            .guestOnly(dataSetID: dataSetID)
         )
     }
 
@@ -73,6 +73,7 @@ final class AccountSessionFoundationTests: XCTestCase {
             .signedInInitialMigrationPending
         )
 
+        XCTAssertTrue(authority.markInitialMigrationCompleted())
         authority.markSynchronizationActive()
         XCTAssertEqual(
             authority.currentSession.state,
@@ -103,6 +104,8 @@ final class AccountSessionFoundationTests: XCTestCase {
 
     func testSessionExpirationAndSignOutPreserveLocalData() {
         let authority = signedInAuthority()
+        authority.markInitialMigrationPending()
+        XCTAssertTrue(authority.markInitialMigrationCompleted())
         authority.markSynchronizationActive()
 
         authority.expireSession()
@@ -126,6 +129,8 @@ final class AccountSessionFoundationTests: XCTestCase {
 
     func testLinkedLocalDataCannotBeRetargetedToAnotherAccount() {
         let authority = signedInAuthority()
+        authority.markInitialMigrationPending()
+        XCTAssertTrue(authority.markInitialMigrationCompleted())
         authority.markSynchronizationActive()
         authority.signOutPreservingLocalData()
 
@@ -149,6 +154,8 @@ final class AccountSessionFoundationTests: XCTestCase {
 
     func testLinkedLocalDataCanResumeOnlyForItsExistingOwner() {
         let authority = signedInAuthority()
+        authority.markInitialMigrationPending()
+        XCTAssertTrue(authority.markInitialMigrationCompleted())
         authority.markSynchronizationActive()
         authority.signOutPreservingLocalData()
 

@@ -229,6 +229,8 @@ Current Progress
 - Smart Nearby Detection
 - Geofence Notification Foundation
 - Staging-only native Sign in with Apple foundation with Keychain restoration
+- Inert Guest → Account migration foundation with deterministic preview,
+  immutable account binding, resumable batches, and independent activation gates
 - GitHub Repository
 - Project Documentation
 
@@ -239,8 +241,8 @@ Current Progress
 - Sprint 19.2 AI persistence and learning foundation
 - Persisting AI search keywords
 - AI result editing polish
-- WT-032B.1 signed-session external QA: Apple-only provider correction, real
-  two-user isolation, foreign-project denial, and administrative revocation
+- WT-032C synthetic Staging migration QA preparation; real signed A/B remains a
+  hard activation gate and Migration/Sync remain OFF
 
 ---
 

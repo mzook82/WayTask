@@ -887,7 +887,6 @@ final class StagingAccountController: ObservableObject {
             }
             accept(session)
             diagnostics.record(.authSucceeded, failure: nil)
-            diagnostics.record(.migrationPending, failure: nil)
         } catch WayTaskAuthenticationFailure.cancelled {
             authority.cancelSignInPreservingLocalData()
             publishSnapshot()
@@ -972,6 +971,87 @@ final class StagingAccountController: ObservableObject {
               secureSession.expiresAt > Date().addingTimeInterval(30),
               case .signedIn = snapshot.authentication else {
             return nil
+        }
+        return secureSession.accessToken
+    }
+
+    var authenticatedUserID: UUID? {
+        guard case let .signedIn(identity, _) = snapshot.authentication else {
+            return nil
+        }
+        return identity.userID
+    }
+
+    var localDataSetID: UUID {
+        switch snapshot.localDataOwnership {
+        case let .guestOnly(dataSetID),
+             let .migrationPending(dataSetID, _),
+             let .linked(dataSetID, _):
+            return dataSetID
+        }
+    }
+
+    func prepareInitialMigrationBinding(expectedUserID: UUID) -> Bool {
+        guard authenticatedUserID == expectedUserID else { return false }
+        let result = authority.prepareInitialMigrationBinding()
+        publishSnapshot()
+        if result {
+            diagnostics.record(.migrationPending, failure: nil)
+        }
+        return result
+    }
+
+    func markInitialMigrationCompleted(expectedUserID: UUID) -> Bool {
+        guard authenticatedUserID == expectedUserID else { return false }
+        let result = authority.markInitialMigrationCompleted()
+        publishSnapshot()
+        return result
+    }
+
+    func migrationActivationEvidence(bundle: Bundle = .main)
+        -> GuestMigrationActivationEvidence {
+        GuestMigrationActivationConfiguration.evidence(
+            bundle: bundle,
+            environment: configurationStatus.environment,
+            compiledForInternalStaging: internalStagingUIEnabled,
+            authenticatedUserID: authenticatedUserID,
+            migrationFeatureEnabled: featureFlags.firstMigrationEnabled
+        )
+    }
+
+    func makeGuestMigrationTransport()
+        -> GuestMigrationTransport {
+        let activation = migrationActivationEvidence()
+        guard activation.blocker() == nil,
+              case let .configured(configuration) = configurationStatus,
+              let transport = try? SupabaseGuestMigrationTransport(
+                configuration: configuration,
+                accessToken: { [weak self] in
+                    guard let self else {
+                        throw GuestMigrationFoundationError.sessionExpired
+                    }
+                    return try await self.migrationAccessToken()
+                }
+              ) else {
+            return DisabledGuestMigrationTransport()
+        }
+        return transport
+    }
+
+    private func migrationAccessToken() async throws -> String {
+        guard migrationActivationEvidence().blocker() == nil else {
+            throw GuestMigrationFoundationError.activationBlocked(
+                .unresolvedSecurityBlocker
+            )
+        }
+        if secureSession?.expiresAt ?? .distantPast <=
+            Date().addingTimeInterval(60) {
+            await restoreSessionIfNeeded(force: true)
+        }
+        guard let secureSession,
+              secureSession.expiresAt > Date().addingTimeInterval(30),
+              authenticatedUserID == secureSession.userID else {
+            throw GuestMigrationFoundationError.sessionExpired
         }
         return secureSession.accessToken
     }

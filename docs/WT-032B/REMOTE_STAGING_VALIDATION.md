@@ -22,7 +22,8 @@ not linked, queried, migrated, or configured.
   mutation denial, parent/child bypass denial, and administrative-table denial.
 - Anonymous database and HTTPS contexts could not read or write private rows.
   Exact UUID guesses and a broad `or` filter returned no private profile row.
-- The live HTTPS/Auth suite passed 15 publishable-key-only assertions:
+- The initial WT-032B live HTTPS/Auth suite passed 15 publishable-key-only
+  assertions; the WT-032B.1 extension below subsequently passed 18/18:
   missing API key, anonymous private access, exact UUID/filter manipulation,
   anonymous insert/update/delete, catalog exposure, private/admin schema
   exposure, malformed bearer JWT, private normalization RPC exposure, hosted
@@ -49,10 +50,8 @@ and server switches remain OFF, so this warning is accepted for WT-032B rather
 than weakening the quota authority or enabling AI.
 
 The WT-032B.1 re-audit additionally reports leaked-password protection disabled.
-Because the public Auth settings currently expose the unused Email provider,
-the immediate correction is to disable Email and preserve Apple-only Staging
-Auth. If the advisor warning remains after Email is disabled, it documents an
-inactive password feature rather than authorizing password authentication.
+Email Auth is now disabled, so that advisor item documents an inactive password
+feature rather than authorizing password authentication.
 
 ## Subsequent real-device authentication proof
 
@@ -97,11 +96,9 @@ real user token or privileged credential. Two additional assertions passed:
 - a structurally valid signed-shape JWT with an unknown key/signature was
   rejected.
 
-The extension therefore passes 17 negative/discovery/Data API assertions. An
-eighteenth Apple-only provider assertion currently fails: the public Staging
-Auth settings expose `apple` and `email`. The unused Email provider must be
-disabled manually in WayTask Staging and the gate rerun. This is configuration
-evidence, not a password implementation in iOS.
+The extension passes 18/18 negative/discovery/Data API/Auth assertions after
+Email was disabled. Apple is the only enabled Staging provider. The successful
+rerun created or modified no user or session.
 
 The extension also adds local client proof for bounded refresh, offline retry,
 denied refresh, protected-request revocation recovery, project-origin mismatch,
@@ -122,8 +119,6 @@ revocation. See [WT-032B.1](../WT-032B.1/README.md).
 
 ## Deferred external actions
 
-- Disable the unused Email provider in **WayTask Staging**; preserve Apple and
-  the native client ID. The public provider-policy check must then pass.
 - Create a second disposable Staging-only identity only after separately
   approving the real Apple action; do not import ProductState data.
 - Inject short-lived A/B access tokens only through an approved ephemeral secret

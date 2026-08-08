@@ -6,24 +6,12 @@ Never paste a JWT, refresh token, Apple token/code, service/secret key, database
 password, email, or display name into chat, a command argument, Git, logs, or a
 test report.
 
-## Gate 0 — correct the hosted provider policy
+## Gate 0 — hosted provider policy — PASSED
 
-Manual action required now:
-
-1. Open the Supabase Dashboard and select the project named exactly
-   **WayTask Staging**. Confirm it is not Production.
-2. Go to **Authentication → Providers → Email**.
-3. Turn **Enable Email provider** OFF and save.
-4. Do not change the Apple provider or native client ID `h.WayTask.staging`.
-5. Do not change JWT expiry, session limits, Production, or any iOS feature flag.
-6. Report only that the Email provider is disabled; do not send configuration
-   screenshots containing user details or any credential value.
-7. Rerun `bash supabase/tests/hosted_staging_data_api.sh`. It must pass all
-   18 assertions, including “Apple as its only enabled sign-in provider.”
-
-If Email is intentionally required for a separate internal use, stop and approve
-a revised provider contract before migration. Do not leave an unused password/
-email entry point enabled merely because the iOS UI does not expose it.
+Email Auth was disabled in **WayTask Staging** without changing Apple, JWT
+settings, Production, or an iOS feature flag. The publishable-key-only hosted
+Data API/Auth rerun passed 18/18, including Apple as the only enabled provider.
+It created or modified no user or session.
 
 ## Gate 1 — obtain two genuine Staging identities
 

@@ -139,6 +139,16 @@ final class WayTaskCloudConfigurationTests: XCTestCase {
         )
         XCTAssertTrue(secureAIWithAccounts.secureAIRecognitionEnabled)
 
+        let migrationWithoutSync = WayTaskCloudConfiguration.featureFlags(
+            values: [
+                WayTaskCloudConfiguration.accountsFlagKey: "YES",
+                WayTaskCloudConfiguration.migrationFlagKey: "YES"
+            ],
+            configurationStatus: status
+        )
+        XCTAssertTrue(migrationWithoutSync.firstMigrationEnabled)
+        XCTAssertFalse(migrationWithoutSync.synchronizationEnabled)
+
         let production = resolve(
             environment: "production",
             url: "https://production.invalid"

@@ -57,7 +57,7 @@ final class StagingAuthenticationTests: XCTestCase {
         )
         XCTAssertEqual(
             controller.snapshot.localDataOwnership,
-            .migrationPending(dataSetID: dataSetID, targetUserID: userA)
+            .guestOnly(dataSetID: dataSetID)
         )
         XCTAssertEqual(auth.signInCount, 1)
         XCTAssertEqual(auth.profileWriteCount, 0)
@@ -101,7 +101,7 @@ final class StagingAuthenticationTests: XCTestCase {
         XCTAssertEqual(controller.lastFailure, .sessionExpired)
         XCTAssertEqual(
             controller.snapshot.localDataOwnership,
-            .migrationPending(dataSetID: dataSetID, targetUserID: userA)
+            .guestOnly(dataSetID: dataSetID)
         )
     }
 
@@ -124,6 +124,9 @@ final class StagingAuthenticationTests: XCTestCase {
         let auth = MockSupabaseAuth(userID: userA)
         let controller = makeController(auth: auth)
         await controller.signInWithApple()
+        XCTAssertTrue(
+            controller.prepareInitialMigrationBinding(expectedUserID: userA)
+        )
 
         await controller.signOut()
 
@@ -145,6 +148,7 @@ final class StagingAuthenticationTests: XCTestCase {
             identity: UserIdentity(userID: userA),
             expiresAt: nil
         )
+        XCTAssertTrue(first.prepareInitialMigrationBinding())
         let persisted = persistence.lastSaved
         XCTAssertEqual(
             persisted,
@@ -235,7 +239,7 @@ final class StagingAuthenticationTests: XCTestCase {
         XCTAssertEqual(controller.lastFailure, .sessionExpired)
         XCTAssertEqual(
             controller.snapshot.localDataOwnership,
-            .migrationPending(dataSetID: dataSetID, targetUserID: userA)
+            .guestOnly(dataSetID: dataSetID)
         )
         XCTAssertNil(controller.secureAIAccessToken())
         XCTAssertTrue(diagnostics.events.contains(.sessionExpired))
@@ -256,7 +260,7 @@ final class StagingAuthenticationTests: XCTestCase {
         XCTAssertEqual(controller.lastFailure, .permissionDenied)
         XCTAssertEqual(
             controller.snapshot.localDataOwnership,
-            .migrationPending(dataSetID: dataSetID, targetUserID: userA)
+            .guestOnly(dataSetID: dataSetID)
         )
     }
 

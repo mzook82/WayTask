@@ -222,13 +222,13 @@ and not migration behavior for a non-empty dataset.
   database-role User A/User B isolation, exact UUID/filter attacks, ownership,
   parent/child enforcement, private/admin denial, catalog publication, and
   identity validation bypass attempts.
-- 15/15 live HTTPS/Auth assertions cover anonymous denial, malformed/no-session
-  JWT boundaries, Data API exposure, and linked-project issuer/JWKS discovery.
+- 18/18 live HTTPS/Auth assertions cover anonymous denial, malformed, unsigned,
+  and forged/no-session JWT boundaries, Data API exposure, linked-project
+  issuer/JWKS discovery, and Apple-only hosted Auth.
 - The security-advisor hardening migration is applied. WT-032B originally
   accepted the authenticated quota-RPC warning while Secure AI stayed OFF.
-  WT-032B.1's current re-audit also reports leaked-password protection disabled
-  and finds the unused Email provider enabled; the Apple-only provider gate now
-  requires disabling Email.
+  WT-032B.1's re-audit also reports leaked-password protection disabled; Email
+  Auth is disabled, so no password provider is enabled.
 
 ### Proven locally
 
@@ -316,11 +316,10 @@ cross-account retargeting.
 - Existing historical Gemini credential rotation remains an authorized Google
   Cloud owner action described by WT-032A.1.
 
-The active follow-up is **WT-032B.1 — Staging Signed-Session Adversarial
-Closure**. Repository-side hardening is implemented, but its external gates are
-still blocking. Only after [WT-032B.1](../WT-032B.1/README.md) records live A/B,
-valid foreign-project denial, hosted refresh/expiration, and administrative
-revocation may a separately approved Guest → Account migration sprint begin.
+WT-032B.1 repository hardening is complete with explicit deferred external QA.
+WT-032C may implement an inert migration foundation, but activation remains
+blocked until [WT-032B.1](../WT-032B.1/README.md) records live signed A/B and
+the required hosted session gates.
 
 See [staging setup](STAGING_SETUP.md),
 [hosted Staging validation](REMOTE_STAGING_VALIDATION.md), and
