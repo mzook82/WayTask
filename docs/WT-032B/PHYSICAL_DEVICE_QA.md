@@ -1,47 +1,55 @@
 # WT-032B Physical-Device QA
 
-Use a registered device and the `WayTask-Staging` scheme connected only to the
-dedicated staging Supabase project.
+Executed on 2026-08-08 on a physical iPhone using the signed
+`h.WayTask.staging` app connected only to **WayTask Staging**. This is real-device
+evidence, not simulator, mock-provider, or unit-test evidence.
 
-- [ ] Cold-launch as Guest; no account request occurs without a stored session.
-- [ ] Existing ProductState V4 products/lists remain visible and editable.
-- [ ] Open **Staging Account**; environment says Staging, Sync Off, Migration Not
-      performed, Secure AI Off.
-- [ ] Complete Sign in with Apple; observe **Signed in** and the exact warning
-      that existing data remains on this device.
-- [ ] Cancel Apple authorization; return to Guest/prior state with no error and
-      no local mutation.
-- [ ] Authorize with Hide My Email/Private Relay; sign-in succeeds without any
-      client email-domain assumption.
-- [ ] On first authorization, verify Apple name is offered only as an optional
-      editable display-name suggestion. Reauthorize and verify missing name/email
-      does not break the flow.
-- [ ] Relaunch online; session restores through Supabase verification.
-- [ ] Launch offline; local data remains usable and **Offline** recovery copy is
-      shown without exposing a token/provider error.
-- [ ] Revoke/expire the staging session; verify **Session expired**, local data
-      preserved, Secure AI token unavailable, and reauthentication offered.
-- [ ] Sign out online and offline; local data and pending ownership remain.
-- [ ] Sign in again as the same Apple account; pending state remains and no upload
-      occurs.
-- [ ] User A sign-in → sign-out → User B sign-in; verify ownership-protected
-      recovery state and no transfer/relabel of User A's local dataset.
-- [ ] Inspect the staging database/network: no existing ProductState product,
-      list, entry, store, history, session, image, catalog, or Product Knowledge
-      row was uploaded automatically.
-- [ ] Save accepted Hebrew, Arabic, accented Latin, CJK, and emoji display names;
-      verify normalized retrieval as text.
-- [ ] Verify invalid invisible/bidi/control/overlong display names show curated
-      typed validation and no database/provider error.
-- [ ] Exercise Map foreground/background return, fresh recentering, store/product
-      compatibility, selection, navigation, geofence registration, cooldown, and
-      notification deep link; compare with WT-MAP-R1 behavior.
-- [ ] Exercise Products, Shopping, Camera/Scanner, catalog search, and Product
-      Knowledge smoke flows.
-- [ ] Confirm Secure AI remains disabled until its separate client/server kill
-      switches receive later approval.
-- [ ] Confirm Release/Production still shows no account UI and contains no
-      Production Supabase configuration.
+## Passed on the physical device
+
+- [x] Signed bundle ID was `h.WayTask.staging`; the signed app and provisioning
+      profile contained the Sign in with Apple entitlement.
+- [x] App began in Guest and exposed the internal Staging account flow.
+- [x] Account UI showed Cloud Staging, Sync Off, Migration Not performed, and
+      Secure AI Off.
+- [x] Native Sign in with Apple completed successfully.
+- [x] Hide My Email/Apple Private Relay completed without a client-side domain
+      assumption.
+- [x] Supabase Auth created exactly one Apple/social user.
+- [x] WayTask transitioned Guest → Signed in without starting sync or migration.
+- [x] Apple supplied the optional display name on first authorization. It was
+      absent after later restoration, matching Apple's one-time name behavior
+      and WayTask's ephemeral suggestion contract.
+- [x] Force-close/reopen restored the valid authenticated session without a
+      second Apple interaction.
+- [x] Sign-out returned to Continue as Guest.
+- [x] Force-close/reopen after sign-out remained Guest; no signed-out Keychain
+      session was restored.
+- [x] Re-sign-in with the same Apple account succeeded and Supabase still showed
+      exactly one user.
+- [x] No ProductState, list, store, history, Product Knowledge, or other user
+      dataset was uploaded, linked, or migrated.
+- [x] Accounts remained Staging-only; Sync, Migration, and Secure AI remained
+      OFF. Production `h.WayTask` remained untouched.
+
+The Staging app has a separate local iOS container and displayed zero products
+and zero shopping lists. This is expected isolation. It is not evidence of
+Production data loss, and because the Staging dataset was empty it is not a
+physical-device proof of preserving a non-empty Guest dataset.
+
+## Not executed in this device run
+
+- [ ] Cancel Apple authorization and verify cancellation returns to the prior
+      state without mutation.
+- [ ] Launch/restore offline and verify curated offline recovery.
+- [ ] Allow a session to approach expiry and verify refresh/expiration recovery.
+- [ ] Administratively revoke the server session and verify device recovery.
+- [ ] Sign in as a different User B and verify no transfer/relabel of User A's
+      pending or linked dataset.
+- [ ] Exercise accepted/rejected display-name UI cases; these are proven at the
+      local and hosted database boundaries, not on this device run.
+- [ ] Exercise the full WT-MAP-R1, Products, Shopping, Camera/Scanner, catalog,
+      and Product Knowledge physical-device smoke matrix; the 880-test local
+      non-performance suite passed separately.
 
 Capture only pass/fail, app version/build, device/OS, sanitized diagnostic code,
 and staging project reference suffix. Do not capture identity tokens, codes,

@@ -1,9 +1,10 @@
 # WT-032B — Supabase Staging + Sign in with Apple Foundation
 
-Status: implemented and locally proven. Hosted Staging schema/RLS and anonymous
-Data API validation are proven; real Apple-authenticated sessions and
-physical-device authorization remain external gates. Production accounts,
-sync, migration, and Secure AI remain disabled.
+Status: **COMPLETE WITH EXPLICIT DEFERRED FOLLOW-UPS** as of 2026-08-08.
+The native Apple happy path, Private Relay, session restoration, sign-out
+persistence, and same-account re-sign-in are proven on a signed physical-device
+Staging build. Hosted schema/RLS and anonymous Auth/Data API boundaries are also
+proven. Production accounts, sync, migration, and Secure AI remain disabled.
 
 ## Baseline audit
 
@@ -28,8 +29,9 @@ sync, migration, and Secure AI remain disabled.
 - Production bundle identifier remains `h.WayTask`; Staging is isolated as
   `h.WayTask.staging`. No Apple entitlement existed before this sprint.
   `WayTask.entitlements` is assigned only to Staging and declares the Sign in
-  with Apple capability; its matching App ID/provisioning capability still
-  requires Apple Developer portal confirmation.
+  with Apple capability. The App ID capability, development provisioning
+  profile, signed bundle identifier, and signed Apple entitlement are now
+  verified on a physical iPhone.
 - No auth token storage existed. Sessions now use a ThisDeviceOnly Keychain item;
   ownership metadata uses an atomic complete-file-protection sidecar. Tokens
   never enter ProductState, `UserDefaults`, plist configuration, diagnostics, or
@@ -86,6 +88,11 @@ only as an ephemeral suggestion and saves it only after the user taps **Save
 display name**. Email—including Apple Private Relay—is left to Supabase Auth and
 is not displayed, copied into ProductState, validated by domain, or logged. This
 also avoids breaking current or future relay domains.
+
+Physical-device QA matched this contract: Apple supplied the optional name on
+first authorization, while later session restoration did not supply it again.
+That is expected one-time Apple authorization behavior, not a missing-profile
+defect and not a new persistence requirement.
 
 ## Account state machine and migration boundary
 
@@ -177,11 +184,71 @@ redaction.
 Hosted Staging additionally passed 56 rollback-only database assertions and 15
 live publishable-key Data API/Auth assertions. This proves deployed schema/RLS,
 database-role User A/User B isolation, anonymous gateway denial, malformed JWT
-denial, catalog exposure, and database identity validation. It does not claim a
-real Apple/Supabase session: Apple is not yet enabled in Staging and no real test
-users/tokens were created. Real JWT signature, issuer/audience, stale/revoked
-session, and signed-token A/B ingress proof remain at that external gate. See
+denial, catalog exposure, and database identity validation. Subsequent
+physical-device QA proved one real Apple/Supabase signed-in session, restoration,
+local sign-out persistence, and same-account re-sign-in without duplication.
+It did not exercise a second real user or adversarial signed tokens. See
 [hosted Staging validation](REMOTE_STAGING_VALIDATION.md).
+
+## Final evidence classification
+
+### Proven on a physical iPhone
+
+- The signed app and embedded development profile identify only
+  `h.WayTask.staging` and contain the Sign in with Apple entitlement.
+- Native Sign in with Apple completed against **WayTask Staging**, including
+  Hide My Email/Private Relay, and Supabase created exactly one social user.
+- WayTask transitioned Guest → Signed in while showing Cloud Staging, Sync Off,
+  Migration Not performed, and Secure AI Off.
+- No ProductState, Shopping, store, history, or other existing user data was
+  uploaded, linked, or migrated.
+- Force-close/reopen restored the valid authenticated session without another
+  Apple interaction.
+- Sign-out returned to Guest; force-close/reopen remained Guest, proving the
+  signed-out Keychain session was not restored.
+- Re-sign-in with the same Apple account succeeded and did not create a duplicate
+  Supabase user.
+- Apple's first-authorization display name was present once and absent during
+  later restoration, matching the documented ephemeral suggestion contract.
+
+The Staging bundle has its own iOS container and therefore began with zero
+products and lists. That proves environment isolation, not Production data loss
+and not migration behavior for a non-empty dataset.
+
+### Proven on hosted Staging
+
+- Four migration versions match and the linked-project dry run is clean.
+- 56/56 transactional PostgreSQL assertions cover deployed RLS/FORCE RLS,
+  database-role User A/User B isolation, exact UUID/filter attacks, ownership,
+  parent/child enforcement, private/admin denial, catalog publication, and
+  identity validation bypass attempts.
+- 15/15 live HTTPS/Auth assertions cover anonymous denial, malformed/no-session
+  JWT boundaries, Data API exposure, and linked-project issuer/JWKS discovery.
+- The security-advisor hardening migration is applied; its sole remaining
+  authenticated quota-RPC warning is intentional while Secure AI stays OFF.
+
+### Proven locally
+
+- The full non-performance regression passed 880/880.
+- Real Keychain/ownership storage tests passed.
+- Debug, Staging, and Release source/artifact secret scans passed.
+- Production remains disabled and isolated.
+
+### Still unproven or intentionally deferred
+
+- Valid signed-session HTTPS isolation between two different real users.
+- Deliberate access-token issuer/audience/subject/claim tampering and rejection;
+  only the valid happy path, discovery metadata, and malformed token are proven.
+- Near-expiry refresh, natural expiration, and expired-session recovery on a
+  physical device.
+- Server-side refresh-session revocation recovery. Device QA proves local
+  sign-out persistence, not independent administrative revocation.
+- Wrong-project signed-token denial using a second non-Production issuer.
+- Apple credential-revocation/account-change server notifications, intentionally
+  deferred with Production account compliance work.
+- Apple cancellation, offline restoration, and preservation of a non-empty
+  Staging Guest dataset were not part of the recorded final device run; their
+  implementation contracts remain locally tested.
 
 ## Observability and privacy
 
@@ -223,12 +290,12 @@ cross-account retargeting.
 
 ## Remaining risks
 
-- The dedicated Staging project and deployed database are proven, but Apple Auth
-  remains disabled, client publishable configuration is absent, and the Apple
-  App ID/provisioning capability still requires external confirmation.
-- Hosted schema/RLS and anonymous Data API proof passed. Real signed-session
-  Auth/JWT issuer/audience/revocation and HTTPS User A/User B proof remain
-  unexecuted until two disposable Staging identities exist.
+- A single real Apple identity proves the provider happy path but cannot prove
+  live signed-session User A/User B isolation. Two disposable Staging identities
+  are required for that validation; none are created as part of closure.
+- Successful restoration proves a currently valid session, not near-expiry
+  refresh, natural expiration, administrative revocation, adversarial audience/
+  claim rejection, or wrong-project signed-token denial.
 - The ownership sidecar is a WT-032B guard, not the approved future sync ledger;
   the migration sprint must bind it transactionally to ProductState backup and
   canonical manifest evidence.
@@ -238,6 +305,13 @@ cross-account retargeting.
   WT-032B sends no account email.
 - Existing historical Gemini credential rotation remains an authorized Google
   Cloud owner action described by WT-032A.1.
+
+The recommended next sprint is **WT-032B.1 — Staging Signed-Session Adversarial
+Closure**: use two disposable Staging-only identities and a secret-safe test
+runner to prove live A/B isolation, valid-token claim boundaries, expiration/
+refresh, server revocation, and wrong-project denial. Keep sync, migration,
+Secure AI, and Production OFF. Only after that gate should a separately approved
+Guest → Account migration sprint begin.
 
 See [staging setup](STAGING_SETUP.md),
 [hosted Staging validation](REMOTE_STAGING_VALIDATION.md), and

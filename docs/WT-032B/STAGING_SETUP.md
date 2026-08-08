@@ -5,6 +5,12 @@ a Production project reference, database, user export, or credentials.
 
 ## External configuration
 
+Status on 2026-08-08: completed for **WayTask Staging**. Apple Auth is enabled
+for native client ID `h.WayTask.staging`; the App ID capability, development
+profile, signed physical-device bundle, and Apple entitlement are verified. The
+ignored publishable client configuration is installed locally with mode `0600`.
+No web OAuth secret or privileged client credential was created.
+
 1. Create/select the isolated staging project. Confirm its organization, owner,
    region, plan, retention, backup policy, and that it contains no Production
    users or data.
@@ -96,13 +102,16 @@ Record sanitized request IDs/statuses and assertion counts only. Never capture
 JWTs, emails, names, or row contents in test reports.
 
 See [the executed hosted validation report](REMOTE_STAGING_VALIDATION.md) for
-the proven boundary and the remaining real-session prerequisites.
+the hosted proof, subsequent real-device auth proof, and deferred adversarial
+signed-session matrix.
 
 ## Build and device gate
 
-Open `WayTask-Staging`, verify the resolved environment is Staging and sync/
-migration/Secure AI are OFF, then build/run on a registered physical device.
-Confirm the signed entitlements include `com.apple.developer.applesignin` and
-the provisioning profile matches `h.WayTask.staging`.
+Completed on 2026-08-08: `WayTask-Staging` built, signed, installed, and launched
+on a registered physical iPhone. The built configuration resolved Accounts ON,
+Sync/Migration/Secure AI OFF, the bundle ID to `h.WayTask.staging`, and the
+signed entitlement `com.apple.developer.applesignin` to `Default`. Native Apple
+sign-in, Private Relay, session restoration, sign-out persistence, and
+same-account re-sign-in passed.
 
 Production remains explicitly disabled and unconfigured throughout this process.

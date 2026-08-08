@@ -48,47 +48,60 @@ and idempotency suite. It does not invoke Gemini. Secure AI's independent client
 and server switches remain OFF, so this warning is accepted for WT-032B rather
 than weakening the quota authority or enabling AI.
 
-## Not yet proven with real hosted Auth sessions
+## Subsequent real-device authentication proof
+
+On 2026-08-08, a signed `h.WayTask.staging` build completed native Sign in with
+Apple on a physical iPhone against **WayTask Staging**. The test used Hide My
+Email/Private Relay. Supabase created exactly one social user. The app restored
+the valid session after force-close/reopen, remained Guest after sign-out and a
+second relaunch, then re-signed in with the same Apple account without creating
+a duplicate user. Sync, migration, and Secure AI stayed OFF and no user dataset
+was uploaded or migrated.
+
+This proves the real Apple → Supabase happy path and a valid signed Staging
+session. It does not convert the database-role A/B assertions below into a live
+two-user signed-token gateway test.
+
+## Signed-session validation still deferred
 
 The 56 database assertions exercise the deployed schema as PostgreSQL's
 `authenticated` role with controlled JWT claim context. They do not mint or
 verify a real Supabase access token. The HTTPS suite exercises the live gateway
-as anonymous and with a malformed token, but does not claim the following:
+as anonymous and with a malformed token. One real happy-path session is now
+proven, but the combined evidence does not claim the following:
 
-- real Apple-to-Supabase token exchange;
 - real User A/User B HTTPS isolation using signed staging sessions;
-- hosted issuer, audience, project, and UUID claim verification for a valid
-  token;
-- stale, expired, refreshed, or administratively revoked session behavior;
+- adversarial issuer, audience, project, subject, or UUID claim rejection for a
+  deliberately altered otherwise-valid token;
+- near-expiry refresh, natural expiration, or administratively revoked session
+  recovery;
 - a wrong-project signed token rejection.
 
-The public Auth settings endpoint reported Apple disabled. The ignored client
-configuration file `Secrets-Staging.xcconfig` is also absent. Creating users or
-obtaining real session tokens would therefore cross the external configuration
-boundary and was intentionally not attempted.
+Local sign-out persistence is real-device proven, but it does not independently
+prove that the server rejected a previously issued refresh session after an
+administrative revocation.
 
-## Exact external actions required
+## Completed external setup
 
-1. In Apple Developer, enable **Sign in with Apple** for the staging App ID
-   `h.WayTask.staging` and regenerate the internal-device provisioning profile.
-2. In **WayTask Staging** Supabase Auth providers, enable Apple and configure the
-   native client ID `h.WayTask.staging`. Keep any Apple private key or generated
-   client secret outside Git and outside the iOS app. Do not configure a
-   Production project.
-3. Create the ignored `Secrets-Staging.xcconfig` from its example and insert
-   only the Staging HTTPS project URL and client-safe publishable key. Keep sync,
-   migration, and Secure AI OFF. Do not send these values in chat or commit them.
-4. On registered devices, establish two disposable Staging-only Apple Auth
-   identities/sessions (User A and User B). Do not import existing users or
-   ProductState data.
-5. For automated HTTPS A/B assertions, place the two short-lived access tokens
-   in an approved ephemeral secret environment, never source control, command
-   arguments, reports, or chat. No service-role key is needed by or permitted in
-   iOS. If tokens cannot be supplied through a secret channel, execute these
-   checks as physical-device QA instead.
-6. Revoke one disposable Staging session from the Auth dashboard to exercise
-   revocation/recovery. Test wrong-project rejection only with another
-   non-Production disposable test project/token; never use a Production token.
+- Apple is enabled in **WayTask Staging** with native client ID
+  `h.WayTask.staging`; no web OAuth secret is configured.
+- The Apple App ID capability, development provisioning profile, signed Staging
+  bundle, and Apple entitlement are verified on a physical iPhone.
+- The ignored client configuration contains only the Staging HTTPS URL and
+  client-safe publishable key and has mode `0600`.
+- Staging Accounts is ON. Sync, Migration, Secure AI, and all Production account
+  configuration remain OFF.
+
+## Deferred external actions
+
+- Create a second disposable Staging-only identity only in the separately
+  approved signed-session adversarial follow-up; do not import ProductState data.
+- Inject short-lived A/B access tokens only through an approved ephemeral secret
+  runner, never Git, chat, logs, reports, plist, or command arguments. No
+  service-role key belongs in iOS.
+- Revoke a disposable Staging session administratively to prove server-side
+  recovery. Use a separate non-Production issuer for wrong-project denial; never
+  use or configure Production.
 
 ## Re-run commands
 
@@ -104,7 +117,7 @@ supabase db advisors --linked --type security --level warn \
   --fail-on none --output json
 ```
 
-The HTTPS/Auth script retrieves exactly one client-safe publishable key into process
-memory, suppresses credential output, and refuses to run unless the linked
-project name is exactly `WayTask Staging`. It never requests or uses a
+The HTTPS/Auth script retrieves exactly one client-safe publishable key into
+process memory, suppresses credential output, and refuses to run unless the
+linked project name is exactly `WayTask Staging`. It never requests or uses a
 service-role/secret key.
