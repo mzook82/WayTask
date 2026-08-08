@@ -228,6 +228,7 @@ Current Progress
 - Shopping Mode
 - Smart Nearby Detection
 - Geofence Notification Foundation
+- Staging-only native Sign in with Apple foundation with Keychain restoration
 - GitHub Repository
 - Project Documentation
 
@@ -238,7 +239,8 @@ Current Progress
 - Sprint 19.2 AI persistence and learning foundation
 - Persisting AI search keywords
 - AI result editing polish
-- Staging Auth token integration and proxy deployment validation
+- WT-032B.1 signed-session external QA: Apple-only provider correction, real
+  two-user isolation, foreign-project denial, and administrative revocation
 
 ---
 
@@ -323,6 +325,15 @@ Additional documentation is available in the `docs` directory.
 - Added Debug/Release built-product and tracked-source secret scanners.
 - See `docs/WT-032A/17_GEMINI_CREDENTIAL_REMEDIATION.md` for proof, prerequisites,
   privacy/cost controls, and the required Google Cloud rotation checklist.
+
+## WT-032B / WT-032B.1 staging authentication
+
+- Native Sign in with Apple, Private Relay, Keychain restoration, sign-out
+  persistence, and same-account re-sign-in are proven on `h.WayTask.staging`.
+- Sync, Guest migration, Secure AI, and Production accounts remain OFF.
+- Signed-session refresh/revocation recovery is locally hardened; Guest →
+  Account Migration remains blocked on the external gates documented in
+  `docs/WT-032B.1/README.md`.
 
 ## Sprint 19.1
 

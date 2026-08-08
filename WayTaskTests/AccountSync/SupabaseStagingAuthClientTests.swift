@@ -95,6 +95,396 @@ final class SupabaseStagingAuthClientTests: XCTestCase {
         XCTAssertNil(store.data)
     }
 
+    func testWrongProjectOriginFailsClosedWithoutNetworkRequest() async throws {
+        let store = InMemorySecureSessionStore()
+        store.data = try JSONEncoder().encode(
+            storedSession(
+                environment: .staging,
+                projectOrigin: "https://other-project.invalid"
+            )
+        )
+        var requestCount = 0
+        AuthMockURLProtocol.handler = { request in
+            requestCount += 1
+            return Self.response(request: request, status: 200, json: [:])
+        }
+        let client = try makeClient(store: store)
+
+        do {
+            _ = try await client.restoreSession()
+            XCTFail("Wrong-project session must fail closed")
+        } catch let failure as WayTaskAuthenticationFailure {
+            XCTAssertEqual(failure, .invalidConfiguration)
+        }
+
+        XCTAssertEqual(requestCount, 0)
+        XCTAssertNil(store.data)
+    }
+
+    func testFreshSessionVerifiesOnceWithoutRefresh() async throws {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let store = InMemorySecureSessionStore()
+        let original = storedSession(expiresAt: now.addingTimeInterval(3_600))
+        store.data = try JSONEncoder().encode(original)
+        var requestCount = 0
+        AuthMockURLProtocol.handler = { [userID] request in
+            requestCount += 1
+            XCTAssertEqual(request.url?.path, "/auth/v1/user")
+            return Self.response(
+                request: request,
+                status: 200,
+                json: ["id": userID.uuidString]
+            )
+        }
+        let client = try makeClient(store: store, now: { now })
+
+        let result = try await client.restoreSession()
+
+        XCTAssertEqual(result, .restored(original))
+        XCTAssertEqual(requestCount, 1)
+    }
+
+    func testNearExpirySessionRefreshesOncePersistsRotationAndVerifies()
+        async throws {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let store = InMemorySecureSessionStore()
+        store.data = try JSONEncoder().encode(
+            storedSession(expiresAt: now.addingTimeInterval(30))
+        )
+        var requestCount = 0
+        AuthMockURLProtocol.handler = { [userID] request in
+            requestCount += 1
+            if request.url?.path == "/auth/v1/token" {
+                XCTAssertEqual(
+                    URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?
+                        .queryItems?.first?.value,
+                    "refresh_token"
+                )
+                return Self.response(
+                    request: request,
+                    status: 200,
+                    json: Self.tokenJSON(
+                        userID: userID,
+                        accessToken: "rotated-access-token",
+                        refreshToken: "rotated-refresh-token",
+                        expiresAt: now.addingTimeInterval(3_600)
+                    )
+                )
+            }
+            XCTAssertEqual(request.url?.path, "/auth/v1/user")
+            return Self.response(
+                request: request,
+                status: 200,
+                json: ["id": userID.uuidString]
+            )
+        }
+        let client = try makeClient(store: store, now: { now })
+
+        let result = try await client.restoreSession()
+        guard case let .restored(refreshed) = result else {
+            return XCTFail("Near-expiry session must refresh")
+        }
+
+        XCTAssertEqual(refreshed.accessToken, "rotated-access-token")
+        XCTAssertEqual(refreshed.refreshToken, "rotated-refresh-token")
+        XCTAssertEqual(requestCount, 2)
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                SecureSupabaseSession.self,
+                from: XCTUnwrap(store.data)
+            ),
+            refreshed
+        )
+    }
+
+    func testExpiredAccessTokenWithValidRefreshTokenRecovers() async throws {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let store = InMemorySecureSessionStore()
+        store.data = try JSONEncoder().encode(
+            storedSession(expiresAt: now.addingTimeInterval(-1))
+        )
+        var requestCount = 0
+        AuthMockURLProtocol.handler = { [userID] request in
+            requestCount += 1
+            if request.url?.path == "/auth/v1/token" {
+                return Self.response(
+                    request: request,
+                    status: 200,
+                    json: Self.tokenJSON(
+                        userID: userID,
+                        accessToken: "fresh-access-token",
+                        refreshToken: "fresh-refresh-token",
+                        expiresAt: now.addingTimeInterval(3_600)
+                    )
+                )
+            }
+            return Self.response(
+                request: request,
+                status: 200,
+                json: ["id": userID.uuidString]
+            )
+        }
+        let client = try makeClient(store: store, now: { now })
+
+        guard case let .restored(session) = try await client.restoreSession()
+        else {
+            return XCTFail("Expired access token must recover with valid refresh")
+        }
+
+        XCTAssertEqual(session.accessToken, "fresh-access-token")
+        XCTAssertEqual(requestCount, 2)
+    }
+
+    func testRefreshWhileOfflinePreservesStoredRetryMaterial() async throws {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let store = InMemorySecureSessionStore()
+        let originalData = try JSONEncoder().encode(
+            storedSession(expiresAt: now.addingTimeInterval(30))
+        )
+        store.data = originalData
+        var requestCount = 0
+        AuthMockURLProtocol.handler = { _ in
+            requestCount += 1
+            throw URLError(.notConnectedToInternet)
+        }
+        let client = try makeClient(store: store, now: { now })
+
+        let result = try await client.restoreSession()
+
+        XCTAssertEqual(
+            result,
+            .offline(lastKnownIdentity: UserIdentity(userID: userID))
+        )
+        XCTAssertEqual(requestCount, 1)
+        XCTAssertEqual(store.data, originalData)
+    }
+
+    func testDeniedRefreshExpiresSessionWithoutRetryStorm() async throws {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let store = InMemorySecureSessionStore()
+        store.data = try JSONEncoder().encode(
+            storedSession(expiresAt: now.addingTimeInterval(30))
+        )
+        var requestCount = 0
+        AuthMockURLProtocol.handler = { request in
+            requestCount += 1
+            return Self.response(request: request, status: 401, json: [:])
+        }
+        let client = try makeClient(store: store, now: { now })
+
+        let result = try await client.restoreSession()
+
+        XCTAssertEqual(
+            result,
+            .expired(lastKnownIdentity: UserIdentity(userID: userID))
+        )
+        XCTAssertEqual(requestCount, 1)
+        XCTAssertNil(store.data)
+    }
+
+    func testStaleAccessTokenRefreshesOnceThenVerifies() async throws {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let store = InMemorySecureSessionStore()
+        store.data = try JSONEncoder().encode(
+            storedSession(expiresAt: now.addingTimeInterval(3_600))
+        )
+        var requestCount = 0
+        AuthMockURLProtocol.handler = { [userID] request in
+            requestCount += 1
+            switch requestCount {
+            case 1:
+                XCTAssertEqual(request.url?.path, "/auth/v1/user")
+                return Self.response(request: request, status: 401, json: [:])
+            case 2:
+                XCTAssertEqual(request.url?.path, "/auth/v1/token")
+                return Self.response(
+                    request: request,
+                    status: 200,
+                    json: Self.tokenJSON(
+                        userID: userID,
+                        accessToken: "refreshed-access-token",
+                        refreshToken: "refreshed-refresh-token",
+                        expiresAt: now.addingTimeInterval(3_600)
+                    )
+                )
+            default:
+                XCTAssertEqual(request.url?.path, "/auth/v1/user")
+                return Self.response(
+                    request: request,
+                    status: 200,
+                    json: ["id": userID.uuidString]
+                )
+            }
+        }
+        let client = try makeClient(store: store, now: { now })
+
+        guard case let .restored(session) = try await client.restoreSession()
+        else {
+            return XCTFail("Stale access token must use one refresh recovery")
+        }
+
+        XCTAssertEqual(session.accessToken, "refreshed-access-token")
+        XCTAssertEqual(requestCount, 3)
+    }
+
+    func testStaleAccessThenOfflineRefreshPreservesStoredRetryMaterial()
+        async throws {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let store = InMemorySecureSessionStore()
+        let originalData = try JSONEncoder().encode(
+            storedSession(expiresAt: now.addingTimeInterval(3_600))
+        )
+        store.data = originalData
+        var requestCount = 0
+        AuthMockURLProtocol.handler = { request in
+            requestCount += 1
+            if requestCount == 1 {
+                XCTAssertEqual(request.url?.path, "/auth/v1/user")
+                return Self.response(request: request, status: 401, json: [:])
+            }
+            XCTAssertEqual(request.url?.path, "/auth/v1/token")
+            throw URLError(.notConnectedToInternet)
+        }
+        let client = try makeClient(store: store, now: { now })
+
+        let result = try await client.restoreSession()
+
+        XCTAssertEqual(
+            result,
+            .offline(lastKnownIdentity: UserIdentity(userID: userID))
+        )
+        XCTAssertEqual(requestCount, 2)
+        XCTAssertEqual(store.data, originalData)
+    }
+
+    func testZeroUserIDTokenResponseIsRejectedAndNotPersisted() async throws {
+        let store = InMemorySecureSessionStore()
+        AuthMockURLProtocol.handler = { request in
+            Self.response(
+                request: request,
+                status: 200,
+                json: Self.tokenJSON(
+                    userID: UUID(
+                        uuidString: "00000000-0000-0000-0000-000000000000"
+                    )!
+                )
+            )
+        }
+        let client = try makeClient(store: store)
+
+        do {
+            _ = try await client.signInWithApple(
+                identityToken: "apple-id-token",
+                rawNonce: "raw-nonce"
+            )
+            XCTFail("Zero user UUID must fail closed")
+        } catch let failure as WayTaskAuthenticationFailure {
+            XCTAssertEqual(failure, .invalidResponse)
+        }
+
+        XCTAssertNil(store.data)
+    }
+
+    func testVerifiedSubjectMismatchFailsClosedAndClearsSession() async throws {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let store = InMemorySecureSessionStore()
+        store.data = try JSONEncoder().encode(
+            storedSession(expiresAt: now.addingTimeInterval(3_600))
+        )
+        AuthMockURLProtocol.handler = { request in
+            Self.response(
+                request: request,
+                status: 200,
+                json: ["id": UUID().uuidString]
+            )
+        }
+        let client = try makeClient(store: store, now: { now })
+
+        do {
+            _ = try await client.restoreSession()
+            XCTFail("Verified subject mismatch must fail closed")
+        } catch let failure as WayTaskAuthenticationFailure {
+            XCTAssertEqual(failure, .invalidResponse)
+        }
+
+        XCTAssertNil(store.data)
+    }
+
+    func testRefreshSubjectMismatchFailsClosedAndClearsSession() async throws {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let store = InMemorySecureSessionStore()
+        store.data = try JSONEncoder().encode(
+            storedSession(expiresAt: now.addingTimeInterval(30))
+        )
+        AuthMockURLProtocol.handler = { request in
+            Self.response(
+                request: request,
+                status: 200,
+                json: Self.tokenJSON(
+                    userID: UUID(),
+                    expiresAt: now.addingTimeInterval(3_600)
+                )
+            )
+        }
+        let client = try makeClient(store: store, now: { now })
+
+        do {
+            _ = try await client.restoreSession()
+            XCTFail("Refresh subject mismatch must fail closed")
+        } catch let failure as WayTaskAuthenticationFailure {
+            XCTAssertEqual(failure, .invalidResponse)
+        }
+
+        XCTAssertNil(store.data)
+    }
+
+    func testProtectedRequestUnauthorizedClearsSessionAndRequiresReauth()
+        async throws {
+        let store = InMemorySecureSessionStore()
+        let session = storedSession(environment: .staging)
+        store.data = try JSONEncoder().encode(session)
+        AuthMockURLProtocol.handler = { request in
+            Self.response(request: request, status: 401, json: [:])
+        }
+        let client = try makeClient(store: store)
+
+        do {
+            try await client.saveDisplayName(
+                "Safe Name",
+                locale: "he-IL",
+                session: session
+            )
+            XCTFail("Unauthorized protected request must require reauth")
+        } catch let failure as WayTaskAuthenticationFailure {
+            XCTAssertEqual(failure, .sessionExpired)
+        }
+
+        XCTAssertNil(store.data)
+    }
+
+    func testProtectedRequestForbiddenKeepsValidSession() async throws {
+        let store = InMemorySecureSessionStore()
+        let session = storedSession(environment: .staging)
+        store.data = try JSONEncoder().encode(session)
+        AuthMockURLProtocol.handler = { request in
+            Self.response(request: request, status: 403, json: [:])
+        }
+        let client = try makeClient(store: store)
+
+        do {
+            try await client.saveDisplayName(
+                "Safe Name",
+                locale: "he-IL",
+                session: session
+            )
+            XCTFail("RLS denial must remain permission denied")
+        } catch let failure as WayTaskAuthenticationFailure {
+            XCTAssertEqual(failure, .permissionDenied)
+        }
+
+        XCTAssertNotNil(store.data)
+    }
+
     func testProfileTextIsEncodedAsJSONDataNotURLOrSQLSyntax() async throws {
         let store = InMemorySecureSessionStore()
         var capturedRequest: URLRequest?
@@ -155,7 +545,10 @@ final class SupabaseStagingAuthClientTests: XCTestCase {
         }
     }
 
-    private func makeClient(store: InMemorySecureSessionStore) throws
+    private func makeClient(
+        store: InMemorySecureSessionStore,
+        now: @escaping () -> Date = Date.init
+    ) throws
         -> SupabaseStagingAuthClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [AuthMockURLProtocol.self]
@@ -166,31 +559,39 @@ final class SupabaseStagingAuthClientTests: XCTestCase {
                 publishableKey: "sb_publishable_staging_test_value"
             ),
             sessionStore: store,
-            urlSession: URLSession(configuration: configuration)
+            urlSession: URLSession(configuration: configuration),
+            now: now
         )
     }
 
     private func storedSession(
-        environment: WayTaskCloudEnvironment
+        environment: WayTaskCloudEnvironment = .staging,
+        projectOrigin: String? = nil,
+        expiresAt: Date = Date().addingTimeInterval(3_600)
     ) -> SecureSupabaseSession {
         SecureSupabaseSession(
             environment: environment,
-            projectOrigin: environment == .staging
+            projectOrigin: projectOrigin ?? (environment == .staging
                 ? "https://staging.invalid"
-                : "http://127.0.0.1:54321",
+                : "http://127.0.0.1:54321"),
             userID: userID,
             accessToken: "test-access-token",
             refreshToken: "test-refresh-token",
-            expiresAt: Date().addingTimeInterval(3_600)
+            expiresAt: expiresAt
         )
     }
 
-    private static func tokenJSON(userID: UUID) -> [String: Any] {
+    private static func tokenJSON(
+        userID: UUID,
+        accessToken: String = "test-access-token",
+        refreshToken: String = "test-refresh-token",
+        expiresAt: Date = Date().addingTimeInterval(3_600)
+    ) -> [String: Any] {
         [
-            "access_token": "test-access-token",
-            "refresh_token": "test-refresh-token",
+            "access_token": accessToken,
+            "refresh_token": refreshToken,
             "expires_in": 3_600,
-            "expires_at": Date().addingTimeInterval(3_600).timeIntervalSince1970,
+            "expires_at": expiresAt.timeIntervalSince1970,
             "token_type": "bearer",
             "user": ["id": userID.uuidString]
         ]

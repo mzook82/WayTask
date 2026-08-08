@@ -216,10 +216,55 @@ final class StagingAuthenticationTests: XCTestCase {
         XCTAssertEqual(auth.lastProfileOwner, userA)
     }
 
+    func testProtectedRequestRevocationExpiresAccountAndPreservesOwnership()
+        async {
+        let auth = MockSupabaseAuth(userID: userA)
+        let diagnostics = DiagnosticsSpy()
+        let controller = makeController(
+            auth: auth,
+            secureAIEnabled: true,
+            diagnostics: diagnostics
+        )
+        await controller.signInWithApple()
+        XCTAssertNotNil(controller.secureAIAccessToken())
+        auth.profileWriteFailure = .sessionExpired
+
+        await controller.saveDisplayName("Safe Name")
+
+        XCTAssertEqual(controller.snapshot.state, .sessionExpired)
+        XCTAssertEqual(controller.lastFailure, .sessionExpired)
+        XCTAssertEqual(
+            controller.snapshot.localDataOwnership,
+            .migrationPending(dataSetID: dataSetID, targetUserID: userA)
+        )
+        XCTAssertNil(controller.secureAIAccessToken())
+        XCTAssertTrue(diagnostics.events.contains(.sessionExpired))
+    }
+
+    func testPermissionDeniedDoesNotMisclassifyValidSessionAsExpired() async {
+        let auth = MockSupabaseAuth(userID: userA)
+        let controller = makeController(auth: auth)
+        await controller.signInWithApple()
+        auth.profileWriteFailure = .permissionDenied
+
+        await controller.saveDisplayName("Safe Name")
+
+        XCTAssertEqual(
+            controller.snapshot.state,
+            .signedInLocalDataNotBackedUp
+        )
+        XCTAssertEqual(controller.lastFailure, .permissionDenied)
+        XCTAssertEqual(
+            controller.snapshot.localDataOwnership,
+            .migrationPending(dataSetID: dataSetID, targetUserID: userA)
+        )
+    }
+
     private func makeController(
         apple: MockAppleProvider? = nil,
         auth: MockSupabaseAuth,
-        secureAIEnabled: Bool = false
+        secureAIEnabled: Bool = false,
+        diagnostics: DiagnosticsSpy = DiagnosticsSpy()
     ) -> StagingAccountController {
         let status = WayTaskCloudConfiguration.resolve(values: [
             WayTaskCloudConfiguration.environmentKey: "staging",
@@ -241,7 +286,7 @@ final class StagingAuthenticationTests: XCTestCase {
             ),
             appleProvider: apple ?? MockAppleProvider(),
             authProvider: auth,
-            diagnostics: DiagnosticsSpy(),
+            diagnostics: diagnostics,
             internalStagingUIEnabled: true
         )
     }
@@ -292,6 +337,7 @@ private final class MockSupabaseAuth: SupabaseAuthenticationProviding {
     private(set) var profileWriteCount = 0
     private(set) var lastDisplayName: String?
     private(set) var lastProfileOwner: UUID?
+    var profileWriteFailure: WayTaskAuthenticationFailure?
 
     init(userID: UUID) {
         session = SecureSupabaseSession(
@@ -327,6 +373,7 @@ private final class MockSupabaseAuth: SupabaseAuthenticationProviding {
         session: SecureSupabaseSession
     ) async throws {
         profileWriteCount += 1
+        if let profileWriteFailure { throw profileWriteFailure }
         lastDisplayName = displayName
         lastProfileOwner = session.userID
     }

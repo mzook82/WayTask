@@ -306,6 +306,10 @@ protocol SupabaseAuthenticationProviding: AnyObject {
 
 final class SupabaseStagingAuthClient: SupabaseAuthenticationProviding,
     @unchecked Sendable {
+    private static let zeroUUID = UUID(
+        uuidString: "00000000-0000-0000-0000-000000000000"
+    )!
+
     private let configuration: WayTaskSupabaseConfiguration
     private let sessionStore: SecureSessionStoring
     private let urlSession: URLSession
@@ -363,11 +367,11 @@ final class SupabaseStagingAuthClient: SupabaseAuthenticationProviding,
         do {
             stored = try decoder.decode(SecureSupabaseSession.self, from: data)
         } catch {
-            try? sessionStore.delete()
+            try deleteStoredSession()
             throw WayTaskAuthenticationFailure.secureStorageUnavailable
         }
         guard matchesCurrentConfiguration(stored) else {
-            try? sessionStore.delete()
+            try deleteStoredSession()
             throw WayTaskAuthenticationFailure.invalidConfiguration
         }
 
@@ -384,11 +388,19 @@ final class SupabaseStagingAuthClient: SupabaseAuthenticationProviding,
                 try await verify(candidate)
             }
             return .restored(candidate)
-        } catch WayTaskAuthenticationFailure.offline {
-            return .offline(lastKnownIdentity: identity)
-        } catch WayTaskAuthenticationFailure.sessionExpired {
-            try? sessionStore.delete()
-            return .expired(lastKnownIdentity: identity)
+        } catch let failure as WayTaskAuthenticationFailure {
+            switch failure {
+            case .offline:
+                return .offline(lastKnownIdentity: identity)
+            case .sessionExpired:
+                try deleteStoredSession()
+                return .expired(lastKnownIdentity: identity)
+            case .invalidResponse, .invalidConfiguration:
+                try deleteStoredSession()
+                throw failure
+            default:
+                throw failure
+            }
         }
     }
 
@@ -409,11 +421,7 @@ final class SupabaseStagingAuthClient: SupabaseAuthenticationProviding,
             networkFailure = .serviceUnavailable
         }
 
-        do {
-            try sessionStore.delete()
-        } catch {
-            throw WayTaskAuthenticationFailure.secureStorageUnavailable
-        }
+        try deleteStoredSession()
         if let networkFailure { throw networkFailure }
     }
 
@@ -484,7 +492,7 @@ final class SupabaseStagingAuthClient: SupabaseAuthenticationProviding,
         guard !response.accessToken.isEmpty,
               !response.refreshToken.isEmpty,
               response.tokenType.lowercased() == "bearer",
-              response.user.id != UUID(),
+              response.user.id != Self.zeroUUID,
               response.accessToken.unicodeScalars.allSatisfy({
                   !CharacterSet.whitespacesAndNewlines.contains($0) &&
                       !CharacterSet.controlCharacters.contains($0)
@@ -513,6 +521,14 @@ final class SupabaseStagingAuthClient: SupabaseAuthenticationProviding,
     private func persist(_ session: SecureSupabaseSession) throws {
         do {
             try sessionStore.write(try encoder.encode(session))
+        } catch {
+            throw WayTaskAuthenticationFailure.secureStorageUnavailable
+        }
+    }
+
+    private func deleteStoredSession() throws {
+        do {
+            try sessionStore.delete()
         } catch {
             throw WayTaskAuthenticationFailure.secureStorageUnavailable
         }
@@ -621,9 +637,12 @@ final class SupabaseStagingAuthClient: SupabaseAuthenticationProviding,
         case 200...299:
             return data
         case 401:
-            throw operation == .restore
-                ? WayTaskAuthenticationFailure.sessionExpired
-                : WayTaskAuthenticationFailure.permissionDenied
+            if operation.invalidatesSessionOnUnauthorized {
+                try deleteStoredSession()
+            }
+            throw operation == .signIn
+                ? WayTaskAuthenticationFailure.permissionDenied
+                : WayTaskAuthenticationFailure.sessionExpired
         case 403:
             throw WayTaskAuthenticationFailure.permissionDenied
         case 429:
@@ -650,6 +669,10 @@ final class SupabaseStagingAuthClient: SupabaseAuthenticationProviding,
         case restore
         case signOut
         case profileWrite
+
+        var invalidatesSessionOnUnauthorized: Bool {
+            self == .signOut || self == .profileWrite
+        }
     }
 }
 
@@ -825,7 +848,7 @@ final class StagingAccountController: ObservableObject {
                 diagnostics.record(.sessionExpired, failure: .sessionExpired)
             }
         } catch let failure as WayTaskAuthenticationFailure {
-            lastFailure = failure
+            handleAuthenticatedOperationFailure(failure)
         } catch {
             lastFailure = .serviceUnavailable
         }
@@ -904,7 +927,7 @@ final class StagingAccountController: ObservableObject {
             profileValidationError = validation
             lastFailure = nil
         } catch let failure as WayTaskAuthenticationFailure {
-            lastFailure = failure
+            handleAuthenticatedOperationFailure(failure)
         } catch {
             lastFailure = .serviceUnavailable
         }
@@ -953,6 +976,7 @@ final class StagingAccountController: ObservableObject {
         return secureSession.accessToken
     }
 
+    #if DEBUG
     func markCurrentSessionExpiredForTesting() {
         guard let secureSession else { return }
         self.secureSession = nil
@@ -963,6 +987,7 @@ final class StagingAccountController: ObservableObject {
         lastFailure = .sessionExpired
         diagnostics.record(.sessionExpired, failure: .sessionExpired)
     }
+    #endif
 
     private var canUseAuthProvider: Bool {
         internalStagingUIEnabled &&
@@ -980,6 +1005,32 @@ final class StagingAccountController: ObservableObject {
         publishSnapshot()
         lastFailure = nil
         scheduleExpiration(for: session)
+    }
+
+    private func handleAuthenticatedOperationFailure(
+        _ failure: WayTaskAuthenticationFailure
+    ) {
+        switch failure {
+        case .sessionExpired, .secureStorageUnavailable,
+             .invalidConfiguration, .invalidResponse:
+            guard let session = secureSession else {
+                lastFailure = failure
+                return
+            }
+            secureSession = nil
+            expirationTask?.cancel()
+            expirationTask = nil
+            suggestedDisplayName = nil
+            savedDisplayName = nil
+            authority.restoreExpiredSession(
+                identity: UserIdentity(userID: session.userID)
+            )
+            publishSnapshot()
+            lastFailure = failure
+            diagnostics.record(.sessionExpired, failure: failure)
+        default:
+            lastFailure = failure
+        }
     }
 
     private func publishSnapshot() {

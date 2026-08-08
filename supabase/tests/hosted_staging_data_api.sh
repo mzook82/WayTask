@@ -136,6 +136,31 @@ assert_jwks() {
     record_pass "${label}"
 }
 
+assert_apple_only_auth() {
+    local label="$1"
+    local response
+    response="$(curl -sS -w $'\n__WAYTASK_STATUS__%{http_code}' \
+        -H "apikey: ${publishable_key}" \
+        "${auth_url}/settings")"
+    split_response "${response}"
+    if [[ "${response_status}" != "200" ]] ||
+        ! printf '%s' "${response_body}" | jq -e \
+            '(.external | type == "object") and
+             (.external.apple == true) and
+             ([.external | to_entries[] |
+               select(.key != "apple" and .value == true)] | length == 0)' \
+            >/dev/null; then
+        local enabled_providers
+        enabled_providers="$(printf '%s' "${response_body}" | jq -r \
+            '[.external | to_entries[] | select(.value == true) | .key] |
+             join(",")' 2>/dev/null || printf 'unreadable')"
+        echo "FAIL ${label}: enabled providers=${enabled_providers}" >&2
+        exit 1
+    fi
+    unset response response_body response_status
+    record_pass "${label}"
+}
+
 assert_status \
     "gateway rejects a request without an API key" \
     "401" \
@@ -211,6 +236,28 @@ assert_status \
     -H "Authorization: Bearer malformed.jwt.value" \
     "${base_url}/profiles?select=id&limit=1"
 
+# Deliberately fabricated public test strings. They contain no credential and
+# are safe to keep in source. The first requests alg=none; the second has a
+# structurally valid JWT shape but a signature/kid that Staging never issued.
+unsigned_token="eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJlYWFhYWFhYS1hYWFhLTRhYWEtOGFhYS1hYWFhYWFhYWFhYWEiLCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImF1ZCI6ImF1dGhlbnRpY2F0ZWQiLCJleHAiOjQxMDI0NDQ4MDB9."
+forged_token="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Im5vdC1hLXN0YWdpbmcta2V5In0.eyJzdWIiOiJlYWFhYWFhYS1hYWFhLTRhYWEtOGFhYS1hYWFhYWFhYWFhYWEiLCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImF1ZCI6ImF1dGhlbnRpY2F0ZWQiLCJleHAiOjQxMDI0NDQ4MDB9.aW52YWxpZC1zaWduYXR1cmU"
+
+assert_status \
+    "unsigned authenticated-claim JWT is rejected by hosted gateway" \
+    "401" \
+    -H "apikey: ${publishable_key}" \
+    -H "Authorization: Bearer ${unsigned_token}" \
+    "${base_url}/profiles?select=id&limit=1"
+
+assert_status \
+    "forged signed-shape authenticated JWT is rejected by hosted gateway" \
+    "401" \
+    -H "apikey: ${publishable_key}" \
+    -H "Authorization: Bearer ${forged_token}" \
+    "${base_url}/profiles?select=id&limit=1"
+
+unset unsigned_token forged_token
+
 assert_status \
     "private normalization RPC is absent from public API" \
     "404" \
@@ -231,6 +278,9 @@ assert_status \
     "401" \
     -H "apikey: ${publishable_key}" \
     "${auth_url}/user"
+
+assert_apple_only_auth \
+    "hosted Auth exposes Apple as its only enabled sign-in provider"
 
 unset publishable_key project_ref base_url auth_url
 printf 'WT-032B hosted Staging Data API validation passed: %d assertions.\n' \

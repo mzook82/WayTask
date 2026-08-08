@@ -40,13 +40,19 @@ not linked, queried, migrated, or configured.
   `20260808000200` revoked that unnecessary access from `public`, `anon`, and
   `authenticated`; the hosted assertions prove those grants are now absent.
 
-The advisor now reports one deliberate warning:
+At WT-032B closure, the advisor reported one deliberate warning:
 `public.consume_ai_recognition_quota(uuid, text)` is an authenticated-callable
 SECURITY DEFINER RPC. This is the reviewed server quota boundary: it derives the
 user from `auth.uid()`, does not accept an owner UUID, and has its own constraint
 and idempotency suite. It does not invoke Gemini. Secure AI's independent client
 and server switches remain OFF, so this warning is accepted for WT-032B rather
 than weakening the quota authority or enabling AI.
+
+The WT-032B.1 re-audit additionally reports leaked-password protection disabled.
+Because the public Auth settings currently expose the unused Email provider,
+the immediate correction is to disable Email and preserve Apple-only Staging
+Auth. If the advisor warning remains after Email is disabled, it documents an
+inactive password feature rather than authorizing password authentication.
 
 ## Subsequent real-device authentication proof
 
@@ -81,6 +87,28 @@ Local sign-out persistence is real-device proven, but it does not independently
 prove that the server rejected a previously issued refresh session after an
 administrative revocation.
 
+## WT-032B.1 hosted extension
+
+On 2026-08-08, the publishable-key HTTPS/Auth gate was extended without using a
+real user token or privileged credential. Two additional assertions passed:
+
+- an unsigned `alg=none` JWT carrying fabricated authenticated claims was
+  rejected;
+- a structurally valid signed-shape JWT with an unknown key/signature was
+  rejected.
+
+The extension therefore passes 17 negative/discovery/Data API assertions. An
+eighteenth Apple-only provider assertion currently fails: the public Staging
+Auth settings expose `apple` and `email`. The unused Email provider must be
+disabled manually in WayTask Staging and the gate rerun. This is configuration
+evidence, not a password implementation in iOS.
+
+The extension also adds local client proof for bounded refresh, offline retry,
+denied refresh, protected-request revocation recovery, project-origin mismatch,
+and server-verified subject mismatch. It still does not claim live signed A/B,
+a valid foreign-project token, natural hosted expiration, or administrative
+revocation. See [WT-032B.1](../WT-032B.1/README.md).
+
 ## Completed external setup
 
 - Apple is enabled in **WayTask Staging** with native client ID
@@ -94,8 +122,10 @@ administrative revocation.
 
 ## Deferred external actions
 
-- Create a second disposable Staging-only identity only in the separately
-  approved signed-session adversarial follow-up; do not import ProductState data.
+- Disable the unused Email provider in **WayTask Staging**; preserve Apple and
+  the native client ID. The public provider-policy check must then pass.
+- Create a second disposable Staging-only identity only after separately
+  approving the real Apple action; do not import ProductState data.
 - Inject short-lived A/B access tokens only through an approved ephemeral secret
   runner, never Git, chat, logs, reports, plist, or command arguments. No
   service-role key belongs in iOS.

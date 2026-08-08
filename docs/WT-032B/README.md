@@ -224,8 +224,11 @@ and not migration behavior for a non-empty dataset.
   identity validation bypass attempts.
 - 15/15 live HTTPS/Auth assertions cover anonymous denial, malformed/no-session
   JWT boundaries, Data API exposure, and linked-project issuer/JWKS discovery.
-- The security-advisor hardening migration is applied; its sole remaining
-  authenticated quota-RPC warning is intentional while Secure AI stays OFF.
+- The security-advisor hardening migration is applied. WT-032B originally
+  accepted the authenticated quota-RPC warning while Secure AI stayed OFF.
+  WT-032B.1's current re-audit also reports leaked-password protection disabled
+  and finds the unused Email provider enabled; the Apple-only provider gate now
+  requires disabling Email.
 
 ### Proven locally
 
@@ -249,6 +252,13 @@ and not migration behavior for a non-empty dataset.
 - Apple cancellation, offline restoration, and preservation of a non-empty
   Staging Guest dataset were not part of the recorded final device run; their
   implementation contracts remain locally tested.
+
+WT-032B.1 has since added bounded refresh/revocation recovery, strict stored
+project binding, subject-mismatch failure, and hosted unsigned/forged JWT
+denial. Those additions do not convert the remaining real A/B, valid foreign-
+project, hosted expiration, or administrative-revocation gates into proof. Its
+current status and external prerequisites are recorded in
+[WT-032B.1](../WT-032B.1/README.md).
 
 ## Observability and privacy
 
@@ -306,12 +316,11 @@ cross-account retargeting.
 - Existing historical Gemini credential rotation remains an authorized Google
   Cloud owner action described by WT-032A.1.
 
-The recommended next sprint is **WT-032B.1 — Staging Signed-Session Adversarial
-Closure**: use two disposable Staging-only identities and a secret-safe test
-runner to prove live A/B isolation, valid-token claim boundaries, expiration/
-refresh, server revocation, and wrong-project denial. Keep sync, migration,
-Secure AI, and Production OFF. Only after that gate should a separately approved
-Guest → Account migration sprint begin.
+The active follow-up is **WT-032B.1 — Staging Signed-Session Adversarial
+Closure**. Repository-side hardening is implemented, but its external gates are
+still blocking. Only after [WT-032B.1](../WT-032B.1/README.md) records live A/B,
+valid foreign-project denial, hosted refresh/expiration, and administrative
+revocation may a separately approved Guest → Account migration sprint begin.
 
 See [staging setup](STAGING_SETUP.md),
 [hosted Staging validation](REMOTE_STAGING_VALIDATION.md), and

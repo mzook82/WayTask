@@ -74,6 +74,7 @@ Discover nearby shopping opportunities and future recommendations.
 |----------|-------------|
 | [WT-032A](WT-032A/README.md) | Local/staging-ready schema, RLS, sync, migration, and Secure-AI prerequisites |
 | [WT-032B](WT-032B/README.md) | Staging-only Supabase Auth and native Sign in with Apple foundation |
+| [WT-032B.1](WT-032B.1/README.md) | Signed-session hardening and the remaining external migration gates |
 
 ---
 

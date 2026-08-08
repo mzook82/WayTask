@@ -51,6 +51,11 @@ physical-device proof of preserving a non-empty Guest dataset.
       and Product Knowledge physical-device smoke matrix; the 880-test local
       non-performance suite passed separately.
 
+WT-032B.1 has not added new physical-device evidence. Its refresh/revocation and
+project/subject hardening is locally tested, while real A/B switching, hosted
+expiration, and administrative revocation still require the separately approved
+[external signed-session checklist](../WT-032B.1/EXTERNAL_SIGNED_SESSION_QA.md).
+
 Capture only pass/fail, app version/build, device/OS, sanitized diagnostic code,
 and staging project reference suffix. Do not capture identity tokens, codes,
 session tokens, nonce/state, email, name, or user dataset content.
