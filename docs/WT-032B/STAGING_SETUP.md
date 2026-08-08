@@ -60,16 +60,21 @@ and records migration history:
 
 ## Remote security verification
 
-Use an externally configured `pg_service` named `waytask_staging`; do not paste a
-database password into commands or logs. The SQL suites are transactional and
-roll back their synthetic users/rows.
+The approved linked-project gate is transactional and rolls back its synthetic
+users/rows:
 
 ```sh
-psql service=waytask_staging --set ON_ERROR_STOP=on --file supabase/tests/authorization.sql
-psql service=waytask_staging --set ON_ERROR_STOP=on --file supabase/tests/constraints.sql
-psql service=waytask_staging --set ON_ERROR_STOP=on --file supabase/tests/identity_inputs.sql
-psql service=waytask_staging --set ON_ERROR_STOP=on --file supabase/tests/ai_proxy_rate_limit.sql
+supabase db query --linked --file supabase/tests/hosted_staging_validation.sql
+bash supabase/tests/hosted_staging_data_api.sh
+supabase db advisors --linked --type security --level warn \
+  --fail-on none --output json
 ```
+
+The Data API script refuses any linked project whose name is not exactly
+`WayTask Staging`, uses only the client-safe publishable key in process memory,
+and never requests a service-role key. The current expected assertion totals are
+56 hosted database assertions and 15 anonymous/malformed-token/Auth discovery
+HTTPS assertions.
 
 Confirm all expected public tables have both RLS and FORCE RLS, private/admin
 schemas have no `anon`/`authenticated` access, anonymous private reads/writes
@@ -89,6 +94,9 @@ Then test through the hosted HTTPS gateways with synthetic staging accounts:
 
 Record sanitized request IDs/statuses and assertion counts only. Never capture
 JWTs, emails, names, or row contents in test reports.
+
+See [the executed hosted validation report](REMOTE_STAGING_VALIDATION.md) for
+the proven boundary and the remaining real-session prerequisites.
 
 ## Build and device gate
 

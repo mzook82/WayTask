@@ -1,8 +1,9 @@
 # WT-032B — Supabase Staging + Sign in with Apple Foundation
 
-Status: implemented and locally proven; remote staging and physical-device
-Apple authorization remain external gates. Production accounts, sync,
-migration, and Secure AI remain disabled.
+Status: implemented and locally proven. Hosted Staging schema/RLS and anonymous
+Data API validation are proven; real Apple-authenticated sessions and
+physical-device authorization remain external gates. Production accounts,
+sync, migration, and Secure AI remain disabled.
 
 ## Baseline audit
 
@@ -173,9 +174,14 @@ Secure-AI gating, typed validation, fixed Supabase endpoints, JSON profile write
 wrong-environment token rejection, 401/revocation behavior, and provider-error
 redaction.
 
-Real JWT signature, issuer/audience, stale/revoked token enforcement at the Auth
-gateway and PostgREST ingress must be rerun against the actual staging project;
-local unit/SQL tests do not claim remote-provider proof.
+Hosted Staging additionally passed 56 rollback-only database assertions and 15
+live publishable-key Data API/Auth assertions. This proves deployed schema/RLS,
+database-role User A/User B isolation, anonymous gateway denial, malformed JWT
+denial, catalog exposure, and database identity validation. It does not claim a
+real Apple/Supabase session: Apple is not yet enabled in Staging and no real test
+users/tokens were created. Real JWT signature, issuer/audience, stale/revoked
+session, and signed-token A/B ingress proof remain at that external gate. See
+[hosted Staging validation](REMOTE_STAGING_VALIDATION.md).
 
 ## Observability and privacy
 
@@ -217,10 +223,12 @@ cross-account retargeting.
 
 ## Remaining risks
 
-- A real staging project, Auth configuration, Apple App ID capability,
-  provisioning profile, and physical-device authorization are not repository
-  operations and remain unproven.
-- Remote Auth/JWT/audience/revocation and hosted RLS tests remain unexecuted.
+- The dedicated Staging project and deployed database are proven, but Apple Auth
+  remains disabled, client publishable configuration is absent, and the Apple
+  App ID/provisioning capability still requires external confirmation.
+- Hosted schema/RLS and anonymous Data API proof passed. Real signed-session
+  Auth/JWT issuer/audience/revocation and HTTPS User A/User B proof remain
+  unexecuted until two disposable Staging identities exist.
 - The ownership sidecar is a WT-032B guard, not the approved future sync ledger;
   the migration sprint must bind it transactionally to ProductState backup and
   canonical manifest evidence.
@@ -231,4 +239,6 @@ cross-account retargeting.
 - Existing historical Gemini credential rotation remains an authorized Google
   Cloud owner action described by WT-032A.1.
 
-See [staging setup](STAGING_SETUP.md) and [physical-device QA](PHYSICAL_DEVICE_QA.md).
+See [staging setup](STAGING_SETUP.md),
+[hosted Staging validation](REMOTE_STAGING_VALIDATION.md), and
+[physical-device QA](PHYSICAL_DEVICE_QA.md).
