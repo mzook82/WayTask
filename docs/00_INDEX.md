@@ -68,6 +68,13 @@ Discover nearby shopping opportunities and future recommendations.
 | 30_ARCHITECTURE.md | Project architecture and design principles |
 | 70_DEVELOPMENT_GUIDE.md | Development workflow and coding standards |
 
+## Account and cloud security
+
+| Document | Description |
+|----------|-------------|
+| [WT-032A](WT-032A/README.md) | Local/staging-ready schema, RLS, sync, migration, and Secure-AI prerequisites |
+| [WT-032B](WT-032B/README.md) | Staging-only Supabase Auth and native Sign in with Apple foundation |
+
 ---
 
 ## 🤖 Artificial Intelligence

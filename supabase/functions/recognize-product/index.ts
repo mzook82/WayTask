@@ -27,7 +27,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   const trustedIPHeader = Deno.env.get("AI_TRUSTED_IP_HEADER") ?? "";
   if (
     !enabled ||
-    !["local", "development", "staging"].includes(environment) ||
+    !["local", "staging"].includes(environment) ||
     geminiKey.length < 16 ||
     publishableKey.length < 16 ||
     rateLimitSalt.length < 32 ||

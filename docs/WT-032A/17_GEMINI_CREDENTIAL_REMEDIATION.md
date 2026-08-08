@@ -186,7 +186,7 @@ that header and rejects client spoofing before the IP limit is trusted.
 
 Both client `WAYTASK_SECURE_AI_ENABLED` and server
 `AI_RECOGNITION_ENABLED` default OFF. The Function itself additionally accepts
-only local/development/staging environments. Logs contain only a fixed event,
+only local/staging environments. Logs contain only a fixed event,
 allowlisted outcome, duration, and provider response byte count. Raw images are
 transient request memory and are not retained by WayTask by default. Provider
 retention/training terms still require a staging legal/privacy review.

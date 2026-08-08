@@ -36,7 +36,7 @@ enum SecureAIRecognitionPolicy {
         guard case let .configured(cloud) = cloudStatus else {
             return .disabled
         }
-        guard cloud.environment != .production else {
+        guard cloud.environment == .local || cloud.environment == .staging else {
             return .invalid(.productionNotApproved)
         }
 
@@ -141,7 +141,9 @@ struct SecureAIProductRecognitionService: AIProductRecognitionServicing {
         session: URLSession = .shared,
         configurationStatus: SecureAIConfigurationStatus =
             SecureAIRecognitionPolicy.resolve(),
-        accessTokenProvider: @escaping AccessTokenProvider = { nil }
+        accessTokenProvider: @escaping AccessTokenProvider = {
+            StagingAccountController.shared.secureAIAccessToken()
+        }
     ) {
         self.session = session
         self.configurationStatus = configurationStatus

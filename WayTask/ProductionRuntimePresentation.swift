@@ -172,7 +172,9 @@ struct WayTaskProductionRuntimeView: View {
 
 private struct WayTaskProductionHomeView: View {
     @EnvironmentObject private var runtime: ProductStateRuntime
+    @EnvironmentObject private var account: StagingAccountController
     @Binding var selectedTab: WayTaskProductionTab
+    @State private var isShowingStagingAccount = false
 
     var body: some View {
         NavigationStack {
@@ -184,6 +186,9 @@ private struct WayTaskProductionHomeView: View {
                     )
 
                     heroCard
+                    if account.internalStagingUIEnabled {
+                        stagingAccountCard
+                    }
                     quickActions
                     shoppingLists
                     recentProducts
@@ -196,6 +201,56 @@ private struct WayTaskProductionHomeView: View {
             .navigationDestination(for: ProductStateProductID.self) { id in
                 WayTaskProductionProductDetailView(productID: id)
             }
+            .sheet(isPresented: $isShowingStagingAccount) {
+                StagingAccountView()
+                    .environmentObject(account)
+            }
+        }
+    }
+
+    private var stagingAccountCard: some View {
+        Button {
+            isShowingStagingAccount = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: account.snapshot.state == .guest
+                    ? "person.crop.circle.badge.plus"
+                    : "person.crop.circle.badge.checkmark")
+                    .font(.title2)
+                    .foregroundStyle(WayTaskDesign.accent)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Staging Account")
+                        .font(.headline)
+                        .foregroundStyle(WayTaskDesign.primaryText)
+                    Text(stagingAccountSummary)
+                        .font(.caption)
+                        .foregroundStyle(WayTaskDesign.secondaryText)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(WayTaskDesign.secondaryText)
+            }
+            .padding(16)
+            .wayTaskGlassCard()
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("staging-account-entry")
+    }
+
+    private var stagingAccountSummary: String {
+        switch account.snapshot.state {
+        case .guest: "Guest · local data only"
+        case .signingIn: "Signing in…"
+        case .sessionExpired: "Session expired · local data preserved"
+        case .recoverableSyncError: "Ownership protected · review required"
+        case .signedInLocalDataNotBackedUp,
+                .signedInInitialMigrationPending,
+                .signedInSynchronizationPaused:
+            "Signed in · migration not performed"
+        case .signedInSynchronizationActive:
+            "Signed in · sync remains unavailable"
+        case .accountDeletionPending:
+            "Account unavailable · local data preserved"
         }
     }
 

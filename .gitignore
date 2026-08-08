@@ -15,6 +15,7 @@ xcuserdata/
 # Logs
 *.log
 Secrets.xcconfig
+Secrets-Staging.xcconfig
 Secrets.plist
 .sentryclirc
 

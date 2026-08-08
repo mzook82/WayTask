@@ -1,0 +1,13 @@
+// Internal staging only. This configuration never falls back to Production.
+// Its separate App ID isolates Apple authorization from the Production bundle.
+PRODUCT_BUNDLE_IDENTIFIER = h.WayTask.staging
+SENTRY_DSN =
+WAYTASK_SUPABASE_ENVIRONMENT = staging
+WAYTASK_SUPABASE_URL =
+WAYTASK_SUPABASE_PUBLISHABLE_KEY =
+WAYTASK_CLOUD_ACCOUNTS_ENABLED = YES
+WAYTASK_CLOUD_SYNC_ENABLED = NO
+WAYTASK_CLOUD_MIGRATION_ENABLED = NO
+WAYTASK_SECURE_AI_ENABLED = NO
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) STAGING
+#include? "Secrets-Staging.xcconfig"

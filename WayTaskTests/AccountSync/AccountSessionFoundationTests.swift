@@ -46,6 +46,24 @@ final class AccountSessionFoundationTests: XCTestCase {
         )
     }
 
+    func testSigningInIsExplicitAndCancellationPreservesGuestOwnership() {
+        let authority = LocalAccountSessionAuthority(dataSetID: dataSetID)
+
+        authority.beginSignIn()
+        XCTAssertEqual(authority.currentSession.state, .signingIn)
+        XCTAssertEqual(
+            authority.currentSession.localDataOwnership,
+            .guestOnly(dataSetID: dataSetID)
+        )
+
+        authority.cancelSignInPreservingLocalData()
+        XCTAssertEqual(authority.currentSession.state, .guest)
+        XCTAssertEqual(
+            authority.currentSession.localDataOwnership,
+            .guestOnly(dataSetID: dataSetID)
+        )
+    }
+
     func testMigrationActivePauseErrorAndDeletionTransitionsAreExplicit() {
         let authority = signedInAuthority()
 

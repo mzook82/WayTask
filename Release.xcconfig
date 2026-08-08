@@ -1,5 +1,5 @@
 // Release build settings for WayTask.
-// Secrets.xcconfig is local-only and must not be committed.
+// Production cannot inherit any developer or staging credential override.
 SENTRY_DSN =
 WAYTASK_SUPABASE_ENVIRONMENT =
 WAYTASK_SUPABASE_URL =
@@ -8,4 +8,3 @@ WAYTASK_CLOUD_ACCOUNTS_ENABLED = NO
 WAYTASK_CLOUD_SYNC_ENABLED = NO
 WAYTASK_CLOUD_MIGRATION_ENABLED = NO
 WAYTASK_SECURE_AI_ENABLED = NO
-#include? "Secrets.xcconfig"

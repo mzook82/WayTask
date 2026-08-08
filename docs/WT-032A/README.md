@@ -26,3 +26,7 @@ Documents:
 
 Executable evidence lives under `supabase/tests/` and iOS contract tests live
 under `WayTaskTests/AccountSync/` and `WayTaskTests/AIRecognition/`.
+
+The subsequent staging-auth implementation is documented in
+[`docs/WT-032B/`](../WT-032B/README.md). It does not enable synchronization,
+migration, Secure AI, or Production accounts.

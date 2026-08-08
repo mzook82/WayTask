@@ -5,7 +5,7 @@
 | Environment | Purpose | Identity/data rule | Promotion |
 |---|---|---|---|
 | Local Supabase | migrations, constraints, RLS and app integration on developer machine/CI | synthetic users only; local ports from `config.toml` | reset from Git migrations |
-| Remote development/staging | integration, Auth provider sandbox, TestFlight-internal proof, load/restore drills | dedicated Supabase project and provider test tenants; no Production users/data | explicit reviewed staging deploy/link |
+| Remote staging | integration, Auth provider sandbox, TestFlight-internal proof, load/restore drills | dedicated Supabase project and provider test tenants; no Production users/data | explicit reviewed staging deploy/link |
 | Production | later real accounts and sync | separate organization/project, Auth providers, domains, backups, alerts and keys | separate manual/CI approval after go/no-go |
 
 No database or Auth data is cloned from Production into development. Test users
@@ -22,7 +22,7 @@ change is a new migration; an applied migration is immutable.
 
 The iOS build contract uses these Info/xcconfig keys:
 
-- `WAYTASK_SUPABASE_ENVIRONMENT`: local/development/staging/production;
+- `WAYTASK_SUPABASE_ENVIRONMENT`: local/staging/production;
 - `WAYTASK_SUPABASE_URL`: loopback HTTP(S) for local, HTTPS for remote;
 - `WAYTASK_SUPABASE_PUBLISHABLE_KEY`: client-safe publishable or legacy anon
   value only;

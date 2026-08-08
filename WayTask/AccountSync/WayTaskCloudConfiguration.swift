@@ -2,7 +2,6 @@ import Foundation
 
 enum WayTaskCloudEnvironment: String, CaseIterable, Codable, Sendable {
     case local
-    case development
     case staging
     case production
 }
@@ -38,6 +37,14 @@ enum WayTaskCloudConfigurationStatus: Equatable, Sendable {
     nonisolated var permitsCloudClientCreation: Bool {
         if case .configured = self { return true }
         return false
+    }
+
+    nonisolated var permitsStagingAuthentication: Bool {
+        guard case let .configured(configuration) = self else {
+            return false
+        }
+        return configuration.environment == .local ||
+            configuration.environment == .staging
     }
 }
 
@@ -119,7 +126,7 @@ enum WayTaskCloudConfiguration {
             else {
                 return .invalid(.nonLocalDevelopmentURL)
             }
-        case .development, .staging, .production:
+        case .staging, .production:
             guard scheme == "https" else {
                 return .invalid(.insecureRemoteURL)
             }
@@ -150,7 +157,7 @@ enum WayTaskCloudConfiguration {
         values: [String: String],
         configurationStatus: WayTaskCloudConfigurationStatus
     ) -> WayTaskCloudFeatureFlags {
-        guard configurationStatus.permitsCloudClientCreation else {
+        guard configurationStatus.permitsStagingAuthentication else {
             return .disabled
         }
         return WayTaskCloudFeatureFlags(

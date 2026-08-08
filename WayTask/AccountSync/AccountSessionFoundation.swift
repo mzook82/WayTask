@@ -12,6 +12,7 @@ struct UserIdentity: Equatable, Hashable, Sendable {
 
 enum AccountAuthenticationState: Equatable, Sendable {
     case guest
+    case signingIn
     case signedIn(identity: UserIdentity, expiresAt: Date?)
     case sessionExpired(lastKnownIdentity: UserIdentity)
     case deletionPending(identity: UserIdentity)
@@ -49,6 +50,7 @@ enum SyncLifecycleState: Equatable, Sendable {
 
 enum AccountSessionState: Equatable, Sendable {
     case guest
+    case signingIn
     case signedInLocalDataNotBackedUp
     case signedInInitialMigrationPending
     case signedInSynchronizationActive
@@ -68,6 +70,8 @@ struct AccountSessionSnapshot: Equatable, Sendable {
         switch (authentication, synchronization) {
         case (.guest, _):
             return .guest
+        case (.signingIn, _):
+            return .signingIn
         case (.sessionExpired, _):
             return .sessionExpired
         case (.deletionPending, _), (_, .accountDeletionPending):
@@ -102,6 +106,8 @@ protocol AccountSessionProviding: AnyObject {
 
 @MainActor
 protocol AccountSessionAuthorizing: AccountSessionProviding {
+    func beginSignIn()
+    func cancelSignInPreservingLocalData()
     func acceptVerifiedSession(
         identity: UserIdentity,
         expiresAt: Date?
@@ -111,16 +117,63 @@ protocol AccountSessionAuthorizing: AccountSessionProviding {
     func pauseSynchronization(_ reason: SyncPauseReason)
     func recordRecoverableSyncError(_ error: WayTaskAccountSyncError)
     func expireSession()
+    func restoreExpiredSession(identity: UserIdentity)
     func markAccountDeletionPending()
     func signOutPreservingLocalData()
+}
+
+protocol LocalDataOwnershipPersisting: AnyObject {
+    func save(_ ownership: LocalDataOwnershipState) throws
 }
 
 @MainActor
 final class LocalAccountSessionAuthority: AccountSessionAuthorizing {
     private(set) var currentSession: AccountSessionSnapshot
+    private let ownershipPersistence: LocalDataOwnershipPersisting?
+    private var authenticationBeforeSignIn: AccountAuthenticationState?
 
-    init(dataSetID: UUID = UUID()) {
-        currentSession = .guest(dataSetID: dataSetID)
+    init(
+        dataSetID: UUID = UUID(),
+        initialOwnership: LocalDataOwnershipState? = nil,
+        ownershipPersistence: LocalDataOwnershipPersisting? = nil
+    ) {
+        self.ownershipPersistence = ownershipPersistence
+        let ownership = initialOwnership ?? .guestOnly(dataSetID: dataSetID)
+        currentSession = AccountSessionSnapshot(
+            authentication: .guest,
+            authorization: .localDeviceOnly,
+            synchronization: .localOnly,
+            localDataOwnership: ownership
+        )
+    }
+
+    func beginSignIn() {
+        switch currentSession.authentication {
+        case .guest, .sessionExpired:
+            authenticationBeforeSignIn = currentSession.authentication
+            currentSession = AccountSessionSnapshot(
+                authentication: .signingIn,
+                authorization: .localDeviceOnly,
+                synchronization: currentSession.synchronization,
+                localDataOwnership: currentSession.localDataOwnership
+            )
+        case .signingIn, .signedIn, .deletionPending:
+            return
+        }
+    }
+
+    func cancelSignInPreservingLocalData() {
+        guard case .signingIn = currentSession.authentication else { return }
+        let authentication = authenticationBeforeSignIn ?? .guest
+        authenticationBeforeSignIn = nil
+        currentSession = AccountSessionSnapshot(
+            authentication: authentication,
+            authorization: .localDeviceOnly,
+            synchronization: synchronizationAfterCancelledSignIn(
+                authentication: authentication
+            ),
+            localDataOwnership: currentSession.localDataOwnership
+        )
     }
 
     func acceptVerifiedSession(
@@ -133,11 +186,19 @@ final class LocalAccountSessionAuthority: AccountSessionAuthorizing {
 
         switch currentSession.localDataOwnership {
         case .guestOnly:
-            targetOwnership = .migrationPending(
+            let pendingOwnership = LocalDataOwnershipState.migrationPending(
                 dataSetID: dataSetID,
                 targetUserID: identity.userID
             )
-            synchronization = .signedInLocalDataNotBackedUp
+            if persist(pendingOwnership) {
+                targetOwnership = pendingOwnership
+                synchronization = .signedInLocalDataNotBackedUp
+            } else {
+                targetOwnership = currentSession.localDataOwnership
+                synchronization = .recoverableError(
+                    WayTaskAccountSyncError(category: .localPersistenceFailure)
+                )
+            }
         case let .migrationPending(_, targetUserID):
             targetOwnership = currentSession.localDataOwnership
             synchronization = targetUserID == identity.userID
@@ -163,6 +224,7 @@ final class LocalAccountSessionAuthority: AccountSessionAuthorizing {
             synchronization: synchronization,
             localDataOwnership: targetOwnership
         )
+        authenticationBeforeSignIn = nil
     }
 
     func markInitialMigrationPending() {
@@ -233,6 +295,16 @@ final class LocalAccountSessionAuthority: AccountSessionAuthorizing {
         )
     }
 
+    func restoreExpiredSession(identity: UserIdentity) {
+        currentSession = AccountSessionSnapshot(
+            authentication: .sessionExpired(lastKnownIdentity: identity),
+            authorization: .localDeviceOnly,
+            synchronization: .paused(.authenticationRequired),
+            localDataOwnership: currentSession.localDataOwnership
+        )
+        authenticationBeforeSignIn = nil
+    }
+
     func markAccountDeletionPending() {
         guard let identity = signedInIdentity else { return }
         currentSession = AccountSessionSnapshot(
@@ -250,13 +322,14 @@ final class LocalAccountSessionAuthority: AccountSessionAuthorizing {
             synchronization: .localOnly,
             localDataOwnership: currentSession.localDataOwnership
         )
+        authenticationBeforeSignIn = nil
     }
 
     private var signedInIdentity: UserIdentity? {
         switch currentSession.authentication {
         case let .signedIn(identity, _), let .deletionPending(identity):
             return identity
-        case .guest, .sessionExpired:
+        case .guest, .signingIn, .sessionExpired:
             return nil
         }
     }
@@ -279,6 +352,25 @@ final class LocalAccountSessionAuthority: AccountSessionAuthorizing {
         case let .linked(_, ownerUserID):
             return ownerUserID == userID
         }
+    }
+
+    private func persist(_ ownership: LocalDataOwnershipState) -> Bool {
+        guard let ownershipPersistence else { return true }
+        do {
+            try ownershipPersistence.save(ownership)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    private func synchronizationAfterCancelledSignIn(
+        authentication: AccountAuthenticationState
+    ) -> SyncLifecycleState {
+        if case .sessionExpired = authentication {
+            return .paused(.authenticationRequired)
+        }
+        return .localOnly
     }
 }
 
@@ -327,15 +419,24 @@ final class WayTaskAccountSyncFoundation {
     let featureFlags: WayTaskCloudFeatureFlags
     let accountSession: LocalAccountSessionAuthority
     let cloudSync: DisabledCloudSyncProvider
+    let localOwnershipStorageAvailable: Bool
 
     init(
         configurationStatus: WayTaskCloudConfigurationStatus,
         featureFlags: WayTaskCloudFeatureFlags,
-        dataSetID: UUID = UUID()
+        dataSetID: UUID = UUID(),
+        initialOwnership: LocalDataOwnershipState? = nil,
+        ownershipPersistence: LocalDataOwnershipPersisting? = nil,
+        localOwnershipStorageAvailable: Bool = true
     ) {
         self.configurationStatus = configurationStatus
         self.featureFlags = featureFlags
-        accountSession = LocalAccountSessionAuthority(dataSetID: dataSetID)
+        self.localOwnershipStorageAvailable = localOwnershipStorageAvailable
+        accountSession = LocalAccountSessionAuthority(
+            dataSetID: dataSetID,
+            initialOwnership: initialOwnership,
+            ownershipPersistence: ownershipPersistence
+        )
         cloudSync = DisabledCloudSyncProvider()
     }
 
@@ -346,9 +447,21 @@ final class WayTaskAccountSyncFoundation {
             bundle: bundle,
             configurationStatus: status
         )
-        return WayTaskAccountSyncFoundation(
-            configurationStatus: status,
-            featureFlags: flags
-        )
+        do {
+            let ownershipStore = try ProtectedLocalDataOwnershipStore.live()
+            let ownership = try ownershipStore.loadOrCreate()
+            return WayTaskAccountSyncFoundation(
+                configurationStatus: status,
+                featureFlags: flags,
+                initialOwnership: ownership,
+                ownershipPersistence: ownershipStore
+            )
+        } catch {
+            return WayTaskAccountSyncFoundation(
+                configurationStatus: status,
+                featureFlags: .disabled,
+                localOwnershipStorageAvailable: false
+            )
+        }
     }
 }

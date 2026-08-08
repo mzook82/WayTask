@@ -10,15 +10,15 @@ import SwiftData
 
 @main
 struct WayTaskApp: App {
-    private let accountSyncFoundation: WayTaskAccountSyncFoundation
+    @StateObject private var accountController: StagingAccountController
     @StateObject private var productStateLaunch:
         ProductStateRuntimeLaunchState
     @StateObject private var onboardingCoordinator: OnboardingCoordinator
 
     init() {
         SentryReportingService.shared.startIfConfigured()
-        let accountSyncFoundation = WayTaskAccountSyncFoundation.startup()
-        self.accountSyncFoundation = accountSyncFoundation
+        let accountController = StagingAccountController.shared
+        _accountController = StateObject(wrappedValue: accountController)
         _productStateLaunch = StateObject(
             wrappedValue: ProductStateRuntimeLaunchState()
         )
@@ -28,10 +28,10 @@ struct WayTaskApp: App {
         )
         #if DEBUG
         print(
-            "Account foundation: \(String(describing: accountSyncFoundation.configurationStatus.environment)) " +
-                "accounts=\(accountSyncFoundation.featureFlags.accountsEnabled) " +
-                "sync=\(accountSyncFoundation.featureFlags.synchronizationEnabled) " +
-                "secureAI=\(accountSyncFoundation.featureFlags.secureAIRecognitionEnabled)"
+            "Account foundation: \(String(describing: accountController.configurationStatus.environment)) " +
+                "accounts=\(accountController.featureFlags.accountsEnabled) " +
+                "sync=\(accountController.featureFlags.synchronizationEnabled) " +
+                "secureAI=\(accountController.featureFlags.secureAIRecognitionEnabled)"
         )
         #endif
     }
@@ -48,6 +48,10 @@ struct WayTaskApp: App {
                     } else {
                         WayTaskProductionRuntimeView()
                             .environmentObject(runtime)
+                            .environmentObject(accountController)
+                            .task {
+                                await accountController.restoreSessionIfNeeded()
+                            }
                     }
                 }
                 .modelContainer(runtime.modelContainer)

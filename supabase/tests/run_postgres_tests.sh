@@ -31,6 +31,8 @@ psql --set ON_ERROR_STOP=on --dbname "${database_name}" \
 psql --set ON_ERROR_STOP=on --dbname "${database_name}" \
     --file "${test_root}/constraints.sql"
 psql --set ON_ERROR_STOP=on --dbname "${database_name}" \
+    --file "${test_root}/identity_inputs.sql"
+psql --set ON_ERROR_STOP=on --dbname "${database_name}" \
     --file "${test_root}/ai_proxy_rate_limit.sql"
 
-echo "WT-032A PostgreSQL policy suite completed."
+echo "WT-032A/WT-032B PostgreSQL policy suite completed."

@@ -138,6 +138,18 @@ final class WayTaskCloudConfigurationTests: XCTestCase {
             configurationStatus: status
         )
         XCTAssertTrue(secureAIWithAccounts.secureAIRecognitionEnabled)
+
+        let production = resolve(
+            environment: "production",
+            url: "https://production.invalid"
+        )
+        XCTAssertEqual(
+            WayTaskCloudConfiguration.featureFlags(
+                values: enabledFlagValues,
+                configurationStatus: production
+            ),
+            .disabled
+        )
     }
 
     private var enabledFlagValues: [String: String] {
